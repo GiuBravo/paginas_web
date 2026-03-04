@@ -20,9 +20,9 @@
         .suggestions-header { display: flex; justify-content: space-between; align-items: center; padding: 8px 15px; background: #333; }
         .close-suggestions { background: #e74c3c; color: white; border: none; border-radius: 4px; padding: 2px 10px; cursor: pointer; font-weight: bold; font-size: 10px; }
         .suggestions-list { max-height: 450px; overflow-y: auto; }
-        .suggestion-item { padding: 12px 15px; cursor: pointer; border-bottom: 1px solid #333; display: flex; align-items: center; gap: 15px; }
+        .suggestion-item { padding: 12px 15px; cursor: pointer; border-bottom: 1px solid #333; display: flex; align-items: center; gap: 10px; }
         .suggestion-item:hover { background: #3a3a3a; }
-        .suggestion-item img { height: 90px; border-radius: 3px; border: 1px solid #444; }
+        .suggestion-item img { height: 120px; border-radius: 3px; border: 1px solid #444; }
         .btn-add { background: #555; color: #aaa; height: 38px; padding: 0 25px; border: none; border-radius: 5px; cursor: not-allowed; font-weight: bold; text-transform: uppercase; transition: 0.3s; }
         .btn-add.active { background: #27ae60; color: white; cursor: pointer; }
         .btn-filter { background: #2980b9; color: white; height: 38px; padding: 0 20px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
@@ -70,7 +70,7 @@
                     <button onclick="adjustScale(0.1)">+</button>
                 </div>
             </div>
-            <button class="btn-filter" id="btn-apply-filters">🔍 Filtrar</button>
+            <button class="btn-filter" id="btn-apply-filters" onclick="performSearch()">🔍 Filtrar</button>
             <button class="btn-clear" id="btn-reset">Resetar</button>
         </div>
 
@@ -238,7 +238,6 @@
         document.getElementById('search-input').value = ""; toggleAddButton(false);
     };
 
-    // FUNÇÃO ATUALIZADA: Renderiza na ordem exata de inserção
     function renderQueue() {
         const listEl = document.getElementById('file-list');
         const itemsEl = document.getElementById('queue-items');
@@ -246,8 +245,6 @@
         
         if (cardQueue.length > 0) {
             listEl.style.display = "block";
-            
-            // Agrupamos apenas para exibição visual limpa, mas mantendo a ordem do primeiro ID encontrado
             const orderMap = new Map();
             cardQueue.forEach(card => {
                 if(!orderMap.has(card.imgId)) {
@@ -300,7 +297,6 @@
         const my = (210 - (2 * h + 1 * gap)) / 2;
         const totalPages = Math.ceil(cardQueue.length / 8);
 
-        // O loop for percorre o array 'cardQueue' na ordem de inserção (push)
         for (let i = 0; i < cardQueue.length; i++) {
             const pos = i % 8;
             if (pos === 0 && i > 0) doc.addPage();
@@ -313,12 +309,14 @@
             }
             const col = pos % 4; const row = Math.floor(pos / 4);
             const x = mx + (col * (w + gap)); const y = my + (row * (h + gap));
-            const imgUrl = `https://images.weserv.nl/?url=images.ygoprodeck.com/images/cards/${cardQueue[i].imgId}.jpg`;
+            // Sua alteração de qualidade máxima aplicada aqui:
+            const imgUrl = `https://images.weserv.nl/?url=images.ygoprodeck.com/images/cards/${cardQueue[i].imgId}.jpg&q=100&output=jpg`;
             try {
                 const resp = await fetch(imgUrl);
                 const blob = await resp.blob();
                 const b64 = await new Promise(r => { const rd = new FileReader(); rd.onloadend = () => r(rd.result); rd.readAsDataURL(blob); });
-                doc.addImage(b64, 'JPEG', x, y, w, h);
+                // Sua alteração de compressão NONE aplicada aqui:
+                doc.addImage(b64, 'JPEG', x, y, w, h, undefined, 'NONE');
                 
                 doc.setDrawColor(255); doc.setLineWidth(0.1);
                 const off = 1.5; const l = 4;
@@ -342,7 +340,7 @@
         const d = `${String(ago.getDate()).padStart(2,'0')}-${String(ago.getMonth()+1).padStart(2,'0')}-${ago.getFullYear()}`;
         const link = document.createElement('a');
         link.href = URL.createObjectURL(currentPdfBlob);
-        link.download = `Proxy_Studio_${d}.pdf`;
+        link.download = `Cartas_Proxies_YuGiOh_${d}.pdf`;
         link.click();
     };
 
