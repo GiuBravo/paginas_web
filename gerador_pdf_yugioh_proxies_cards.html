@@ -10,7 +10,6 @@
         
         h1 { color: #f1c40f; margin-bottom: 20px; text-transform: uppercase; font-size: 24px; letter-spacing: 1px; }
 
-        /* Estilo da Seção de Busca e Filtros */
         .search-section { background: #222; padding: 20px; border-radius: 10px; margin-bottom: 20px; border: 1px solid #444; text-align: left; position: relative; }
         .filter-row { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; align-items: center; }
         .search-box { display: flex; gap: 10px; align-items: center; border-top: 1px solid #444; padding-top: 15px; }
@@ -18,9 +17,6 @@
         input[type="text"], select { padding: 10px; border-radius: 5px; border: 1px solid #444; background: #111; color: white; font-size: 14px; }
         input[type="text"] { flex: 1; font-size: 16px; }
         
-        input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-        input[type=number] { -moz-appearance: textfield; }
-
         .monster-extras { display: none; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; margin-bottom: 15px; }
 
         .stepper-group { display: flex; flex-direction: column; gap: 5px; }
@@ -33,19 +29,20 @@
         .btn-clear { background: #c0392b; color: white; padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: bold; }
         .btn-filter { background: #2980b9; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
         
-        /* Sugestões */
         .suggestions-container { position: absolute; left: 20px; right: 20px; background: #252525; border-radius: 8px; z-index: 999; border: 2px solid #f1c40f; margin-top: 5px; display: none; box-shadow: 0 20px 40px rgba(0,0,0,0.8); }
         .suggestions-header { display: flex; justify-content: space-between; align-items: center; padding: 8px 15px; background: #333; border-radius: 6px 6px 0 0; }
         .close-suggestions { background: #e74c3c; color: white; border: none; border-radius: 4px; padding: 2px 10px; cursor: pointer; font-weight: bold; }
         .suggestions-list { max-height: 60vh; overflow-y: auto; }
-        .suggestion-item { padding: 10px 20px; cursor: pointer; border-bottom: 1px solid #333; display: flex; align-items: center; gap: 20px; height: 90px; }
+        .suggestion-item { padding: 10px 20px; cursor: pointer; border-bottom: 1px solid #333; display: flex; align-items: center; gap: 20px; height: 100px; }
         .suggestion-item:hover { background: #3a3a3a; }
-        .suggestion-item img { height: 100px; border-radius: 4px; }
+        .suggestion-item img { height: 90px; border-radius: 4px; }
         
         .upload-area { border: 2px dashed #444; padding: 20px; cursor: pointer; display: block; margin-bottom: 20px; background: #1a1a1a; border-radius: 10px; color: #888; }
         .file-list { text-align: left; margin-bottom: 20px; background: #111; padding: 15px; border-radius: 8px; border: 1px solid #333; }
+        .list-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 1px solid #333; padding-bottom: 10px; }
         .file-item { display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid #222; }
         .remove-btn { color: #e74c3c; cursor: pointer; font-weight: bold; border: none; background: none; font-size: 22px; }
+        .btn-clear-all { background: #e74c3c; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: bold; }
 
         .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px; display: none; }
         button.main-btn { border: none; padding: 16px; font-weight: bold; cursor: pointer; border-radius: 8px; text-transform: uppercase; }
@@ -53,7 +50,7 @@
         #btn-download { background: #f1c40f; color: black; }
         
         #preview-frame { width: 100%; height: 750px; border: 1px solid #444; border-radius: 8px; background: #222; margin-top: 20px; }
-        #status { color: #f1c40f; font-weight: bold; margin-bottom: 10px; }
+        #status { color: #f1c40f; font-weight: bold; margin-bottom: 10px; height: 20px; }
     </style>
 </head>
 <body>
@@ -72,7 +69,7 @@
             <select id="filter-subtype" style="display: none;"></select>
             <select id="filter-race" style="display: none;"></select>
             <button class="btn-filter" id="btn-apply-filters">🔍 Filtrar</button>
-            <button class="btn-clear" id="btn-reset">Limpar</button>
+            <button class="btn-clear" id="btn-reset">Resetar Filtros</button>
         </div>
 
         <div id="monster-extras" class="monster-extras">
@@ -110,10 +107,10 @@
 
         <div class="search-box">
             <div style="flex:1; position:relative;">
-                <input type="text" id="search-input" placeholder="Pesquisar carta pelo nome..." autocomplete="off">
+                <input type="text" id="search-input" placeholder="Busque por nome (PT ou EN)... Ex: 'Mago Negro' ou 'Dark Magician'" autocomplete="off">
                 <div id="suggestions-container" class="suggestions-container">
                     <div class="suggestions-header">
-                        <span style="font-size: 11px; font-weight: bold; color: #f1c40f;">RESULTADOS</span>
+                        <span style="font-size: 11px; font-weight: bold; color: #f1c40f;">RESULTADOS ENCONTRADOS</span>
                         <button class="close-suggestions" onclick="closeSuggestions()">FECHAR X</button>
                     </div>
                     <div id="suggestions-list" class="suggestions-list"></div>
@@ -131,7 +128,15 @@
     </div>
 
     <label class="upload-area">📁 Importar arquivo .ydk <input type="file" id="input" accept=".ydk" multiple style="display:none"></label>
-    <div id="file-list" class="file-list" style="display:none"></div>
+    
+    <div id="file-list" class="file-list" style="display:none">
+        <div class="list-header">
+            <strong>CARTAS NA FILA</strong>
+            <button class="btn-clear-all" onclick="clearQueue()">LIMPAR TUDO</button>
+        </div>
+        <div id="queue-items"></div>
+    </div>
+
     <div id="status"></div>
     
     <div id="actions-bar" class="actions">
@@ -146,27 +151,33 @@
     let cardQueue = []; 
     let selectedManualCard = null;
     let currentPdfBlob = null;
+    let searchTimeout = null;
 
-    // Tabelas de Tradução
     const tradSubtypes = { "Normal Monster": "Monstro Normal", "Effect Monster": "Monstro de Efeito", "Fusion Monster": "Monstro de Fusão", "Synchro Monster": "Monstro Synchro", "XYZ Monster": "Monstro Xyz", "Link Monster": "Monstro Link" };
     const tradRaces = { "Aqua": "Aqua", "Beast": "Besta", "Beast-Warrior": "Besta-Guerreira", "Cyberse": "Ciberso", "Dinosaur": "Dinossauro", "Divine-Beast": "Besta Divina", "Dragon": "Dragão", "Fiend": "Demônio", "Fish": "Peixe", "Insect": "Inseto", "Machine": "Máquina", "Plant": "Planta", "Psychic": "Psíquico", "Pyro": "Piro", "Reptile": "Réptil", "Rock": "Rocha", "Sea Serpent": "Serpente Marinha", "Spellcaster": "Mago", "Thunder": "Trovão", "Warrior": "Guerreiro", "Winged Beast": "Besta Alada", "Wyrm": "Wyrm", "Zombie": "Zumbi", "Normal": "Normal", "Continuous": "Contínua", "Field": "Campo", "Equip": "Equipamento", "Quick-Play": "Rápida", "Ritual": "Ritual", "Counter": "Resposta" };
     const rawRaces = { "Monster": ["Aqua", "Beast", "Beast-Warrior", "Cyberse", "Dinosaur", "Divine-Beast", "Dragon", "Fiend", "Fish", "Insect", "Machine", "Plant", "Psychic", "Pyro", "Reptile", "Rock", "Sea Serpent", "Spellcaster", "Thunder", "Warrior", "Winged Beast", "Wyrm", "Zombie"], "Spell Card": ["Normal", "Continuous", "Field", "Equip", "Quick-Play", "Ritual"], "Trap Card": ["Normal", "Continuous", "Counter"] };
 
-    // Popular níveis
     const lvSelect = document.getElementById('filter-lv');
     for(let i=0; i<=13; i++) { let opt = document.createElement('option'); opt.value = i; opt.textContent = i; lvSelect.appendChild(opt); }
 
     function adjustVal(id, amount) { const el = document.getElementById(id); el.value = Math.max(0, (parseInt(el.value) || 0) + amount); }
     function closeSuggestions() { document.getElementById('suggestions-container').style.display = "none"; }
 
-    // Gerenciamento de Arquivos e Busca
+    function clearQueue() {
+        if(confirm("Deseja remover todas as cartas da lista?")) {
+            cardQueue = [];
+            renderQueue();
+            document.getElementById('preview-frame').style.display = "none";
+            document.getElementById('actions-bar').style.display = "none";
+        }
+    }
+
     const input = document.getElementById('input');
     input.addEventListener('change', async (e) => {
         const files = Array.from(e.target.files);
         for (const file of files) {
             const text = await file.text();
             const ids = text.split('\n').map(l => l.trim()).filter(l => l && !isNaN(l) && !l.startsWith('#') && !l.startsWith('!'));
-            // Como o arquivo .ydk não tem o nome da carta, fazemos um fetch rápido para pegar o nome
             for (const id of ids) {
                 cardQueue.push({ id: id, name: "ID: " + id }); 
             }
@@ -193,29 +204,51 @@
         } else { filterSub.style.display = "none"; filterRc.style.display = "none"; document.getElementById('monster-extras').style.display = "none"; }
     });
 
-    document.getElementById('search-input').addEventListener('input', () => performSearch());
+    // Busca com delay para não travar
+    document.getElementById('search-input').addEventListener('input', () => {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(performSearch, 500);
+    });
     document.getElementById('btn-apply-filters').onclick = () => performSearch();
 
     async function performSearch() {
         const query = document.getElementById('search-input').value.trim();
         const type = filterType.value;
         if (query.length < 3 && !type) { closeSuggestions(); return; }
-        let params = [`language=pt`];
-        if (query) params.push(`fname=${encodeURIComponent(query)}`);
-        if (document.getElementById('filter-race').value) params.push(`race=${encodeURIComponent(document.getElementById('filter-race').value)}`);
+
+        let baseParams = [];
+        if (document.getElementById('filter-race').value) baseParams.push(`race=${encodeURIComponent(document.getElementById('filter-race').value)}`);
         if (type === "Monster") {
-            params.push(`type=${encodeURIComponent(document.getElementById('filter-subtype').value || "Monster")}`);
+            baseParams.push(`type=${encodeURIComponent(document.getElementById('filter-subtype').value || "Monster")}`);
             ['attribute', 'level', 'atk', 'def'].forEach(f => {
                 const v = document.getElementById('filter-' + (f==='level'?'lv':f)).value;
-                if(v) params.push(`${f}=${v}`);
+                if(v) baseParams.push(`${f}=${v}`);
             });
-        } else if (type) params.push(`type=${encodeURIComponent(type)}`);
+        } else if (type) baseParams.push(`type=${encodeURIComponent(type)}`);
 
+        // TENTATIVA 1: BUSCA EM PORTUGUÊS
+        let paramsPT = [...baseParams, `language=pt`];
+        if (query) paramsPT.push(`fname=${encodeURIComponent(query)}`);
+        
         try {
-            const res = await fetch(`https://db.ygoprodeck.com/api/v7/cardinfo.php?${params.join('&')}`);
-            const data = await res.json();
-            renderSuggestions(data.data ? data.data.slice(0, 40) : []);
-        } catch (e) { console.error(e); }
+            document.getElementById('status').innerText = "Buscando...";
+            let res = await fetch(`https://db.ygoprodeck.com/api/v7/cardinfo.php?${paramsPT.join('&')}`);
+            let data = await res.json();
+
+            // SE NÃO ACHOU EM PT, TENTA EM EN
+            if (!data.data || data.data.length === 0) {
+                let paramsEN = [...baseParams];
+                if (query) paramsEN.push(`fname=${encodeURIComponent(query)}`);
+                res = await fetch(`https://db.ygoprodeck.com/api/v7/cardinfo.php?${paramsEN.join('&')}`);
+                data = await res.json();
+            }
+
+            renderSuggestions(data.data ? data.data.slice(0, 50) : []);
+            document.getElementById('status').innerText = "";
+        } catch (e) { 
+            console.error(e);
+            document.getElementById('status').innerText = "Erro na busca.";
+        }
     }
 
     function renderSuggestions(list) {
@@ -231,7 +264,11 @@
             div.innerHTML = `<img src="${card.card_images[0].image_url_small}"> 
                 <div style="text-align:left"><b style="color:#f1c40f">${card.name}</b><br>
                 <small>${tradRaces[card.race] || card.race} / ${tradSubtypes[card.type] || card.type} ${card.level ? '• '+labelEscala+' '+card.level : ''}</small></div>`;
-            div.onclick = () => { selectedManualCard = { id: card.id, name: card.name }; document.getElementById('search-input').value = card.name; closeSuggestions(); };
+            div.onclick = () => { 
+                selectedManualCard = { id: card.id, name: card.name }; 
+                document.getElementById('search-input').value = card.name; 
+                closeSuggestions(); 
+            };
             listEl.appendChild(div);
         });
     }
@@ -240,24 +277,31 @@
         if (!selectedManualCard) return;
         const qty = parseInt(document.getElementById('search-qty').value);
         for(let i=0; i<qty; i++) cardQueue.push({ id: selectedManualCard.id, name: selectedManualCard.name });
-        renderQueue(); generatePreview();
+        renderQueue(); 
+        generatePreview();
     };
 
     function renderQueue() {
         const listEl = document.getElementById('file-list');
-        listEl.innerHTML = `<strong>Cartas na Fila:</strong><br>`;
+        const itemsEl = document.getElementById('queue-items');
+        itemsEl.innerHTML = "";
         if (cardQueue.length > 0) {
             listEl.style.display = "block";
-            const counts = cardQueue.reduce((acc, curr) => { acc[curr.id] = (acc[curr.id] || 0) + 1; acc[curr.id+'_n'] = curr.name; return acc; }, {});
+            const counts = cardQueue.reduce((acc, curr) => { 
+                acc[curr.id] = (acc[curr.id] || 0) + 1; 
+                acc[curr.id+'_n'] = curr.name; 
+                return acc; 
+            }, {});
             Object.keys(counts).filter(k=>!k.endsWith('_n')).forEach(id => {
-                listEl.innerHTML += `<div class="file-item">${counts[id]}x ${counts[id+'_n']} <span class="remove-btn" onclick="remove('${id}')">&times;</span></div>`;
+                itemsEl.innerHTML += `<div class="file-item"><span><b>${counts[id]}x</b> ${counts[id+'_n']}</span> <span class="remove-btn" onclick="remove('${id}')">&times;</span></div>`;
             });
-        } else listEl.style.display = "none";
+        } else {
+            listEl.style.display = "none";
+        }
     }
 
     window.remove = (id) => { cardQueue = cardQueue.filter(c => c.id != id); renderQueue(); generatePreview(); };
 
-    // MOTOR DE PDF RESTAURADO (EXATAMENTE COMO A VERSÃO DESEJADA)
     async function getBase64Image(id) {
         const proxy = "https://images.weserv.nl/?url=";
         const url = `${proxy}images.ygoprodeck.com/images/cards/${id}.jpg`;
@@ -275,7 +319,7 @@
     async function generatePreview() {
         if (cardQueue.length === 0) return;
         const status = document.getElementById('status');
-        status.innerText = "Gerando PDF com precisão gráfica...";
+        status.innerText = "Preparando prévia...";
 
         const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
         const w = 59, h = 86, gap = 6;
@@ -287,10 +331,8 @@
             const pos = i % 8;
             if (pos === 0 && i > 0) doc.addPage();
             if (pos === 0) {
-                // Fundo Escuro Restaurado
                 doc.setFillColor(30, 30, 30);
                 doc.rect(0, 0, 297, 210, 'F');
-                // Títulos Restaurados
                 doc.setFont("helvetica", "bold");
                 doc.setFontSize(11);
                 doc.setTextColor(255, 255, 255);
@@ -307,7 +349,6 @@
             const imgData = await getBase64Image(cardQueue[i].id);
             if (imgData) doc.addImage(imgData, 'JPEG', x, y, w, h);
 
-            // Marcas de Corte Precisas Restauradas
             doc.setDrawColor(255, 255, 255);
             doc.setLineWidth(0.15);
             const off = 1.5; const l = 4;
@@ -316,14 +357,14 @@
             doc.line(x-off-l, y+h, x-off, y+h); doc.line(x, y+h+off, x, y+h+off+l);
             doc.line(x+w+off, y+h, x+w+off+l, y+h); doc.line(x+w, y+h+off, x+w, y+h+off+l);
             
-            status.innerText = `Processando: ${i+1} / ${cardQueue.length}`;
+            status.innerText = `Renderizando: ${i+1} / ${cardQueue.length}`;
         }
 
         currentPdfBlob = doc.output('blob');
         document.getElementById('preview-frame').src = URL.createObjectURL(currentPdfBlob);
         document.getElementById('preview-frame').style.display = "block";
         document.getElementById('actions-bar').style.display = "grid";
-        status.innerText = "PDF Pronto!";
+        status.innerText = "PDF Atualizado!";
     }
 
     document.getElementById('btn-update').onclick = generatePreview;
@@ -332,7 +373,7 @@
         const date = new Date().toLocaleDateString('pt-BR').replace(/\//g, '-');
         const link = document.createElement('a');
         link.href = URL.createObjectURL(currentPdfBlob);
-        link.download = `Cartas_Proxies_YGO_Studio_${date}.pdf`;
+        link.download = `Proxies_YGO_Studio_${date}.pdf`;
         link.click();
     };
 
