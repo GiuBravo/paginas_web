@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="pt-BR" id="raiz_html">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Calculadora de Custo - Lust Goddess</title>
+  <style>
+    /* --- Definição de variáveis de tema (claro/escuro) --- */
+    :root {
+      --cor-titulo: rgb(255, 207, 47);  
+      --cor_fundo_pagina: #f9f9f9;
+      --cor_texto_principal: #333;
+      --cor_fundo_resultado: white;
+      --cor_borda_elementos: #ddd;
+      --cor_sombra_suave: rgba(0,0,0,0.1);
+      --cor_texto_alma: #ffcc41;
+      --cor_texto_creditos: #6c757d;
+      --cor_botao_calcular: #d32f2f;
+      --cor_botao_copiar: #4CAF50;
+      --cor_botao_resetar: #6c757d;
+      --cor_fundo_erro: #ff0000;
+      --cor_icone_ajuda: #666;
+    }
+
+    /* --- Estilo para modo escuro --- */
+    .tema_escuro {
+      --cor-titulo: rgb(255, 207, 47); 
+      --cor_fundo_pagina: #1e1e1e;
+      --cor_texto_principal: #f0f0f0;
+      --cor_fundo_resultado: #1a1a1a;
+      --cor_borda_elementos: #444;
+      --cor_sombra_suave: rgba(0,0,0,0.3);
+      --cor_texto_alma: #ffcc41;
+      --cor_texto_creditos: #6c757d;
+      --cor_botao_calcular: #b71c1c;
+      --cor_botao_copiar: #388E3C;
+      --cor_botao_resetar: #5a6268;
+      --cor_fundo_erro: #ff4444;
+      --cor_icone_ajuda: #aaa;
+    }
+
+    /* --- Estilos gerais da página --- */
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      max-width: 600px;
+      margin: 20px auto;
+      padding: 15px;
+      background: var(--cor_fundo_pagina);
+      color: var(--cor_texto_principal);
+      transition: background 0.3s, color 0.3s;
+    }
+
+    h1 {
+      text-align: center;
+      color: var(--cor-titulo);
+      margin-bottom: 15px;
+      font-size: 1.5em;
+    }
+
+    .icone_ajuda {
+      cursor: help;
+      font-size: 1.1em;
+      color: var(--cor_icone_ajuda);
+      margin-left: 5px;
+    }
+
+    fieldset {
+      border: 1px solid var(--cor_borda_elementos);
+      border-radius: 6px;
+      padding: 10px 15px 5px 15px;
+      margin-bottom: 25px;
+      background: var(--cor_fundo_resultado);
+      box-shadow: 0 1px 3px var(--cor_sombra_suave);
+    }
+
+    legend {
+      font-weight: bold;
+      font-size: 1.1em;
+      color: var(--cor_texto_principal);
+      padding: 0 10px;
+      background: var(--cor_fundo_resultado);
+      border-radius: 4px;
+    }
+
+    .grupo_formulario {
+      margin-bottom: 15px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 10px;
+      box-sizing: border-box;
+      border: 1px solid var(--cor_borda_elementos);
+      border-radius: 4px;
+      font-size: 16px;
+      background: var(--cor_fundo_resultado);
+      color: var(--cor_texto_principal);
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 4px;
+      font-size: 18px;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: background 0.3s;
+    }
+
+    #botao_calcular { background: var(--cor_botao_calcular); color: white; }
+    #botao_copiar { background: var(--cor_botao_copiar); color: white; }
+    #botao_resetar { background: var(--cor_botao_resetar); color: white; }
+    #botao_tema { background: #9a2af7; color: white; }
+
+    .bloco_resultado {
+      margin-top: 25px;
+      padding: 20px;
+      background: var(--cor_fundo_resultado);
+      border-radius: 6px;
+      box-shadow: 0 2px 8px var(--cor_sombra_suave);
+      border: 1px solid var(--cor_borda_elementos);
+      text-align: center;
+    }
+
+    .bloco_resultado p {
+      margin: 10px 0;
+      font-size: 18px;
+      line-height: 1.6;
+    }
+
+    .valor_alma {
+      font-size: 24px;
+      font-weight: bold;
+      color: var(--cor_texto_alma);
+      margin: 0 15px;
+    }
+
+    .valor_creditos {
+      font-size: 24px;
+      font-weight: bold;
+      color: var(--cor_texto_creditos);
+      margin: 0 15px;
+    }
+
+    .linha_separadora {
+      height: 1px;
+      background: var(--cor_borda_elementos);
+      margin: 15px 0;
+    }
+
+    .grupo_botoes {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    #mensagem_copia {
+      text-align: center;
+      margin-top: 10px;
+      font-weight: bold;
+      min-height: 20px;
+      font-size: 14px;
+    }
+
+    .mensagem_erro {
+      color: white;
+      background: var(--cor_fundo_erro);
+      padding: 10px;
+      border-radius: 4px;
+      font-weight: bold;
+      text-align: center;
+      font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Título principal da página -->
+  <h1 id="elemento_titulo">
+    📅 Calculadora de Custo <br> 💃 Lust Goddess
+  </h1>
+
+  <br>
+  <!-- Botão de controle de tema -->
+  <div class="grupo_botoes">
+    <button id="botao_tema">🌙 Modo Escuro</button>
+  </div>
+    <br>
+    <br>
+
+  <!-- Seção do ponto desejado (objetivo) -->
+  <fieldset>
+    <legend id="elemento_legenda_desejado">🎯 Ponto Desejado (Objetivo)</legend>
+    <div class="grupo_formulario">
+      <label for="reinicio_desejado" id="rotulo_reinicio_desejado">Reinício Desejado</label>
+      <select id="reinicio_desejado"></select>
+    </div>
+    <div class="grupo_formulario">
+      <label for="level_desejado" id="rotulo_level_desejado">Level Desejado (Máx: 31)</label>
+      <input type="number" id="level_desejado" min="1" max="31">
+    </div>
+  </fieldset>
+  
+  <!-- Seção do ponto atual do jogador -->
+  <fieldset>
+    <legend id="elemento_legenda_atual">📍 Ponto Atual</legend>
+    <div class="grupo_formulario">
+      <label for="reinicio_atual" id="rotulo_reinicio_atual">Reinício Atual</label>
+      <select id="reinicio_atual"></select>
+    </div>
+    <div class="grupo_formulario">
+      <label for="level_atual" id="rotulo_level_atual">Level Atual (Máx: 31)</label>
+      <input type="number" id="level_atual" min="1" max="31">
+    </div>
+  </fieldset>
+
+  <!-- Botão principal de cálculo -->
+  <button id="botao_calcular">Calcular Custo Restante</button>
+  
+  <!-- Botões secundários -->
+  <div class="grupo_botoes">
+    <button id="botao_copiar" disabled>Copiar Resultado</button>
+    <button id="botao_resetar">↺ Resetar</button>
+  </div>
+  <p id="mensagem_copia"></p>
+
+  <!-- Bloco de exibição do resultado -->
+  <div id="bloco_resultado" class="bloco_resultado" style="display:none;">
+    <p><strong id="texto_total_desejado">Total desejado:</strong> <span class="valor_alma">0</span> <span id="texto_alma">Alma</span>, <span class="valor_creditos">0</span> <span id="texto_creditos">Créditos</span></p>
+    <p><strong id="texto_total_atual">Total atual:</strong> <span class="valor_alma">0</span> <span id="texto_alma2">Alma</span>, <span class="valor_creditos">0</span> <span id="texto_creditos2">Créditos</span></p>
+    <div class="linha_separadora"></div>
+    <p><strong id="texto_restante">Restante necessário:</strong> <span class="valor_alma">0</span> <span id="texto_alma3">Alma</span>, <span class="valor_creditos">0</span> <span id="texto_creditos3">Créditos</span></p>
+  </div>
+
+  <script>
+    // === DADOS EXTRAÍDOS DA PLANILHA "Lust Goddess Levels up.xlsx" ===
+    // Custo de Alma por faixa de level (1→2, 2→3, ..., 30→31)
+    const lista_custos_alma_por_faixa = [
+      5, 10, 15, 20, 40,
+      60, 80, 100, 120, 150,
+      200, 250, 320, 400, 500,
+      700, 850, 1000, 1300, 1700,
+      2200, 2900, 3700, 4800, 6000,
+      6150, 6300, 6450, 6650, 6900
+    ];
+
+    // Custo de Créditos por faixa de level
+    const lista_custos_creditos_por_faixa = [
+      600, 900, 1400, 1900, 2500,
+      3500, 5500, 7000, 9000, 11000,
+      14000, 17000, 20000, 24000, 28000,
+      32000, 36000, 40000, 44000, 48000,
+      52000, 57000, 62000, 68000, 75000,
+      80000, 86000, 93000, 101000, 110000
+    ];
+
+    // Constantes de limite
+    const nivel_maximo_com_dados = 31;
+    const reinicio_maximo_com_dados = 5;
+
+    // Variáveis de estado
+    let texto_ultimo_resultado = "";
+    let temporizador_para_calculo = null;
+    let tema_selecionado = localStorage.getItem('tema_armazenado') || 'claro';
+
+    // === FUNÇÃO: Formata número no padrão brasileiro (ex: 18600 → "18.600") ===
+    function formatar_numero_braceiro(numero) {
+      return numero.toLocaleString('pt-BR');
+    }
+
+    // === FUNÇÃO: Calcula custo acumulado de um único ciclo até um nível ===
+    function calcular_custo_acumulado_ate_nivel(nivel) {
+      if (nivel < 2) return [0, 0];
+      const indice_na_lista = nivel - 2; // 1→2 é índice 0
+      if (indice_na_lista >= lista_custos_alma_por_faixa.length) {
+        throw new Error(`Valores inválidos. Nível deve ser entre 1 e ${nivel_maximo_com_dados}.`);
+      }
+      const total_alma = lista_custos_alma_por_faixa.slice(0, indice_na_lista + 1).reduce((soma, valor) => soma + valor, 0);
+      const total_creditos = lista_custos_creditos_por_faixa.slice(0, indice_na_lista + 1).reduce((soma, valor) => soma + valor, 0);
+      return [total_alma, total_creditos];
+    }
+
+    // === FUNÇÃO: Calcula custo total desde o início até (reinício, nível) ===
+    function calcular_custo_total_desde_inicio(reinicio, nivel) {
+      let total_acumulado_alma = 0;
+      let total_acumulado_creditos = 0;
+
+      // Níveis máximos que definem cada reinício (R0=6, R1=11, etc.)
+      const lista_niveis_maximos_por_reinicio = [6, 11, 16, 21, 26, 31];
+
+      // Soma os ciclos anteriores COMPLETOS
+      for (let indice_reinicio = 0; indice_reinicio < reinicio; indice_reinicio++) {
+        const nivel_limite = lista_niveis_maximos_por_reinicio[indice_reinicio];
+        const [alma_ciclo, creditos_ciclo] = calcular_custo_acumulado_ate_nivel(nivel_limite);
+        total_acumulado_alma += alma_ciclo;
+        total_acumulado_creditos += creditos_ciclo;
+      }
+
+      // Soma o ciclo atual até o nível desejado
+      if (nivel > 1) {
+        const [alma_atual, creditos_atual] = calcular_custo_acumulado_ate_nivel(nivel);
+        total_acumulado_alma += alma_atual;
+        total_acumulado_creditos += creditos_atual;
+      }
+
+      return [total_acumulado_alma, total_acumulado_creditos];
+    }
+
+    // === FUNÇÃO: Atualiza o texto do botão de tema conforme o estado atual ===
+    function atualizar_textos_da_interface() {
+    // Atualiza apenas o botão de tema
+    document.getElementById('botao_tema').textContent = 
+        tema_selecionado === 'escuro' ? "☀️ Modo Claro" : "🌙 Modo Escuro";
+    }
+
+    // === FUNÇÃO: Alterna entre modo claro e escuro ===
+    function alternar_tema_interface() {
+    const elemento_raiz = document.getElementById('raiz_html');
+    if (tema_selecionado === 'claro') {
+        elemento_raiz.classList.add('tema_escuro');
+        tema_selecionado = 'escuro';
+    } else {
+        elemento_raiz.classList.remove('tema_escuro');
+        tema_selecionado = 'claro';
+    }
+    localStorage.setItem('tema_armazenado', tema_selecionado);
+    atualizar_textos_da_interface();
+    }
+
+    // === FUNÇÃO: Preenche os menus suspensos de reinício ===
+    function preencher_menus_suspensos_reinicio() {
+      ['reinicio_desejado', 'reinicio_atual'].forEach(id_menu => {
+        const elemento_menu = document.getElementById(id_menu);
+        elemento_menu.innerHTML = '';
+        for (let valor_reinicio = 0; valor_reinicio <= reinicio_maximo_com_dados; valor_reinicio++) {
+          const opcao = document.createElement('option');
+          opcao.value = valor_reinicio;
+          opcao.textContent = `Reinício ${valor_reinicio}`;
+          elemento_menu.appendChild(opcao);
+        }
+      });
+    }
+
+    // === FUNÇÃO: Salva configuração atual no armazenamento local ===
+    function salvar_configuracao_no_navegador() {
+      localStorage.setItem('reinicio_desejado_armazenado', document.getElementById('reinicio_desejado').value);
+      localStorage.setItem('level_desejado_armazenado', document.getElementById('level_desejado').value);
+      localStorage.setItem('reinicio_atual_armazenado', document.getElementById('reinicio_atual').value);
+      localStorage.setItem('level_atual_armazenado', document.getElementById('level_atual').value);
+    }
+
+    // === FUNÇÃO: Carrega configuração salva ou define padrões ===
+    function carregar_configuracao_do_navegador() {
+      const reinicio_desejado_salvo = localStorage.getItem('reinicio_desejado_armazenado');
+      const level_desejado_salvo = localStorage.getItem('level_desejado_armazenado');
+      const reinicio_atual_salvo = localStorage.getItem('reinicio_atual_armazenado');
+      const level_atual_salvo = localStorage.getItem('level_atual_armazenado');
+
+      document.getElementById('reinicio_desejado').value = reinicio_desejado_salvo !== null ? reinicio_desejado_salvo : 4;
+      document.getElementById('level_desejado').value = level_desejado_salvo !== null ? level_desejado_salvo : 21;
+      document.getElementById('reinicio_atual').value = reinicio_atual_salvo !== null ? reinicio_atual_salvo : 0;
+      document.getElementById('level_atual').value = level_atual_salvo !== null ? level_atual_salvo : 1;
+    }
+
+    // === FUNÇÃO PRINCIPAL: Executa o cálculo e exibe o resultado ===
+    function executar_calculo_principal() {
+      const elemento_resultado = document.getElementById("bloco_resultado");
+      const botao_copiar = document.getElementById("botao_copiar");
+
+      elemento_resultado.style.display = "block";
+      botao_copiar.disabled = true;
+      document.getElementById("mensagem_copia").textContent = "";
+
+      salvar_configuracao_no_navegador();
+
+      const reinicio_desejado = parseInt(document.getElementById("reinicio_desejado").value);
+      const level_desejado = parseInt(document.getElementById("level_desejado").value);
+      const reinicio_atual = parseInt(document.getElementById("reinicio_atual").value);
+      const level_atual = parseInt(document.getElementById("level_atual").value);
+
+      try {
+        // Validação de entrada
+        if (
+          reinicio_desejado < 0 || level_desejado < 1 || level_desejado > nivel_maximo_com_dados ||
+          reinicio_atual < 0 || level_atual < 1 || level_atual > nivel_maximo_com_dados
+        ) {
+          throw new Error(`Valores inválidos. Nível deve ser entre 1 e ${nivel_maximo_com_dados}.`);
+        }
+
+        // Validação de progresso lógico
+        if (reinicio_desejado < reinicio_atual || (reinicio_desejado === reinicio_atual && level_desejado < level_atual)) {
+          throw new Error("O ponto ATUAL não pode ser após o DESEJADO.");
+        }
+
+        // Cálculo dos totais
+        const [total_alma_desejado, total_creditos_desejado] = calcular_custo_total_desde_inicio(reinicio_desejado, level_desejado);
+        const [total_alma_atual, total_creditos_atual] = calcular_custo_total_desde_inicio(reinicio_atual, level_atual);
+        const alma_restante = total_alma_desejado - total_alma_atual;
+        const creditos_restantes = total_creditos_desejado - total_creditos_atual;
+
+        // Prepara texto para cópia
+        texto_ultimo_resultado = 
+          `Total desejado (R${reinicio_desejado}, L${level_desejado}): ${formatar_numero_braceiro(total_alma_desejado)} Alma, ${formatar_numero_braceiro(total_creditos_desejado)} Créditos\n` +
+          `Total atual (R${reinicio_atual}, L${level_atual}): ${formatar_numero_braceiro(total_alma_atual)} Alma, ${formatar_numero_braceiro(total_creditos_atual)} Créditos\n` +
+          `Restante necessário: ${formatar_numero_braceiro(alma_restante)} Alma, ${formatar_numero_braceiro(creditos_restantes)} Créditos`;
+
+        // Atualiza valores na interface
+        document.querySelectorAll('.valor_alma')[0].textContent = formatar_numero_braceiro(total_alma_desejado);
+        document.querySelectorAll('.valor_creditos')[0].textContent = formatar_numero_braceiro(total_creditos_desejado);
+        document.querySelectorAll('.valor_alma')[1].textContent = formatar_numero_braceiro(total_alma_atual);
+        document.querySelectorAll('.valor_creditos')[1].textContent = formatar_numero_braceiro(total_creditos_atual);
+        document.querySelectorAll('.valor_alma')[2].textContent = formatar_numero_braceiro(alma_restante);
+        document.querySelectorAll('.valor_creditos')[2].textContent = formatar_numero_braceiro(creditos_restantes);
+
+        botao_copiar.disabled = false;
+      } catch (erro) {
+        elemento_resultado.innerHTML = `<p class="mensagem_erro">⚠️ ${erro.message}</p>`;
+      }
+    }
+
+    // === FUNÇÃO: Executa cálculo com atraso para evitar chamadas excessivas ===
+    function executar_calculo_com_atraso() {
+      clearTimeout(temporizador_para_calculo);
+      temporizador_para_calculo = setTimeout(executar_calculo_principal, 300);
+    }
+
+    // === FUNÇÃO: Copia o resultado para a área de transferência ===
+    function copiar_resultado_para_area_transferencia() {
+      if (texto_ultimo_resultado) {
+        navigator.clipboard.writeText(texto_ultimo_resultado).then(() => {
+          const elemento_mensagem = document.getElementById("mensagem_copia");
+          elemento_mensagem.textContent = "✅ Resultado copiado!";
+          elemento_mensagem.style.color = "#4CAF50";
+          setTimeout(() => elemento_mensagem.textContent = "", 1500);
+        }).catch(() => {
+          alert("Erro ao copiar. Use Ctrl+C:\n\n" + texto_ultimo_resultado);
+        });
+      }
+    }
+
+    // === FUNÇÃO: Reseta todas as configurações para os valores padrão ===
+    function resetar_calculadora_para_padrao() {
+      localStorage.clear();
+      carregar_configuracao_do_navegador();
+      preencher_menus_suspensos_reinicio();
+      executar_calculo_principal();
+    }
+
+    // === VINCULAÇÃO DE EVENTOS ===
+    document.getElementById("botao_calcular").onclick = executar_calculo_principal;
+    document.getElementById("botao_copiar").onclick = copiar_resultado_para_area_transferencia;
+    document.getElementById("botao_resetar").onclick = resetar_calculadora_para_padrao;
+    document.getElementById("botao_tema").onclick = alternar_tema_interface;
+    
+    // Eventos para campos de entrada
+    ['reinicio_desejado','reinicio_atual','level_desejado','level_atual'].forEach(id_campo => {
+      document.getElementById(id_campo).onchange = executar_calculo_com_atraso;
+      document.getElementById(id_campo).oninput = executar_calculo_com_atraso;
+    });
+    
+    // Evento para tecla Enter
+    document.addEventListener('keypress', (evento) => {
+      if (evento.key === 'Enter') executar_calculo_principal();
+    });
+
+    // === INICIALIZAÇÃO DA PÁGINA ===
+    window.onload = () => {
+      if (localStorage.getItem('tema_armazenado') === 'escuro') {
+        document.getElementById('raiz_html').classList.add('tema_escuro');
+        tema_selecionado = 'escuro';
+      }
+      
+      carregar_configuracao_do_navegador();
+      preencher_menus_suspensos_reinicio();
+      atualizar_textos_da_interface();
+      executar_calculo_principal();
+    };
+  </script>
+</body>
+</html>

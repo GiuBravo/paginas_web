@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>YGO Proxy Studio Pro - Automático</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #0c0c0c; color: #e0e0e0; text-align: center; padding: 20px; margin: 0; }
+        .container { background: #1a1a1a; padding: 25px; border-radius: 15px; border: 1px solid #333; max-width: 850px; margin: auto; box-shadow: 0 10px 25px rgba(0,0,0,0.7); }
+        
+        h1 { color: #f1c40f; margin-bottom: 5px; text-transform: uppercase; font-size: 24px; letter-spacing: 1px; }
+        .deckbuilder-link { background: #2c3e50; padding: 12px; border-radius: 8px; margin-bottom: 20px; font-size: 14px; border-left: 4px solid #f1c40f; text-align: left; line-height: 1.4; }
+        .deckbuilder-link a { color: #f1c40f; text-decoration: none; font-weight: bold; border-bottom: 1px solid transparent; }
+        .deckbuilder-link a:hover { border-bottom: 1px solid #f1c40f; }
+        
+        .upload-area { border: 2px dashed #444; padding: 40px; cursor: pointer; display: block; margin-bottom: 20px; background: #222; border-radius: 10px; transition: 0.3s; }
+        .upload-area:hover { border-color: #f1c40f; background: #282828; }
+        
+        .file-list { text-align: left; margin-bottom: 20px; background: #111; padding: 15px; border-radius: 8px; display: none; border: 1px solid #333; }
+        .file-item { display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid #222; }
+        .file-item:last-child { border-bottom: none; }
+        .remove-btn { color: #e74c3c; cursor: pointer; font-weight: bold; font-size: 20px; border: none; background: none; padding: 0 10px; }
+
+        .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px; display: none; }
+        button { border: none; padding: 16px; font-weight: bold; cursor: pointer; border-radius: 8px; font-size: 14px; transition: 0.2s; text-transform: uppercase; }
+        #btn-update { background: #3498db; color: white; }
+        #btn-download { background: #f1c40f; color: black; }
+        button:hover { opacity: 0.9; transform: translateY(-1px); }
+        button:active { transform: translateY(0); }
+
+        #preview-container { margin-top: 25px; display: none; border-top: 1px solid #333; padding-top: 20px; }
+        #preview-frame { width: 100%; height: 600px; border: 1px solid #444; border-radius: 8px; background: #333; }
+        
+        #status { margin-top: 15px; color: #f1c40f; font-weight: bold; font-size: 14px; min-height: 20px; }
+        .success-msg { color: #2ecc71 !important; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>YGO Proxy Studio Pro</h1>
+    
+    <div class="deckbuilder-link">
+        💡 Se ainda não montou seu arquivo <b>.ydk</b>, você pode gerar aqui: 
+        <a href="https://ygoprodeck.com/deckbuilder/" target="_blank">YGOPRODeck Builder</a>
+    </div>
+    
+    <label class="upload-area" id="drop-zone">
+        <span id="label">📄 Arraste ou clique para carregar arquivos .ydk</span>
+        <input type="file" id="input" accept=".ydk" multiple style="display:none">
+    </label>
+
+    <div id="file-list" class="file-list"></div>
+
+    <div id="status"></div>
+
+    <div id="actions-bar" class="actions">
+        <button id="btn-update">Atualizar Prévia</button>
+        <button id="btn-download">Baixar PDF Final</button>
+    </div>
+
+    <div id="preview-container">
+        <h3 style="color:#888; font-weight: normal;">Pré-visualização do Documento</h3>
+        <iframe id="preview-frame"></iframe>
+    </div>
+</div>
+
+<script>
+    const { jsPDF } = window.jspdf;
+    let selectedFiles = [];
+    let currentPdfBlob = null;
+
+    const input = document.getElementById('input');
+    const fileListEl = document.getElementById('file-list');
+    const actionsBar = document.getElementById('actions-bar');
+    const btnUpdate = document.getElementById('btn-update');
+    const btnDownload = document.getElementById('btn-download');
+    const status = document.getElementById('status');
+    const previewContainer = document.getElementById('preview-container');
+    const previewFrame = document.getElementById('preview-frame');
+
+    // Listener para o input de arquivos
+    input.addEventListener('change', async (e) => {
+        const files = Array.from(e.target.files);
+        let added = false;
+        
+        files.forEach(file => {
+            if (!selectedFiles.some(f => f.name === file.name)) {
+                selectedFiles.push(file);
+                added = true;
+            }
+        });
+
+        if (added) {
+            renderFileList();
+            await autoGeneratePreview();
+        }
+    });
+
+    function renderFileList() {
+        fileListEl.innerHTML = "";
+        if (selectedFiles.length > 0) {
+            fileListEl.style.display = "block";
+            selectedFiles.forEach((file, index) => {
+                const item = document.createElement('div');
+                item.className = 'file-item';
+                item.innerHTML = `
+                    <span><b>${index + 1}.</b> ${file.name}</span>
+                    <button class="remove-btn" title="Remover" onclick="removeFile(${index})">&times;</button>
+                `;
+                fileListEl.appendChild(item);
+            });
+        } else {
+            fileListEl.style.display = "none";
+            actionsBar.style.display = "none";
+            previewContainer.style.display = "none";
+            status.innerText = "";
+        }
+    }
+
+    window.removeFile = async (index) => {
+        selectedFiles.splice(index, 1);
+        renderFileList();
+        if (selectedFiles.length > 0) {
+            await autoGeneratePreview();
+        }
+    };
+
+    async function getBase64Image(id) {
+        const proxy = "https://images.weserv.nl/?url=";
+        const url = `${proxy}images.ygoprodeck.com/images/cards/${id}.jpg`;
+        try {
+            const response = await fetch(url);
+            const blob = await response.blob();
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result);
+                reader.readAsDataURL(blob);
+            });
+        } catch (e) { return null; }
+    }
+
+    async function autoGeneratePreview() {
+        if (selectedFiles.length === 0) return;
+
+        status.classList.remove('success-msg');
+        status.innerText = "Processando cartas e gerando prévia automática...";
+        actionsBar.style.display = "none"; // Oculta botões enquanto processa
+
+        let cards = [];
+        for (const file of selectedFiles) {
+            const text = await file.text();
+            const ids = text.split('\n').map(l => l.trim()).filter(l => l && !isNaN(l) && !l.startsWith('#') && !l.startsWith('!'));
+            cards.push(...ids);
+        }
+
+        const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+        const w = 59, h = 86, gap = 6;
+        const mx = (297 - (4 * w + 3 * gap)) / 2;
+        const my = (210 - (2 * h + 1 * gap)) / 2;
+        const totalPages = Math.ceil(cards.length / 8);
+
+        for (let i = 0; i < cards.length; i++) {
+            const pos = i % 8;
+            if (pos === 0 && i > 0) doc.addPage();
+            if (pos === 0) {
+                doc.setFillColor(30, 30, 30);
+                doc.rect(0, 0, 297, 210, 'F');
+                doc.setFont("helvetica", "bold");
+                doc.setFontSize(11);
+                doc.setTextColor(255, 255, 255);
+                doc.text("IMPRIMIR EM 100% – NÃO AJUSTAR À PÁGINA", 148.5, 10, { align: "center" });
+                doc.setFontSize(8);
+                doc.text(`Página ${Math.floor(i/8) + 1} de ${totalPages}`, 285, 205, { align: "right" });
+            }
+
+            const col = pos % 4;
+            const row = Math.floor(pos / 4);
+            const x = mx + (col * (w + gap));
+            const y = my + (row * (h + gap));
+
+            const imgData = await getBase64Image(cards[i]);
+            if (imgData) doc.addImage(imgData, 'JPEG', x, y, w, h);
+
+            doc.setDrawColor(255, 255, 255);
+            doc.setLineWidth(0.15);
+            const off = 1.5; const l = 4;
+            doc.line(x-off-l, y, x-off, y); doc.line(x, y-off-l, x, y-off);
+            doc.line(x+w+off, y, x+w+off+l, y); doc.line(x+w, y-off-l, x+w, y-off);
+            doc.line(x-off-l, y+h, x-off, y+h); doc.line(x, y+h+off, x, y+h+off+l);
+            doc.line(x+w+off, y+h, x+w+off+l, y+h); doc.line(x+w, y+h+off, x+w, y+h+off+l);
+            
+            status.innerText = `Lendo cartas: ${i+1} / ${cards.length}`;
+        }
+
+        currentPdfBlob = doc.output('blob');
+        const url = URL.createObjectURL(currentPdfBlob);
+        
+        previewFrame.src = url;
+        previewContainer.style.display = "block";
+        actionsBar.style.display = "grid";
+        status.innerText = "Prévia pronta!";
+        status.classList.add('success-msg');
+    }
+
+    btnUpdate.addEventListener('click', autoGeneratePreview);
+
+    btnDownload.addEventListener('click', () => {
+        if (!currentPdfBlob) return;
+        const date = new Date().toLocaleDateString('pt-BR').replace(/\//g, '-');
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(currentPdfBlob);
+        link.download = `Cartas_Proxies_de_Yu-Gi-Oh_${date}.pdf`;
+        link.click();
+    });
+</script>
+
+</body>
+</html>
