@@ -29,9 +29,12 @@
         .suggestion-item:hover { background: #3a3a3a; }
         .suggestion-item img { height: 90px; border-radius: 3px; border: 1px solid #444; }
         
+        /* Estilo da mensagem "Nada encontrado" dentro da lista */
+        .no-results { padding: 40px 20px; text-align: center; color: #888; }
+        .no-results b { color: #f1c40f; display: block; margin-bottom: 5px; }
+
         .btn-add { background: #555; color: #aaa; height: 38px; padding: 0 25px; border: none; border-radius: 5px; cursor: not-allowed; font-weight: bold; text-transform: uppercase; transition: 0.3s; }
         .btn-add.active { background: #27ae60; color: white; cursor: pointer; }
-        .btn-filter { background: #2980b9; color: white; height: 38px; padding: 0 20px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
         .btn-clear { background: #c0392b; color: white; height: 38px; padding: 0 15px; border: none; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: bold; }
         
         .upload-area { border: 2px dashed #444; padding: 20px; cursor: pointer; display: block; margin-bottom: 20px; background: #1a1a1a; border-radius: 10px; color: #888; }
@@ -78,8 +81,7 @@
                     <button onclick="adjustScale(0.1)">+</button>
                 </div>
             </div>
-            <button class="btn-filter" id="btn-apply-filters" onclick="performSearch()">🔍 Filtrar</button>
-            <button class="btn-clear" id="btn-reset" onclick="resetFilters()">Resetar</button>
+            <button class="btn-clear" id="btn-reset" onclick="resetFilters()">Resetar Filtros</button>
         </div>
 
         <div id="monster-extras" class="row-layout" style="display: none;">
@@ -95,7 +97,7 @@
                 <input type="text" id="search-input" placeholder="Busque pelo nome..." autocomplete="off">
                 <div id="suggestions-container" class="suggestions-container">
                     <div class="suggestions-header">
-                        <span style="font-size: 10px; font-weight: bold; color: #f1c40f;">ARTES DISPONÍVEIS</span>
+                        <span style="font-size: 10px; font-weight: bold; color: #f1c40f;">RESULTADOS</span>
                         <button class="close-suggestions" onclick="closeSuggestions()">FECHAR X</button>
                     </div>
                     <div id="suggestions-list" class="suggestions-list"></div>
@@ -117,7 +119,7 @@
     
     <div id="file-list" style="display:none; text-align: left; background: #111; padding: 15px; border-radius: 8px; border: 1px solid #333; margin-bottom: 20px;">
         <div class="list-header">
-            <span style="color: #f1c40f; font-weight: bold; font-size: 12px;">CARTAS NA FILA (ORDEM DE ADIÇÃO)</span>
+            <span style="color: #f1c40f; font-weight: bold; font-size: 12px;">CARTAS NA FILA</span>
             <button class="btn-clear-list" onclick="clearFullQueue()">Limpar Lista</button>
         </div>
         <div id="queue-items"></div>
@@ -145,8 +147,17 @@
     const lvSelect = document.getElementById('filter-lv');
     for(let i=0; i<=13; i++) { let opt = document.createElement('option'); opt.value = i; opt.textContent = i; lvSelect.appendChild(opt); }
 
-    function adjustVal(id, amount) { const el = document.getElementById(id); el.value = Math.max(0, (parseInt(el.value) || 0) + amount); }
-    function adjustScale(amount) { const el = document.getElementById('print-scale'); el.value = (parseFloat(el.value) + amount).toFixed(1); }
+    function adjustVal(id, amount) { 
+        const el = document.getElementById(id); 
+        el.value = Math.max(0, (parseInt(el.value) || 0) + amount);
+        triggerAutoSearch(); 
+    }
+    
+    function adjustScale(amount) { 
+        const el = document.getElementById('print-scale'); 
+        el.value = (parseFloat(el.value) + amount).toFixed(1); 
+    }
+    
     function closeSuggestions() { document.getElementById('suggestions-container').style.display = "none"; }
     
     function toggleAddButton(active) {
@@ -164,28 +175,94 @@
         document.getElementById('filter-lv').value = "";
         document.getElementById('search-input').value = "";
         document.getElementById('search-qty').value = "1";
-        document.getElementById('print-scale').value = "100.0";
         selectedManualCard = null;
         toggleAddButton(false);
         closeSuggestions();
-        document.getElementById('status').innerText = "Filtros resetados.";
-        setTimeout(() => document.getElementById('status').innerText = "", 2000);
+        document.getElementById('status').innerText = "";
     }
 
-    document.getElementById('input').addEventListener('change', async (e) => {
-        const files = Array.from(e.target.files);
-        for (const file of files) {
-            const text = await file.text();
-            const ids = text.split('\n').map(l => l.trim()).filter(l => l && !isNaN(l) && !l.startsWith('#') && !l.startsWith('!'));
-            for (const id of ids) { 
-                cardQueue.push({ id: id, name: "ID: " + id, imgId: id, timestamp: Date.now() }); 
-            }
-        }
-        renderQueue(); generatePreview();
-    });
+    // DISPARO DA BUSCA
+    function triggerAutoSearch() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(performSearch, 500);
+    }
 
-    const filterType = document.getElementById('filter-type');
-    filterType.addEventListener('change', function() {
+    // OUVINTES PARA TODOS OS CAMPOS
+    const fields = ['filter-type', 'filter-subtype', 'filter-race', 'filter-attribute', 'filter-lv', 'filter-atk', 'filter-def'];
+    fields.forEach(id => document.getElementById(id).addEventListener('change', triggerAutoSearch));
+    document.getElementById('search-input').addEventListener('input', triggerAutoSearch);
+
+    // BUSCA PRINCIPAL
+    async function performSearch() {
+        const query = document.getElementById('search-input').value.trim();
+        const type = document.getElementById('filter-type').value;
+        const subtype = document.getElementById('filter-subtype').value;
+        const race = document.getElementById('filter-race').value;
+        const attr = document.getElementById('filter-attribute').value;
+        const lv = document.getElementById('filter-lv').value;
+        const atk = document.getElementById('filter-atk').value;
+        const def = document.getElementById('filter-def').value;
+
+        // Se o input estiver vazio e não houver filtros, fecha as sugestões
+        if (query.length === 0 && !type && !atk && !def) { closeSuggestions(); return; }
+
+        try {
+            document.getElementById('status').innerText = "Buscando...";
+            let params = new URLSearchParams();
+            params.append('language', 'pt');
+            if (query.length > 0) params.append('fname', query);
+
+            if (type) {
+                if (type === "Monster") { if (subtype) params.append('type', subtype); } 
+                else { params.append('type', type); }
+            }
+
+            if (type === "Monster" || (!type && (atk > 0 || def > 0))) {
+                if (race) params.append('race', race);
+                if (attr) params.append('attribute', attr);
+                if (lv) params.append('level', lv);
+                if (parseInt(atk) > 0) params.append('atk', atk);
+                if (parseInt(def) > 0) params.append('def', def);
+            } else if (race) { params.append('race', race); }
+
+            const res = await fetch(`https://db.ygoprodeck.com/api/v7/cardinfo.php?${params.toString()}`);
+            const data = await res.json();
+
+            const listEl = document.getElementById('suggestions-list');
+            document.getElementById('suggestions-container').style.display = "block";
+            listEl.innerHTML = "";
+
+            if (data.data) {
+                let results = data.data;
+                if (type === "Monster" && !subtype) results = results.filter(c => c.type.toLowerCase().includes("monster"));
+                
+                results.slice(0, 30).forEach(card => {
+                    card.card_images.forEach((img, idx) => {
+                        const div = document.createElement('div');
+                        div.className = 'suggestion-item';
+                        div.innerHTML = `<img src="${img.image_url_small}"><div><b style="color:#f1c40f">${card.name}</b><br><small style="color:#bbb">${tradSubtypes[card.type] || card.type} | Arte #${idx+1}</small></div>`;
+                        div.onclick = () => {
+                            selectedManualCard = { id: card.id, name: card.name, imgId: img.id };
+                            document.getElementById('search-input').value = card.name;
+                            toggleAddButton(true); closeSuggestions();
+                        };
+                        listEl.appendChild(div);
+                    });
+                });
+            } else {
+                // EXIBE MENSAGEM DENTRO DA LISTA
+                listEl.innerHTML = `
+                    <div class="no-results">
+                        <b>Nenhuma carta encontrada</b>
+                        <small>Tente mudar o nome ou ajustar os filtros.</small>
+                    </div>`;
+            }
+            document.getElementById('status').innerText = "";
+        } catch (e) { document.getElementById('status').innerText = ""; }
+    }
+
+    // LOGICA DE INTERFACE (TIPO DE CARTA)
+    document.getElementById('filter-type').addEventListener('change', function() {
         const val = this.value;
         const groupSub = document.getElementById('group-subtype'); const groupRc = document.getElementById('group-race');
         const filterSub = document.getElementById('filter-subtype'); const filterRc = document.getElementById('filter-race');
@@ -201,96 +278,10 @@
         } else { groupSub.style.display = "none"; groupRc.style.display = "none"; document.getElementById('monster-extras').style.display = "none"; }
     });
 
-    document.getElementById('search-input').addEventListener('input', () => {
-        selectedManualCard = null;
-        toggleAddButton(false);
-        clearTimeout(searchTimeout);
-        searchTimeout = setTimeout(performSearch, 500);
-    });
-
-    // BUSCA INTELIGENTE (ACEITA APENAS MONSTRO)
-    async function performSearch() {
-        const query = document.getElementById('search-input').value.trim();
-        const type = document.getElementById('filter-type').value;
-        const subtype = document.getElementById('filter-subtype').value;
-        const race = document.getElementById('filter-race').value;
-        const attr = document.getElementById('filter-attribute').value;
-        const lv = document.getElementById('filter-lv').value;
-        const atk = document.getElementById('filter-atk').value;
-        const def = document.getElementById('filter-def').value;
-
-        if (query.length < 3 && !type) { closeSuggestions(); return; }
-
-        try {
-            document.getElementById('status').innerText = "Buscando...";
-            let params = new URLSearchParams();
-            params.append('language', 'pt');
-            if (query.length >= 3) params.append('fname', query);
-
-            if (type) {
-                if (type === "Monster") {
-                    if (subtype) params.append('type', subtype);
-                } else {
-                    params.append('type', type);
-                }
-            }
-
-            if (type === "Monster") {
-                if (race) params.append('race', race);
-                if (attr) params.append('attribute', attr);
-                if (lv) params.append('level', lv);
-                const atkVal = parseInt(atk);
-                const defVal = parseInt(def);
-                if (!isNaN(atkVal) && atkVal > 0) params.append('atk', atkVal);
-                if (!isNaN(defVal) && defVal > 0) params.append('def', defVal);
-            } else if (race) {
-                params.append('race', race);
-            }
-
-            const url = `https://db.ygoprodeck.com/api/v7/cardinfo.php?${params.toString()}`;
-            const res = await fetch(url);
-            const data = await res.json();
-
-            if (data.data) {
-                let results = data.data;
-                if (type === "Monster" && !subtype) {
-                    results = results.filter(card => card.type.toLowerCase().includes("monster"));
-                }
-                renderSuggestions(results.slice(0, 30));
-                document.getElementById('status').innerText = "";
-            } else {
-                document.getElementById('status').innerText = "Nada encontrado.";
-                closeSuggestions();
-            }
-        } catch (e) { document.getElementById('status').innerText = "Erro na busca."; }
-    }
-
-    function renderSuggestions(list) {
-        const container = document.getElementById('suggestions-container');
-        const listEl = document.getElementById('suggestions-list');
-        listEl.innerHTML = "";
-        container.style.display = "block";
-        list.forEach(card => {
-            card.card_images.forEach((img, idx) => {
-                const div = document.createElement('div');
-                div.className = 'suggestion-item';
-                div.innerHTML = `<img src="${img.image_url_small}"><div><b style="color:#f1c40f">${card.name}</b><br><small style="color:#bbb">${tradSubtypes[card.type] || card.type} | Arte #${idx+1}</small></div>`;
-                div.onclick = () => {
-                    selectedManualCard = { id: card.id, name: card.name, imgId: img.id };
-                    document.getElementById('search-input').value = card.name + ` (#${idx+1})`;
-                    toggleAddButton(true); closeSuggestions();
-                };
-                listEl.appendChild(div);
-            });
-        });
-    }
-
     document.getElementById('btn-manual-add').onclick = () => {
         if (!selectedManualCard) return;
         const qty = parseInt(document.getElementById('search-qty').value);
-        for(let i=0; i<qty; i++) { 
-            cardQueue.push({ ...selectedManualCard, instanceId: Date.now() + Math.random() }); 
-        }
+        for(let i=0; i<qty; i++) { cardQueue.push({ ...selectedManualCard, instanceId: Date.now() + Math.random() }); }
         renderQueue(); generatePreview();
         document.getElementById('search-input').value = ""; toggleAddButton(false);
     };
@@ -318,13 +309,10 @@
 
     window.remove = (imgId) => { 
         cardQueue = cardQueue.filter(c => c.imgId != imgId); 
-        renderQueue(); 
-        if(cardQueue.length > 0) generatePreview(); else clearPreview();
+        renderQueue(); if(cardQueue.length > 0) generatePreview(); else clearPreview();
     };
 
-    window.clearFullQueue = () => {
-        if(confirm("Deseja realmente remover todas as cartas?")) { cardQueue = []; renderQueue(); clearPreview(); }
-    };
+    window.clearFullQueue = () => { if(confirm("Limpar tudo?")) { cardQueue = []; renderQueue(); clearPreview(); } };
 
     function clearPreview() {
         document.getElementById('preview-frame').style.display = "none";
@@ -332,11 +320,10 @@
         currentPdfBlob = null;
     }
 
-   async function generatePreview() {
+    async function generatePreview() {
         if (cardQueue.length === 0) return;
         const status = document.getElementById('status');
         status.innerText = "Gerando PDF...";
-        
         const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
         const scale = parseFloat(document.getElementById('print-scale').value) / 100;
         const w = 59 * scale, h = 86 * scale, gap = 6;
@@ -345,63 +332,32 @@
         const totalPages = Math.ceil(cardQueue.length / 8);
 
         for (let i = 0; i < cardQueue.length; i++) {
-            const pos = i % 8;
-            if (pos === 0 && i > 0) doc.addPage();
-            
-            if (pos === 0) {
-                // Fundo Escuro para destacar as marcas brancas
-                doc.setFillColor(30, 30, 30); 
-                doc.rect(0, 0, 297, 210, 'F');
-                
-                // Título solicitado
-                doc.setFontSize(14); 
-                doc.setTextColor(255, 255, 255);
-                doc.text("Imprimir tamanho real", 148.5, 12, { align: "center" });
-                
+            if (i % 8 === 0 && i > 0) doc.addPage();
+            if (i % 8 === 0) {
+                // Título da página
+                doc.setFillColor(30, 30, 30); doc.rect(0, 0, 297, 210, 'F');
+                doc.setFontSize(16); doc.setTextColor(255);
+                doc.text("Imprimir no tamanho real", 148.5, 7, { align: "center" });
                 // Numeração de página
-                doc.setFontSize(10);
-                doc.text(`Página ${Math.floor(i / 8) + 1} de ${totalPages}`, 280, 200, { align: "right" });
+                doc.setFontSize(12);
+                doc.text(`Página ${Math.floor(i / 8) + 1} de ${totalPages}`, 270, 200, { align: "right" });
             }
-
-            const col = pos % 4; 
-            const row = Math.floor(pos / 4);
-            const x = mx + (col * (w + gap)); 
-            const y = my + (row * (h + gap));
-            
+            const pos = i % 8; const col = pos % 4; const row = Math.floor(pos / 4);
+            const x = mx + (col * (w + gap)); const y = my + (row * (h + gap));
             try {
                 const imgUrl = `https://images.weserv.nl/?url=images.ygoprodeck.com/images/cards/${cardQueue[i].imgId}.jpg&q=100`;
                 const resp = await fetch(imgUrl);
                 const blob = await resp.blob();
-                const b64 = await new Promise(r => { 
-                    const rd = new FileReader(); 
-                    rd.onloadend = () => r(rd.result); 
-                    rd.readAsDataURL(blob); 
-                });
-                
+                const b64 = await new Promise(r => { const rd = new FileReader(); rd.onloadend = () => r(rd.result); rd.readAsDataURL(blob); });
                 doc.addImage(b64, 'JPEG', x, y, w, h);
-                
-                // MARCAS DE CORTE BRANCAS BEM DESTACADAS
-                doc.setDrawColor(255, 255, 255); 
-                doc.setLineWidth(0.4); // Linha um pouco mais grossa para destacar
-                const offset = 2; // Distância da carta
-                const len = 5;    // Comprimento da linha
-                
-                // Canto Superior Esquerdo
-                doc.line(x - offset, y, x - offset - len, y); 
-                doc.line(x, y - offset, x, y - offset - len);
-                // Canto Superior Direito
-                doc.line(x + w + offset, y, x + w + offset + len, y);
-                doc.line(x + w, y - offset, x + w, y - offset - len);
-                // Canto Inferior Esquerdo
-                doc.line(x - offset, y + h, x - offset - len, y + h);
-                doc.line(x, y + h + offset, x, y + h + offset + len);
-                // Canto Inferior Direito
-                doc.line(x + w + offset, y + h, x + w + offset + len, y + h);
-                doc.line(x + w, y + h + offset, x + w, y + h + offset + len);
-
-            } catch (e) { console.error("Erro na imagem:", e); }
+                doc.setDrawColor(255); doc.setLineWidth(0.4);
+                const offset = 2; const len = 5;
+                doc.line(x-offset, y, x-offset-len, y); doc.line(x, y-offset, x, y-offset-len);
+                doc.line(x+w+offset, y, x+w+offset+len, y); doc.line(x+w, y-offset, x+w, y-offset-len);
+                doc.line(x-offset, y+h, x-offset-len, y+h); doc.line(x, y+h+offset, x, y+h+offset+len);
+                doc.line(x+w+offset, y+h, x+w+offset+len, y+h); doc.line(x+w, y+h+offset, x+w, y+h+offset+len);
+            } catch (e) {}
         }
-        
         currentPdfBlob = doc.output('blob');
         document.getElementById('preview-frame').src = URL.createObjectURL(currentPdfBlob);
         document.getElementById('preview-frame').style.display = "block";
@@ -425,6 +381,15 @@
     };
 
     document.getElementById('btn-update').onclick = generatePreview;
+    document.getElementById('input').addEventListener('change', async (e) => {
+        const files = Array.from(e.target.files);
+        for (const f of files) {
+            const t = await f.text();
+            const ids = t.split('\n').map(l=>l.trim()).filter(l=>l && !isNaN(l) && !l.startsWith('#') && !l.startsWith('!'));
+            for (const id of ids) cardQueue.push({ id, name: "ID: "+id, imgId: id });
+        }
+        renderQueue(); generatePreview();
+    });
 </script>
 </body>
 </html>
