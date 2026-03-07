@@ -14,14 +14,13 @@
         .row-layout { display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 20px; }
         input[type="text"], select { padding: 10px; border-radius: 5px; border: 1px solid #444; background: #111; color: white; font-size: 14px; height: 38px; box-sizing: border-box; }
         
-        /* REMOVE SETAS DOS INPUTS NUMBER */
-        input::-webkit-outer-spin-button,
-        input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
         input[type=number] { -moz-appearance: textfield; }
 
         .stepper { display: flex; align-items: center; background: #111; border: 1px solid #444; border-radius: 5px; height: 38px; overflow: hidden; width: fit-content; }
         .stepper button { background: #333; border: none; color: white; width: 30px; height: 100%; cursor: pointer; font-size: 18px; }
         .stepper input { width: 50px; border: none; background: transparent; color: white; text-align: center; font-size: 14px; outline: none; }
+        
         .suggestions-container { position: absolute; top: 100%; left: 0; right: 0; background: #252525; border-radius: 0 0 8px 8px; z-index: 9999; border: 2px solid #f1c40f; border-top: none; display: none; box-shadow: 0 20px 40px rgba(0,0,0,0.8); margin-top: 2px; }
         .suggestions-header { display: flex; justify-content: space-between; align-items: center; padding: 8px 15px; background: #333; }
         .close-suggestions { background: #e74c3c; color: white; border: none; border-radius: 4px; padding: 2px 10px; cursor: pointer; font-weight: bold; font-size: 10px; }
@@ -29,10 +28,12 @@
         .suggestion-item { padding: 12px 15px; cursor: pointer; border-bottom: 1px solid #333; display: flex; align-items: center; gap: 15px; }
         .suggestion-item:hover { background: #3a3a3a; }
         .suggestion-item img { height: 90px; border-radius: 3px; border: 1px solid #444; }
+        
         .btn-add { background: #555; color: #aaa; height: 38px; padding: 0 25px; border: none; border-radius: 5px; cursor: not-allowed; font-weight: bold; text-transform: uppercase; transition: 0.3s; }
         .btn-add.active { background: #27ae60; color: white; cursor: pointer; }
         .btn-filter { background: #2980b9; color: white; height: 38px; padding: 0 20px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
         .btn-clear { background: #c0392b; color: white; height: 38px; padding: 0 15px; border: none; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: bold; }
+        
         .upload-area { border: 2px dashed #444; padding: 20px; cursor: pointer; display: block; margin-bottom: 20px; background: #1a1a1a; border-radius: 10px; color: #888; }
         #preview-frame { width: 100%; height: 750px; border: 1px solid #444; border-radius: 8px; background: #222; margin-top: 20px; display: none; }
         #status { color: #f1c40f; font-weight: bold; margin-bottom: 10px; height: 20px; font-size: 14px; }
@@ -40,6 +41,7 @@
         button.main-btn { border: none; padding: 16px; font-weight: bold; cursor: pointer; border-radius: 8px; text-transform: uppercase; }
         #btn-update { background: #3498db; color: white; }
         #btn-download { background: #f1c40f; color: black; }
+        
         .list-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 1px solid #444; padding-bottom: 10px; }
         .btn-clear-list { background: #e67e22; color: white; border: none; padding: 5px 12px; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: bold; text-transform: uppercase; }
     </style>
@@ -153,7 +155,6 @@
         else btn.classList.remove('active');
     }
 
-    // NOVA FUNÇÃO PARA RESETAR APENAS FILTROS
     function resetFilters() {
         document.getElementById('filter-type').value = "";
         document.getElementById('filter-type').dispatchEvent(new Event('change'));
@@ -207,27 +208,60 @@
         searchTimeout = setTimeout(performSearch, 500);
     });
 
+    // BUSCA INTELIGENTE (ACEITA APENAS MONSTRO)
     async function performSearch() {
         const query = document.getElementById('search-input').value.trim();
-        const selectedType = filterType.value;
-        if (query.length < 3) { closeSuggestions(); return; }
+        const type = document.getElementById('filter-type').value;
+        const subtype = document.getElementById('filter-subtype').value;
+        const race = document.getElementById('filter-race').value;
+        const attr = document.getElementById('filter-attribute').value;
+        const lv = document.getElementById('filter-lv').value;
+        const atk = document.getElementById('filter-atk').value;
+        const def = document.getElementById('filter-def').value;
+
+        if (query.length < 3 && !type) { closeSuggestions(); return; }
+
         try {
             document.getElementById('status').innerText = "Buscando...";
-            let res = await fetch(`https://db.ygoprodeck.com/api/v7/cardinfo.php?fname=${encodeURIComponent(query)}&language=pt`);
-            let data = await res.json();
-            if (!data.data) {
-                res = await fetch(`https://db.ygoprodeck.com/api/v7/cardinfo.php?fname=${encodeURIComponent(query)}`);
-                data = await res.json();
+            let params = new URLSearchParams();
+            params.append('language', 'pt');
+            if (query.length >= 3) params.append('fname', query);
+
+            if (type) {
+                if (type === "Monster") {
+                    if (subtype) params.append('type', subtype);
+                } else {
+                    params.append('type', type);
+                }
             }
-            let results = data.data || [];
-            if (selectedType) {
-                results = results.filter(card => {
-                    if (selectedType === "Monster") return card.type.toLowerCase().includes("monster");
-                    return card.type === selectedType;
-                });
+
+            if (type === "Monster") {
+                if (race) params.append('race', race);
+                if (attr) params.append('attribute', attr);
+                if (lv) params.append('level', lv);
+                const atkVal = parseInt(atk);
+                const defVal = parseInt(def);
+                if (!isNaN(atkVal) && atkVal > 0) params.append('atk', atkVal);
+                if (!isNaN(defVal) && defVal > 0) params.append('def', defVal);
+            } else if (race) {
+                params.append('race', race);
             }
-            renderSuggestions(results.slice(0, 30));
-            document.getElementById('status').innerText = "";
+
+            const url = `https://db.ygoprodeck.com/api/v7/cardinfo.php?${params.toString()}`;
+            const res = await fetch(url);
+            const data = await res.json();
+
+            if (data.data) {
+                let results = data.data;
+                if (type === "Monster" && !subtype) {
+                    results = results.filter(card => card.type.toLowerCase().includes("monster"));
+                }
+                renderSuggestions(results.slice(0, 30));
+                document.getElementById('status').innerText = "";
+            } else {
+                document.getElementById('status').innerText = "Nada encontrado.";
+                closeSuggestions();
+            }
         } catch (e) { document.getElementById('status').innerText = "Erro na busca."; }
     }
 
@@ -235,7 +269,6 @@
         const container = document.getElementById('suggestions-container');
         const listEl = document.getElementById('suggestions-list');
         listEl.innerHTML = "";
-        if (list.length === 0) { container.style.display = "none"; return; }
         container.style.display = "block";
         list.forEach(card => {
             card.card_images.forEach((img, idx) => {
@@ -266,22 +299,18 @@
         const listEl = document.getElementById('file-list');
         const itemsEl = document.getElementById('queue-items');
         itemsEl.innerHTML = "";
-        
         if (cardQueue.length > 0) {
             listEl.style.display = "block";
             const orderMap = new Map();
             cardQueue.forEach(card => {
-                if(!orderMap.has(card.imgId)) {
-                    orderMap.set(card.imgId, { name: card.name, qty: 0 });
-                }
+                if(!orderMap.has(card.imgId)) orderMap.set(card.imgId, { name: card.name, qty: 0 });
                 orderMap.get(card.imgId).qty++;
             });
-
             orderMap.forEach((data, id) => {
                 itemsEl.innerHTML += `
                     <div style="padding:5px; border-bottom:1px solid #333; display:flex; justify-content:space-between; align-items:center;">
                         <span><b>${data.qty}x</b> ${data.name}</span>
-                        <span style="color:#e74c3c; cursor:pointer; font-size:10px; font-weight:bold; text-transform:uppercase;" onclick="remove('${id}')">[X]</span>
+                        <span style="color:#e74c3c; cursor:pointer; font-size:10px; font-weight:bold;" onclick="remove('${id}')">[X]</span>
                     </div>`;
             });
         } else listEl.style.display = "none";
@@ -290,17 +319,11 @@
     window.remove = (imgId) => { 
         cardQueue = cardQueue.filter(c => c.imgId != imgId); 
         renderQueue(); 
-        if(cardQueue.length > 0) generatePreview(); 
-        else clearPreview();
+        if(cardQueue.length > 0) generatePreview(); else clearPreview();
     };
 
     window.clearFullQueue = () => {
-        if(confirm("Deseja realmente remover todas as cartas da lista?")) {
-            cardQueue = [];
-            renderQueue();
-            clearPreview();
-            document.getElementById('status').innerText = "Lista limpa.";
-        }
+        if(confirm("Deseja realmente remover todas as cartas?")) { cardQueue = []; renderQueue(); clearPreview(); }
     };
 
     function clearPreview() {
@@ -309,7 +332,7 @@
         currentPdfBlob = null;
     }
 
-    async function generatePreview() {
+   async function generatePreview() {
         if (cardQueue.length === 0) return;
         const status = document.getElementById('status');
         status.innerText = "Gerando PDF...";
@@ -324,31 +347,61 @@
         for (let i = 0; i < cardQueue.length; i++) {
             const pos = i % 8;
             if (pos === 0 && i > 0) doc.addPage();
+            
             if (pos === 0) {
-                doc.setFillColor(30, 30, 30); doc.rect(0, 0, 297, 210, 'F');
-                doc.setFontSize(10); doc.setTextColor(255);
-                doc.text(`Escala: ${(scale * 100).toFixed(1)}% | Ordem de Adição`, 148.5, 10, { align: "center" });
-                doc.setFontSize(8);
-                doc.text(`Página ${Math.floor(i / 8) + 1} de ${totalPages}`, 285, 205, { align: "right" });
+                // Fundo Escuro para destacar as marcas brancas
+                doc.setFillColor(30, 30, 30); 
+                doc.rect(0, 0, 297, 210, 'F');
+                
+                // Título solicitado
+                doc.setFontSize(14); 
+                doc.setTextColor(255, 255, 255);
+                doc.text("Imprimir tamanho real", 148.5, 12, { align: "center" });
+                
+                // Numeração de página
+                doc.setFontSize(10);
+                doc.text(`Página ${Math.floor(i / 8) + 1} de ${totalPages}`, 280, 200, { align: "right" });
             }
-            const col = pos % 4; const row = Math.floor(pos / 4);
-            const x = mx + (col * (w + gap)); const y = my + (row * (h + gap));
-            const imgUrl = `https://images.weserv.nl/?url=images.ygoprodeck.com/images/cards/${cardQueue[i].imgId}.jpg&q=100&output=jpg`;
+
+            const col = pos % 4; 
+            const row = Math.floor(pos / 4);
+            const x = mx + (col * (w + gap)); 
+            const y = my + (row * (h + gap));
+            
             try {
+                const imgUrl = `https://images.weserv.nl/?url=images.ygoprodeck.com/images/cards/${cardQueue[i].imgId}.jpg&q=100`;
                 const resp = await fetch(imgUrl);
                 const blob = await resp.blob();
-                const b64 = await new Promise(r => { const rd = new FileReader(); rd.onloadend = () => r(rd.result); rd.readAsDataURL(blob); });
-                doc.addImage(b64, 'JPEG', x, y, w, h, undefined, 'NONE');
+                const b64 = await new Promise(r => { 
+                    const rd = new FileReader(); 
+                    rd.onloadend = () => r(rd.result); 
+                    rd.readAsDataURL(blob); 
+                });
                 
-                doc.setDrawColor(255); doc.setLineWidth(0.1);
-                const off = 1.5; const l = 4;
-                doc.line(x-off-l, y, x-off, y); doc.line(x, y-off-l, x, y-off);
-                doc.line(x+w+off, y, x+w+off+l, y); doc.line(x+w, y-off-l, x+w, y-off);
-                doc.line(x-off-l, y+h, x-off, y+h); doc.line(x, y+h+off, x, y+h+off+l);
-                doc.line(x+w+off, y+h, x+w+off+l, y+h); doc.line(x+w, y+h+off, x+w, y+h+off+l);
-            } catch (e) {}
-            if (i % 4 === 0) await new Promise(r => setTimeout(r, 10));
+                doc.addImage(b64, 'JPEG', x, y, w, h);
+                
+                // MARCAS DE CORTE BRANCAS BEM DESTACADAS
+                doc.setDrawColor(255, 255, 255); 
+                doc.setLineWidth(0.4); // Linha um pouco mais grossa para destacar
+                const offset = 2; // Distância da carta
+                const len = 5;    // Comprimento da linha
+                
+                // Canto Superior Esquerdo
+                doc.line(x - offset, y, x - offset - len, y); 
+                doc.line(x, y - offset, x, y - offset - len);
+                // Canto Superior Direito
+                doc.line(x + w + offset, y, x + w + offset + len, y);
+                doc.line(x + w, y - offset, x + w, y - offset - len);
+                // Canto Inferior Esquerdo
+                doc.line(x - offset, y + h, x - offset - len, y + h);
+                doc.line(x, y + h + offset, x, y + h + offset + len);
+                // Canto Inferior Direito
+                doc.line(x + w + offset, y + h, x + w + offset + len, y + h);
+                doc.line(x + w, y + h + offset, x + w, y + h + offset + len);
+
+            } catch (e) { console.error("Erro na imagem:", e); }
         }
+        
         currentPdfBlob = doc.output('blob');
         document.getElementById('preview-frame').src = URL.createObjectURL(currentPdfBlob);
         document.getElementById('preview-frame').style.display = "block";
@@ -358,11 +411,16 @@
 
     document.getElementById('btn-download').onclick = () => {
         if (!currentPdfBlob) return;
-        const ago = new Date();
-        const d = `${String(ago.getDate()).padStart(2,'0')}-${String(ago.getMonth()+1).padStart(2,'0')}-${ago.getFullYear()}`;
+        
+        const agora = new Date();
+        const dia = String(agora.getDate()).padStart(2, '0');
+        const mes = String(agora.getMonth() + 1).padStart(2, '0');
+        const ano = agora.getFullYear();
+        const dataFormatada = `${dia}-${mes}-${ano}`;
+
         const link = document.createElement('a');
         link.href = URL.createObjectURL(currentPdfBlob);
-        link.download = `Cartas_Proxies_YuGiOh_${d}.pdf`;
+        link.download = `Cartas_Proxies_Yu-Gi-Oh_${dataFormatada}.pdf`;
         link.click();
     };
 
