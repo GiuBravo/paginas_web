@@ -21,44 +21,36 @@
         .stepper button { background: #333; border: none; color: white; width: 30px; height: 100%; cursor: pointer; font-size: 18px; }
         .stepper input { width: 50px; border: none; background: transparent; color: white; text-align: center; font-size: 14px; outline: none; }
         
-        .stepper input:not(:placeholder-shown) { border-bottom: 2px solid #f1c40f; }
-
+        /* Sugestões e Paginação */
         .suggestions-container { position: absolute; top: 100%; left: 0; right: 0; background: #252525; border-radius: 0 0 8px 8px; z-index: 9999; border: 2px solid #f1c40f; border-top: none; display: none; box-shadow: 0 20px 40px rgba(0,0,0,0.8); margin-top: 2px; }
-        .suggestions-header { display: flex; justify-content: space-between; align-items: center; padding: 8px 15px; background: #333; }
-        .close-suggestions { background: #e74c3c; color: white; border: none; border-radius: 4px; padding: 2px 10px; cursor: pointer; font-weight: bold; font-size: 10px; }
-        .suggestions-list { max-height: 450px; overflow-y: auto; }
+        .suggestions-header { display: flex; justify-content: space-between; align-items: center; padding: 8px 15px; background: #333; gap: 10px; border-bottom: 1px solid #444; }
         
-        /* Layout da Sugestão Ajustado */
-        .suggestion-item { padding: 12px 15px; cursor: pointer; border-bottom: 1px solid #333; display: flex; align-items: center; gap: 20px; }
-        .suggestion-item:hover { background: #3a3a3a; }
+        .pagination-controls { display: flex; align-items: center; gap: 8px; color: #f1c40f; font-size: 11px; font-weight: bold; }
+        .pagination-controls input { width: 40px !important; height: 25px !important; padding: 0 !important; text-align: center; background: #111; border: 1px solid #555; color: #f1c40f; border-radius: 3px; }
+        .page-btn { background: #444; border: none; color: white; padding: 2px 8px; cursor: pointer; border-radius: 3px; }
+        
+        .view-toggle { display: flex; gap: 5px; }
+        .view-btn { background: #444; border: 1px solid #555; color: #aaa; padding: 6px; cursor: pointer; border-radius: 4px; display: flex; align-items: center; justify-content: center; }
+        .view-btn svg { width: 18px; height: 18px; fill: currentColor; }
+        .view-btn.active { background: #f1c40f; color: black; border-color: #f1c40f; }
+
+        .suggestions-list { max-height: 450px; overflow-y: auto; padding: 10px; }
+        
+        /* Grid Mode Minimalista */
+        .suggestions-list.grid-mode { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 12px; }
+        .suggestions-list.grid-mode .suggestion-item { flex-direction: column; padding: 5px; border: 1px solid #333; border-radius: 5px; align-items: center; }
+        .suggestions-list.grid-mode .suggestion-item img { height: 140px; }
+        .suggestions-list.grid-mode .card-info-box { display: none; } /* Remove texto no grid */
+        
+        .suggestion-item { padding: 12px 15px; cursor: pointer; border-bottom: 1px solid #333; display: flex; align-items: center; gap: 20px; transition: 0.2s; }
+        .suggestion-item:hover { background: #3a3a3a; border-color: #f1c40f; }
         .suggestion-item img { height: 100px; border-radius: 3px; border: 1px solid #444; }
         
-        .card-info-box { 
-            flex-grow: 1; 
-            display: flex; 
-            flex-direction: column; 
-            gap: 6px; 
-            text-align: left; 
-            max-width: 300px;
-        }
-
+        .card-info-box { flex-grow: 1; display: flex; flex-direction: column; gap: 6px; text-align: left; max-width: 400px; }
         .info-row { display: flex; justify-content: space-between; font-size: 12px; color: #bbb; align-items: center; }
-        .info-row b { color: #f1c40f; }
-        
-        /* Estilo específico para a linha de ATK/DEF */
-        .atk-def-row { 
-            font-weight: bold; 
-            font-size: 13px; 
-            margin-top: 2px; 
-            border-top: 1px solid #444; 
-            padding-top: 4px; 
-            color: #fff;
-        }
-        
-        .no-results { padding: 40px 20px; text-align: center; color: #888; }
-        .no-results b { color: #f1c40f; display: block; margin-bottom: 5px; }
+        .atk-def-row { font-weight: bold; font-size: 13px; margin-top: 2px; border-top: 1px solid #444; padding-top: 4px; color: #fff; }
 
-        .btn-add { background: #555; color: #aaa; height: 38px; padding: 0 25px; border: none; border-radius: 5px; cursor: not-allowed; font-weight: bold; text-transform: uppercase; transition: 0.3s; }
+        .btn-add { background: #555; color: #aaa; height: 38px; padding: 0 25px; border: none; border-radius: 5px; cursor: not-allowed; font-weight: bold; text-transform: uppercase; }
         .btn-add.active { background: #27ae60; color: white; cursor: pointer; }
         .btn-clear { background: #c0392b; color: white; height: 38px; padding: 0 15px; border: none; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: bold; }
         
@@ -122,8 +114,23 @@
                 <input type="text" id="search-input" placeholder="Busque pelo nome..." autocomplete="off">
                 <div id="suggestions-container" class="suggestions-container">
                     <div class="suggestions-header">
-                        <span style="font-size: 10px; font-weight: bold; color: #f1c40f;">RESULTADOS</span>
-                        <button class="close-suggestions" onclick="closeSuggestions()">FECHAR X</button>
+                        <div class="view-toggle">
+                            <button class="view-btn active" id="btn-list-view" onclick="setView('list')" title="Lista">
+                                <svg viewBox="0 0 24 24"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg>
+                            </button>
+                            <button class="view-btn" id="btn-grid-view" onclick="setView('grid')" title="Grade">
+                                <svg viewBox="0 0 24 24"><path d="M4 11h5V5H4v6zm0 7h5v-6H4v6zm6 0h5v-6h-5v6zm6 0h5v-6h-5v6zm-6-7h5V5h-5v6zm6-6v6h5V5h-5z"/></svg>
+                            </button>
+                        </div>
+                        <div class="pagination-controls">
+                            <span id="result-count" style="margin-right: 10px; color: #aaa;"></span>
+                            <button class="page-btn" onclick="prevPage()">◄</button>
+                            <span>Pág.</span>
+                            <input type="number" id="current-page-input" value="1" min="1" onchange="goToPage(this.value)">
+                            <span id="total-pages">de 1</span>
+                            <button class="page-btn" onclick="nextPage()">►</button>
+                        </div>
+                        <button class="close-suggestions" onclick="closeSuggestions()" style="background:transparent; border:none; color:#888; cursor:pointer; font-weight:bold;">✖</button>
                     </div>
                     <div id="suggestions-list" class="suggestions-list"></div>
                 </div>
@@ -164,6 +171,12 @@
     let selectedManualCard = null;
     let currentPdfBlob = null;
     let searchTimeout = null;
+    
+    // Paginação e View
+    let searchResults = [];
+    let currentPage = 1;
+    const itemsPerPage = 20;
+    let currentView = 'list';
 
     const tradSubtypes = { "Normal Monster": "Monstro Normal", "Effect Monster": "Monstro de Efeito", "Fusion Monster": "Monstro de Fusão", "Synchro Monster": "Monstro Synchro", "XYZ Monster": "Monstro Xyz", "Link Monster": "Monstro Link" };
     const tradRaces = { "Aqua": "Aqua", "Beast": "Besta", "Beast-Warrior": "Besta-Guerreira", "Cyberse": "Ciberso", "Dinosaur": "Dinossauro", "Divine-Beast": "Besta Divina", "Dragon": "Dragão", "Fiend": "Demônio", "Fish": "Peixe", "Insect": "Inseto", "Machine": "Máquina", "Plant": "Planta", "Psychic": "Psíquico", "Pyro": "Piro", "Reptile": "Réptil", "Rock": "Rocha", "Sea Serpent": "Serpente Marinha", "Spellcaster": "Mago", "Thunder": "Trovão", "Warrior": "Guerreiro", "Winged Beast": "Besta Alada", "Wyrm": "Wyrm", "Zombie": "Zumbi", "Normal": "Normal", "Continuous": "Contínua", "Field": "Campo", "Equip": "Equipamento", "Quick-Play": "Rápida", "Ritual": "Ritual", "Counter": "Resposta" };
@@ -175,12 +188,10 @@
     function adjustVal(id, amount) { 
         const el = document.getElementById(id); 
         let currentVal = el.value;
-        if (currentVal === "") {
-            if (amount > 0) el.value = 0;
-        } else {
+        if (currentVal === "") { if (amount > 0) el.value = 0; } 
+        else {
             let newVal = parseInt(currentVal) + amount;
-            if (newVal < 0) el.value = "";
-            else el.value = newVal;
+            if (newVal < 0) el.value = ""; else el.value = newVal;
         }
         triggerAutoSearch(); 
     }
@@ -192,15 +203,17 @@
     
     function closeSuggestions() { document.getElementById('suggestions-container').style.display = "none"; }
     
+    function setView(view) {
+        currentView = view;
+        document.getElementById('btn-list-view').classList.toggle('active', view === 'list');
+        document.getElementById('btn-grid-view').classList.toggle('active', view === 'grid');
+        displayResults();
+    }
+
     function toggleAddButton(active) {
         const btn = document.getElementById('btn-manual-add');
-        if(active) {
-            btn.classList.add('active');
-            btn.innerText = "Adicionar"; // Texto quando uma carta é selecionada
-        } else {
-            btn.classList.remove('active');
-            btn.innerText = "Selecione a carta"; // Texto quando está desabilitado
-        }
+        if(active) { btn.classList.add('active'); btn.innerText = "Adicionar"; } 
+        else { btn.classList.remove('active'); btn.innerText = "Selecione a carta"; }
     }
 
     function resetFilters() {
@@ -215,17 +228,12 @@
         selectedManualCard = null;
         toggleAddButton(false);
         closeSuggestions();
-        document.getElementById('status').innerText = "";
     }
 
     function triggerAutoSearch() {
         clearTimeout(searchTimeout);
         searchTimeout = setTimeout(performSearch, 500);
     }
-
-    const fields = ['filter-type', 'filter-subtype', 'filter-race', 'filter-attribute', 'filter-lv', 'filter-atk', 'filter-def'];
-    fields.forEach(id => document.getElementById(id).addEventListener('change', triggerAutoSearch));
-    document.getElementById('search-input').addEventListener('input', triggerAutoSearch);
 
     async function performSearch() {
         const query = document.getElementById('search-input').value.trim();
@@ -259,58 +267,83 @@
             const res = await fetch(`https://db.ygoprodeck.com/api/v7/cardinfo.php?${params.toString()}`);
             const data = await res.json();
 
-            const listEl = document.getElementById('suggestions-list');
-            document.getElementById('suggestions-container').style.display = "block";
-            listEl.innerHTML = "";
-
             if (data.data) {
-                let results = data.data;
-                if (type === "Monster" && !subtype) results = results.filter(c => c.type.toLowerCase().includes("monster"));
-                
-                results.slice(0, 30).forEach(card => {
-                    card.card_images.forEach((img, idx) => {
-                        const div = document.createElement('div');
-                        div.className = 'suggestion-item';
-                        
-                        // Formatação dos dados
-                        const cardAttr = card.attribute || (card.type.includes("Spell") ? "MAGIA" : "ARMADILHA");
-                        const cardLv = card.level ? `Nível ${card.level}` : (card.rank ? `Rank ${card.rank}` : (card.linkval ? `Link-${card.linkval}` : "---"));
-                        const cardRace = tradRaces[card.race] || card.race;
-                        const cardAtk = card.atk !== undefined ? `ATK/ ${card.atk}` : "";
-                        const cardDef = card.def !== undefined ? `DEF/ ${card.def}` : (card.linkval ? `LINK/ ${card.linkval}` : "");
-
-                        // Novo layout em 3 linhas
-                        div.innerHTML = `
-                            <img src="${img.image_url_small}">
-                            <div class="card-info-box">
-                                <b style="color:#f1c40f; font-size: 15px;">${card.name}</b>
-                                
-                                <div class="info-row">
-                                    <span style="flex: 1; text-align: left; font-weight: bold;">${cardAttr}</span>
-                                    <span style="flex: 1; text-align: center;">${cardLv}</span>
-                                    <span style="flex: 1; text-align: right;">${cardRace}</span>
-                                </div>
-
-                                <div class="info-row atk-def-row">
-                                    <span style="flex: 1; text-align: left;">${cardAtk}</span>
-                                    <span style="flex: 1; text-align: right;">${cardDef}</span>
-                                    ${(!cardAtk && !cardDef) ? `<small style="color:#666; width: 100%; text-align: center;">Arte #${idx+1}</small>` : ''}
-                                </div>
-                            </div>`;
-                        
-                        div.onclick = () => {
-                            selectedManualCard = { id: card.id, name: card.name, imgId: img.id };
-                            document.getElementById('search-input').value = card.name;
-                            toggleAddButton(true); closeSuggestions();
-                        };
-                        listEl.appendChild(div);
-                    });
-                });
+                searchResults = data.data;
+                if (type === "Monster" && !subtype) searchResults = searchResults.filter(c => c.type.toLowerCase().includes("monster"));
+                currentPage = 1;
+                displayResults();
+                document.getElementById('suggestions-container').style.display = "block";
             } else {
-                listEl.innerHTML = `<div class="no-results"><b>Nenhuma carta encontrada</b><small>Tente mudar o nome ou ajustar os filtros.</small></div>`;
+                document.getElementById('suggestions-list').innerHTML = `<div class="no-results"><b>Nenhuma carta encontrada</b></div>`;
+                document.getElementById('result-count').innerText = "0 cartas";
             }
             document.getElementById('status').innerText = "";
         } catch (e) { document.getElementById('status').innerText = ""; }
+    }
+
+    function displayResults() {
+        const listEl = document.getElementById('suggestions-list');
+        listEl.innerHTML = "";
+        listEl.className = currentView === 'grid' ? "suggestions-list grid-mode" : "suggestions-list";
+
+        const totalItems = searchResults.length;
+        const totalPages = Math.ceil(totalItems / itemsPerPage);
+        
+        const startIdx = (currentPage - 1) * itemsPerPage;
+        const endIdx = Math.min(startIdx + itemsPerPage, totalItems);
+        
+        // Texto: "Exibindo 1-20 de 45"
+        document.getElementById('result-count').innerText = totalItems > 0 ? 
+            `Exibindo ${startIdx + 1}-${endIdx} de ${totalItems}` : "";
+            
+        document.getElementById('total-pages').innerText = `de ${totalPages || 1}`;
+        document.getElementById('current-page-input').value = currentPage;
+
+        const pageItems = searchResults.slice(startIdx, endIdx);
+
+        pageItems.forEach(card => {
+            card.card_images.forEach((img, idx) => {
+                const div = document.createElement('div');
+                div.className = 'suggestion-item';
+                
+                const cardAttr = card.attribute || (card.type.includes("Spell") ? "MAGIA" : "ARMADILHA");
+                const cardLv = card.level ? `Nível ${card.level}` : (card.rank ? `Rank ${card.rank}` : (card.linkval ? `Link-${card.linkval}` : "---"));
+                const cardRace = tradRaces[card.race] || card.race;
+                const cardAtk = card.atk !== undefined ? `ATK/ ${card.atk}` : "";
+                const cardDef = card.def !== undefined ? `DEF/ ${card.def}` : (card.linkval ? `LINK/ ${card.linkval}` : "");
+
+                div.innerHTML = `
+                    <img src="${img.image_url_small}">
+                    <div class="card-info-box">
+                        <b style="color:#f1c40f; font-size: 14px;">${card.name}</b>
+                        <div class="info-row">
+                            <span style="font-weight: bold;">${cardAttr}</span>
+                            <span>${cardLv}</span>
+                            <span>${cardRace}</span>
+                        </div>
+                        <div class="info-row atk-def-row">
+                            <span>${cardAtk}</span>
+                            <span>${cardDef}</span>
+                        </div>
+                    </div>`;
+                
+                div.onclick = () => {
+                    selectedManualCard = { id: card.id, name: card.name, imgId: img.id };
+                    document.getElementById('search-input').value = card.name;
+                    toggleAddButton(true); closeSuggestions();
+                };
+                listEl.appendChild(div);
+            });
+        });
+    }
+
+    function nextPage() { if(currentPage * itemsPerPage < searchResults.length) { currentPage++; displayResults(); } }
+    function prevPage() { if(currentPage > 1) { currentPage--; displayResults(); } }
+    function goToPage(page) {
+        const p = parseInt(page);
+        const max = Math.ceil(searchResults.length / itemsPerPage);
+        if(p >= 1 && p <= max) { currentPage = p; displayResults(); }
+        else { document.getElementById('current-page-input').value = currentPage; }
     }
 
     document.getElementById('filter-type').addEventListener('change', function() {
@@ -352,7 +385,7 @@
                 itemsEl.innerHTML += `
                     <div style="padding:5px; border-bottom:1px solid #333; display:flex; justify-content:space-between; align-items:center;">
                         <span><b>${data.qty}x</b> ${data.name}</span>
-                        <span style="color:#e74c3c; cursor:pointer; font-size:10px; font-weight:bold;" onclick="remove('${id}')">[X]</span>
+                        <span style="color:#e74c3c; cursor:pointer; font-size:10px; font-weight:bold;" onclick="remove('${id}')">[REMOVER]</span>
                     </div>`;
             });
         } else listEl.style.display = "none";
@@ -419,8 +452,7 @@
         const agora = new Date();
         const dia = String(agora.getDate()).padStart(2, '0');
         const mes = String(agora.getMonth() + 1).padStart(2, '0');
-        const ano = agora.getFullYear();
-        const dataFormatada = `${dia}-${mes}-${ano}`;
+        const dataFormatada = `${dia}-${mes}-${agora.getFullYear()}`;
         const link = document.createElement('a');
         link.href = URL.createObjectURL(currentPdfBlob);
         link.download = `Cartas_Proxies_Yu-Gi-Oh_${dataFormatada}.pdf`;
@@ -437,6 +469,10 @@
         }
         renderQueue(); generatePreview();
     });
+
+    const fields = ['filter-type', 'filter-subtype', 'filter-race', 'filter-attribute', 'filter-lv', 'filter-atk', 'filter-def'];
+    fields.forEach(id => document.getElementById(id).addEventListener('change', triggerAutoSearch));
+    document.getElementById('search-input').addEventListener('input', triggerAutoSearch);
 </script>
 </body>
 </html>
