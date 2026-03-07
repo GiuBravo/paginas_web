@@ -21,15 +21,40 @@
         .stepper button { background: #333; border: none; color: white; width: 30px; height: 100%; cursor: pointer; font-size: 18px; }
         .stepper input { width: 50px; border: none; background: transparent; color: white; text-align: center; font-size: 14px; outline: none; }
         
+        .stepper input:not(:placeholder-shown) { border-bottom: 2px solid #f1c40f; }
+
         .suggestions-container { position: absolute; top: 100%; left: 0; right: 0; background: #252525; border-radius: 0 0 8px 8px; z-index: 9999; border: 2px solid #f1c40f; border-top: none; display: none; box-shadow: 0 20px 40px rgba(0,0,0,0.8); margin-top: 2px; }
         .suggestions-header { display: flex; justify-content: space-between; align-items: center; padding: 8px 15px; background: #333; }
         .close-suggestions { background: #e74c3c; color: white; border: none; border-radius: 4px; padding: 2px 10px; cursor: pointer; font-weight: bold; font-size: 10px; }
         .suggestions-list { max-height: 450px; overflow-y: auto; }
-        .suggestion-item { padding: 12px 15px; cursor: pointer; border-bottom: 1px solid #333; display: flex; align-items: center; gap: 15px; }
-        .suggestion-item:hover { background: #3a3a3a; }
-        .suggestion-item img { height: 90px; border-radius: 3px; border: 1px solid #444; }
         
-        /* Estilo da mensagem "Nada encontrado" dentro da lista */
+        /* Layout da Sugestão Ajustado */
+        .suggestion-item { padding: 12px 15px; cursor: pointer; border-bottom: 1px solid #333; display: flex; align-items: center; gap: 20px; }
+        .suggestion-item:hover { background: #3a3a3a; }
+        .suggestion-item img { height: 100px; border-radius: 3px; border: 1px solid #444; }
+        
+        .card-info-box { 
+            flex-grow: 1; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 6px; 
+            text-align: left; 
+            max-width: 300px;
+        }
+
+        .info-row { display: flex; justify-content: space-between; font-size: 12px; color: #bbb; align-items: center; }
+        .info-row b { color: #f1c40f; }
+        
+        /* Estilo específico para a linha de ATK/DEF */
+        .atk-def-row { 
+            font-weight: bold; 
+            font-size: 13px; 
+            margin-top: 2px; 
+            border-top: 1px solid #444; 
+            padding-top: 4px; 
+            color: #fff;
+        }
+        
         .no-results { padding: 40px 20px; text-align: center; color: #888; }
         .no-results b { color: #f1c40f; display: block; margin-bottom: 5px; }
 
@@ -87,8 +112,8 @@
         <div id="monster-extras" class="row-layout" style="display: none;">
             <div class="field-group"><label>Atributo</label><select id="filter-attribute" style="width: 120px;"><option value="">Todos</option><option value="dark">Trevas</option><option value="light">Luz</option><option value="earth">Terra</option><option value="fire">Fogo</option><option value="water">Água</option><option value="wind">Vento</option><option value="divine">Divino</option></select></div>
             <div class="field-group"><label>Nível/Rank</label><select id="filter-lv" style="width: 100px;"><option value="">Todos</option></select></div>
-            <div class="field-group"><label>Ataque (ATK)</label><div class="stepper"><button onclick="adjustVal('filter-atk', -50)">-</button><input type="number" id="filter-atk" placeholder="0"><button onclick="adjustVal('filter-atk', 50)">+</button></div></div>
-            <div class="field-group"><label>Defesa (DEF)</label><div class="stepper"><button onclick="adjustVal('filter-def', -50)">-</button><input type="number" id="filter-def" placeholder="0"><button onclick="adjustVal('filter-def', 50)">+</button></div></div>
+            <div class="field-group"><label>Ataque (ATK)</label><div class="stepper"><button onclick="adjustVal('filter-atk', -50)">-</button><input type="number" id="filter-atk" placeholder="---"><button onclick="adjustVal('filter-atk', 50)">+</button></div></div>
+            <div class="field-group"><label>Defesa (DEF)</label><div class="stepper"><button onclick="adjustVal('filter-def', -50)">-</button><input type="number" id="filter-def" placeholder="---"><button onclick="adjustVal('filter-def', 50)">+</button></div></div>
         </div>
 
         <div class="row-layout" style="border-top: 1px solid #444; padding-top: 20px; margin-bottom: 0;">
@@ -111,7 +136,7 @@
                     <button onclick="document.getElementById('search-qty').stepUp()">+</button>
                 </div>
             </div>
-            <button class="btn-add" id="btn-manual-add" style="flex: 0.5;">Adicionar</button>
+            <button class="btn-add" id="btn-manual-add" style="flex: 0.5;">Selecione a carta</button>
         </div>
     </div>
 
@@ -149,7 +174,14 @@
 
     function adjustVal(id, amount) { 
         const el = document.getElementById(id); 
-        el.value = Math.max(0, (parseInt(el.value) || 0) + amount);
+        let currentVal = el.value;
+        if (currentVal === "") {
+            if (amount > 0) el.value = 0;
+        } else {
+            let newVal = parseInt(currentVal) + amount;
+            if (newVal < 0) el.value = "";
+            else el.value = newVal;
+        }
         triggerAutoSearch(); 
     }
     
@@ -162,8 +194,13 @@
     
     function toggleAddButton(active) {
         const btn = document.getElementById('btn-manual-add');
-        if(active) btn.classList.add('active');
-        else btn.classList.remove('active');
+        if(active) {
+            btn.classList.add('active');
+            btn.innerText = "Adicionar"; // Texto quando uma carta é selecionada
+        } else {
+            btn.classList.remove('active');
+            btn.innerText = "Selecione a carta"; // Texto quando está desabilitado
+        }
     }
 
     function resetFilters() {
@@ -181,18 +218,15 @@
         document.getElementById('status').innerText = "";
     }
 
-    // DISPARO DA BUSCA
     function triggerAutoSearch() {
         clearTimeout(searchTimeout);
         searchTimeout = setTimeout(performSearch, 500);
     }
 
-    // OUVINTES PARA TODOS OS CAMPOS
     const fields = ['filter-type', 'filter-subtype', 'filter-race', 'filter-attribute', 'filter-lv', 'filter-atk', 'filter-def'];
     fields.forEach(id => document.getElementById(id).addEventListener('change', triggerAutoSearch));
     document.getElementById('search-input').addEventListener('input', triggerAutoSearch);
 
-    // BUSCA PRINCIPAL
     async function performSearch() {
         const query = document.getElementById('search-input').value.trim();
         const type = document.getElementById('filter-type').value;
@@ -203,26 +237,23 @@
         const atk = document.getElementById('filter-atk').value;
         const def = document.getElementById('filter-def').value;
 
-        // Se o input estiver vazio e não houver filtros, fecha as sugestões
-        if (query.length === 0 && !type && !atk && !def) { closeSuggestions(); return; }
+        if (query.length === 0 && !type && atk === "" && def === "") { closeSuggestions(); return; }
 
         try {
             document.getElementById('status').innerText = "Buscando...";
             let params = new URLSearchParams();
             params.append('language', 'pt');
             if (query.length > 0) params.append('fname', query);
-
             if (type) {
                 if (type === "Monster") { if (subtype) params.append('type', subtype); } 
                 else { params.append('type', type); }
             }
-
-            if (type === "Monster" || (!type && (atk > 0 || def > 0))) {
+            if (type === "Monster" || (!type && (atk !== "" || def !== ""))) {
                 if (race) params.append('race', race);
                 if (attr) params.append('attribute', attr);
                 if (lv) params.append('level', lv);
-                if (parseInt(atk) > 0) params.append('atk', atk);
-                if (parseInt(def) > 0) params.append('def', def);
+                if (atk !== "") params.append('atk', atk);
+                if (def !== "") params.append('def', def);
             } else if (race) { params.append('race', race); }
 
             const res = await fetch(`https://db.ygoprodeck.com/api/v7/cardinfo.php?${params.toString()}`);
@@ -240,7 +271,33 @@
                     card.card_images.forEach((img, idx) => {
                         const div = document.createElement('div');
                         div.className = 'suggestion-item';
-                        div.innerHTML = `<img src="${img.image_url_small}"><div><b style="color:#f1c40f">${card.name}</b><br><small style="color:#bbb">${tradSubtypes[card.type] || card.type} | Arte #${idx+1}</small></div>`;
+                        
+                        // Formatação dos dados
+                        const cardAttr = card.attribute || (card.type.includes("Spell") ? "MAGIA" : "ARMADILHA");
+                        const cardLv = card.level ? `Nível ${card.level}` : (card.rank ? `Rank ${card.rank}` : (card.linkval ? `Link-${card.linkval}` : "---"));
+                        const cardRace = tradRaces[card.race] || card.race;
+                        const cardAtk = card.atk !== undefined ? `ATK/ ${card.atk}` : "";
+                        const cardDef = card.def !== undefined ? `DEF/ ${card.def}` : (card.linkval ? `LINK/ ${card.linkval}` : "");
+
+                        // Novo layout em 3 linhas
+                        div.innerHTML = `
+                            <img src="${img.image_url_small}">
+                            <div class="card-info-box">
+                                <b style="color:#f1c40f; font-size: 15px;">${card.name}</b>
+                                
+                                <div class="info-row">
+                                    <span style="flex: 1; text-align: left; font-weight: bold;">${cardAttr}</span>
+                                    <span style="flex: 1; text-align: center;">${cardLv}</span>
+                                    <span style="flex: 1; text-align: right;">${cardRace}</span>
+                                </div>
+
+                                <div class="info-row atk-def-row">
+                                    <span style="flex: 1; text-align: left;">${cardAtk}</span>
+                                    <span style="flex: 1; text-align: right;">${cardDef}</span>
+                                    ${(!cardAtk && !cardDef) ? `<small style="color:#666; width: 100%; text-align: center;">Arte #${idx+1}</small>` : ''}
+                                </div>
+                            </div>`;
+                        
                         div.onclick = () => {
                             selectedManualCard = { id: card.id, name: card.name, imgId: img.id };
                             document.getElementById('search-input').value = card.name;
@@ -250,18 +307,12 @@
                     });
                 });
             } else {
-                // EXIBE MENSAGEM DENTRO DA LISTA
-                listEl.innerHTML = `
-                    <div class="no-results">
-                        <b>Nenhuma carta encontrada</b>
-                        <small>Tente mudar o nome ou ajustar os filtros.</small>
-                    </div>`;
+                listEl.innerHTML = `<div class="no-results"><b>Nenhuma carta encontrada</b><small>Tente mudar o nome ou ajustar os filtros.</small></div>`;
             }
             document.getElementById('status').innerText = "";
         } catch (e) { document.getElementById('status').innerText = ""; }
     }
 
-    // LOGICA DE INTERFACE (TIPO DE CARTA)
     document.getElementById('filter-type').addEventListener('change', function() {
         const val = this.value;
         const groupSub = document.getElementById('group-subtype'); const groupRc = document.getElementById('group-race');
@@ -334,11 +385,9 @@
         for (let i = 0; i < cardQueue.length; i++) {
             if (i % 8 === 0 && i > 0) doc.addPage();
             if (i % 8 === 0) {
-                // Título da página
                 doc.setFillColor(30, 30, 30); doc.rect(0, 0, 297, 210, 'F');
                 doc.setFontSize(16); doc.setTextColor(255);
                 doc.text("Imprimir no tamanho real", 148.5, 7, { align: "center" });
-                // Numeração de página
                 doc.setFontSize(12);
                 doc.text(`Página ${Math.floor(i / 8) + 1} de ${totalPages}`, 270, 200, { align: "right" });
             }
@@ -367,13 +416,11 @@
 
     document.getElementById('btn-download').onclick = () => {
         if (!currentPdfBlob) return;
-        
         const agora = new Date();
         const dia = String(agora.getDate()).padStart(2, '0');
         const mes = String(agora.getMonth() + 1).padStart(2, '0');
         const ano = agora.getFullYear();
         const dataFormatada = `${dia}-${mes}-${ano}`;
-
         const link = document.createElement('a');
         link.href = URL.createObjectURL(currentPdfBlob);
         link.download = `Cartas_Proxies_Yu-Gi-Oh_${dataFormatada}.pdf`;
