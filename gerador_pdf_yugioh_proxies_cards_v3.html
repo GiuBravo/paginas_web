@@ -2,7 +2,7 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>YGO Proxy Studio Pro - Workspace</title>
+    <title>YGO Proxy Studio Pro - Workspace V3.1</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         :root {
@@ -118,7 +118,6 @@
         .info-row { display: flex; justify-content: space-between; font-size: 11px; color: #999; }
         .atk-def-row { font-weight: bold; font-size: 11px; border-top: 1px solid #222; margin-top: 5px; padding-top: 5px; color: #fff; }
 
-        /* ALTURA DA LISTA AMPLIADA / PREVIEW DIMINUÍDO */
         .deck-list { height: 350px; overflow-y: auto; padding: 10px; background: #080808; border-bottom: 1px solid var(--border); }
         
         .pdf-preview-container { flex-grow: 1; background: #222; position: relative; overflow: hidden; }
@@ -214,6 +213,7 @@
     let cardQueue = [], searchResults = [], currentPage = 1, currentView = 'list';
     let isGenerating = false;
 
+    // Configurações de paginação adaptativa conforme solicitado nas correções
     function getItemsPerPage() {
         const isQueueEmpty = cardQueue.length === 0;
         if (currentView === 'list') { return isQueueEmpty ? 25 : 15; }
@@ -223,7 +223,6 @@
     const trad = { "DARK": "TREVAS", "LIGHT": "LUZ", "EARTH": "TERRA", "FIRE": "FOGO", "WATER": "ÁGUA", "WIND": "VENTO", "DIVINE": "DIVINO" };
     for(let i=0; i<=13; i++) document.getElementById('filter-lv').innerHTML += `<option value="${i}">${i}</option>`;
 
-    // CARREGAMENTO INICIAL
     window.onload = () => { performSearch(true); };
 
     function changeView(view) {
@@ -276,34 +275,24 @@
         const sub = document.getElementById('filter-subtype').value;
         const atk = document.getElementById('filter-atk').value;
         const def = document.getElementById('filter-def').value;
-        
-        // Se for carregamento inicial, não bloqueia por falta de input
         if(!initial && q.length < 2 && !type && !atk && !def) return;
-
         let p = new URLSearchParams({ language: 'pt' });
         if(q) p.append('fname', q);
-        
         if(type) {
             if(type === "Monster" && sub) p.append('type', sub);
             else if(type !== "Monster") p.append('type', type);
         }
-        
         const race = document.getElementById('filter-race').value;
         if(race) p.append('race', race);
         if(atk) p.append('atk', atk);
         if(def) p.append('def', def);
         if(document.getElementById('filter-lv').value) p.append('level', document.getElementById('filter-lv').value);
         if(document.getElementById('filter-attribute').value) p.append('attribute', document.getElementById('filter-attribute').value);
-
         try {
             const res = await fetch(`https://db.ygoprodeck.com/api/v7/cardinfo.php?${p.toString()}`);
             const data = await res.json();
             let rawData = data.data || [];
-            
-            if(type === "Monster" && !sub) {
-                rawData = rawData.filter(c => c.type.toLowerCase().includes("monster"));
-            }
-
+            if(type === "Monster" && !sub) rawData = rawData.filter(c => c.type.toLowerCase().includes("monster"));
             searchResults = rawData;
             currentPage = 1;
             renderResults();
@@ -314,16 +303,13 @@
         const container = document.getElementById('results-view');
         container.innerHTML = "";
         container.className = `results-view ${currentView}-mode`;
-
-        const itemsPerPage = getItemsPerPage();
-        const start = (currentPage - 1) * itemsPerPage;
-        const pageItems = searchResults.slice(start, start + itemsPerPage);
-        const totalPages = Math.ceil(searchResults.length / itemsPerPage) || 1;
-        
-        document.getElementById('result-info').innerText = `Exibindo ${start + 1}-${Math.min(start + itemsPerPage, searchResults.length)} de ${searchResults.length}`;
+        const items = getItemsPerPage();
+        const start = (currentPage - 1) * items;
+        const pageItems = searchResults.slice(start, start + items);
+        const totalPages = Math.ceil(searchResults.length / items) || 1;
+        document.getElementById('result-info').innerText = `Exibindo ${start + 1}-${Math.min(start + items, searchResults.length)} de ${searchResults.length}`;
         document.getElementById('page-total').innerText = `/ ${totalPages}`;
         document.getElementById('page-jump').value = currentPage;
-
         pageItems.forEach(card => {
             const div = document.createElement('div');
             div.className = 'suggestion-item';
@@ -342,10 +328,8 @@
     function updateUI() {
         const list = document.getElementById('deck-items');
         const layout = document.getElementById('app-layout');
-        
         if(cardQueue.length === 0) layout.classList.add('empty-queue');
         else layout.classList.remove('empty-queue');
-
         list.innerHTML = "";
         const counts = {};
         cardQueue.forEach(c => counts[c.imgId] = (counts[c.imgId] || 0) + 1);
@@ -359,27 +343,71 @@
 
     function triggerPDFUpdate() { if(isGenerating || cardQueue.length === 0) return; generatePDF(); }
 
+    // --- LÓGICA DE PDF DA VERSÃO 2 ---
     async function generatePDF() {
         if(isGenerating) return;
         isGenerating = true;
         document.getElementById('import-overlay').style.display = 'flex';
+        
         const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
         const scale = parseFloat(document.getElementById('print-scale').value) / 100;
-        const w = 59 * scale, h = 86 * scale, gap = 5;
+        
+        // Medidas reais Yu-Gi-Oh: 59x86mm
+        const w = 59 * scale, h = 86 * scale, gap = 6;
+        const mx = (297 - (4 * w + 3 * gap)) / 2;
+        const my = (210 - (2 * h + 1 * gap)) / 2;
+        const totalPages = Math.ceil(cardQueue.length / 8);
+
         for(let i=0; i<cardQueue.length; i++) {
-            if(i > 0 && i % 8 === 0) doc.addPage();
-            const pos = i % 8;
-            const x = 15 + (pos % 4) * (w + gap);
-            const y = 20 + Math.floor(pos / 4) * (h + gap);
+            if (i % 8 === 0 && i > 0) doc.addPage();
+            
+            if (i % 8 === 0) {
+                // Fundo Escuro (Igual v2)
+                doc.setFillColor(30, 30, 30); 
+                doc.rect(0, 0, 297, 210, 'F');
+                
+                // Título Centralizado
+                doc.setFontSize(16); doc.setTextColor(255);
+                doc.text("Imprimir no tamanho real", 148.5, 7, { align: "center" });
+                
+                // Numeração de Página
+                doc.setFontSize(12);
+                doc.text(`Página ${Math.floor(i / 8) + 1} de ${totalPages}`, 270, 200, { align: "right" });
+            }
+
+            const pos = i % 8; 
+            const col = pos % 4; 
+            const row = Math.floor(pos / 4);
+            const x = mx + (col * (w + gap)); 
+            const y = my + (row * (h + gap));
+
             document.getElementById('progress-bar').style.width = Math.round(((i + 1) / cardQueue.length) * 100) + '%';
+            
             try {
-                const imgUrl = `https://images.weserv.nl/?url=images.ygoprodeck.com/images/cards/${cardQueue[i].imgId}.jpg&w=400&q=90`;
+                const imgUrl = `https://images.weserv.nl/?url=images.ygoprodeck.com/images/cards/${cardQueue[i].imgId}.jpg&q=100`;
                 const resp = await fetch(imgUrl);
                 const blob = await resp.blob();
-                const b64 = await new Promise(r => { const reader = new FileReader(); reader.onloadend = () => r(reader.result); reader.readAsDataURL(blob); });
+                const b64 = await new Promise(r => { const rd = new FileReader(); rd.onloadend = () => r(rd.result); rd.readAsDataURL(blob); });
+                
                 doc.addImage(b64, 'JPEG', x, y, w, h);
-            } catch(e) {}
+
+                // Marcas de Corte (Cruzes nos cantos)
+                doc.setDrawColor(255); 
+                doc.setLineWidth(0.4);
+                const offset = 2; const len = 5;
+                
+                // Canto Superior Esquerdo
+                doc.line(x-offset, y, x-offset-len, y); doc.line(x, y-offset, x, y-offset-len);
+                // Canto Superior Direito
+                doc.line(x+w+offset, y, x+w+offset+len, y); doc.line(x+w, y-offset, x+w, y-offset-len);
+                // Canto Inferior Esquerdo
+                doc.line(x-offset, y+h, x-offset-len, y+h); doc.line(x, y+h+offset, x, y+h+offset+len);
+                // Canto Inferior Direito
+                doc.line(x+w+offset, y+h, x+w+offset+len, y+h); doc.line(x+w, y+h+offset, x+w, y+h+offset+len);
+                
+            } catch(e) { console.error("Erro ao carregar imagem", e); }
         }
+        
         window.currentPdf = doc.output('blob');
         document.getElementById('preview-frame').src = URL.createObjectURL(window.currentPdf);
         document.getElementById('import-overlay').style.display = 'none';
@@ -387,7 +415,7 @@
     }
 
     window.removeItem = (id) => { cardQueue = cardQueue.filter(c => c.imgId != id); updateUI(); renderResults(); };
-    window.clearQueue = () => { cardQueue = []; updateUI(); renderResults(); };
+    window.clearQueue = () => { if(confirm("Limpar tudo?")) { cardQueue = []; updateUI(); renderResults(); } };
     window.changePage = (dir) => { 
         const max = Math.ceil(searchResults.length/getItemsPerPage());
         if((currentPage + dir) > 0 && (currentPage + dir) <= max) { currentPage += dir; renderResults(); }
@@ -397,7 +425,18 @@
         currentPage = Math.max(1, Math.min(max, parseInt(val) || 1));
         renderResults(); 
     };
-    window.downloadPDF = () => { if(window.currentPdf) { const a = document.createElement('a'); a.href = URL.createObjectURL(window.currentPdf); a.download = `Proxies.pdf`; a.click(); } };
+    window.downloadPDF = () => { 
+        if(window.currentPdf) { 
+            const agora = new Date();
+            const dia = String(agora.getDate()).padStart(2, '0');
+            const mes = String(agora.getMonth() + 1).padStart(2, '0');
+            const dataF = `${dia}-${mes}-${agora.getFullYear()}`;
+            const a = document.createElement('a'); 
+            a.href = URL.createObjectURL(window.currentPdf); 
+            a.download = `Cartas_Proxies_Yu-Gi-Oh!_${dataF}.pdf`; 
+            a.click(); 
+        } 
+    };
     
     window.importYDK = async (input) => {
         const file = input.files[0]; if(!file) return;
