@@ -2,7 +2,8 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>YGO Proxy Studio Pro - Workspace V3.1</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YGO Proxy Studio Pro - Workspace V3.7</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         :root {
@@ -22,9 +23,7 @@
             overflow: hidden; 
         }
 
-        input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-        input[type=number] { -moz-appearance: textfield; }
-
+        /* --- ESTRUTURA BASE (DESKTOP) --- */
         .app-container {
             display: grid;
             grid-template-columns: 300px 1fr 450px;
@@ -34,10 +33,7 @@
             transition: grid-template-columns 0.3s ease;
         }
 
-        .app-container.empty-queue {
-            grid-template-columns: 300px 1fr 0px;
-        }
-
+        .app-container.empty-queue { grid-template-columns: 300px 1fr 0px; }
         .col { background: var(--bg-dark); display: flex; flex-direction: column; overflow: hidden; }
         
         .col-header { 
@@ -57,9 +53,22 @@
         .filter-group { margin-bottom: 12px; display: flex; flex-direction: column; gap: 4px; }
         .filter-group label { font-size: 10px; color: #888; text-transform: uppercase; font-weight: bold; }
         
-        select, input { 
-            background: #111; border: 1px solid #444; color: white; 
-            padding: 8px; border-radius: 4px; font-size: 13px; width: 100%; box-sizing: border-box;
+        select, input { background: #111; border: 1px solid #444; color: white; padding: 8px; border-radius: 4px; font-size: 13px; width: 100%; box-sizing: border-box; }
+        
+        .btn-secondary { 
+            display: block; 
+            background: #333; 
+            color: white; 
+            width: 100%; 
+            padding: 10px; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            text-align: center; 
+            border: 1px solid #444; 
+            font-size: 11px; 
+            font-weight: bold;
+            box-sizing: border-box;
+            text-transform: uppercase;
         }
 
         .stepper { display: flex; border: 1px solid #444; border-radius: 4px; overflow: hidden; height: 35px; background: #111; }
@@ -74,74 +83,61 @@
 
         .results-view { flex-grow: 1; overflow-y: auto; }
 
-        .list-mode { 
-            display: grid; 
-            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); 
-            gap: 1px; 
-            background: #222; 
-        }
+        .suggestion-item { display: flex; gap: 12px; padding: 15px 10px; background: var(--bg-dark); align-items: flex-start; cursor: pointer; border-bottom: 1px solid #222; }
+        .suggestion-item img { height: 110px; border-radius: 4px; border: 1px solid #444; flex-shrink: 0; box-shadow: 0 4px 8px rgba(0,0,0,0.6); }
 
-        .list-mode .suggestion-item { 
-            display: flex; 
-            gap: 12px; 
-            padding: 15px 10px; 
-            background: var(--bg-dark); 
-            align-items: flex-start; 
-            cursor: pointer; 
-        }
-        .list-mode .suggestion-item:hover { background: #151515; }
-        .list-mode .suggestion-item img { 
-            height: 110px; 
-            border-radius: 4px; 
-            border: 1px solid #444; 
-            flex-shrink: 0;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.6);
-        }
-
-        .grid-mode { 
-            display: grid; 
-            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); 
-            gap: 15px; 
-            padding: 15px;
-            background: var(--bg-dark);
-        }
-        .grid-mode .suggestion-item { display: block; cursor: pointer; text-align: center; }
-        .grid-mode .suggestion-item img { 
-            width: 100%; height: auto; border-radius: 5px; border: 1px solid #444;
-            transition: transform 0.2s;
-        }
-        .grid-mode .suggestion-item:hover img { transform: scale(1.05); border-color: var(--accent); }
-        .grid-mode .card-info-box { display: none; }
-
-        .card-info-box { flex-grow: 1; display: flex; flex-direction: column; gap: 5px; text-align: left; overflow: hidden; }
-        .card-name { color: var(--accent); font-size: 13px; font-weight: bold; margin-bottom: 4px; }
+        .card-info-box { flex-grow: 1; display: flex; flex-direction: column; gap: 5px; text-align: left; }
+        .card-name { color: var(--accent); font-size: 13px; font-weight: bold; }
         .info-row { display: flex; justify-content: space-between; font-size: 11px; color: #999; }
         .atk-def-row { font-weight: bold; font-size: 11px; border-top: 1px solid #222; margin-top: 5px; padding-top: 5px; color: #fff; }
 
         .deck-list { height: 350px; overflow-y: auto; padding: 10px; background: #080808; border-bottom: 1px solid var(--border); }
-        
-        .pdf-preview-container { flex-grow: 1; background: #222; position: relative; overflow: hidden; }
+        .pdf-preview-container { flex-grow: 1; background: #222; position: relative; overflow: hidden; min-height: 300px; }
         #preview-frame { width: 100%; height: 100%; border: none; }
-
         .btn-accent { background: var(--accent); color: black; width: 100%; padding: 12px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; text-transform: uppercase; }
-        .btn-secondary { background: #333; color: white; width: 100%; padding: 8px; border: 1px solid #444; border-radius: 4px; cursor: pointer; font-size: 11px; text-transform: uppercase; box-sizing: border-box; }
-        
-        .pagination-bar { padding: 8px; background: var(--panel-bg); display: flex; justify-content: center; gap: 10px; align-items: center; }
-        .page-input { width: 50px; text-align: center; padding: 4px; background: #000; border: 1px solid #444; color: var(--accent); font-weight: bold; }
 
-        #import-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(12, 12, 12, 0.9); display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 10; }
-        .progress-container { width: 80%; background: #333; height: 6px; border-radius: 10px; margin-top: 15px; overflow: hidden; }
-        #progress-bar { width: 0%; height: 100%; background: var(--accent); transition: width 0.1s; }
+        .pagination-bar { padding: 8px; background: var(--panel-bg); display: flex; justify-content: center; gap: 10px; align-items: center; border-top: 1px solid var(--border); }
+        .page-input { width: 50px; text-align: center; background: #000; border: 1px solid #444; color: var(--accent); }
+
+        /* --- EXCLUSIVO DESKTOP --- */
+        @media (min-width: 901px) {
+            .list-mode { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1px; background: #222; }
+            .grid-mode { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 15px; padding: 15px; }
+            .grid-mode .card-info-box { display: none; }
+            .grid-mode .suggestion-item { display: block; text-align: center; }
+            .grid-mode .suggestion-item img { width: 100%; height: auto; }
+        }
+
+        /* --- BLOCO MOBILE (V3.7) --- */
+        @media (max-width: 900px) {
+            body { overflow-y: auto !important; height: auto !important; }
+            .app-container, .app-container.empty-queue { 
+                display: block !important; 
+                height: auto !important; 
+            }
+            .col { 
+                width: 100% !important; 
+                height: auto !important; 
+                overflow: visible !important;
+                border-bottom: 2px solid var(--border); 
+            }
+            .results-view { 
+                height: 550px; 
+                overflow-y: auto;
+            }
+            /* OCULTA O PREVIEW DO PDF NO MOBILE */
+            .pdf-preview-container { display: none !important; }
+            
+            #col-preview { margin-top: 20px; }
+            .deck-list { height: 250px; }
+        }
     </style>
 </head>
 <body>
 
 <div class="app-container empty-queue" id="app-layout">
     <div class="col">
-        <div class="col-header">
-            <span>Filtros</span>
-            <button class="btn-view" onclick="resetFilters()">Resetar</button>
-        </div>
+        <div class="col-header"><span>Filtros</span><button class="btn-view" onclick="resetFilters()">Resetar</button></div>
         <div class="sidebar-content">
             <div class="filter-group"><label>Tipo de Carta</label>
                 <select id="filter-type">
@@ -155,13 +151,13 @@
             <div id="group-race" class="filter-group" style="display:none"><label>Raça/Tipo</label><select id="filter-race"></select></div>
             <div id="monster-extras" style="display:none">
                 <div class="filter-group"><label>Atributo</label><select id="filter-attribute"><option value="">Todos</option><option value="dark">Trevas</option><option value="light">Luz</option><option value="earth">Terra</option><option value="fire">Fogo</option><option value="water">Água</option><option value="wind">Vento</option><option value="divine">Divino</option></select></div>
-                <div class="filter-group"><label>Nível/Rank</label><select id="filter-lv"><option value="">Todos</option></select></div>
+                <div class="filter-group"><label>Nível</label><select id="filter-lv"><option value="">Todos</option></select></div>
                 <div class="filter-group"><label>ATK</label><div class="stepper"><button onclick="adjustVal('filter-atk', -50)">-</button><input type="number" id="filter-atk" placeholder="---"><button onclick="adjustVal('filter-atk', 50)">+</button></div></div>
                 <div class="filter-group"><label>DEF</label><div class="stepper"><button onclick="adjustVal('filter-def', -50)">-</button><input type="number" id="filter-def" placeholder="---"><button onclick="adjustVal('filter-def', 50)">+</button></div></div>
             </div>
             <div class="filter-group" style="margin-top:20px;"><label>Escala do PDF (%)</label><div class="stepper"><button onclick="adjustScale(-0.1)">-</button><input type="number" id="print-scale" value="100.0" readonly><button onclick="adjustScale(0.1)">+</button></div></div>
             <hr style="border:0; border-top:1px solid #333; margin: 20px 0;">
-            <label class="btn-secondary" style="display: block; text-align: center; cursor: pointer; width: 100%;">IMPORTAR .YDK<input type="file" id="file-ydk" accept=".ydk" style="display:none" onchange="importYDK(this)"></label>
+            <label class="btn-secondary">IMPORTAR .YDK<input type="file" id="file-ydk" accept=".ydk" style="display:none" onchange="importYDK(this)"></label>
         </div>
     </div>
 
@@ -177,7 +173,7 @@
             </div>
         </div>
         <div class="view-controls">
-            <span id="result-info" style="font-size: 11px; color: #888;">Carregando banco de dados...</span>
+            <span id="result-info" style="font-size: 11px; color: #888;">Carregando...</span>
             <div style="display: flex; gap: 5px;">
                 <button id="btn-list" class="btn-view active" onclick="changeView('list')">LISTA</button>
                 <button id="btn-grid" class="btn-view" onclick="changeView('grid')">GRADE</button>
@@ -195,13 +191,10 @@
     </div>
 
     <div class="col" id="col-preview">
-        <div class="col-header">
-            <span>Fila de Impressão (<span id="count-total">0</span>)</span>
-            <button class="btn-view" onclick="clearQueue()" style="font-size: 9px;">Limpar</button>
-        </div>
+        <div class="col-header"><span>Fila (<span id="count-total">0</span>)</span><button class="btn-view" onclick="clearQueue()" style="font-size: 9px;">Limpar</button></div>
         <div class="deck-list" id="deck-items"></div>
         <div class="pdf-preview-container">
-            <div id="import-overlay"><span style="font-size: 11px; color: var(--accent); font-weight: bold;">GERANDO PDF...</span><div class="progress-container"><div id="progress-bar"></div></div></div>
+            <div id="import-overlay" style="position: absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); display:none; flex-direction:column; justify-content:center; align-items:center; z-index:10;"><span style="color:var(--accent); font-size:11px;">GERANDO PDF...</span><div style="width:80%; height:4px; background:#333; margin-top:10px;"><div id="progress-bar" style="width:0; height:100%; background:var(--accent);"></div></div></div>
             <iframe id="preview-frame"></iframe>
         </div>
         <div style="padding: 10px; background: #111;"><button class="btn-accent" onclick="downloadPDF()">BAIXAR PDF HQ</button></div>
@@ -213,11 +206,10 @@
     let cardQueue = [], searchResults = [], currentPage = 1, currentView = 'list';
     let isGenerating = false;
 
-    // Configurações de paginação adaptativa conforme solicitado nas correções
     function getItemsPerPage() {
+        if (window.innerWidth < 900) return 15;
         const isQueueEmpty = cardQueue.length === 0;
-        if (currentView === 'list') { return isQueueEmpty ? 25 : 15; }
-        else { return isQueueEmpty ? 33 : 21; }
+        return currentView === 'list' ? (isQueueEmpty ? 25 : 15) : (isQueueEmpty ? 44 : 21);
     }
 
     const trad = { "DARK": "TREVAS", "LIGHT": "LUZ", "EARTH": "TERRA", "FIRE": "FOGO", "WATER": "ÁGUA", "WIND": "VENTO", "DIVINE": "DIVINO" };
@@ -229,21 +221,18 @@
         currentView = view;
         document.getElementById('btn-list').classList.toggle('active', view === 'list');
         document.getElementById('btn-grid').classList.toggle('active', view === 'grid');
-        currentPage = 1;
-        renderResults();
+        currentPage = 1; renderResults();
     }
 
     function adjustVal(id, amount) {
         const el = document.getElementById(id);
         let val = (parseInt(el.value) || 0) + amount;
-        el.value = val < 0 ? "" : val;
-        triggerSearch();
+        el.value = val < 0 ? "" : val; triggerSearch();
     }
 
     function adjustScale(amount) {
         const el = document.getElementById('print-scale');
-        el.value = (parseFloat(el.value) + amount).toFixed(1);
-        triggerPDFUpdate();
+        el.value = (parseFloat(el.value) + amount).toFixed(1); triggerPDFUpdate();
     }
 
     document.getElementById('filter-type').onchange = function() {
@@ -264,10 +253,7 @@
     const inputFields = ['search-input', 'filter-subtype', 'filter-race', 'filter-attribute', 'filter-lv', 'filter-atk', 'filter-def'];
     inputFields.forEach(id => document.getElementById(id).addEventListener('input', triggerSearch));
 
-    function triggerSearch() {
-        clearTimeout(window.sTimeout);
-        window.sTimeout = setTimeout(performSearch, 500);
-    }
+    function triggerSearch() { clearTimeout(window.sTimeout); window.sTimeout = setTimeout(performSearch, 500); }
 
     async function performSearch(initial = false) {
         const q = document.getElementById('search-input').value;
@@ -278,14 +264,9 @@
         if(!initial && q.length < 2 && !type && !atk && !def) return;
         let p = new URLSearchParams({ language: 'pt' });
         if(q) p.append('fname', q);
-        if(type) {
-            if(type === "Monster" && sub) p.append('type', sub);
-            else if(type !== "Monster") p.append('type', type);
-        }
-        const race = document.getElementById('filter-race').value;
-        if(race) p.append('race', race);
-        if(atk) p.append('atk', atk);
-        if(def) p.append('def', def);
+        if(type) { if(type === "Monster" && sub) p.append('type', sub); else if(type !== "Monster") p.append('type', type); }
+        const race = document.getElementById('filter-race').value; if(race) p.append('race', race);
+        if(atk) p.append('atk', atk); if(def) p.append('def', def);
         if(document.getElementById('filter-lv').value) p.append('level', document.getElementById('filter-lv').value);
         if(document.getElementById('filter-attribute').value) p.append('attribute', document.getElementById('filter-attribute').value);
         try {
@@ -293,15 +274,12 @@
             const data = await res.json();
             let rawData = data.data || [];
             if(type === "Monster" && !sub) rawData = rawData.filter(c => c.type.toLowerCase().includes("monster"));
-            searchResults = rawData;
-            currentPage = 1;
-            renderResults();
+            searchResults = rawData; currentPage = 1; renderResults();
         } catch(e) { searchResults = []; renderResults(); }
     }
 
     function renderResults() {
-        const container = document.getElementById('results-view');
-        container.innerHTML = "";
+        const container = document.getElementById('results-view'); container.innerHTML = "";
         container.className = `results-view ${currentView}-mode`;
         const items = getItemsPerPage();
         const start = (currentPage - 1) * items;
@@ -311,15 +289,13 @@
         document.getElementById('page-total').innerText = `/ ${totalPages}`;
         document.getElementById('page-jump').value = currentPage;
         pageItems.forEach(card => {
-            const div = document.createElement('div');
-            div.className = 'suggestion-item';
+            const div = document.createElement('div'); div.className = 'suggestion-item';
             const attrTrad = trad[card.attribute] || (card.type.includes("Spell") ? "MAGIA" : "ARMADILHA");
             div.innerHTML = `<img src="${card.card_images[0].image_url_small}"><div class="card-info-box"><b class="card-name">${card.name}</b><div class="info-row"><span style="color:#eee">${attrTrad}</span><span>${card.level ? 'LV '+card.level : ''}</span></div><div class="info-row" style="color:var(--accent)"><span>${card.race}</span></div>${card.atk !== undefined ? `<div class="info-row atk-def-row"><span>ATK/ ${card.atk}</span><span>DEF/ ${card.def}</span></div>` : ''}</div>`;
             div.onclick = () => {
                 const qty = parseInt(document.getElementById('search-qty').value);
                 for(let i=0; i<qty; i++) cardQueue.push({ id: card.id, name: card.name, imgId: card.card_images[0].id });
-                updateUI();
-                renderResults(); 
+                updateUI(); renderResults(); 
             };
             container.appendChild(div);
         });
@@ -328,8 +304,7 @@
     function updateUI() {
         const list = document.getElementById('deck-items');
         const layout = document.getElementById('app-layout');
-        if(cardQueue.length === 0) layout.classList.add('empty-queue');
-        else layout.classList.remove('empty-queue');
+        if(cardQueue.length === 0) layout.classList.add('empty-queue'); else layout.classList.remove('empty-queue');
         list.innerHTML = "";
         const counts = {};
         cardQueue.forEach(c => counts[c.imgId] = (counts[c.imgId] || 0) + 1);
@@ -337,81 +312,45 @@
             const c = cardQueue.find(x => x.imgId == id);
             list.innerHTML += `<div style="padding:8px; border-bottom:1px solid #222; font-size:11px; display:flex; justify-content:space-between; align-items:center;"><span><b>${counts[id]}x</b> ${c.name}</span><span style="color:red; cursor:pointer; font-weight:bold;" onclick="removeItem('${id}')">✖</span></div>`;
         });
-        document.getElementById('count-total').innerText = cardQueue.length;
-        triggerPDFUpdate();
+        document.getElementById('count-total').innerText = cardQueue.length; triggerPDFUpdate();
     }
 
     function triggerPDFUpdate() { if(isGenerating || cardQueue.length === 0) return; generatePDF(); }
 
-    // --- LÓGICA DE PDF DA VERSÃO 2 ---
     async function generatePDF() {
-        if(isGenerating) return;
-        isGenerating = true;
+        if(isGenerating) return; isGenerating = true;
         document.getElementById('import-overlay').style.display = 'flex';
-        
         const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
         const scale = parseFloat(document.getElementById('print-scale').value) / 100;
-        
-        // Medidas reais Yu-Gi-Oh: 59x86mm
         const w = 59 * scale, h = 86 * scale, gap = 6;
-        const mx = (297 - (4 * w + 3 * gap)) / 2;
-        const my = (210 - (2 * h + 1 * gap)) / 2;
+        const mx = (297 - (4 * w + 3 * gap)) / 2; const my = (210 - (2 * h + 1 * gap)) / 2;
         const totalPages = Math.ceil(cardQueue.length / 8);
-
+        
         for(let i=0; i<cardQueue.length; i++) {
             if (i % 8 === 0 && i > 0) doc.addPage();
-            
             if (i % 8 === 0) {
-                // Fundo Escuro (Igual v2)
-                doc.setFillColor(30, 30, 30); 
-                doc.rect(0, 0, 297, 210, 'F');
-                
-                // Título Centralizado
-                doc.setFontSize(16); doc.setTextColor(255);
-                doc.text("Imprimir no tamanho real", 148.5, 7, { align: "center" });
-                
-                // Numeração de Página
-                doc.setFontSize(12);
-                doc.text(`Página ${Math.floor(i / 8) + 1} de ${totalPages}`, 270, 200, { align: "right" });
+                doc.setFillColor(30, 30, 30); doc.rect(0, 0, 297, 210, 'F');
+                doc.setTextColor(255); doc.setFontSize(16); doc.text("Imprimir no tamanho real", 148.5, 7, { align: "center" });
+                doc.setTextColor(241, 196, 15); doc.setFontSize(12); doc.text(`Página ${Math.floor(i / 8) + 1} de ${totalPages}`, 270, 200, { align: "right" });
             }
-
-            const pos = i % 8; 
-            const col = pos % 4; 
-            const row = Math.floor(pos / 4);
-            const x = mx + (col * (w + gap)); 
-            const y = my + (row * (h + gap));
-
+            const pos = i % 8, col = pos % 4, row = Math.floor(pos / 4);
+            const x = mx + (col * (w + gap)), y = my + (row * (h + gap));
             document.getElementById('progress-bar').style.width = Math.round(((i + 1) / cardQueue.length) * 100) + '%';
-            
             try {
                 const imgUrl = `https://images.weserv.nl/?url=images.ygoprodeck.com/images/cards/${cardQueue[i].imgId}.jpg&q=100`;
-                const resp = await fetch(imgUrl);
-                const blob = await resp.blob();
+                const resp = await fetch(imgUrl); const blob = await resp.blob();
                 const b64 = await new Promise(r => { const rd = new FileReader(); rd.onloadend = () => r(rd.result); rd.readAsDataURL(blob); });
-                
                 doc.addImage(b64, 'JPEG', x, y, w, h);
-
-                // Marcas de Corte (Cruzes nos cantos)
-                doc.setDrawColor(255); 
-                doc.setLineWidth(0.4);
-                const offset = 2; const len = 5;
-                
-                // Canto Superior Esquerdo
+                doc.setDrawColor(255); doc.setLineWidth(0.4); const offset = 2, len = 5;
                 doc.line(x-offset, y, x-offset-len, y); doc.line(x, y-offset, x, y-offset-len);
-                // Canto Superior Direito
                 doc.line(x+w+offset, y, x+w+offset+len, y); doc.line(x+w, y-offset, x+w, y-offset-len);
-                // Canto Inferior Esquerdo
                 doc.line(x-offset, y+h, x-offset-len, y+h); doc.line(x, y+h+offset, x, y+h+offset+len);
-                // Canto Inferior Direito
                 doc.line(x+w+offset, y+h, x+w+offset+len, y+h); doc.line(x+w, y+h+offset, x+w, y+h+offset+len);
-                
-            } catch(e) { console.error("Erro ao carregar imagem", e); }
+            } catch(e) {}
         }
-        
         window.currentPdf = doc.output('blob');
         document.getElementById('preview-frame').src = URL.createObjectURL(window.currentPdf);
-        document.getElementById('import-overlay').style.display = 'none';
-        isGenerating = false;
+        document.getElementById('import-overlay').style.display = 'none'; isGenerating = false;
     }
 
     window.removeItem = (id) => { cardQueue = cardQueue.filter(c => c.imgId != id); updateUI(); renderResults(); };
@@ -422,25 +361,17 @@
     };
     window.jumpToPage = (val) => { 
         const max = Math.ceil(searchResults.length/getItemsPerPage());
-        currentPage = Math.max(1, Math.min(max, parseInt(val) || 1));
-        renderResults(); 
+        currentPage = Math.max(1, Math.min(max, parseInt(val) || 1)); renderResults(); 
     };
     window.downloadPDF = () => { 
         if(window.currentPdf) { 
-            const agora = new Date();
-            const dia = String(agora.getDate()).padStart(2, '0');
-            const mes = String(agora.getMonth() + 1).padStart(2, '0');
-            const dataF = `${dia}-${mes}-${agora.getFullYear()}`;
-            const a = document.createElement('a'); 
-            a.href = URL.createObjectURL(window.currentPdf); 
-            a.download = `Cartas_Proxies_Yu-Gi-Oh!_${dataF}.pdf`; 
-            a.click(); 
+            const agora = new Date(); const dataF = `${String(agora.getDate()).padStart(2, '0')}-${String(agora.getMonth() + 1).padStart(2, '0')}-${agora.getFullYear()}`;
+            const a = document.createElement('a'); a.href = URL.createObjectURL(window.currentPdf); 
+            a.download = `Cartas_Proxies_Yu-Gi-Oh!_${dataF}.pdf`; a.click(); 
         } 
     };
-    
     window.importYDK = async (input) => {
-        const file = input.files[0]; if(!file) return;
-        const text = await file.text();
+        const file = input.files[0]; if(!file) return; const text = await file.text();
         const ids = text.split('\n').map(l => l.trim()).filter(l => /^\d+$/.test(l));
         const res = await fetch(`https://db.ygoprodeck.com/api/v7/cardinfo.php?id=${ids.join(',')}`);
         const data = await res.json();
@@ -449,18 +380,13 @@
                 const count = ids.filter(id => id == card.id).length;
                 for(let i=0; i<count; i++) cardQueue.push({ id: card.id, name: card.name, imgId: card.card_images[0].id });
             });
-            updateUI();
-            renderResults();
+            updateUI(); renderResults();
         }
     };
-
     window.resetFilters = () => {
-        document.getElementById('search-input').value = "";
-        document.getElementById('filter-type').value = "";
-        document.getElementById('filter-type').dispatchEvent(new Event('change'));
-        performSearch(true);
+        document.getElementById('search-input').value = ""; document.getElementById('filter-type').value = "";
+        document.getElementById('filter-type').dispatchEvent(new Event('change')); performSearch(true);
     };
 </script>
-
 </body>
 </html>
