@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>YGO Proxy Studio Pro - Workspace V3.7</title>
+    <title>YGO Proxy Studio Pro - Workspace V4.0</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         :root {
@@ -12,6 +12,7 @@
             --accent: #f1c40f;
             --border: #333;
             --text: #e0e0e0;
+            --success: #27ae60;
         }
 
         body { 
@@ -56,19 +57,9 @@
         select, input { background: #111; border: 1px solid #444; color: white; padding: 8px; border-radius: 4px; font-size: 13px; width: 100%; box-sizing: border-box; }
         
         .btn-secondary { 
-            display: block; 
-            background: #333; 
-            color: white; 
-            width: 100%; 
-            padding: 10px; 
-            border-radius: 4px; 
-            cursor: pointer; 
-            text-align: center; 
-            border: 1px solid #444; 
-            font-size: 11px; 
-            font-weight: bold;
-            box-sizing: border-box;
-            text-transform: uppercase;
+            display: block; background: #333; color: white; width: 100%; padding: 10px; border-radius: 4px; 
+            cursor: pointer; text-align: center; border: 1px solid #444; font-size: 11px; font-weight: bold;
+            box-sizing: border-box; text-transform: uppercase;
         }
 
         .stepper { display: flex; border: 1px solid #444; border-radius: 4px; overflow: hidden; height: 35px; background: #111; }
@@ -83,7 +74,8 @@
 
         .results-view { flex-grow: 1; overflow-y: auto; }
 
-        .suggestion-item { display: flex; gap: 12px; padding: 15px 10px; background: var(--bg-dark); align-items: flex-start; cursor: pointer; border-bottom: 1px solid #222; }
+        .suggestion-item { display: flex; gap: 12px; padding: 15px 10px; background: var(--bg-dark); align-items: flex-start; cursor: pointer; border-bottom: 1px solid #222; transition: background 0.2s; }
+        .suggestion-item:active { background: #1a1a1a; }
         .suggestion-item img { height: 110px; border-radius: 4px; border: 1px solid #444; flex-shrink: 0; box-shadow: 0 4px 8px rgba(0,0,0,0.6); }
 
         .card-info-box { flex-grow: 1; display: flex; flex-direction: column; gap: 5px; text-align: left; }
@@ -99,41 +91,37 @@
         .pagination-bar { padding: 8px; background: var(--panel-bg); display: flex; justify-content: center; gap: 10px; align-items: center; border-top: 1px solid var(--border); }
         .page-input { width: 50px; text-align: center; background: #000; border: 1px solid #444; color: var(--accent); }
 
-        /* --- EXCLUSIVO DESKTOP --- */
+        #toast-container { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 9999; pointer-events: none; }
+        .toast { background: var(--success); color: white; padding: 12px 20px; border-radius: 30px; font-size: 12px; font-weight: bold; margin-bottom: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); animation: slideUp 0.3s ease, fadeOut 0.5s ease 1.5s forwards; display: flex; align-items: center; gap: 10px; white-space: nowrap; }
+        @keyframes slideUp { from { transform: translateY(100px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        @keyframes fadeOut { to { opacity: 0; } }
+
         @media (min-width: 901px) {
             .list-mode { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1px; background: #222; }
             .grid-mode { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 15px; padding: 15px; }
             .grid-mode .card-info-box { display: none; }
-            .grid-mode .suggestion-item { display: block; text-align: center; }
+            .grid-mode .suggestion-item { display: block; text-align: center; border-bottom: none; }
             .grid-mode .suggestion-item img { width: 100%; height: auto; }
         }
 
-        /* --- BLOCO MOBILE (V3.7) --- */
         @media (max-width: 900px) {
             body { overflow-y: auto !important; height: auto !important; }
-            .app-container, .app-container.empty-queue { 
-                display: block !important; 
-                height: auto !important; 
-            }
-            .col { 
-                width: 100% !important; 
-                height: auto !important; 
-                overflow: visible !important;
-                border-bottom: 2px solid var(--border); 
-            }
-            .results-view { 
-                height: 550px; 
-                overflow-y: auto;
-            }
-            /* OCULTA O PREVIEW DO PDF NO MOBILE */
+            .app-container, .app-container.empty-queue { display: block !important; height: auto !important; }
+            .col { width: 100% !important; height: auto !important; overflow: visible !important; border-bottom: 2px solid var(--border); }
+            .results-view { height: 550px; overflow-y: auto; }
+            .grid-mode { display: grid !important; grid-template-columns: repeat(2, 1fr) !important; gap: 10px !important; padding: 10px !important; }
+            .grid-mode .suggestion-item { display: block !important; text-align: center; padding: 5px; border-bottom: none; }
+            .grid-mode .suggestion-item img { width: 100%; height: auto; }
+            .grid-mode .card-info-box { display: none !important; }
             .pdf-preview-container { display: none !important; }
-            
             #col-preview { margin-top: 20px; }
             .deck-list { height: 250px; }
         }
     </style>
 </head>
 <body>
+
+<div id="toast-container"></div>
 
 <div class="app-container empty-queue" id="app-layout">
     <div class="col">
@@ -206,8 +194,17 @@
     let cardQueue = [], searchResults = [], currentPage = 1, currentView = 'list';
     let isGenerating = false;
 
+    function showToast(msg) {
+        const container = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+        toast.className = 'toast';
+        toast.innerHTML = `<span>✔</span> ${msg}`;
+        container.appendChild(toast);
+        setTimeout(() => toast.remove(), 2000);
+    }
+
     function getItemsPerPage() {
-        if (window.innerWidth < 900) return 15;
+        if (window.innerWidth < 900) return currentView === 'list' ? 15 : 20;
         const isQueueEmpty = cardQueue.length === 0;
         return currentView === 'list' ? (isQueueEmpty ? 25 : 15) : (isQueueEmpty ? 44 : 21);
     }
@@ -295,7 +292,8 @@
             div.onclick = () => {
                 const qty = parseInt(document.getElementById('search-qty').value);
                 for(let i=0; i<qty; i++) cardQueue.push({ id: card.id, name: card.name, imgId: card.card_images[0].id });
-                updateUI(); renderResults(); 
+                updateUI();
+                if(window.innerWidth < 900) showToast(`${qty}x ${card.name} adicionado(a)!`);
             };
             container.appendChild(div);
         });
@@ -324,14 +322,18 @@
         const scale = parseFloat(document.getElementById('print-scale').value) / 100;
         const w = 59 * scale, h = 86 * scale, gap = 6;
         const mx = (297 - (4 * w + 3 * gap)) / 2; const my = (210 - (2 * h + 1 * gap)) / 2;
-        const totalPages = Math.ceil(cardQueue.length / 8);
+        const totalPagesPDF = Math.ceil(cardQueue.length / 8);
         
         for(let i=0; i<cardQueue.length; i++) {
+            const currentPagePDF = Math.floor(i / 8) + 1;
             if (i % 8 === 0 && i > 0) doc.addPage();
             if (i % 8 === 0) {
+                // Desenha o fundo escuro e cabeçalhos de página
                 doc.setFillColor(30, 30, 30); doc.rect(0, 0, 297, 210, 'F');
-                doc.setTextColor(255); doc.setFontSize(16); doc.text("Imprimir no tamanho real", 148.5, 7, { align: "center" });
-                doc.setTextColor(241, 196, 15); doc.setFontSize(12); doc.text(`Página ${Math.floor(i / 8) + 1} de ${totalPages}`, 270, 200, { align: "right" });
+                doc.setTextColor(255); doc.setFontSize(18); doc.text("Imprimir no tamanho real", 148.5, 7, { align: "center" });
+                // RESTAURADO: Numeração da Página
+                doc.setFontSize(12); doc.setTextColor(180);
+                doc.text(`Página ${currentPagePDF} de ${totalPagesPDF}`, 148.5, 205, { align: "center" });
             }
             const pos = i % 8, col = pos % 4, row = Math.floor(pos / 4);
             const x = mx + (col * (w + gap)), y = my + (row * (h + gap));
@@ -353,8 +355,8 @@
         document.getElementById('import-overlay').style.display = 'none'; isGenerating = false;
     }
 
-    window.removeItem = (id) => { cardQueue = cardQueue.filter(c => c.imgId != id); updateUI(); renderResults(); };
-    window.clearQueue = () => { if(confirm("Limpar tudo?")) { cardQueue = []; updateUI(); renderResults(); } };
+    window.removeItem = (id) => { cardQueue = cardQueue.filter(c => c.imgId != id); updateUI(); };
+    window.clearQueue = () => { if(confirm("Limpar tudo?")) { cardQueue = []; updateUI(); } };
     window.changePage = (dir) => { 
         const max = Math.ceil(searchResults.length/getItemsPerPage());
         if((currentPage + dir) > 0 && (currentPage + dir) <= max) { currentPage += dir; renderResults(); }
@@ -380,7 +382,8 @@
                 const count = ids.filter(id => id == card.id).length;
                 for(let i=0; i<count; i++) cardQueue.push({ id: card.id, name: card.name, imgId: card.card_images[0].id });
             });
-            updateUI(); renderResults();
+            updateUI();
+            showToast("Deck Importado com sucesso!");
         }
     };
     window.resetFilters = () => {
