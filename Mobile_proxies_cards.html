@@ -254,6 +254,8 @@
     function showTooltip(card, e) {
         if(window.innerWidth < 900) return;
         const tt = document.getElementById('card-tooltip');
+        const description = card.desc_pt || card.desc;
+        document.getElementById('tooltip-text').innerText = description;
         document.getElementById('tooltip-img').src = card.card_images[0].image_url;
         document.getElementById('tooltip-name').innerText = card.name;
         
@@ -389,23 +391,66 @@
         const sub = document.getElementById('filter-subtype').value;
         const atk = document.getElementById('filter-atk').value;
         const def = document.getElementById('filter-def').value;
+
         if(!initial && q.length < 2 && !type && !atk && !def) return;
-        let p = new URLSearchParams({ language: 'pt' });
+
+        let p = new URLSearchParams();
+        
+        // REGRA DE OURO: 
+        // Se houver texto (q), não enviamos 'language' para buscar no banco global (Inglês + Outros).
+        // Se NÃO houver texto (apenas filtros), usamos 'pt' para manter o padrão que você gosta.
+        if (!q) {
+            p.append('language', 'pt');
+        }
+
         if(q) p.append('fname', q);
-        if(type) { if(type === "Monster" && sub) p.append('type', sub); else if(type !== "Monster") p.append('type', type); }
-        const race = document.getElementById('filter-race').value; if(race) p.append('race', race);
-        if(atk) p.append('atk', atk); if(def) p.append('def', def);
+        
+        if(type) { 
+            if(type === "Monster" && sub) p.append('type', sub); 
+            else if(type !== "Monster") p.append('type', type); 
+        }
+        
+        const race = document.getElementById('filter-race').value; 
+        if(race) p.append('race', race);
+        if(atk) p.append('atk', atk); 
+        if(def) p.append('def', def);
         if(document.getElementById('filter-lv').value) p.append('level', document.getElementById('filter-lv').value);
         if(document.getElementById('filter-attribute').value) p.append('attribute', document.getElementById('filter-attribute').value);
+
         try {
-            const res = await fetch(`https://db.ygoprodeck.com/api/v7/cardinfo.php?${p.toString()}`);
-            const data = await res.json();
+            let res = await fetch(`https://db.ygoprodeck.com/api/v7/cardinfo.php?${p.toString()}`);
+            let data = await res.json();
             let rawData = data.data || [];
-            if(type === "Monster" && !sub) rawData = rawData.filter(c => c.type.toLowerCase().includes("monster"));
+
+            // --- LÓGICA DE BUSCA DUPLA PARA TEXTO ---
+            // Se você buscou por texto e o resultado global foi pequeno ou vazio, 
+            // tentamos uma busca forçada em PT para garantir que termos específicos (ex: "Besta Cristalina") apareçam.
+            if (q && rawData.length < 5) {
+                let p2 = new URLSearchParams(p);
+                p2.append('language', 'pt');
+                const res2 = await fetch(`https://db.ygoprodeck.com/api/v7/cardinfo.php?${p2.toString()}`);
+                const data2 = await res2.json();
+                if (data2.data) {
+                    // Mescla os resultados evitando duplicatas por ID
+                    const existingIds = new Set(rawData.map(c => c.id));
+                    data2.data.forEach(c => {
+                        if (!existingIds.has(c.id)) rawData.push(c);
+                    });
+                }
+            }
+
+            if(type === "Monster" && !sub) {
+                rawData = rawData.filter(c => c.type.toLowerCase().includes("monster"));
+            }
+
             searchResults = rawData; 
-            searchResults.forEach(c => cardCache[c.id] = c); // SALVA NO CACHE
-            currentPage = 1; renderResults();
-        } catch(e) { searchResults = []; renderResults(); }
+            searchResults.forEach(c => cardCache[c.id] = c);
+            currentPage = 1; 
+            renderResults();
+        } catch(e) { 
+            searchResults = []; 
+            renderResults(); 
+        }
     }
 
     function renderResults() {
