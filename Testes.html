@@ -202,9 +202,27 @@
         </div>
         <div class="view-controls">
             <span id="result-info" style="font-size: 11px; color: #888;">Carregando...</span>
-            <div style="display: flex; gap: 5px;">
-                <button id="btn-list" class="btn-view active" onclick="changeView('list')">LISTA</button>
-                <button id="btn-grid" class="btn-view" onclick="changeView('grid')">GRADE</button>
+            
+            <div style="display: flex; gap: 15px; align-items: center;">
+                <div style="display: flex; gap: 5px; align-items: center;">
+                    <select id="sort-by" style="width: 105px; font-size: 11px; height: 32px; padding: 0 5px;" onchange="sortAndRender()">
+                        <option value="name">Nome</option>
+                        <option value="atk">Ataque</option>
+                        <option value="def">Defesa</option>
+                        <option value="level">Level/Rank</option>
+                        <option value="tcg_date">Data TCG</option>
+                        <option value="ocg_date">Data OCG</option>
+                    </select>
+                    
+                    <button id="btn-order" class="btn-view" style="width: 32px; height: 32px; font-size: 14px; padding: 0; display: flex; align-items: center; justify-content: center;" onclick="toggleOrder()">
+                        <span id="order-icon">↓</span>
+                    </button>
+                </div>
+
+                <div style="display: flex; gap: 5px;">
+                    <button id="btn-list" class="btn-view active" style="height: 32px;" onclick="changeView('list')">LISTA</button>
+                    <button id="btn-grid" class="btn-view" style="height: 32px;" onclick="changeView('grid')">GRADE</button>
+                </div>
             </div>
         </div>
         <div id="results-view" class="results-view list-mode"></div>
@@ -234,6 +252,55 @@
     let cardQueue = [], searchResults = [], currentPage = 1, currentView = 'list';
     let isGenerating = false;
     let cardCache = {}; // ESSENCIAL: Armazena dados das cartas para o tooltip
+
+    let sortDirection = 1; // -1 para Descendente (seta baixo), 1 para Ascendente (seta cima)
+
+    function toggleOrder() {
+        sortDirection *= -1;
+        document.getElementById('order-icon').innerText = sortDirection === 1 ? '↑' : '↓';
+        sortAndRender();
+    }
+
+    function sortAndRender() {
+        const criterion = document.getElementById('sort-by').value;
+
+        searchResults.sort((a, b) => {
+            let valA, valB;
+
+            switch(criterion) {
+                case 'name':
+                    // Garante que o nome existe antes de comparar
+                    return sortDirection === 1 
+                        ? (a.name || "").localeCompare(b.name || "") 
+                        : (b.name || "").localeCompare(a.name || "");
+                case 'atk':
+                    valA = a.atk ?? -1; valB = b.atk ?? -1; break;
+                case 'def':
+                    valA = a.def ?? -1; valB = b.def ?? -1; break;
+                case 'level':
+                    valA = a.level || a.rank || a.linkval || 0;
+                    valB = b.level || b.rank || b.linkval || 0;
+                    break;
+                case 'tcg_date':
+                    // O ?. garante que se misc_info ou misc_info[0] forem undefined, o código não quebra
+                    valA = a.misc_info?.[0]?.tcg_date || "1900-01-01";
+                    valB = b.misc_info?.[0]?.tcg_date || "1900-01-01";
+                    return sortDirection === 1 ? valA.localeCompare(valB) : valB.localeCompare(valA);
+                case 'ocg_date':
+                    valA = a.misc_info?.[0]?.ocg_date || "1900-01-01";
+                    valB = b.misc_info?.[0]?.ocg_date || "1900-01-01";
+                    return sortDirection === 1 ? valA.localeCompare(valB) : valB.localeCompare(valA);
+                default: return 0;
+            }
+
+            if (valA < valB) return -1 * sortDirection;
+            if (valA > valB) return 1 * sortDirection;
+            return 0;
+        });
+
+        currentPage = 1;
+        renderResults();
+    }
 
     const trad = { 
         "DARK": "TREVAS", "LIGHT": "LUZ", "EARTH": "TERRA", "FIRE": "FOGO", 
@@ -396,9 +463,6 @@
 
         let p = new URLSearchParams();
         
-        // REGRA DE OURO: 
-        // Se houver texto (q), não enviamos 'language' para buscar no banco global (Inglês + Outros).
-        // Se NÃO houver texto (apenas filtros), usamos 'pt' para manter o padrão que você gosta.
         if (!q) {
             p.append('language', 'pt');
         }
@@ -418,20 +482,16 @@
         if(document.getElementById('filter-attribute').value) p.append('attribute', document.getElementById('filter-attribute').value);
 
         try {
-            let res = await fetch(`https://db.ygoprodeck.com/api/v7/cardinfo.php?${p.toString()}`);
+            let res = await fetch(`https://db.ygoprodeck.com/api/v7/cardinfo.php?${p.toString()}&misc=yes`);
             let data = await res.json();
             let rawData = data.data || [];
 
-            // --- LÓGICA DE BUSCA DUPLA PARA TEXTO ---
-            // Se você buscou por texto e o resultado global foi pequeno ou vazio, 
-            // tentamos uma busca forçada em PT para garantir que termos específicos (ex: "Besta Cristalina") apareçam.
             if (q && rawData.length < 5) {
                 let p2 = new URLSearchParams(p);
                 p2.append('language', 'pt');
-                const res2 = await fetch(`https://db.ygoprodeck.com/api/v7/cardinfo.php?${p2.toString()}`);
+                const res2 = await fetch(`https://db.ygoprodeck.com/api/v7/cardinfo.php?${p2.toString()}&misc=yes`);
                 const data2 = await res2.json();
                 if (data2.data) {
-                    // Mescla os resultados evitando duplicatas por ID
                     const existingIds = new Set(rawData.map(c => c.id));
                     data2.data.forEach(c => {
                         if (!existingIds.has(c.id)) rawData.push(c);
@@ -443,10 +503,13 @@
                 rawData = rawData.filter(c => c.type.toLowerCase().includes("monster"));
             }
 
-            searchResults = rawData; 
-            searchResults.forEach(c => cardCache[c.id] = c);
-            currentPage = 1; 
-            renderResults();
+            // Armazena os resultados brutos
+            searchResults = rawData;            
+            // Atualiza o cache para tooltips
+            searchResults.forEach(c => cardCache[c.id] = c);            
+            // Chama a ordenação, que por sua vez chama o renderResults
+            sortAndRender();
+
         } catch(e) { 
             searchResults = []; 
             renderResults(); 
