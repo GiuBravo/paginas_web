@@ -24,30 +24,58 @@
             overflow: hidden; 
         }
 
-        /* --- ESTRUTURA BASE (DESKTOP) --- */
-        .app-container {
-            display: grid;
-            grid-template-columns: 300px 1fr 450px;
-            height: 100vh;
-            gap: 1px;
-            background: var(--border);
-            transition: grid-template-columns 0.3s ease;
+        /* --- TOOLTIP STYLE (ORIGEM: TESTES.HTML) --- */
+        #card-tooltip {
+            display: none;
+            position: fixed;
+            z-index: 10000;
+            pointer-events: none;
+            width: 350px;
+            background: rgba(26, 26, 26, 0.98);
+            border: 1px solid var(--accent);
+            border-radius: 4px;
+            padding: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.9);
+        }
+        #tooltip-header { display: flex; gap: 12px; margin-bottom: 10px; }
+        #tooltip-img { width: 100px; border-radius: 4px; border: 1px solid #444; }
+        #tooltip-meta { flex: 1; display: flex; flex-direction: column; }
+        #tooltip-name { color: white; font-weight: bold; font-size: 16px; margin-bottom: 8px; }
+        
+        .tt-row-split { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; padding-right: 2px; }
+        .tt-attr-group { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #ccc; text-transform: uppercase; }
+        .tt-level-group { display: flex; align-items: center; gap: 4px; font-size: 14px; font-weight: bold; color: #fff; }
+        .tt-icon { width: 20px; height: 20px; object-fit: contain; background: #222; border-radius: 50%; }
+        .tt-star { color: #f1c40f; font-size: 15px; }
+        
+        #tooltip-text { 
+            font-size: 12px; 
+            color: #eee; 
+            line-height: 1.5; 
+            border-top: 1px solid #444; 
+            padding-top: 10px; 
+            white-space: pre-wrap;
+            max-height: 200px;
+            overflow: hidden;
+        }
+        .tt-stats { 
+            font-weight: bold; color: #fff; margin-top: 8px; font-size: 13px; border-top: 1px solid #444; 
+            padding-top: 5px; display: flex; justify-content: flex-start; gap: 10px;
         }
 
+        /* --- REMOVER SETAS DE INPUT NUMBER (ESTILO ORIGINAL) --- */
+        input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type=number] { -moz-appearance: textfield; }
+
+        /* --- ESTRUTURA BASE --- */
+        .app-container { display: grid; grid-template-columns: 300px 1fr 450px; height: 100vh; gap: 1px; background: var(--border); transition: grid-template-columns 0.3s ease; }
         .app-container.empty-queue { grid-template-columns: 300px 1fr 0px; }
         .col { background: var(--bg-dark); display: flex; flex-direction: column; overflow: hidden; }
         
         .col-header { 
-            padding: 12px 15px; 
-            background: var(--panel-bg); 
-            border-bottom: 1px solid var(--border); 
-            font-size: 11px; 
-            font-weight: bold; 
-            color: var(--accent); 
-            display: flex; 
-            justify-content: space-between;
-            align-items: center;
-            text-transform: uppercase;
+            padding: 12px 15px; background: var(--panel-bg); border-bottom: 1px solid var(--border); 
+            font-size: 11px; font-weight: bold; color: var(--accent); display: flex; 
+            justify-content: space-between; align-items: center; text-transform: uppercase;
         }
 
         .sidebar-content { padding: 15px; overflow-y: auto; flex-grow: 1; }
@@ -116,10 +144,22 @@
             .pdf-preview-container { display: none !important; }
             #col-preview { margin-top: 20px; }
             .deck-list { height: 250px; }
+            #card-tooltip { display: none !important; }
         }
     </style>
 </head>
 <body>
+
+<div id="card-tooltip">
+    <div id="tooltip-header">
+        <img id="tooltip-img" src="">
+        <div id="tooltip-meta">
+            <div id="tooltip-name"></div>
+            <div id="tooltip-info-rows"></div>
+        </div>
+    </div>
+    <div id="tooltip-text"></div>
+</div>
 
 <div id="toast-container"></div>
 
@@ -193,6 +233,13 @@
     const { jsPDF } = window.jspdf;
     let cardQueue = [], searchResults = [], currentPage = 1, currentView = 'list';
     let isGenerating = false;
+    let cardCache = {}; // ESSENCIAL: Armazena dados das cartas para o tooltip
+
+    const trad = { 
+        "DARK": "TREVAS", "LIGHT": "LUZ", "EARTH": "TERRA", "FIRE": "FOGO", 
+        "WATER": "ÁGUA", "WIND": "VENTO", "DIVINE": "DIVINO",
+        "Monster": "Monstro", "Spell Card": "Magia", "Trap Card": "Armadilha"
+    };
 
     function showToast(msg) {
         const container = document.getElementById('toast-container');
@@ -203,15 +250,58 @@
         setTimeout(() => toast.remove(), 2000);
     }
 
+    // --- TOOLTIP LOGIC (INTEGRADA DO TESTES.HTML) ---
+    function showTooltip(card, e) {
+        if(window.innerWidth < 900) return;
+        const tt = document.getElementById('card-tooltip');
+        document.getElementById('tooltip-img').src = card.card_images[0].image_url;
+        document.getElementById('tooltip-name').innerText = card.name;
+        
+        let infoHtml = "";
+        if(card.attribute || card.level || card.rank || card.linkval) {
+            infoHtml += `<div class="tt-row-split">`;
+            if(card.attribute) {
+                const attrRaw = card.attribute.toUpperCase();
+                const iconUrl = `https://images.ygoprodeck.com/images/cards/icons/${attrRaw.toLowerCase()}.jpg`;
+                infoHtml += `<div class="tt-attr-group"><img class="tt-icon" src="${iconUrl}" onerror="this.style.display='none'"><span>${trad[attrRaw] || attrRaw}</span></div>`;
+            } else { infoHtml += `<div></div>`; }
+            if(card.level || card.rank || card.linkval) {
+                const val = card.level || card.rank || card.linkval;
+                infoHtml += `<div class="tt-level-group"><span class="tt-star">★</span><span>${val}</span></div>`;
+            }
+            infoHtml += `</div>`;
+        }
+
+        const tipoTrad = card.type.replace("Monster", "Monstro").replace("Spell Card", "Magia").replace("Trap Card", "Armadilha");
+        infoHtml += `<div style="color: #aaa; font-size: 11px; margin-bottom: 8px;">[${card.race} / ${tipoTrad}]</div>`;
+
+        if(card.atk !== undefined) {
+            infoHtml += `<div class="tt-stats"><span>ATK/${card.atk}</span><span>DEF/${card.def}</span></div>`;
+        }
+
+        document.getElementById('tooltip-info-rows').innerHTML = infoHtml;
+        document.getElementById('tooltip-text').innerText = card.desc;
+        tt.style.display = 'block';
+        moveTooltip(e);
+    }
+
+    function moveTooltip(e) {
+        const tt = document.getElementById('card-tooltip');
+        let x = e.clientX + 20, y = e.clientY + 20;
+        if (x + 350 > window.innerWidth) x = e.clientX - 360;
+        if (y + 420 > window.innerHeight) y = window.innerHeight - 440;
+        tt.style.left = x + 'px'; tt.style.top = y + 'px';
+    }
+
+    function hideTooltip() { document.getElementById('card-tooltip').style.display = 'none'; }
+
     function getItemsPerPage() {
         if (window.innerWidth < 900) return currentView === 'list' ? 15 : 20;
         const isQueueEmpty = cardQueue.length === 0;
         return currentView === 'list' ? (isQueueEmpty ? 25 : 15) : (isQueueEmpty ? 44 : 21);
     }
 
-    const trad = { "DARK": "TREVAS", "LIGHT": "LUZ", "EARTH": "TERRA", "FIRE": "FOGO", "WATER": "ÁGUA", "WIND": "VENTO", "DIVINE": "DIVINO" };
     for(let i=0; i<=13; i++) document.getElementById('filter-lv').innerHTML += `<option value="${i}">${i}</option>`;
-
     window.onload = () => { performSearch(true); };
 
     function changeView(view) {
@@ -235,20 +325,61 @@
     document.getElementById('filter-type').onchange = function() {
         const v = this.value;
         const fSub = document.getElementById('filter-subtype'), fRace = document.getElementById('filter-race');
+        
+        // Reset dos selects
         fSub.innerHTML = fRace.innerHTML = '<option value="">Qualquer</option>';
+        
         document.getElementById('group-subtype').style.display = (v === "Monster" ? "flex" : "none");
         document.getElementById('monster-extras').style.display = (v === "Monster" ? "block" : "none");
+
         if(v) {
-            if(v === "Monster") ["Normal Monster", "Effect Monster", "Fusion Monster", "Synchro Monster", "XYZ Monster", "Link Monster"].forEach(k => fSub.innerHTML += `<option value="${k}">${k}</option>`);
-            const rawRaces = { "Monster": ["Aqua", "Beast", "Beast-Warrior", "Cyberse", "Dinosaur", "Dragon", "Fiend", "Fish", "Insect", "Machine", "Plant", "Psychic", "Pyro", "Reptile", "Rock", "Sea Serpent", "Spellcaster", "Thunder", "Warrior", "Winged Beast", "Wyrm", "Zombie"], "Spell Card": ["Normal", "Continuous", "Field", "Equip", "Quick-Play", "Ritual"], "Trap Card": ["Normal", "Continuous", "Counter"] };
-            rawRaces[v].forEach(r => fRace.innerHTML += `<option value="${r}">${r}</option>`);
+            if(v === "Monster") {
+                const subTypes = {
+                    "Normal Monster": "Monstro Normal",
+                    "Effect Monster": "Monstro de Efeito",
+                    "Fusion Monster": "Monstro de Fusão",
+                    "Synchro Monster": "Monstro Sincro",
+                    "XYZ Monster": "Monstro Xyz",
+                    "Link Monster": "Monstro Link",
+                    "Ritual Monster": "Monstro Ritual",
+                    "Token": "Ficha"
+                };
+                Object.entries(subTypes).forEach(([val, text]) => {
+                    fSub.innerHTML += `<option value="${val}">${text}</option>`;
+                });
+            }
+
+            const races = {
+                "Monster": {
+                    "Aqua": "Aqua", "Beast": "Besta", "Beast-Warrior": "Besta-Guerreira", "Cyberse": "Ciberso",
+                    "Dinosaur": "Dinossauro", "Dragon": "Dragão", "Fiend": "Demônio", "Fish": "Peixe",
+                    "Insect": "Inseto", "Machine": "Máquina", "Plant": "Planta", "Psychic": "Psíquico",
+                    "Pyro": "Piro", "Reptile": "Réptil", "Rock": "Rocha", "Sea Serpent": "Serpente Marinha",
+                    "Spellcaster": "Mago", "Thunder": "Trovão", "Warrior": "Guerreiro", "Winged Beast": "Besta Alada",
+                    "Wyrm": "Wyrm", "Zombie": "Zumbi", "Divine-Beast": "Besta Divina"
+                },
+                "Spell Card": {
+                    "Normal": "Normal", "Continuous": "Contínua", "Field": "Campo", 
+                    "Equip": "Equipamento", "Quick-Play": "Rápida", "Ritual": "Ritual"
+                },
+                "Trap Card": {
+                    "Normal": "Normal", "Continuous": "Contínua", "Counter": "Resposta"
+                }
+            };
+
+            // Preenche as Raças/Tipos com tradução
+            Object.entries(races[v]).forEach(([val, text]) => {
+                fRace.innerHTML += `<option value="${val}">${text}</option>`;
+            });
+
             document.getElementById('group-race').style.display = "flex";
-        } else { document.getElementById('group-race').style.display = "none"; }
+        } else {
+            document.getElementById('group-race').style.display = "none";
+        }
         triggerSearch();
     };
 
-    const inputFields = ['search-input', 'filter-subtype', 'filter-race', 'filter-attribute', 'filter-lv', 'filter-atk', 'filter-def'];
-    inputFields.forEach(id => document.getElementById(id).addEventListener('input', triggerSearch));
+    ['search-input', 'filter-subtype', 'filter-race', 'filter-attribute', 'filter-lv', 'filter-atk', 'filter-def'].forEach(id => document.getElementById(id).addEventListener('input', triggerSearch));
 
     function triggerSearch() { clearTimeout(window.sTimeout); window.sTimeout = setTimeout(performSearch, 500); }
 
@@ -271,24 +402,68 @@
             const data = await res.json();
             let rawData = data.data || [];
             if(type === "Monster" && !sub) rawData = rawData.filter(c => c.type.toLowerCase().includes("monster"));
-            searchResults = rawData; currentPage = 1; renderResults();
+            searchResults = rawData; 
+            searchResults.forEach(c => cardCache[c.id] = c); // SALVA NO CACHE
+            currentPage = 1; renderResults();
         } catch(e) { searchResults = []; renderResults(); }
     }
 
     function renderResults() {
-        const container = document.getElementById('results-view'); container.innerHTML = "";
+        const container = document.getElementById('results-view'); 
+        container.innerHTML = "";
         container.className = `results-view ${currentView}-mode`;
+        
         const items = getItemsPerPage();
         const start = (currentPage - 1) * items;
         const pageItems = searchResults.slice(start, start + items);
-        const totalPages = Math.ceil(searchResults.length / items) || 1;
+        
         document.getElementById('result-info').innerText = `Exibindo ${start + 1}-${Math.min(start + items, searchResults.length)} de ${searchResults.length}`;
-        document.getElementById('page-total').innerText = `/ ${totalPages}`;
+        document.getElementById('page-total').innerText = `/ ${Math.ceil(searchResults.length / items) || 1}`;
         document.getElementById('page-jump').value = currentPage;
+
+        // Mapeamento de Raças/Tipos para a UI
+        const racesTrad = {
+            "Aqua": "Aqua", "Beast": "Besta", "Beast-Warrior": "Besta-Guerreira", "Cyberse": "Ciberso",
+            "Dinosaur": "Dinossauro", "Dragon": "Dragão", "Fiend": "Demônio", "Fish": "Peixe",
+            "Insect": "Inseto", "Machine": "Máquina", "Plant": "Planta", "Psychic": "Psíquico",
+            "Pyro": "Piro", "Reptile": "Réptil", "Rock": "Rocha", "Sea Serpent": "Serpente Marinha",
+            "Spellcaster": "Mago", "Thunder": "Trovão", "Warrior": "Guerreiro", "Winged Beast": "Besta Alada",
+            "Wyrm": "Wyrm", "Zombie": "Zumbi", "Divine-Beast": "Besta Divina",
+            "Normal": "Normal", "Continuous": "Contínua", "Field": "Campo", "Equip": "Equipamento", 
+            "Quick-Play": "Rápida", "Ritual": "Ritual", "Counter": "Resposta"
+        };
+
         pageItems.forEach(card => {
-            const div = document.createElement('div'); div.className = 'suggestion-item';
+            const div = document.createElement('div'); 
+            div.className = 'suggestion-item';
+            
+            // Tradução do Atributo/Tipo principal
             const attrTrad = trad[card.attribute] || (card.type.includes("Spell") ? "MAGIA" : "ARMADILHA");
-            div.innerHTML = `<img src="${card.card_images[0].image_url_small}"><div class="card-info-box"><b class="card-name">${card.name}</b><div class="info-row"><span style="color:#eee">${attrTrad}</span><span>${card.level ? 'LV '+card.level : ''}</span></div><div class="info-row" style="color:var(--accent)"><span>${card.race}</span></div>${card.atk !== undefined ? `<div class="info-row atk-def-row"><span>ATK/ ${card.atk}</span><span>DEF/ ${card.def}</span></div>` : ''}</div>`;
+            
+            // Tradução da Raça/Subtipo (ex: Mago, Guerreiro, Rápida)
+            const raceTraduzida = racesTrad[card.race] || card.race;
+
+            div.innerHTML = `
+                <img src="${card.card_images[0].image_url_small}">
+                <div class="card-info-box">
+                    <b class="card-name">${card.name}</b>
+                    <div class="info-row">
+                        <span style="color:#eee">${attrTrad}</span>
+                        <span>${card.level ? 'LV '+card.level : ''}</span>
+                    </div>
+                    <div class="info-row" style="color:var(--accent)">
+                        <span>${raceTraduzida}</span>
+                    </div>
+                    ${card.atk !== undefined ? `
+                    <div class="info-row atk-def-row">
+                        <span>ATK/ ${card.atk}</span>
+                        <span>DEF/ ${card.def}</span>
+                    </div>` : ''}
+                </div>`;
+
+            div.onmouseenter = (e) => showTooltip(card, e);
+            div.onmousemove = (e) => moveTooltip(e);
+            div.onmouseleave = () => hideTooltip();
             div.onclick = () => {
                 const qty = parseInt(document.getElementById('search-qty').value);
                 for(let i=0; i<qty; i++) cardQueue.push({ id: card.id, name: card.name, imgId: card.card_images[0].id });
@@ -306,9 +481,18 @@
         list.innerHTML = "";
         const counts = {};
         cardQueue.forEach(c => counts[c.imgId] = (counts[c.imgId] || 0) + 1);
-        Object.keys(counts).forEach(id => {
-            const c = cardQueue.find(x => x.imgId == id);
-            list.innerHTML += `<div style="padding:8px; border-bottom:1px solid #222; font-size:11px; display:flex; justify-content:space-between; align-items:center;"><span><b>${counts[id]}x</b> ${c.name}</span><span style="color:red; cursor:pointer; font-weight:bold;" onclick="removeItem('${id}')">✖</span></div>`;
+        Object.keys(counts).forEach(imgId => {
+            const c = cardQueue.find(x => x.imgId == imgId);
+            const row = document.createElement('div');
+            row.style = "padding:8px; border-bottom:1px solid #222; font-size:11px; display:flex; justify-content:space-between; align-items:center; cursor:default;";
+            row.innerHTML = `<span><b>${counts[imgId]}x</b> ${c.name}</span><span style="color:red; cursor:pointer; font-weight:bold;" onclick="removeItem('${imgId}')">✖</span>`;
+            const fullData = cardCache[c.id];
+            if(fullData) {
+                row.onmouseenter = (e) => showTooltip(fullData, e);
+                row.onmousemove = (e) => moveTooltip(e);
+                row.onmouseleave = () => hideTooltip();
+            }
+            list.appendChild(row);
         });
         document.getElementById('count-total').innerText = cardQueue.length; triggerPDFUpdate();
     }
@@ -321,17 +505,16 @@
         const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
         const scale = parseFloat(document.getElementById('print-scale').value) / 100;
         const w = 59 * scale, h = 86 * scale, gap = 6;
-        const mx = (297 - (4 * w + 3 * gap)) / 2; const my = (210 - (2 * h + 1 * gap)) / 2;
+        const mx = (297 - (4 * w + 3 * gap)) / 2, my = (210 - (2 * h + 1 * gap)) / 2;
         const totalPagesPDF = Math.ceil(cardQueue.length / 8);
         
         for(let i=0; i<cardQueue.length; i++) {
             const currentPagePDF = Math.floor(i / 8) + 1;
             if (i % 8 === 0 && i > 0) doc.addPage();
             if (i % 8 === 0) {
-                // Desenha o fundo escuro e cabeçalhos de página
                 doc.setFillColor(30, 30, 30); doc.rect(0, 0, 297, 210, 'F');
                 doc.setTextColor(255); doc.setFontSize(18); doc.text("Imprimir no tamanho real", 148.5, 7, { align: "center" });
-                // RESTAURADO: Numeração da Página
+                // RESTAURADO: NUMERAÇÃO DE PÁGINA
                 doc.setFontSize(12); doc.setTextColor(180);
                 doc.text(`Página ${currentPagePDF} de ${totalPagesPDF}`, 148.5, 205, { align: "center" });
             }
@@ -342,7 +525,7 @@
                 const imgUrl = `https://images.weserv.nl/?url=images.ygoprodeck.com/images/cards/${cardQueue[i].imgId}.jpg&q=100`;
                 const resp = await fetch(imgUrl); const blob = await resp.blob();
                 const b64 = await new Promise(r => { const rd = new FileReader(); rd.onloadend = () => r(rd.result); rd.readAsDataURL(blob); });
-                doc.addImage(b64, 'JPEG', x, y, w, h);
+                doc.addImage(b64, 'JPEG', x, y, w, h, undefined, 'NONE');
                 doc.setDrawColor(255); doc.setLineWidth(0.4); const offset = 2, len = 5;
                 doc.line(x-offset, y, x-offset-len, y); doc.line(x, y-offset, x, y-offset-len);
                 doc.line(x+w+offset, y, x+w+offset+len, y); doc.line(x+w, y-offset, x+w, y-offset-len);
@@ -355,8 +538,8 @@
         document.getElementById('import-overlay').style.display = 'none'; isGenerating = false;
     }
 
-    window.removeItem = (id) => { cardQueue = cardQueue.filter(c => c.imgId != id); updateUI(); };
-    window.clearQueue = () => { if(confirm("Limpar tudo?")) { cardQueue = []; updateUI(); } };
+    window.removeItem = (imgId) => { cardQueue = cardQueue.filter(c => c.imgId != imgId); updateUI(); hideTooltip(); };
+    window.clearQueue = () => { if(confirm("Limpar tudo?")) { cardQueue = []; updateUI(); hideTooltip(); } };
     window.changePage = (dir) => { 
         const max = Math.ceil(searchResults.length/getItemsPerPage());
         if((currentPage + dir) > 0 && (currentPage + dir) <= max) { currentPage += dir; renderResults(); }
@@ -379,16 +562,37 @@
         const data = await res.json();
         if(data.data) {
             data.data.forEach(card => {
+                cardCache[card.id] = card; // SALVA NO CACHE NA IMPORTAÇÃO
                 const count = ids.filter(id => id == card.id).length;
                 for(let i=0; i<count; i++) cardQueue.push({ id: card.id, name: card.name, imgId: card.card_images[0].id });
             });
-            updateUI();
-            showToast("Deck Importado com sucesso!");
+            updateUI(); showToast("Deck Importado com sucesso!");
         }
     };
     window.resetFilters = () => {
-        document.getElementById('search-input').value = ""; document.getElementById('filter-type').value = "";
-        document.getElementById('filter-type').dispatchEvent(new Event('change')); performSearch(true);
+        // 1. Resetar inputs de texto e seletores principais
+        document.getElementById('search-input').value = "";
+        document.getElementById('filter-type').value = "";
+        document.getElementById('search-qty').value = "1";
+        
+        // 2. Resetar seletores dependentes e campos numéricos
+        document.getElementById('filter-subtype').innerHTML = '<option value="">Qualquer</option>';
+        document.getElementById('filter-race').innerHTML = '<option value="">Qualquer</option>';
+        document.getElementById('filter-attribute').value = "";
+        document.getElementById('filter-lv').value = "";
+        document.getElementById('filter-atk').value = "";
+        document.getElementById('filter-def').value = "";
+
+        // 3. Esconder os grupos de filtros dinâmicos
+        document.getElementById('group-subtype').style.display = "none";
+        document.getElementById('group-race').style.display = "none";
+        document.getElementById('monster-extras').style.display = "none";
+
+        // 4. Resetar o estado da paginação e disparar a busca inicial
+        currentPage = 1;
+        performSearch(true);
+        
+        showToast("Filtros resetados");
     };
 </script>
 </body>
