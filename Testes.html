@@ -24,7 +24,6 @@
             overflow: hidden; 
         }
 
-        /* --- TOOLTIP STYLE (ORIGEM: TESTES.HTML) --- */
         #card-tooltip {
             display: none;
             position: fixed;
@@ -144,7 +143,33 @@
             .pdf-preview-container { display: none !important; }
             #col-preview { margin-top: 20px; }
             .deck-list { height: 250px; }
-            #card-tooltip { display: none !important; }
+            #card-tooltip { 
+                display: none;
+                position: fixed !important;
+                top: 50% !important;
+                left: 50% !important; /* Fixa o ponto de origem no centro da tela */
+                transform: translate(-50%, -50%) !important; /* Puxa o elemento de volta pelo próprio centro */
+                width: 90vw !important; /* Ocupa 90% da largura da tela do celular */
+                max-width: 360px !important; /* Não deixa ficar exagerado em tablets */
+                height: auto !important;
+                max-height: 85vh !important; /* Não deixa passar da altura da tela */
+                overflow-y: auto !important; /* Se o texto for longo, permite scroll dentro do card */
+                z-index: 999999 !important;
+                background: #1a1a1a !important;
+                border: 2px solid var(--accent) !important;
+                box-sizing: border-box !important; /* Impede que o padding "empurre" a borda para fora */
+                padding: 15px !important;
+                pointer-events: auto !important;
+            }
+
+            /* Ajuste para a imagem dentro do tooltip não estourar */
+            #tooltip-img {
+                width: 100% !important;
+                height: auto !important;
+                max-width: 180px; /* Reduz um pouco o tamanho da imagem no mobile para sobrar espaço para o texto */
+                margin: 0 auto 10px auto;
+                display: block;
+            }
         }
     </style>
 </head>
@@ -317,9 +342,9 @@
         setTimeout(() => toast.remove(), 2000);
     }
 
-    // --- TOOLTIP LOGIC (INTEGRADA DO TESTES.HTML) ---
-    function showTooltip(card, e) {
-        if(window.innerWidth < 900) return;
+   function showTooltip(card, e) {
+        if(!card) return;
+        
         const tt = document.getElementById('card-tooltip');
         const description = card.desc_pt || card.desc;
         document.getElementById('tooltip-text').innerText = description;
@@ -349,17 +374,29 @@
         }
 
         document.getElementById('tooltip-info-rows').innerHTML = infoHtml;
-        document.getElementById('tooltip-text').innerText = card.desc;
+
         tt.style.display = 'block';
-        moveTooltip(e);
+
+        if (window.innerWidth < 900) {
+            tt.style.left = '50%';
+            tt.style.top = '50%';
+            tt.style.bottom = '';
+            tt.style.transform = 'translateY(-50%)'; // Mantém o alinhamento do modal
+        } else {
+            // DESKTOP: Segue o mouse normalmente
+            moveTooltip(e);
+        }
     }
 
     function moveTooltip(e) {
+        if (window.innerWidth < 900) return; // IMPEDE O MOVIMENTO NO MOBILE
+        
         const tt = document.getElementById('card-tooltip');
         let x = e.clientX + 20, y = e.clientY + 20;
         if (x + 350 > window.innerWidth) x = e.clientX - 360;
         if (y + 420 > window.innerHeight) y = window.innerHeight - 440;
-        tt.style.left = x + 'px'; tt.style.top = y + 'px';
+        tt.style.left = x + 'px'; 
+        tt.style.top = y + 'px';
     }
 
     function hideTooltip() { document.getElementById('card-tooltip').style.display = 'none'; }
@@ -569,9 +606,37 @@
                     </div>` : ''}
                 </div>`;
 
+            let pressTimer;
+
+            const startPress = (card, e) => {
+                // Impedir que o clique normal aconteça junto
+                pressTimer = setTimeout(() => {
+                    // Objeto fictício para o showTooltip não quebrar no mobile
+                    const fakeEvent = {
+                        clientX: e.touches ? e.touches[0].clientX : e.clientX,
+                        clientY: e.touches ? e.touches[0].clientY : e.clientY
+                    };
+                    showTooltip(card, fakeEvent);
+                    if (navigator.vibrate) navigator.vibrate(50);
+                }, 600);
+            };
+
+            const cancelPress = () => clearTimeout(pressTimer);
+
+            // Eventos para Mouse (Desktop)
             div.onmouseenter = (e) => showTooltip(card, e);
             div.onmousemove = (e) => moveTooltip(e);
             div.onmouseleave = () => hideTooltip();
+
+            // Eventos para Touch (Mobile)
+            div.ontouchstart = (e) => startPress(e);
+            div.ontouchend = cancelPress;
+            div.ontouchmove = cancelPress; // Se mover o dedo, cancela o preview
+            div.oncontextmenu = (e) => {
+                if(window.innerWidth < 900) e.preventDefault(); // Impede menu de "salvar imagem" no mobile
+            };
+
+            // Clique normal (Adicionar à fila)
             div.onclick = () => {
                 const qty = parseInt(document.getElementById('search-qty').value);
                 for(let i=0; i<qty; i++) cardQueue.push({ id: card.id, name: card.name, imgId: card.card_images[0].id });
@@ -702,6 +767,9 @@
         
         showToast("Filtros resetados");
     };
+    
+    // Fecha o tooltip ao tocar nele mesmo (útil no mobile)
+    document.getElementById('card-tooltip').addEventListener('click', hideTooltip);
 </script>
 </body>
 </html>
