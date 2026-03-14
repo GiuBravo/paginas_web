@@ -284,6 +284,12 @@
 
     let sortDirection = 1; // -1 para Descendente (seta baixo), 1 para Ascendente (seta cima)
 
+    function formatDateBR(dateStr) {
+        if (!dateStr) return "N/A";
+        const [year, month, day] = dateStr.split('-');
+        return `${day}/${month}/${year}`;
+    }
+
     function toggleOrder() {
         sortDirection *= -1;
         document.getElementById('order-icon').innerText = sortDirection === 1 ? '↑' : '↓';
@@ -346,12 +352,11 @@
         setTimeout(() => toast.remove(), 2000);
     }
 
-   function showTooltip(card, e) {
+    function showTooltip(card, e) {
         if(!card) return;
         
         const tt = document.getElementById('card-tooltip');
         const description = card.desc_pt || card.desc;
-        document.getElementById('tooltip-text').innerText = description;
         document.getElementById('tooltip-img').src = card.card_images[0].image_url;
         document.getElementById('tooltip-name').innerText = card.name;
         
@@ -376,20 +381,28 @@
         if(card.atk !== undefined) {
             infoHtml += `<div class="tt-stats"><span>ATK/${card.atk}</span><span>DEF/${card.def}</span></div>`;
         }
-
         document.getElementById('tooltip-info-rows').innerHTML = infoHtml;
 
-        tt.style.display = 'block';
-
-        if (window.innerWidth < 900) {
-            tt.style.left = '50%';
-            tt.style.top = '50%';
-            tt.style.bottom = '';
-            tt.style.transform = 'translateY(-50%)'; // Mantém o alinhamento do modal
-        } else {
-            // DESKTOP: Segue o mouse normalmente
-            moveTooltip(e);
+        // LÓGICA DAS DATAS
+        let tcgDate = "N/A", ocgDate = "N/A";
+        if (card.misc_info && card.misc_info[0]) {
+            tcgDate = formatDateBR(card.misc_info[0].tcg_date);
+            ocgDate = formatDateBR(card.misc_info[0].ocg_date);
         }
+
+        const datesHtml = `
+            <div style="margin-top: 10px; padding-top: 8px; border-top: 1px dashed #444; font-size: 10px; color: #888; display: flex; gap: 12px;">
+                <span>📅 TCG: ${tcgDate}</span>
+                <span>📅 OCG: ${ocgDate}</span>
+            </div>`;
+
+        document.getElementById('tooltip-text').innerHTML = `<div>${description}</div>${datesHtml}`;
+
+        tt.style.display = 'block';
+        if (window.innerWidth < 900) {
+            tt.style.left = '50%'; tt.style.top = '50%';
+            tt.style.transform = 'translate(-50%, -50%)';
+        } else { moveTooltip(e); }
     }
 
     function moveTooltip(e) {
@@ -659,24 +672,38 @@
     function updateUI() {
         const list = document.getElementById('deck-items');
         const layout = document.getElementById('app-layout');
-        if(cardQueue.length === 0) layout.classList.add('empty-queue'); else layout.classList.remove('empty-queue');
+        
+        if(cardQueue.length === 0) layout.classList.add('empty-queue'); 
+        else layout.classList.remove('empty-queue');
+        
         list.innerHTML = "";
         const counts = {};
+        
         cardQueue.forEach(c => counts[c.imgId] = (counts[c.imgId] || 0) + 1);
+        
         Object.keys(counts).forEach(imgId => {
+            // Encontramos a referência da carta na fila
             const c = cardQueue.find(x => x.imgId == imgId);
+            
+            // BUSCAMOS O OBJETO COMPLETO NO CACHE (que tem o misc_info)
+            const fullCardData = cardCache[c.id]; 
+
             const row = document.createElement('div');
             row.style = "padding:8px; border-bottom:1px solid #222; font-size:11px; display:flex; justify-content:space-between; align-items:center; cursor:default;";
             row.innerHTML = `<span><b>${counts[imgId]}x</b> ${c.name}</span><span style="color:red; cursor:pointer; font-weight:bold;" onclick="removeItem('${imgId}')">✖</span>`;
-            const fullData = cardCache[c.id];
-            if(fullData) {
-                row.onmouseenter = (e) => showTooltip(fullData, e);
+            
+            // Associamos o tooltip ao objeto COMPLETO do cache
+            if(fullCardData) {
+                row.onmouseenter = (e) => showTooltip(fullCardData, e);
                 row.onmousemove = (e) => moveTooltip(e);
                 row.onmouseleave = () => hideTooltip();
             }
+            
             list.appendChild(row);
         });
-        document.getElementById('count-total').innerText = cardQueue.length; triggerPDFUpdate();
+        
+        document.getElementById('count-total').innerText = cardQueue.length; 
+        triggerPDFUpdate();
     }
 
     function triggerPDFUpdate() { if(isGenerating || cardQueue.length === 0) return; generatePDF(); }
@@ -740,11 +767,13 @@
     window.importYDK = async (input) => {
         const file = input.files[0]; if(!file) return; const text = await file.text();
         const ids = text.split('\n').map(l => l.trim()).filter(l => /^\d+$/.test(l));
-        const res = await fetch(`https://db.ygoprodeck.com/api/v7/cardinfo.php?id=${ids.join(',')}`);
+        
+        // ADICIONADO &misc=yes para trazer as datas no import também
+        const res = await fetch(`https://db.ygoprodeck.com/api/v7/cardinfo.php?id=${ids.join(',')}&misc=yes`);
         const data = await res.json();
         if(data.data) {
             data.data.forEach(card => {
-                cardCache[card.id] = card; // SALVA NO CACHE NA IMPORTAÇÃO
+                cardCache[card.id] = card; 
                 const count = ids.filter(id => id == card.id).length;
                 for(let i=0; i<count; i++) cardQueue.push({ id: card.id, name: card.name, imgId: card.card_images[0].id });
             });
