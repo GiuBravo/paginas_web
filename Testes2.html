@@ -268,6 +268,39 @@
                 <div class="filter-group"><label>ATK</label><div class="stepper"><button onclick="adjustVal('filter-atk', -50)">-</button><input type="number" id="filter-atk" placeholder="---"><button onclick="adjustVal('filter-atk', 50)">+</button></div></div>
                 <div class="filter-group"><label>DEF</label><div class="stepper"><button onclick="adjustVal('filter-def', -50)">-</button><input type="number" id="filter-def" placeholder="---"><button onclick="adjustVal('filter-def', 50)">+</button></div></div>
             </div>
+            <div class="filter-group">
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 11px; color: var(--accent); text-transform: uppercase; font-weight: bold;">
+                    <input type="checkbox" id="enable-date-filter" style="width: auto;"> Ativar Filtro de Data/Era
+                </label>
+            </div>
+            <div id="date-filters-container" style="display: none; border: 1px solid #333; padding: 10px; border-radius: 4px; margin-bottom: 15px; background: #111;">
+                <div class="filter-group">
+                    <label>Era Yu-Gi-Oh!</label>
+                    <select id="filter-era">
+                        <option value="">Todas as Eras</option>
+                        <option value="dm">Duel Monsters (2002-2004)</option>
+                        <option value="gx">GX (2004-2008)</option>
+                        <option value="5ds">5D's (2008-2011)</option>
+                        <option value="zexal">Zexal (2011-2014)</option>
+                        <option value="arc-v">Arc-V (2014-2017)</option>
+                        <option value="vrains">Vrains (2017-2020)</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Basear busca em:</label>
+                    <select id="date-region-type">
+                        <option value="tcg">Lançamento TCG (Ocidente)</option>
+                        <option value="ocg">Lançamento OCG (Japão)</option>
+                    </select>
+                </div>                
+                <div class="filter-group">
+                    <label>Período (De -> Até)</label>
+                    <div style="display: flex; gap: 5px;">
+                        <input type="date" id="date-start" value="1999-01-01" style="flex:1;">
+                        <input type="date" id="date-end" style="flex:1;">
+                    </div>
+                </div>
+            </div>
             <div class="filter-group" style="margin-top:20px;"><label>Escala do PDF (%)</label><div class="stepper"><button onclick="adjustScale(-0.1)">-</button><input type="number" id="print-scale" value="100.0" readonly><button onclick="adjustScale(0.1)">+</button></div></div>
             <hr style="border:0; border-top:1px solid #333; margin: 20px 0;">
             <label class="btn-secondary">IMPORTAR .YDK<input type="file" id="file-ydk" accept=".ydk" style="display:none" onchange="importYDK(this)"></label>
@@ -552,7 +585,44 @@
     }
 
     for(let i=0; i<=13; i++) document.getElementById('filter-lv').innerHTML += `<option value="${i}">${i}</option>`;
-    window.onload = () => { performSearch(true); };
+    window.onload = () => {
+        const hoje = new Date().toISOString().split('T')[0];
+        document.getElementById('date-end').value = hoje;
+
+        // Toggle do painel
+        document.getElementById('enable-date-filter').onchange = function() {
+            document.getElementById('date-filters-container').style.display = this.checked ? 'block' : 'none';
+            triggerSearch();
+        };
+
+        // Definição das Eras
+        const ERAS = {
+            'dm': { tcg: ['2002-03-08', '2004-09-30'], ocg: ['1999-02-04', '2004-09-30'] },
+            'gx': { tcg: ['2004-10-01', '2008-08-31'], ocg: ['2004-10-01', '2008-02-29'] },
+            '5ds': { tcg: ['2008-09-01', '2011-08-31'], ocg: ['2008-03-15', '2011-02-28'] },
+            'zexal': { tcg: ['2011-09-01', '2014-07-31'], ocg: ['2011-03-19', '2014-03-20'] },
+            'arc-v': { tcg: ['2014-08-01', '2017-07-31'], ocg: ['2014-03-21', '2017-03-24'] },
+            'vrains': { tcg: ['2017-08-01', '2020-04-30'], ocg: ['2017-03-25', '2020-04-17'] }
+        };
+
+        document.getElementById('filter-era').onchange = function() {
+            const eraData = ERAS[this.value];
+            const region = document.getElementById('date-region-type').value;
+            if(eraData) {
+                const dates = eraData[region] || eraData['tcg'];
+                document.getElementById('date-start').value = dates[0];
+                document.getElementById('date-end').value = dates[1];
+                triggerSearch();
+            }
+        };
+
+        // Escuta mudanças nos campos de data
+        ['date-start', 'date-end', 'date-region-type'].forEach(id => {
+            document.getElementById(id).addEventListener('change', triggerSearch);
+        });
+
+        performSearch(true); 
+    };
 
     function changeView(view) {
         currentView = view;
@@ -640,10 +710,15 @@
         const sub = document.getElementById('filter-subtype').value;
         const atk = document.getElementById('filter-atk').value;
         const def = document.getElementById('filter-def').value;
+        // Captura os novos campos de data
+        const dateEnabled = document.getElementById('enable-date-filter').checked;
+        const dateRegion = document.getElementById('date-region-type').value;
+        const dateStart = document.getElementById('date-start').value;
+        const dateEnd = document.getElementById('date-end').value;
 
         const hasEnoughName = q.length >= 3;
         const hasEnoughDesc = desc.length >= 3;
-        const hasOtherFilters = type || atk || def || document.getElementById('filter-attribute').value;
+        const hasOtherFilters = type || atk || def || document.getElementById('filter-attribute').value || dateEnabled;
 
         if(!initial && !hasEnoughName && !hasEnoughDesc && !hasOtherFilters) return;
 
@@ -663,15 +738,13 @@
         if(lv) p.append('level', lv);
         const attr = document.getElementById('filter-attribute').value;
         if(attr) p.append('attribute', attr);
-        p.append('misc', 'yes');
+        p.append('misc', 'yes'); // Importante: mantém o 'yes' para trazer as datas no misc_info
 
         try {
-            // Criamos as duas URLs: Uma global e uma forçada em PT
             const urlGlobal = `https://db.ygoprodeck.com/api/v7/cardinfo.php?${p.toString()}`;
             p.append('language', 'pt');
             const urlPT = `https://db.ygoprodeck.com/api/v7/cardinfo.php?${p.toString()}`;
 
-            // Executa as duas buscas ao mesmo tempo para ganhar performance
             const [resGlobal, resPT] = await Promise.all([
                 fetch(urlGlobal).then(r => r.ok ? r.json() : { data: [] }),
                 fetch(urlPT).then(r => r.ok ? r.json() : { data: [] })
@@ -680,18 +753,11 @@
             const dataGlobal = resGlobal.data || [];
             const dataPT = resPT.data || [];
 
-            // MAPA DE FUSÃO: Usamos o ID como chave única
-            // Se a carta vier no dataPT, ela substitui ou complementa a do Global
             const mergedMap = new Map();
-
-            // 1. Adicionamos as globais primeiro
             dataGlobal.forEach(card => mergedMap.set(card.id, card));
-
-            // 2. Sobrepomos com as em PT (elas terão name_pt e desc_pt preenchidos)
             dataPT.forEach(card => {
                 const existing = mergedMap.get(card.id);
                 if (existing) {
-                    // Mescla os campos de tradução no objeto existente
                     mergedMap.set(card.id, { ...existing, ...card });
                 } else {
                     mergedMap.set(card.id, card);
@@ -700,7 +766,23 @@
 
             let finalData = Array.from(mergedMap.values());
 
-            // Filtro adicional de segurança para Monstros
+            // --- INÍCIO DA ADIÇÃO DO FILTRO DE DATA ---
+            if (dateEnabled) {
+                const start = dateStart || "1900-01-01";
+                const end = dateEnd || "9999-12-31";
+
+                finalData = finalData.filter(card => {
+                    const misc = card.misc_info ? card.misc_info[0] : null;
+                    if (!misc) return false;
+
+                    // Escolhe a data baseada na região selecionada
+                    const cardDate = (dateRegion === 'tcg') ? misc.tcg_date : misc.ocg_date;
+                    
+                    return cardDate && cardDate >= start && cardDate <= end;
+                });
+            }
+            // --- FIM DA ADIÇÃO DO FILTRO DE DATA ---
+
             if(type === "Monster" && !sub) {
                 finalData = finalData.filter(c => c.type.toLowerCase().includes("monster"));
             }
@@ -935,13 +1017,11 @@
         }
     };
     window.resetFilters = () => {
-        // 1. Resetar inputs de texto e seletores principais
         document.getElementById('search-input').value = "";
         document.getElementById('filter-desc').value = "";
         document.getElementById('filter-type').value = "";
         document.getElementById('search-qty').value = "1";
         
-        // 2. Resetar seletores dependentes e campos numéricos
         document.getElementById('filter-subtype').innerHTML = '<option value="">Qualquer</option>';
         document.getElementById('filter-race').innerHTML = '<option value="">Qualquer</option>';
         document.getElementById('filter-attribute').value = "";
@@ -949,15 +1029,21 @@
         document.getElementById('filter-atk').value = "";
         document.getElementById('filter-def').value = "";
 
-        // 3. Esconder os grupos de filtros dinâmicos
+        // Reset de Datas
+        const hoje = new Date().toISOString().split('T')[0];
+        document.getElementById('enable-date-filter').checked = false;
+        document.getElementById('date-filters-container').style.display = 'none';
+        document.getElementById('filter-era').value = "";
+        document.getElementById('date-region-type').value = "tcg";
+        document.getElementById('date-start').value = "1999-01-01";
+        document.getElementById('date-end').value = hoje;
+
         document.getElementById('group-subtype').style.display = "none";
         document.getElementById('group-race').style.display = "none";
         document.getElementById('monster-extras').style.display = "none";
 
-        // 4. Resetar o estado da paginação e disparar a busca inicial
         currentPage = 1;
         performSearch(true);
-        
         showToast("Filtros resetados");
     };
     

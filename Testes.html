@@ -120,9 +120,26 @@
         .results-view { flex-grow: 1; overflow-y: auto; }
 
         /* --- ITENS DA LISTA (Sugestões) ATUALIZADOS --- */
-        .suggestion-item { display: flex; gap: 12px; padding: 15px 10px; background: var(--bg-dark); align-items: flex-start; cursor: pointer; border-bottom: 1px solid #222; transition: background 0.2s; }
+        .suggestion-item { 
+            display: flex; 
+            gap: 15px;             /* Aumentei um pouco o espaço entre foto e texto */
+            padding: 12px 10px; 
+            background: var(--bg-dark); 
+            align-items: flex-start; /* Alinha pelo topo para nomes de cartas longos */
+            cursor: pointer; 
+            border-bottom: 1px solid #222; 
+            transition: background 0.2s; 
+        }
         .suggestion-item:active { background: #1a1a1a; }
-        .suggestion-item img { height: 110px; border-radius: 4px; border: 1px solid #444; flex-shrink: 0; box-shadow: 0 4px 8px rgba(0,0,0,0.6); }
+        .suggestion-item img { 
+            width: 80px;           /* Defina uma largura fixa em vez de altura */
+            height: auto;          /* Deixe a altura ser proporcional */
+            border-radius: 4px; 
+            border: 1px solid #444; 
+            flex-shrink: 0;        /* ISSO É O MAIS IMPORTANTE: impede o texto de empurrar a imagem */
+            box-shadow: 0 4px 8px rgba(0,0,0,0.6); 
+            object-fit: contain;
+        }
 
         .card-info-box { flex-grow: 1; display: flex; flex-direction: column; gap: 5px; text-align: left; }
         .card-name { color: var(--accent); font-size: 13px; font-weight: bold; }
@@ -251,35 +268,31 @@
                 <div class="filter-group"><label>ATK</label><div class="stepper"><button onclick="adjustVal('filter-atk', -50)">-</button><input type="number" id="filter-atk" placeholder="---"><button onclick="adjustVal('filter-atk', 50)">+</button></div></div>
                 <div class="filter-group"><label>DEF</label><div class="stepper"><button onclick="adjustVal('filter-def', -50)">-</button><input type="number" id="filter-def" placeholder="---"><button onclick="adjustVal('filter-def', 50)">+</button></div></div>
             </div>
-            <div class="filter-group" style="margin-top:20px;"><label>Escala do PDF (%)</label><div class="stepper"><button onclick="adjustScale(-0.1)">-</button><input type="number" id="print-scale" value="100.0" readonly><button onclick="adjustScale(0.1)">+</button></div></div>
-           <div class="filter-group">
+            <div class="filter-group">
                 <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 11px; color: var(--accent); text-transform: uppercase; font-weight: bold;">
                     <input type="checkbox" id="enable-date-filter" style="width: auto;"> Ativar Filtro de Data/Era
                 </label>
             </div>
-
             <div id="date-filters-container" style="display: none; border: 1px solid #333; padding: 10px; border-radius: 4px; margin-bottom: 15px; background: #111;">
                 <div class="filter-group">
                     <label>Era Yu-Gi-Oh!</label>
                     <select id="filter-era">
                         <option value="">Todas as Eras</option>
-                        <option value="dm">Duel Monsters</option>
-                        <option value="gx">GX</option>
-                        <option value="5ds">5D's</option>
-                        <option value="zexal">Zexal</option>
-                        <option value="arc-v">Arc-V</option>
-                        <option value="vrains">Vrains</option>
+                        <option value="dm">Duel Monsters (2002-2004)</option>
+                        <option value="gx">GX (2004-2008)</option>
+                        <option value="5ds">5D's (2008-2011)</option>
+                        <option value="zexal">Zexal (2011-2014)</option>
+                        <option value="arc-v">Arc-V (2014-2017)</option>
+                        <option value="vrains">Vrains (2017-2020)</option>
                     </select>
                 </div>
-
                 <div class="filter-group">
                     <label>Basear busca em:</label>
                     <select id="date-region-type">
                         <option value="tcg">Lançamento TCG (Ocidente)</option>
                         <option value="ocg">Lançamento OCG (Japão)</option>
                     </select>
-                </div>
-                
+                </div>                
                 <div class="filter-group">
                     <label>Período (De -> Até)</label>
                     <div style="display: flex; gap: 5px;">
@@ -288,6 +301,7 @@
                     </div>
                 </div>
             </div>
+            <div class="filter-group" style="margin-top:20px;"><label>Escala do PDF (%)</label><div class="stepper"><button onclick="adjustScale(-0.1)">-</button><input type="number" id="print-scale" value="100.0" readonly><button onclick="adjustScale(0.1)">+</button></div></div>
             <hr style="border:0; border-top:1px solid #333; margin: 20px 0;">
             <label class="btn-secondary">IMPORTAR .YDK<input type="file" id="file-ydk" accept=".ydk" style="display:none" onchange="importYDK(this)"></label>
         </div>
@@ -356,6 +370,7 @@
     let cardQueue = [], searchResults = [], currentPage = 1, currentView = 'list';
     let isGenerating = false;
     let cardCache = {}; // ESSENCIAL: Armazena dados das cartas para o tooltip
+    let searchTimeout;
 
     let sortDirection = 1; // -1 para Descendente (seta baixo), 1 para Ascendente (seta cima)
 
@@ -432,9 +447,11 @@
         if(!card) return;
         
         const tt = document.getElementById('card-tooltip');
+        // Mantém a lógica de prioridade para o Português
         const description = card.desc_pt || card.desc;
+        
         document.getElementById('tooltip-img').src = card.card_images[0].image_url;
-        document.getElementById('tooltip-name').innerText = card.name;
+        document.getElementById('tooltip-name').innerText = card.name_pt || card.name;
         
         const racesTrad = { 
             "Aqua": "Aqua", "Beast": "Besta", "Beast-Warrior": "Besta-Guerreira", "Cyberse": "Ciberso", 
@@ -449,7 +466,7 @@
 
         let infoHtml = "";
         
-        // 1. Atributo e Level/Rank/Link
+        // Bloco de Atributo e Nível/Rank/Link
         if(card.attribute || card.type.includes("Spell") || card.type.includes("Trap")) {
             infoHtml += `<div class="tt-row-split">`;
             
@@ -483,7 +500,7 @@
             infoHtml += `</div>`;
         }
 
-        // 2. Tradução de Tipo e URLs de Ícones
+        // 1. Lógica de Tradução do Tipo
         let tipoTexto = card.type;
         if (tipoTexto.includes("Effect Monster")) {
             tipoTexto = "Monstro de Efeito";
@@ -496,20 +513,21 @@
                 .replace("Trap Card", "Carta de Armadilha");
         }
 
+        // 2. Ícones (Raça e Categoria/Tipo de Carta)
         const raceTraduzida = racesTrad[card.race] || card.race;
         const raceIconUrl = `https://images.ygoprodeck.com/images/cards/icons/race/${card.race}.png`;
         const typeIconUrl = `https://images.ygoprodeck.com/images/cards/icons/${encodeURIComponent(card.type)}.jpg`;
 
-        // 3. Linha: [ Ícone Raça / Ícone Tipo TipoTexto ]
-        infoHtml += `<div style="display: flex; align-items: center; gap: 4px; color: #aaa; font-size: 11px; margin-bottom: 8px;">
+        // 3. Montagem da linha: [ Ícone Raça / Ícone Tipo TipoTraduzido ]
+        infoHtml += `<div style="display: flex; align-items: center; gap: 4px; color: #aaa; font-size: 11px; margin-bottom: 8px; flex-wrap: wrap;">
             <span>[</span>
-            <img src="${raceIconUrl}" style="width: 14px; height: 14px;" onerror="this.style.display='none'">
+            <img src="${raceIconUrl}" title="Raça" style="width: 14px; height: 14px;" onerror="this.style.display='none'">
             <span>${raceTraduzida} / </span>
-            <img src="${typeIconUrl}" style="width: 14px; height: 14px; border-radius: 2px;" onerror="this.style.display='none'">
+            <img src="${typeIconUrl}" title="Tipo" style="width: 14px; height: 14px; border-radius: 2px;" onerror="this.style.display='none'">
             <span>${tipoTexto} ]</span>
         </div>`;
 
-        // 4. Status (ATK/DEF) com SVG e FontAwesome
+        // 4. Ataque e Defesa
         if(card.atk !== undefined) {
             const swordSvg = `<svg width="14" height="14" viewBox="0 0 512 512" style="fill: #e74c3c;"><path d="M507.3 5.7c-7.6-7.6-19.8-7.6-27.4 0l-144 144c-3.1 3.1-4.7 7.2-4.7 11.3 0 4.1 1.6 8.2 4.7 11.3l24.7 24.7-149.7 149.7-50.3-50.3c-7.6-7.6-19.8-7.6-27.4 0s-7.6 19.8 0 27.4l50.3 50.3-64.7 64.7c-1.8 1.8-4.3 2.8-6.9 2.8s-5.1-1-6.9-2.8l-40-40c-3.8-3.8-10.1-3.8-13.9 0s-3.8 10.1 0 13.9l40 40c7.6 7.6 19.8 7.6 27.4 0l64.7-64.7 50.3 50.3c7.6 7.6 19.8 7.6 27.4 0s7.6-19.8 0-27.4l-50.3-50.3 149.7-149.7 24.7 24.7c3.1 3.1 7.2 4.7 11.3 4.7s8.2-1.6 11.3-4.7l144-144c7.6-7.5 7.6-19.7 0-27.3z"/></svg>`;
             
@@ -528,14 +546,17 @@
         
         document.getElementById('tooltip-info-rows').innerHTML = infoHtml;
 
-        // Datas TCG/OCG
+        // Datas e Finalização
         let tcgDate = "N/A", ocgDate = "N/A";
         if (card.misc_info && card.misc_info[0]) {
             tcgDate = formatDateBR(card.misc_info[0].tcg_date);
             ocgDate = formatDateBR(card.misc_info[0].ocg_date);
         }
         const datesHtml = `<div style="margin-top: 10px; padding-top: 8px; border-top: 1px dashed #444; font-size: 10px; color: #888; display: flex; gap: 12px;"><span>📅 TCG: ${tcgDate}</span><span>📅 OCG: ${ocgDate}</span></div>`;
-        document.getElementById('tooltip-text').innerHTML = `<div>${description}</div>${datesHtml}`;
+        
+        // AJUSTE FINAL: Conversão de quebras de linha (\n) para <br> para manter a formatação do efeito
+        const formattedDescription = description.replace(/\n/g, '<br>');
+        document.getElementById('tooltip-text').innerHTML = `<div>${formattedDescription}</div>${datesHtml}`;
 
         tt.style.display = 'block';
         if (window.innerWidth < 900) {
@@ -560,7 +581,7 @@
     function getItemsPerPage() {
         if (window.innerWidth < 900) return currentView === 'list' ? 15 : 20;
         const isQueueEmpty = cardQueue.length === 0;
-        return currentView === 'list' ? (isQueueEmpty ? 25 : 15) : (isQueueEmpty ? 44 : 21);
+        return currentView === 'list' ? (isQueueEmpty ? 25 : 15) : (isQueueEmpty ? 33 : 21);
     }
 
     for(let i=0; i<=13; i++) document.getElementById('filter-lv').innerHTML += `<option value="${i}">${i}</option>`;
@@ -574,7 +595,7 @@
             triggerSearch();
         };
 
-        // Lógica das Eras
+        // Definição das Eras
         const ERAS = {
             'dm': { tcg: ['2002-03-08', '2004-09-30'], ocg: ['1999-02-04', '2004-09-30'] },
             'gx': { tcg: ['2004-10-01', '2008-08-31'], ocg: ['2004-10-01', '2008-02-29'] },
@@ -595,23 +616,13 @@
             }
         };
 
-        // Escuta mudanças nos campos de data para busca automática
+        // Escuta mudanças nos campos de data
         ['date-start', 'date-end', 'date-region-type'].forEach(id => {
             document.getElementById(id).addEventListener('change', triggerSearch);
         });
 
         performSearch(true); 
     };
-
-    // Função auxiliar para o Reset
-    function resetDateFilters() {
-        const hoje = new Date().toISOString().split('T')[0];
-        document.getElementById('filter-era').value = "";
-        document.getElementById('tcg-start').value = "2002-03-08";
-        document.getElementById('ocg-start').value = "1999-02-04";
-        document.getElementById('tcg-end').value = hoje;
-        document.getElementById('ocg-end').value = hoje;
-    }
 
     function changeView(view) {
         currentView = view;
@@ -690,14 +701,7 @@
 
     ['search-input', 'filter-desc', 'filter-subtype', 'filter-race', 'filter-attribute', 'filter-lv', 'filter-atk', 'filter-def'].forEach(id => document.getElementById(id).addEventListener('input', triggerSearch));
 
-    let searchTimer;
-    function triggerSearch() {
-        clearTimeout(searchTimer);
-        searchTimer = setTimeout(() => {
-            currentPage = 1;
-            performSearch();
-        }, 500); // Dá tempo de você terminar de digitar ou escolher a data
-    }
+    function triggerSearch() { clearTimeout(window.sTimeout); window.sTimeout = setTimeout(performSearch, 500); }
 
     async function performSearch(initial = false) {
         const q = document.getElementById('search-input').value;
@@ -706,21 +710,22 @@
         const sub = document.getElementById('filter-subtype').value;
         const atk = document.getElementById('filter-atk').value;
         const def = document.getElementById('filter-def').value;
-        const attr = document.getElementById('filter-attribute').value;
+        // Captura os novos campos de data
         const dateEnabled = document.getElementById('enable-date-filter').checked;
-        const start = document.getElementById('date-start').value || "1900-01-01";
-        const end = document.getElementById('date-end').value || new Date().toISOString().split('T')[0];
+        const dateRegion = document.getElementById('date-region-type').value;
+        const dateStart = document.getElementById('date-start').value;
+        const dateEnd = document.getElementById('date-end').value;
 
         const hasEnoughName = q.length >= 3;
         const hasEnoughDesc = desc.length >= 3;
-        const hasOtherFilters = type || atk || def || attr || dateEnabled;
+        const hasOtherFilters = type || atk || def || document.getElementById('filter-attribute').value || dateEnabled;
 
         if(!initial && !hasEnoughName && !hasEnoughDesc && !hasOtherFilters) return;
 
+        // Configuração dos parâmetros base
         let p = new URLSearchParams();
         if(hasEnoughName) p.append('fname', q);
         if(hasEnoughDesc) p.append('desc', desc);
-        
         if(type) { 
             if(type === "Monster" && sub) p.append('type', sub); 
             else if(type !== "Monster") p.append('type', type); 
@@ -731,36 +736,55 @@
         if(def) p.append('def', def);
         const lv = document.getElementById('filter-lv').value;
         if(lv) p.append('level', lv);
+        const attr = document.getElementById('filter-attribute').value;
         if(attr) p.append('attribute', attr);
-        
-        p.append('language', 'pt');
-        p.append('misc', 'yes'); // Necessário para as datas
+        p.append('misc', 'yes'); // Importante: mantém o 'yes' para trazer as datas no misc_info
 
         try {
-            const response = await fetch(`https://db.ygoprodeck.com/api/v7/cardinfo.php?${p.toString()}`);
-            if (!response.ok) { searchResults = []; renderResults(); return; }
+            const urlGlobal = `https://db.ygoprodeck.com/api/v7/cardinfo.php?${p.toString()}`;
+            p.append('language', 'pt');
+            const urlPT = `https://db.ygoprodeck.com/api/v7/cardinfo.php?${p.toString()}`;
 
-            const data = await response.json();
-            let finalData = data.data || [];
+            const [resGlobal, resPT] = await Promise.all([
+                fetch(urlGlobal).then(r => r.ok ? r.json() : { data: [] }),
+                fetch(urlPT).then(r => r.ok ? r.json() : { data: [] })
+            ]);
 
-            // Filtro de Monstro Genérico (se selecionado Monstro mas sem sub-tipo)
-            if(type === "Monster" && !sub) {
-                finalData = finalData.filter(c => c.type.toLowerCase().includes("monster"));
-            }
+            const dataGlobal = resGlobal.data || [];
+            const dataPT = resPT.data || [];
 
-            // --- FILTRO DE DATA CORRIGIDO ---
-            if (document.getElementById('enable-date-filter').checked) {
-                const region = document.getElementById('date-region-type').value;
-                const start = document.getElementById('date-start').value || "1900-01-01";
-                const end = document.getElementById('date-end').value || "9999-12-31";
+            const mergedMap = new Map();
+            dataGlobal.forEach(card => mergedMap.set(card.id, card));
+            dataPT.forEach(card => {
+                const existing = mergedMap.get(card.id);
+                if (existing) {
+                    mergedMap.set(card.id, { ...existing, ...card });
+                } else {
+                    mergedMap.set(card.id, card);
+                }
+            });
+
+            let finalData = Array.from(mergedMap.values());
+
+            // --- INÍCIO DA ADIÇÃO DO FILTRO DE DATA ---
+            if (dateEnabled) {
+                const start = dateStart || "1900-01-01";
+                const end = dateEnd || "9999-12-31";
 
                 finalData = finalData.filter(card => {
                     const misc = card.misc_info ? card.misc_info[0] : null;
                     if (!misc) return false;
 
-                    const cardDate = (region === 'tcg') ? misc.tcg_date : misc.ocg_date;
+                    // Escolhe a data baseada na região selecionada
+                    const cardDate = (dateRegion === 'tcg') ? misc.tcg_date : misc.ocg_date;
+                    
                     return cardDate && cardDate >= start && cardDate <= end;
                 });
+            }
+            // --- FIM DA ADIÇÃO DO FILTRO DE DATA ---
+
+            if(type === "Monster" && !sub) {
+                finalData = finalData.filter(c => c.type.toLowerCase().includes("monster"));
             }
 
             searchResults = finalData;            
@@ -768,6 +792,7 @@
             sortAndRender();
 
         } catch(e) { 
+            console.error("Erro na busca dual:", e);
             searchResults = []; 
             renderResults(); 
         }
@@ -801,56 +826,81 @@
             const div = document.createElement('div'); 
             div.className = 'suggestion-item';
             
+            // Lógica de Atributos e Ícones
             const attrRaw = card.attribute ? card.attribute.toUpperCase() : (card.type.includes("Spell") ? "SPELL" : "TRAP");
-            // Link dos Atributos
             const attrIconUrl = card.attribute ? `https://images.ygoprodeck.com/images/cards/${attrRaw}.jpg` : "";
-            // Link das Raças que você achou
             const raceIconUrl = `https://images.ygoprodeck.com/images/cards/icons/race/${card.race}.png`;
             const starIcon = "https://ygoprodeck.com/wp-content/uploads/2017/01/level.png";
-
             const raceTraduzida = racesTrad[card.race] || card.race;
 
+            // Montagem do HTML Interno
             div.innerHTML = `
-                <img src="${card.card_images[0].image_url_small}">
+                <img src="${card.card_images[0].image_url_small}" 
+                    loading="lazy" 
+                    onerror="this.src='https://images.ygoprodeck.com/images/cards/back_high.jpg'"
+                    alt="${card.name}">
+                    
                 <div class="card-info-box">
-                    <b class="card-name">${card.name}</b>
+                    <b class="card-name">${card.name_pt || card.name}</b>
+                    
                     <div class="info-row" style="align-items: center; gap: 8px;">
-                        ${attrIconUrl ? `<div style="display: flex; align-items: center; gap: 4px;"><img src="${attrIconUrl}" style="width: 14px; height: 14px; border-radius: 50%;"> <span style="font-size: 10px;">${trad[attrRaw] || attrRaw}</span></div>` : ''}
+                        ${attrIconUrl ? `
+                            <div style="display: flex; align-items: center; gap: 4px;">
+                                <img src="${attrIconUrl}" style="width: 14px; height: 14px; border-radius: 50%;"> 
+                                <span style="font-size: 10px;">${trad[attrRaw] || attrRaw}</span>
+                            </div>` : ''}
+                        
                         ${(card.level || card.rank) ? `
                             <div style="display: flex; align-items: center; gap: 2px;">
                                 <img src="${starIcon}" style="width: 12px; height: 12px; ${card.type.includes('XYZ') ? 'filter:invert(1) brightness(0.5);' : ''}">
                                 <span style="font-size: 10px;">${card.level || card.rank}</span>
                             </div>` : ''}
                     </div>
+
                     <div class="info-row" style="color:var(--accent); align-items: center; gap: 4px;">
                         <img src="${raceIconUrl}" style="width: 14px; height: 14px;" onerror="this.style.display='none'">
                         <span>${raceTraduzida}</span>
                     </div>
-                    ${card.atk !== undefined ? `<div class="info-row atk-def-row"><span>ATK/ ${card.atk}</span><span>DEF/ ${card.def}</span></div>` : ''}
+
+                    ${card.atk !== undefined ? `
+                        <div class="info-row atk-def-row">
+                            <span>ATK/ ${card.atk}</span>
+                            <span>DEF/ ${card.def}</span>
+                        </div>` : ''}
                 </div>`;
 
-            // Eventos de Tooltip e Clique (Manteve igual)
+            // --- Lógica de Eventos (Inalterada, pois já está funcional) ---
             let pressTimer;
             const startPress = (cardObj, e) => {
                 pressTimer = setTimeout(() => {
-                    const fakeEvent = { clientX: e.touches ? e.touches[0].clientX : e.clientX, clientY: e.touches ? e.touches[0].clientY : e.clientY };
+                    const fakeEvent = { 
+                        clientX: e.touches ? e.touches[0].clientX : e.clientX, 
+                        clientY: e.touches ? e.touches[0].clientY : e.clientY 
+                    };
                     showTooltip(cardObj, fakeEvent);
                     if (navigator.vibrate) navigator.vibrate(50);
                 }, 600);
             };
+            
             const cancelPress = () => clearTimeout(pressTimer);
+            
             div.onmouseenter = (e) => showTooltip(card, e);
             div.onmousemove = (e) => moveTooltip(e);
             div.onmouseleave = () => hideTooltip();
             div.ontouchstart = (e) => startPress(card, e);
             div.ontouchend = cancelPress;
             div.ontouchmove = cancelPress;
+            
             div.onclick = () => {
-                const qty = parseInt(document.getElementById('search-qty').value);
-                for(let i=0; i<qty; i++) cardQueue.push({ id: card.id, name: card.name, imgId: card.card_images[0].id });
+                const qty = parseInt(document.getElementById('search-qty').value) || 1;
+                const displayName = card.name_pt || card.name; // Pega o nome em PT se existir
+                for(let i=0; i<qty; i++) {
+                    cardQueue.push({ id: card.id, name: displayName, imgId: card.card_images[0].id });
+                }
                 updateUI();
-                if(window.innerWidth < 900) showToast(`${qty}x ${card.name} adicionado(a)!`);
+                if(window.innerWidth < 900) showToast(`${qty}x ${displayName} adicionado(a)!`);
             };
+
             container.appendChild(div);
         });
     }
@@ -859,6 +909,7 @@
         const list = document.getElementById('deck-items');
         const layout = document.getElementById('app-layout');
         
+        // Verifica se mudou o estado da fila para ajustar o layout
         if(cardQueue.length === 0) layout.classList.add('empty-queue'); 
         else layout.classList.remove('empty-queue');
         
@@ -868,17 +919,13 @@
         cardQueue.forEach(c => counts[c.imgId] = (counts[c.imgId] || 0) + 1);
         
         Object.keys(counts).forEach(imgId => {
-            // Encontramos a referência da carta na fila
             const c = cardQueue.find(x => x.imgId == imgId);
-            
-            // BUSCAMOS O OBJETO COMPLETO NO CACHE (que tem o misc_info)
             const fullCardData = cardCache[c.id]; 
 
             const row = document.createElement('div');
             row.style = "padding:8px; border-bottom:1px solid #222; font-size:11px; display:flex; justify-content:space-between; align-items:center; cursor:default;";
             row.innerHTML = `<span><b>${counts[imgId]}x</b> ${c.name}</span><span style="color:red; cursor:pointer; font-weight:bold;" onclick="removeItem('${imgId}')">✖</span>`;
             
-            // Associamos o tooltip ao objeto COMPLETO do cache
             if(fullCardData) {
                 row.onmouseenter = (e) => showTooltip(fullCardData, e);
                 row.onmousemove = (e) => moveTooltip(e);
@@ -889,6 +936,9 @@
         });
         
         document.getElementById('count-total').innerText = cardQueue.length; 
+        // Força a atualização da grade de sugestões para respeitar o novo espaço
+        renderResults(); 
+
         triggerPDFUpdate();
     }
 
@@ -967,23 +1017,27 @@
         }
     };
     window.resetFilters = () => {
-        // Limpeza de campos padrão
-        ['search-input', 'filter-desc', 'filter-type', 'filter-attribute', 'filter-lv', 'filter-atk', 'filter-def', 'filter-era'].forEach(id => {
-            document.getElementById(id).value = "";
-        });
+        document.getElementById('search-input').value = "";
+        document.getElementById('filter-desc').value = "";
+        document.getElementById('filter-type').value = "";
         document.getElementById('search-qty').value = "1";
         
-        // Reset de Interface de Datas
+        document.getElementById('filter-subtype').innerHTML = '<option value="">Qualquer</option>';
+        document.getElementById('filter-race').innerHTML = '<option value="">Qualquer</option>';
+        document.getElementById('filter-attribute').value = "";
+        document.getElementById('filter-lv').value = "";
+        document.getElementById('filter-atk').value = "";
+        document.getElementById('filter-def').value = "";
+
+        // Reset de Datas
         const hoje = new Date().toISOString().split('T')[0];
         document.getElementById('enable-date-filter').checked = false;
         document.getElementById('date-filters-container').style.display = 'none';
+        document.getElementById('filter-era').value = "";
         document.getElementById('date-region-type').value = "tcg";
         document.getElementById('date-start').value = "1999-01-01";
         document.getElementById('date-end').value = hoje;
 
-        // Reset de Categorias dinâmicas
-        document.getElementById('filter-subtype').innerHTML = '<option value="">Qualquer</option>';
-        document.getElementById('filter-race').innerHTML = '<option value="">Qualquer</option>';
         document.getElementById('group-subtype').style.display = "none";
         document.getElementById('group-race').style.display = "none";
         document.getElementById('monster-extras').style.display = "none";
