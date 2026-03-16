@@ -386,6 +386,26 @@
         sortAndRender();
     }
 
+    function getLinkMarkersHtml(markers) {
+        if (!markers) return '';
+        
+        // Mapeamento de direções para ícones (usando Font Awesome ou Setas Unicode)
+        const arrowMap = {
+            "Top": "↑",
+            "Bottom": "↓",
+            "Left": "←",
+            "Right": "→",
+            "Top-Left": "↖",
+            "Top-Right": "↗",
+            "Bottom-Left": "↙",
+            "Bottom-Right": "↘"
+        };
+
+        return markers.map(m => 
+            `<span style="color: #ff0000; font-weight: bold; margin: 0 1px;" title="${m}">${arrowMap[m] || m}</span>`
+        ).join('');
+    }
+
     function sortAndRender() {
         const criterion = document.getElementById('sort-by').value;
 
@@ -468,37 +488,30 @@
         
         // Bloco de Atributo e Nível/Rank/Link
         if(card.attribute || card.type.includes("Spell") || card.type.includes("Trap")) {
-            infoHtml += `<div class="tt-row-split">`;
+            infoHtml += `<div class="tt-row-split" style="flex-direction: column; align-items: flex-start; gap: 4px;">`;
             
-            let displayType = "";
-            let iconUrl = "";
-
-            if(card.attribute) {
-                displayType = card.attribute.toUpperCase();
-                iconUrl = `https://images.ygoprodeck.com/images/cards/${displayType}.jpg`;
-            } else {
-                displayType = card.type.includes("Spell") ? "SPELL" : "TRAP";
-                iconUrl = `https://images.ygoprodeck.com/images/cards/icons/${displayType.toLowerCase()}.png`;
-            }
-
+            // Atributo
             infoHtml += `<div class="tt-attr-group">
-                <img class="tt-icon" src="${iconUrl}" onerror="this.style.display='none'">
-                <span>${trad[displayType] || displayType}</span>
+                <img class="tt-icon" src="https://images.ygoprodeck.com/images/cards/${card.attribute ? card.attribute.toUpperCase() : (card.type.includes('Spell') ? 'SPELL' : 'TRAP')}.jpg">
+                <span>${trad[card.attribute?.toUpperCase()] || card.attribute || ''}</span>
             </div>`;
 
-            if(card.level || card.rank || card.linkval) {
-                const val = card.level || card.rank || card.linkval;
-                const isXyz = card.type.includes("XYZ");
-                const isLink = card.type.includes("Link");
-                const starIcon = "https://ygoprodeck.com/wp-content/uploads/2017/01/level.png";
-                
+            // SETAS LINK (Abaixo do Atributo)
+            if(card.type.toLowerCase().includes("link")) {
+                infoHtml += `<div style="color: #ff0000; font-size: 20px; letter-spacing: 4px; margin-top: 2px;">
+                    ${getLinkMarkersHtml(card.linkmarkers)}
+                </div>`;
+            }
+            
+            // Level/Rank (Se não for link)
+            if((card.level || card.rank) && !card.type.toLowerCase().includes("link")) {
                 infoHtml += `<div class="tt-level-group">
-                    ${!isLink ? `<img src="${starIcon}" style="width:16px; height:16px; ${isXyz ? 'filter:invert(1) brightness(0.5);' : ''}">` : ''}
-                    <span>${isLink ? 'LINK-' + val : val}</span>
+                    <img src="${starIcon}" style="width:16px; height:16px;">
+                    <span>${card.level || card.rank}</span>
                 </div>`;
             }
             infoHtml += `</div>`;
-        }
+        }            
 
         // 1. Lógica de Tradução do Tipo
         let tipoTexto = card.type;
@@ -527,20 +540,24 @@
             <span>${tipoTexto} ]</span>
         </div>`;
 
-        // 4. Ataque e Defesa
+        // Bloco de ATK e DEF (Oculta DEF se for Link)
         if(card.atk !== undefined) {
-            const swordSvg = `<svg width="14" height="14" viewBox="0 0 512 512" style="fill: #e74c3c;"><path d="M507.3 5.7c-7.6-7.6-19.8-7.6-27.4 0l-144 144c-3.1 3.1-4.7 7.2-4.7 11.3 0 4.1 1.6 8.2 4.7 11.3l24.7 24.7-149.7 149.7-50.3-50.3c-7.6-7.6-19.8-7.6-27.4 0s-7.6 19.8 0 27.4l50.3 50.3-64.7 64.7c-1.8 1.8-4.3 2.8-6.9 2.8s-5.1-1-6.9-2.8l-40-40c-3.8-3.8-10.1-3.8-13.9 0s-3.8 10.1 0 13.9l40 40c7.6 7.6 19.8 7.6 27.4 0l64.7-64.7 50.3 50.3c7.6 7.6 19.8 7.6 27.4 0s7.6-19.8 0-27.4l-50.3-50.3 149.7-149.7 24.7 24.7c3.1 3.1 7.2 4.7 11.3 4.7s8.2-1.6 11.3-4.7l144-144c7.6-7.5 7.6-19.7 0-27.3z"/></svg>`;
-            
+            const isLink = card.type.toLowerCase().includes("link");
             infoHtml += `
                 <div class="tt-stats" style="display: flex; gap: 15px; margin-top: 5px; font-weight: bold; font-size: 13px;">
-                    <div style="display: flex; align-items: center; gap: 6px;">
-                        ${swordSvg}
-                        <span>ATK/ ${card.atk}</span>
+                    <div style="display: flex; align-items: center; gap: 4px;">
+                        <span style="color: #e74c3c;">ATK/</span>
+                        <span>${card.atk}</span>
                     </div>
-                    <div style="display: flex; align-items: center; gap: 6px;">
-                        <i class="fa-solid fa-shield-halved" style="color: #3498db;"></i>
-                        <span>DEF/ ${card.def !== undefined ? card.def : '---'}</span>
-                    </div>
+                    ${!isLink ? `
+                        <div style="display: flex; align-items: center; gap: 4px;">
+                            <span style="color: #3498db;">DEF/</span>
+                            <span>${card.def}</span>
+                        </div>` : `
+                        <div style="display: flex; align-items: center; gap: 4px;">
+                            <span style="color: #ffffff;">LINK-${card.linkval}</span>
+                        </div>`
+                    }
                 </div>`;
         }
         
@@ -835,39 +852,49 @@
 
             // Montagem do HTML Interno
             div.innerHTML = `
-                <img src="${card.card_images[0].image_url_small}" 
-                    loading="lazy" 
-                    onerror="this.src='https://images.ygoprodeck.com/images/cards/back_high.jpg'"
-                    alt="${card.name}">
-                    
-                <div class="card-info-box">
-                    <b class="card-name">${card.name_pt || card.name}</b>
-                    
-                    <div class="info-row" style="align-items: center; gap: 8px;">
-                        ${attrIconUrl ? `
-                            <div style="display: flex; align-items: center; gap: 4px;">
-                                <img src="${attrIconUrl}" style="width: 14px; height: 14px; border-radius: 50%;"> 
-                                <span style="font-size: 10px;">${trad[attrRaw] || attrRaw}</span>
-                            </div>` : ''}
-                        
-                        ${(card.level || card.rank) ? `
-                            <div style="display: flex; align-items: center; gap: 2px;">
-                                <img src="${starIcon}" style="width: 12px; height: 12px; ${card.type.includes('XYZ') ? 'filter:invert(1) brightness(0.5);' : ''}">
-                                <span style="font-size: 10px;">${card.level || card.rank}</span>
-                            </div>` : ''}
-                    </div>
-
-                    <div class="info-row" style="color:var(--accent); align-items: center; gap: 4px;">
-                        <img src="${raceIconUrl}" style="width: 14px; height: 14px;" onerror="this.style.display='none'">
-                        <span>${raceTraduzida}</span>
-                    </div>
-
-                    ${card.atk !== undefined ? `
-                        <div class="info-row atk-def-row">
-                            <span>ATK/ ${card.atk}</span>
-                            <span>DEF/ ${card.def}</span>
+            <img src="${card.card_images[0].image_url_small}" 
+                loading="lazy" 
+                onerror="this.src='https://images.ygoprodeck.com/images/cards/back_high.jpg'"
+                alt="${card.name}">
+                
+            <div class="card-info-box">
+                <b class="card-name">${card.name_pt || card.name}</b>
+                
+                <div class="info-row" style="display: flex; align-items: center; justify-content: flex-start; gap: 10px;">
+                    ${attrIconUrl ? `
+                        <div style="display: flex; align-items: center; gap: 4px;">
+                            <img src="${attrIconUrl}" style="width: 14px; height: 14px; border-radius: 50%;"> 
+                            <span style="font-size: 10px;">${trad[attrRaw] || attrRaw}</span>
                         </div>` : ''}
-                </div>`;
+                    
+                    ${(card.level || card.rank) && !card.type.toLowerCase().includes("link") ? `
+                        <div style="display: flex; align-items: center; gap: 2px;">
+                            <img src="${starIcon}" style="width: 12px; height: 12px; ${card.type.toUpperCase().includes('XYZ') ? 'filter:invert(1) brightness(0.5);' : ''}">
+                            <span style="font-size: 10px;">${card.level || card.rank}</span>
+                        </div>` : ''}
+                </div>
+
+                ${card.type.toLowerCase().includes("link") ? 
+                    `<div style="display: block; margin-top: -2px;">
+                        <span style="color: #ff0000; letter-spacing: 2px; font-size: 14px; font-weight: bold;">
+                            ${getLinkMarkersHtml(card.linkmarkers)}
+                        </span>
+                    </div>` : ''}
+
+                <div class="info-row" style="color:var(--accent); align-items: center; gap: 4px; margin-top: 2px;">
+                    <img src="${raceIconUrl}" style="width: 14px; height: 14px;" onerror="this.style.display='none'">
+                    <span>${raceTraduzida}</span>
+                </div>
+
+                ${card.atk !== undefined ? `
+                    <div class="info-row atk-def-row">
+                        <span>ATK/ ${card.atk}</span>
+                        ${!card.type.toLowerCase().includes("link") ? 
+                            `<span>DEF/ ${card.def}</span>` : 
+                            `<span style="color: #ffffff; font-weight: bold; font-size: 11px;">LINK-${card.linkval}</span>`
+                        }
+                    </div>` : ''}
+            </div>`;
 
             // --- Lógica de Eventos (Inalterada, pois já está funcional) ---
             let pressTimer;
