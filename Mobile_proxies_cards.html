@@ -625,10 +625,10 @@
 
         if(!initial && !hasEnoughName && !hasEnoughDesc && !hasOtherFilters) return;
 
+        // Configuração dos parâmetros base
         let p = new URLSearchParams();
         if(hasEnoughName) p.append('fname', q);
         if(hasEnoughDesc) p.append('desc', desc);
-        
         if(type) { 
             if(type === "Monster" && sub) p.append('type', sub); 
             else if(type !== "Monster") p.append('type', type); 
@@ -641,33 +641,54 @@
         if(lv) p.append('level', lv);
         const attr = document.getElementById('filter-attribute').value;
         if(attr) p.append('attribute', attr);
-        
-        p.append('language', 'pt');
         p.append('misc', 'yes');
 
         try {
-            const response = await fetch(`https://db.ygoprodeck.com/api/v7/cardinfo.php?${p.toString()}`);
-            
-            // Se a API retornar erro (400 por erro de digitação ou 500), zeramos e renderizamos a mensagem
-            if (!response.ok) {
-                searchResults = [];
-                renderResults();
-                return;
-            }
+            // Criamos as duas URLs: Uma global e uma forçada em PT
+            const urlGlobal = `https://db.ygoprodeck.com/api/v7/cardinfo.php?${p.toString()}`;
+            p.append('language', 'pt');
+            const urlPT = `https://db.ygoprodeck.com/api/v7/cardinfo.php?${p.toString()}`;
 
-            const data = await response.json();
-            let rawData = data.data || [];
+            // Executa as duas buscas ao mesmo tempo para ganhar performance
+            const [resGlobal, resPT] = await Promise.all([
+                fetch(urlGlobal).then(r => r.ok ? r.json() : { data: [] }),
+                fetch(urlPT).then(r => r.ok ? r.json() : { data: [] })
+            ]);
 
+            const dataGlobal = resGlobal.data || [];
+            const dataPT = resPT.data || [];
+
+            // MAPA DE FUSÃO: Usamos o ID como chave única
+            // Se a carta vier no dataPT, ela substitui ou complementa a do Global
+            const mergedMap = new Map();
+
+            // 1. Adicionamos as globais primeiro
+            dataGlobal.forEach(card => mergedMap.set(card.id, card));
+
+            // 2. Sobrepomos com as em PT (elas terão name_pt e desc_pt preenchidos)
+            dataPT.forEach(card => {
+                const existing = mergedMap.get(card.id);
+                if (existing) {
+                    // Mescla os campos de tradução no objeto existente
+                    mergedMap.set(card.id, { ...existing, ...card });
+                } else {
+                    mergedMap.set(card.id, card);
+                }
+            });
+
+            let finalData = Array.from(mergedMap.values());
+
+            // Filtro adicional de segurança para Monstros
             if(type === "Monster" && !sub) {
-                rawData = rawData.filter(c => c.type.toLowerCase().includes("monster"));
+                finalData = finalData.filter(c => c.type.toLowerCase().includes("monster"));
             }
 
-            searchResults = rawData;            
+            searchResults = finalData;            
             searchResults.forEach(c => cardCache[c.id] = c);            
             sortAndRender();
 
         } catch(e) { 
-            // Silencia erro de rede no JS e limpa a tela
+            console.error("Erro na busca dual:", e);
             searchResults = []; 
             renderResults(); 
         }
@@ -713,7 +734,7 @@
             div.innerHTML = `
                 <img src="${card.card_images[0].image_url_small}">
                 <div class="card-info-box">
-                    <b class="card-name">${card.name}</b>
+                    <b class="card-name">${card.name_pt || card.name}</b>
                     <div class="info-row" style="align-items: center; gap: 8px;">
                         ${attrIconUrl ? `<div style="display: flex; align-items: center; gap: 4px;"><img src="${attrIconUrl}" style="width: 14px; height: 14px; border-radius: 50%;"> <span style="font-size: 10px;">${trad[attrRaw] || attrRaw}</span></div>` : ''}
                         ${(card.level || card.rank) ? `

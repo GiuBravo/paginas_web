@@ -252,6 +252,42 @@
                 <div class="filter-group"><label>DEF</label><div class="stepper"><button onclick="adjustVal('filter-def', -50)">-</button><input type="number" id="filter-def" placeholder="---"><button onclick="adjustVal('filter-def', 50)">+</button></div></div>
             </div>
             <div class="filter-group" style="margin-top:20px;"><label>Escala do PDF (%)</label><div class="stepper"><button onclick="adjustScale(-0.1)">-</button><input type="number" id="print-scale" value="100.0" readonly><button onclick="adjustScale(0.1)">+</button></div></div>
+           <div class="filter-group">
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 11px; color: var(--accent); text-transform: uppercase; font-weight: bold;">
+                    <input type="checkbox" id="enable-date-filter" style="width: auto;"> Ativar Filtro de Data/Era
+                </label>
+            </div>
+
+            <div id="date-filters-container" style="display: none; border: 1px solid #333; padding: 10px; border-radius: 4px; margin-bottom: 15px; background: #111;">
+                <div class="filter-group">
+                    <label>Era Yu-Gi-Oh!</label>
+                    <select id="filter-era">
+                        <option value="">Todas as Eras</option>
+                        <option value="dm">Duel Monsters</option>
+                        <option value="gx">GX</option>
+                        <option value="5ds">5D's</option>
+                        <option value="zexal">Zexal</option>
+                        <option value="arc-v">Arc-V</option>
+                        <option value="vrains">Vrains</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label>Basear busca em:</label>
+                    <select id="date-region-type">
+                        <option value="tcg">Lançamento TCG (Ocidente)</option>
+                        <option value="ocg">Lançamento OCG (Japão)</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label>Período (De -> Até)</label>
+                    <div style="display: flex; gap: 5px;">
+                        <input type="date" id="date-start" value="1999-01-01" style="flex:1;">
+                        <input type="date" id="date-end" style="flex:1;">
+                    </div>
+                </div>
+            </div>
             <hr style="border:0; border-top:1px solid #333; margin: 20px 0;">
             <label class="btn-secondary">IMPORTAR .YDK<input type="file" id="file-ydk" accept=".ydk" style="display:none" onchange="importYDK(this)"></label>
         </div>
@@ -413,7 +449,7 @@
 
         let infoHtml = "";
         
-        // Bloco de Atributo e Nível/Rank/Link
+        // 1. Atributo e Level/Rank/Link
         if(card.attribute || card.type.includes("Spell") || card.type.includes("Trap")) {
             infoHtml += `<div class="tt-row-split">`;
             
@@ -447,7 +483,7 @@
             infoHtml += `</div>`;
         }
 
-        // 1. Lógica de Tradução do Tipo
+        // 2. Tradução de Tipo e URLs de Ícones
         let tipoTexto = card.type;
         if (tipoTexto.includes("Effect Monster")) {
             tipoTexto = "Monstro de Efeito";
@@ -460,22 +496,20 @@
                 .replace("Trap Card", "Carta de Armadilha");
         }
 
-        // 2. Ícones (Raça e Categoria/Tipo de Carta)
         const raceTraduzida = racesTrad[card.race] || card.race;
         const raceIconUrl = `https://images.ygoprodeck.com/images/cards/icons/race/${card.race}.png`;
-        // Novo ícone que você indicou (ex: Effect Monster.jpg)
         const typeIconUrl = `https://images.ygoprodeck.com/images/cards/icons/${encodeURIComponent(card.type)}.jpg`;
 
-        // 3. Montagem da linha: [ Ícone Raça / Ícone Tipo TipoTraduzido ]
-        infoHtml += `<div style="display: flex; align-items: center; gap: 4px; color: #aaa; font-size: 11px; margin-bottom: 8px; flex-wrap: wrap;">
+        // 3. Linha: [ Ícone Raça / Ícone Tipo TipoTexto ]
+        infoHtml += `<div style="display: flex; align-items: center; gap: 4px; color: #aaa; font-size: 11px; margin-bottom: 8px;">
             <span>[</span>
-            <img src="${raceIconUrl}" title="Raça" style="width: 14px; height: 14px;" onerror="this.style.display='none'">
+            <img src="${raceIconUrl}" style="width: 14px; height: 14px;" onerror="this.style.display='none'">
             <span>${raceTraduzida} / </span>
-            <img src="${typeIconUrl}" title="Tipo" style="width: 14px; height: 14px; border-radius: 2px;" onerror="this.style.display='none'">
+            <img src="${typeIconUrl}" style="width: 14px; height: 14px; border-radius: 2px;" onerror="this.style.display='none'">
             <span>${tipoTexto} ]</span>
         </div>`;
 
-        // 4. Ataque e Defesa com o SVG de Espada e Ícone de Escudo
+        // 4. Status (ATK/DEF) com SVG e FontAwesome
         if(card.atk !== undefined) {
             const swordSvg = `<svg width="14" height="14" viewBox="0 0 512 512" style="fill: #e74c3c;"><path d="M507.3 5.7c-7.6-7.6-19.8-7.6-27.4 0l-144 144c-3.1 3.1-4.7 7.2-4.7 11.3 0 4.1 1.6 8.2 4.7 11.3l24.7 24.7-149.7 149.7-50.3-50.3c-7.6-7.6-19.8-7.6-27.4 0s-7.6 19.8 0 27.4l50.3 50.3-64.7 64.7c-1.8 1.8-4.3 2.8-6.9 2.8s-5.1-1-6.9-2.8l-40-40c-3.8-3.8-10.1-3.8-13.9 0s-3.8 10.1 0 13.9l40 40c7.6 7.6 19.8 7.6 27.4 0l64.7-64.7 50.3 50.3c7.6 7.6 19.8 7.6 27.4 0s7.6-19.8 0-27.4l-50.3-50.3 149.7-149.7 24.7 24.7c3.1 3.1 7.2 4.7 11.3 4.7s8.2-1.6 11.3-4.7l144-144c7.6-7.5 7.6-19.7 0-27.3z"/></svg>`;
             
@@ -494,7 +528,7 @@
         
         document.getElementById('tooltip-info-rows').innerHTML = infoHtml;
 
-        // Datas e Finalização
+        // Datas TCG/OCG
         let tcgDate = "N/A", ocgDate = "N/A";
         if (card.misc_info && card.misc_info[0]) {
             tcgDate = formatDateBR(card.misc_info[0].tcg_date);
@@ -530,7 +564,54 @@
     }
 
     for(let i=0; i<=13; i++) document.getElementById('filter-lv').innerHTML += `<option value="${i}">${i}</option>`;
-    window.onload = () => { performSearch(true); };
+    window.onload = () => {
+        const hoje = new Date().toISOString().split('T')[0];
+        document.getElementById('date-end').value = hoje;
+
+        // Toggle do painel
+        document.getElementById('enable-date-filter').onchange = function() {
+            document.getElementById('date-filters-container').style.display = this.checked ? 'block' : 'none';
+            triggerSearch();
+        };
+
+        // Lógica das Eras
+        const ERAS = {
+            'dm': { tcg: ['2002-03-08', '2004-09-30'], ocg: ['1999-02-04', '2004-09-30'] },
+            'gx': { tcg: ['2004-10-01', '2008-08-31'], ocg: ['2004-10-01', '2008-02-29'] },
+            '5ds': { tcg: ['2008-09-01', '2011-08-31'], ocg: ['2008-03-15', '2011-02-28'] },
+            'zexal': { tcg: ['2011-09-01', '2014-07-31'], ocg: ['2011-03-19', '2014-03-20'] },
+            'arc-v': { tcg: ['2014-08-01', '2017-07-31'], ocg: ['2014-03-21', '2017-03-24'] },
+            'vrains': { tcg: ['2017-08-01', '2020-04-30'], ocg: ['2017-03-25', '2020-04-17'] }
+        };
+
+        document.getElementById('filter-era').onchange = function() {
+            const eraData = ERAS[this.value];
+            const region = document.getElementById('date-region-type').value;
+            if(eraData) {
+                const dates = eraData[region] || eraData['tcg'];
+                document.getElementById('date-start').value = dates[0];
+                document.getElementById('date-end').value = dates[1];
+                triggerSearch();
+            }
+        };
+
+        // Escuta mudanças nos campos de data para busca automática
+        ['date-start', 'date-end', 'date-region-type'].forEach(id => {
+            document.getElementById(id).addEventListener('change', triggerSearch);
+        });
+
+        performSearch(true); 
+    };
+
+    // Função auxiliar para o Reset
+    function resetDateFilters() {
+        const hoje = new Date().toISOString().split('T')[0];
+        document.getElementById('filter-era').value = "";
+        document.getElementById('tcg-start').value = "2002-03-08";
+        document.getElementById('ocg-start').value = "1999-02-04";
+        document.getElementById('tcg-end').value = hoje;
+        document.getElementById('ocg-end').value = hoje;
+    }
 
     function changeView(view) {
         currentView = view;
@@ -609,7 +690,14 @@
 
     ['search-input', 'filter-desc', 'filter-subtype', 'filter-race', 'filter-attribute', 'filter-lv', 'filter-atk', 'filter-def'].forEach(id => document.getElementById(id).addEventListener('input', triggerSearch));
 
-    function triggerSearch() { clearTimeout(window.sTimeout); window.sTimeout = setTimeout(performSearch, 500); }
+    let searchTimer;
+    function triggerSearch() {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(() => {
+            currentPage = 1;
+            performSearch();
+        }, 500); // Dá tempo de você terminar de digitar ou escolher a data
+    }
 
     async function performSearch(initial = false) {
         const q = document.getElementById('search-input').value;
@@ -618,10 +706,14 @@
         const sub = document.getElementById('filter-subtype').value;
         const atk = document.getElementById('filter-atk').value;
         const def = document.getElementById('filter-def').value;
+        const attr = document.getElementById('filter-attribute').value;
+        const dateEnabled = document.getElementById('enable-date-filter').checked;
+        const start = document.getElementById('date-start').value || "1900-01-01";
+        const end = document.getElementById('date-end').value || new Date().toISOString().split('T')[0];
 
         const hasEnoughName = q.length >= 3;
         const hasEnoughDesc = desc.length >= 3;
-        const hasOtherFilters = type || atk || def || document.getElementById('filter-attribute').value;
+        const hasOtherFilters = type || atk || def || attr || dateEnabled;
 
         if(!initial && !hasEnoughName && !hasEnoughDesc && !hasOtherFilters) return;
 
@@ -639,35 +731,43 @@
         if(def) p.append('def', def);
         const lv = document.getElementById('filter-lv').value;
         if(lv) p.append('level', lv);
-        const attr = document.getElementById('filter-attribute').value;
         if(attr) p.append('attribute', attr);
         
         p.append('language', 'pt');
-        p.append('misc', 'yes');
+        p.append('misc', 'yes'); // Necessário para as datas
 
         try {
             const response = await fetch(`https://db.ygoprodeck.com/api/v7/cardinfo.php?${p.toString()}`);
-            
-            // Se a API retornar erro (400 por erro de digitação ou 500), zeramos e renderizamos a mensagem
-            if (!response.ok) {
-                searchResults = [];
-                renderResults();
-                return;
-            }
+            if (!response.ok) { searchResults = []; renderResults(); return; }
 
             const data = await response.json();
-            let rawData = data.data || [];
+            let finalData = data.data || [];
 
+            // Filtro de Monstro Genérico (se selecionado Monstro mas sem sub-tipo)
             if(type === "Monster" && !sub) {
-                rawData = rawData.filter(c => c.type.toLowerCase().includes("monster"));
+                finalData = finalData.filter(c => c.type.toLowerCase().includes("monster"));
             }
 
-            searchResults = rawData;            
+            // --- FILTRO DE DATA CORRIGIDO ---
+            if (document.getElementById('enable-date-filter').checked) {
+                const region = document.getElementById('date-region-type').value;
+                const start = document.getElementById('date-start').value || "1900-01-01";
+                const end = document.getElementById('date-end').value || "9999-12-31";
+
+                finalData = finalData.filter(card => {
+                    const misc = card.misc_info ? card.misc_info[0] : null;
+                    if (!misc) return false;
+
+                    const cardDate = (region === 'tcg') ? misc.tcg_date : misc.ocg_date;
+                    return cardDate && cardDate >= start && cardDate <= end;
+                });
+            }
+
+            searchResults = finalData;            
             searchResults.forEach(c => cardCache[c.id] = c);            
             sortAndRender();
 
         } catch(e) { 
-            // Silencia erro de rede no JS e limpa a tela
             searchResults = []; 
             renderResults(); 
         }
@@ -867,29 +967,29 @@
         }
     };
     window.resetFilters = () => {
-        // 1. Resetar inputs de texto e seletores principais
-        document.getElementById('search-input').value = "";
-        document.getElementById('filter-desc').value = "";
-        document.getElementById('filter-type').value = "";
+        // Limpeza de campos padrão
+        ['search-input', 'filter-desc', 'filter-type', 'filter-attribute', 'filter-lv', 'filter-atk', 'filter-def', 'filter-era'].forEach(id => {
+            document.getElementById(id).value = "";
+        });
         document.getElementById('search-qty').value = "1";
         
-        // 2. Resetar seletores dependentes e campos numéricos
+        // Reset de Interface de Datas
+        const hoje = new Date().toISOString().split('T')[0];
+        document.getElementById('enable-date-filter').checked = false;
+        document.getElementById('date-filters-container').style.display = 'none';
+        document.getElementById('date-region-type').value = "tcg";
+        document.getElementById('date-start').value = "1999-01-01";
+        document.getElementById('date-end').value = hoje;
+
+        // Reset de Categorias dinâmicas
         document.getElementById('filter-subtype').innerHTML = '<option value="">Qualquer</option>';
         document.getElementById('filter-race').innerHTML = '<option value="">Qualquer</option>';
-        document.getElementById('filter-attribute').value = "";
-        document.getElementById('filter-lv').value = "";
-        document.getElementById('filter-atk').value = "";
-        document.getElementById('filter-def').value = "";
-
-        // 3. Esconder os grupos de filtros dinâmicos
         document.getElementById('group-subtype').style.display = "none";
         document.getElementById('group-race').style.display = "none";
         document.getElementById('monster-extras').style.display = "none";
 
-        // 4. Resetar o estado da paginação e disparar a busca inicial
         currentPage = 1;
         performSearch(true);
-        
         showToast("Filtros resetados");
     };
     

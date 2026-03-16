@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YGO Proxy Studio Pro - Workspace V4.0</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-dark: #0c0c0c;
+            --panel-bg: #1a1a1a;
+            --accent: #f1c40f;
+            --border: #333;
+            --text: #e0e0e0;
+            --success: #27ae60;
+        }
+
+        body { 
+            font-family: 'Segoe UI', Tahoma, sans-serif; 
+            background: var(--bg-dark); 
+            color: var(--text); 
+            margin: 0; 
+            height: 100vh;
+            overflow: hidden; 
+        }
+
+        /* --- TOOLTIP ATUALIZADO (Com suporte a ícones) --- */
+        #card-tooltip {
+            display: none;
+            position: fixed;
+            z-index: 10000;
+            pointer-events: none;
+            width: 350px;
+            background: rgba(26, 26, 26, 0.98);
+            border: 1px solid var(--accent);
+            border-radius: 4px;
+            padding: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.9);
+            backdrop-filter: blur(5px);
+        }
+        #tooltip-header { display: flex; gap: 12px; margin-bottom: 10px; }
+        #tooltip-img { width: 100px; border-radius: 4px; border: 1px solid #444; object-fit: contain; }
+        #tooltip-meta { flex: 1; display: flex; flex-direction: column; }
+        #tooltip-name { color: white; font-weight: bold; font-size: 16px; margin-bottom: 8px; }
+        
+        /* Linha de Atributo e Nível */
+        .tt-row-split { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            margin-bottom: 6px; 
+            padding: 4px 0;
+            border-bottom: 1px solid #333;
+        }
+        .tt-attr-group { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #ccc; text-transform: uppercase; font-weight: bold; }
+        .tt-level-group { display: flex; align-items: center; gap: 4px; font-size: 15px; font-weight: bold; color: #fff; }
+        
+        /* Estilo dos Ícones */
+        .tt-icon { 
+            width: 22px; 
+            height: 22px; 
+            object-fit: contain; 
+            filter: drop-shadow(0px 0px 2px rgba(0,0,0,0.8));
+        }
+        .tt-level-group img { width: 18px; height: 18px; object-fit: contain; }
+        
+        #tooltip-text { 
+            font-size: 12px; 
+            color: #eee; 
+            line-height: 1.5; 
+            border-top: 1px solid #444; 
+            padding-top: 10px; 
+            white-space: pre-wrap;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .tt-stats { 
+            font-weight: bold; color: #fff; margin-top: 8px; font-size: 13px; border-top: 1px solid #444; 
+            padding-top: 5px; display: flex; justify-content: flex-start; gap: 10px;
+        }
+
+        /* --- REMOVER SETAS DE INPUT NUMBER --- */
+        input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type=number] { -moz-appearance: textfield; }
+
+        /* --- ESTRUTURA BASE --- */
+        .app-container { display: grid; grid-template-columns: 300px 1fr 450px; height: 100vh; gap: 1px; background: var(--border); transition: grid-template-columns 0.3s ease; }
+        .app-container.empty-queue { grid-template-columns: 300px 1fr 0px; }
+        .col { background: var(--bg-dark); display: flex; flex-direction: column; overflow: hidden; }
+        
+        .col-header { 
+            padding: 12px 15px; background: var(--panel-bg); border-bottom: 1px solid var(--border); 
+            font-size: 11px; font-weight: bold; color: var(--accent); display: flex; 
+            justify-content: space-between; align-items: center; text-transform: uppercase;
+        }
+
+        .sidebar-content { padding: 15px; overflow-y: auto; flex-grow: 1; }
+        .filter-group { margin-bottom: 12px; display: flex; flex-direction: column; gap: 4px; }
+        .filter-group label { font-size: 10px; color: #888; text-transform: uppercase; font-weight: bold; }
+        
+        select, input { background: #111; border: 1px solid #444; color: white; padding: 8px; border-radius: 4px; font-size: 13px; width: 100%; box-sizing: border-box; }
+        
+        .btn-secondary { 
+            display: block; background: #333; color: white; width: 100%; padding: 10px; border-radius: 4px; 
+            cursor: pointer; text-align: center; border: 1px solid #444; font-size: 11px; font-weight: bold;
+            box-sizing: border-box; text-transform: uppercase;
+        }
+
+        .stepper { display: flex; border: 1px solid #444; border-radius: 4px; overflow: hidden; height: 35px; background: #111; }
+        .stepper button { background: #333; color: white; border: none; width: 35px; cursor: pointer; font-size: 18px; font-weight: bold; }
+        .stepper input { border: none !important; text-align: center; width: 100%; background: transparent; }
+
+        .search-area { background: #111; padding: 15px; border-bottom: 1px solid var(--border); }
+        .view-controls { display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; background: #181818; border-bottom: 1px solid #333; }
+        
+        .btn-view { background: #333; color: #888; border: 1px solid #444; padding: 5px 10px; cursor: pointer; border-radius: 4px; font-size: 11px; }
+        .btn-view.active { background: var(--accent); color: black; border-color: var(--accent); }
+
+        .results-view { flex-grow: 1; overflow-y: auto; }
+
+        /* --- ITENS DA LISTA (Sugestões) ATUALIZADOS --- */
+        .suggestion-item { display: flex; gap: 12px; padding: 15px 10px; background: var(--bg-dark); align-items: flex-start; cursor: pointer; border-bottom: 1px solid #222; transition: background 0.2s; }
+        .suggestion-item:active { background: #1a1a1a; }
+        .suggestion-item img { height: 110px; border-radius: 4px; border: 1px solid #444; flex-shrink: 0; box-shadow: 0 4px 8px rgba(0,0,0,0.6); }
+
+        .card-info-box { flex-grow: 1; display: flex; flex-direction: column; gap: 5px; text-align: left; }
+        .card-name { color: var(--accent); font-size: 13px; font-weight: bold; }
+        
+        /* Linha interna da lista (Atributo e Estrelas na sugestão) */
+        .info-row { display: flex; align-items: center; gap: 8px; font-size: 11px; color: #999; }
+        .info-row img { width: 14px; height: 14px; object-fit: contain; }
+        
+        .atk-def-row { 
+            font-weight: bold; 
+            font-size: 11px; 
+            border-top: 1px solid #222; 
+            margin-top: 5px; 
+            padding-top: 5px; 
+            color: #fff; 
+            display: flex; 
+            gap: 10px; 
+        }
+        .tt-stats i {
+            font-size: 14px;
+            filter: drop-shadow(0 0 1px rgba(0,0,0,0.5));
+        }
+
+        .deck-list { height: 350px; overflow-y: auto; padding: 10px; background: #080808; border-bottom: 1px solid var(--border); }
+        .pdf-preview-container { flex-grow: 1; background: #222; position: relative; overflow: hidden; min-height: 300px; }
+        #preview-frame { width: 100%; height: 100%; border: none; }
+        .btn-accent { background: var(--accent); color: black; width: 100%; padding: 12px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; text-transform: uppercase; }
+
+        .pagination-bar { padding: 8px; background: var(--panel-bg); display: flex; justify-content: center; gap: 10px; align-items: center; border-top: 1px solid var(--border); }
+        .page-input { width: 50px; text-align: center; background: #000; border: 1px solid #444; color: var(--accent); }
+
+        #toast-container { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 9999; pointer-events: none; }
+        .toast { background: var(--success); color: white; padding: 12px 20px; border-radius: 30px; font-size: 12px; font-weight: bold; margin-bottom: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); animation: slideUp 0.3s ease, fadeOut 0.5s ease 1.5s forwards; display: flex; align-items: center; gap: 10px; white-space: nowrap; }
+        @keyframes slideUp { from { transform: translateY(100px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        @keyframes fadeOut { to { opacity: 0; } }
+
+        /* --- RESPONSIVIDADE DESKTOP --- */
+        @media (min-width: 901px) {
+            .list-mode { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1px; background: #222; }
+            .grid-mode { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 15px; padding: 15px; }
+            .grid-mode .card-info-box { display: none; }
+            .grid-mode .suggestion-item { display: block; text-align: center; border-bottom: none; }
+            .grid-mode .suggestion-item img { width: 100%; height: auto; }
+        }
+
+        /* --- RESPONSIVIDADE MOBILE --- */
+        @media (max-width: 900px) {
+            body { overflow-y: auto !important; height: auto !important; }
+            .app-container, .app-container.empty-queue { display: block !important; height: auto !important; }
+            .col { width: 100% !important; height: auto !important; overflow: visible !important; border-bottom: 2px solid var(--border); }
+            .results-view { height: 550px; overflow-y: auto; }
+            .grid-mode { display: grid !important; grid-template-columns: repeat(2, 1fr) !important; gap: 10px !important; padding: 10px !important; }
+            .grid-mode .suggestion-item { display: block !important; text-align: center; padding: 5px; border-bottom: none; }
+            .grid-mode .suggestion-item img { width: 100%; height: auto; }
+            .grid-mode .card-info-box { display: none !important; }
+            .pdf-preview-container { display: none !important; }
+            #col-preview { margin-top: 20px; }
+            .deck-list { height: 250px; }
+            
+            /* Tooltip Mobile Centralizado */
+            #card-tooltip { 
+                display: none;
+                position: fixed !important;
+                top: 50% !important;
+                left: 50% !important;
+                transform: translate(-50%, -50%) !important;
+                width: 90vw !important;
+                max-width: 360px !important;
+                height: auto !important;
+                max-height: 85vh !important;
+                overflow-y: auto !important;
+                z-index: 999999 !important;
+                background: #1a1a1a !important;
+                border: 2px solid var(--accent) !important;
+                box-sizing: border-box !important;
+                padding: 15px !important;
+                pointer-events: auto !important;
+            }
+
+            #tooltip-img {
+                width: 100% !important;
+                height: auto !important;
+                max-width: 180px;
+                margin: 0 auto 10px auto;
+                display: block;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div id="card-tooltip">
+    <div id="tooltip-header">
+        <img id="tooltip-img" src="">
+        <div id="tooltip-meta">
+            <div id="tooltip-name"></div>
+            <div id="tooltip-info-rows"></div>
+        </div>
+    </div>
+    <div id="tooltip-text"></div>
+</div>
+
+<div id="toast-container"></div>
+
+<div class="app-container empty-queue" id="app-layout">
+    <div class="col">
+        <div class="col-header"><span>Filtros</span><button class="btn-view" onclick="resetFilters()">Resetar</button></div>
+        <div class="sidebar-content">
+            <div class="filter-group"><label>Tipo de Carta</label>
+                <select id="filter-type">
+                    <option value="">Selecione...</option>
+                    <option value="Monster">Monstro</option>
+                    <option value="Spell Card">Magia</option>
+                    <option value="Trap Card">Armadilha</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Descrição/Efeito</label>
+                <input type="text" id="filter-desc" placeholder="Ex: 'banir', 'cemitério'...">
+            </div>
+            <div id="group-subtype" class="filter-group" style="display:none"><label>Categoria</label><select id="filter-subtype"></select></div>
+            <div id="group-race" class="filter-group" style="display:none"><label>Raça/Tipo</label><select id="filter-race"></select></div>
+            <div id="monster-extras" style="display:none">
+                <div class="filter-group"><label>Atributo</label><select id="filter-attribute"><option value="">Todos</option><option value="dark">Trevas</option><option value="light">Luz</option><option value="earth">Terra</option><option value="fire">Fogo</option><option value="water">Água</option><option value="wind">Vento</option><option value="divine">Divino</option></select></div>
+                <div class="filter-group"><label>Nível</label><select id="filter-lv"><option value="">Todos</option></select></div>
+                <div class="filter-group"><label>ATK</label><div class="stepper"><button onclick="adjustVal('filter-atk', -50)">-</button><input type="number" id="filter-atk" placeholder="---"><button onclick="adjustVal('filter-atk', 50)">+</button></div></div>
+                <div class="filter-group"><label>DEF</label><div class="stepper"><button onclick="adjustVal('filter-def', -50)">-</button><input type="number" id="filter-def" placeholder="---"><button onclick="adjustVal('filter-def', 50)">+</button></div></div>
+            </div>
+            <div class="filter-group" style="margin-top:20px;"><label>Escala do PDF (%)</label><div class="stepper"><button onclick="adjustScale(-0.1)">-</button><input type="number" id="print-scale" value="100.0" readonly><button onclick="adjustScale(0.1)">+</button></div></div>
+            <hr style="border:0; border-top:1px solid #333; margin: 20px 0;">
+            <label class="btn-secondary">IMPORTAR .YDK<input type="file" id="file-ydk" accept=".ydk" style="display:none" onchange="importYDK(this)"></label>
+        </div>
+    </div>
+
+    <div class="col">
+        <div class="search-area">
+            <div style="display: flex; gap: 10px;">
+                <input type="text" id="search-input" placeholder="Buscar pelo nome...">
+                <div class="stepper" style="width: 100px;">
+                    <button onclick="document.getElementById('search-qty').stepDown()">-</button>
+                    <input type="number" id="search-qty" value="1" min="1" readonly>
+                    <button onclick="document.getElementById('search-qty').stepUp()">+</button>
+                </div>
+            </div>
+        </div>
+        <div class="view-controls">
+            <span id="result-info" style="font-size: 11px; color: #888;">Carregando...</span>
+            
+            <div style="display: flex; gap: 15px; align-items: center;">
+                <div style="display: flex; gap: 5px; align-items: center;">
+                    <select id="sort-by" style="width: 105px; font-size: 11px; height: 32px; padding: 0 5px;" onchange="sortAndRender()">
+                        <option value="name">Nome</option>
+                        <option value="atk">Ataque</option>
+                        <option value="def">Defesa</option>
+                        <option value="level">Level/Rank</option>
+                        <option value="tcg_date">Data TCG</option>
+                        <option value="ocg_date">Data OCG</option>
+                    </select>
+                    
+                    <button id="btn-order" class="btn-view" style="width: 32px; height: 32px; font-size: 14px; padding: 0; display: flex; align-items: center; justify-content: center;" onclick="toggleOrder()">
+                        <span id="order-icon">↓</span>
+                    </button>
+                </div>
+
+                <div style="display: flex; gap: 5px;">
+                    <button id="btn-list" class="btn-view active" style="height: 32px;" onclick="changeView('list')">LISTA</button>
+                    <button id="btn-grid" class="btn-view" style="height: 32px;" onclick="changeView('grid')">GRADE</button>
+                </div>
+            </div>
+        </div>
+        <div id="results-view" class="results-view list-mode"></div>
+        <div class="pagination-bar">
+            <button class="btn-view" onclick="changePage(-1)">◄</button>
+            <div style="display: flex; align-items: center; gap: 5px;">
+                <input type="number" id="page-jump" class="page-input" value="1" min="1" onchange="jumpToPage(this.value)">
+                <span id="page-total" style="font-size: 11px; color: #888;">/ 1</span>
+            </div>
+            <button class="btn-view" onclick="changePage(1)">►</button>
+        </div>
+    </div>
+
+    <div class="col" id="col-preview">
+        <div class="col-header"><span>Fila (<span id="count-total">0</span>)</span><button class="btn-view" onclick="clearQueue()" style="font-size: 9px;">Limpar</button></div>
+        <div class="deck-list" id="deck-items"></div>
+        <div class="pdf-preview-container">
+            <div id="import-overlay" style="position: absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); display:none; flex-direction:column; justify-content:center; align-items:center; z-index:10;"><span style="color:var(--accent); font-size:11px;">GERANDO PDF...</span><div style="width:80%; height:4px; background:#333; margin-top:10px;"><div id="progress-bar" style="width:0; height:100%; background:var(--accent);"></div></div></div>
+            <iframe id="preview-frame"></iframe>
+        </div>
+        <div style="padding: 10px; background: #111;"><button class="btn-accent" onclick="downloadPDF()">BAIXAR PDF HQ</button></div>
+    </div>
+</div>
+
+<script>
+    const { jsPDF } = window.jspdf;
+    let cardQueue = [], searchResults = [], currentPage = 1, currentView = 'list';
+    let isGenerating = false;
+    let cardCache = {}; // ESSENCIAL: Armazena dados das cartas para o tooltip
+
+    let sortDirection = 1; // -1 para Descendente (seta baixo), 1 para Ascendente (seta cima)
+
+    function formatDateBR(dateStr) {
+        if (!dateStr) return "N/A";
+        const [year, month, day] = dateStr.split('-');
+        return `${day}/${month}/${year}`;
+    }
+
+    function toggleOrder() {
+        sortDirection *= -1;
+        document.getElementById('order-icon').innerText = sortDirection === 1 ? '↑' : '↓';
+        sortAndRender();
+    }
+
+    function sortAndRender() {
+        const criterion = document.getElementById('sort-by').value;
+
+        searchResults.sort((a, b) => {
+            let valA, valB;
+
+            switch(criterion) {
+                case 'name':
+                    // Garante que o nome existe antes de comparar
+                    return sortDirection === 1 
+                        ? (a.name || "").localeCompare(b.name || "") 
+                        : (b.name || "").localeCompare(a.name || "");
+                case 'atk':
+                    valA = a.atk ?? -1; valB = b.atk ?? -1; break;
+                case 'def':
+                    valA = a.def ?? -1; valB = b.def ?? -1; break;
+                case 'level':
+                    valA = a.level || a.rank || a.linkval || 0;
+                    valB = b.level || b.rank || b.linkval || 0;
+                    break;
+                case 'tcg_date':
+                    // O ?. garante que se misc_info ou misc_info[0] forem undefined, o código não quebra
+                    valA = a.misc_info?.[0]?.tcg_date || "1900-01-01";
+                    valB = b.misc_info?.[0]?.tcg_date || "1900-01-01";
+                    return sortDirection === 1 ? valA.localeCompare(valB) : valB.localeCompare(valA);
+                case 'ocg_date':
+                    valA = a.misc_info?.[0]?.ocg_date || "1900-01-01";
+                    valB = b.misc_info?.[0]?.ocg_date || "1900-01-01";
+                    return sortDirection === 1 ? valA.localeCompare(valB) : valB.localeCompare(valA);
+                default: return 0;
+            }
+
+            if (valA < valB) return -1 * sortDirection;
+            if (valA > valB) return 1 * sortDirection;
+            return 0;
+        });
+
+        currentPage = 1;
+        renderResults();
+    }
+
+    const trad = { 
+        "DARK": "TREVAS", "LIGHT": "LUZ", "EARTH": "TERRA", "FIRE": "FOGO", 
+        "WATER": "ÁGUA", "WIND": "VENTO", "DIVINE": "DIVINO",
+        "Monster": "Monstro", "Spell Card": "Magia", "Trap Card": "Armadilha",
+        "SPELL": "MAGIA", "TRAP": "ARMADILHA"
+    };
+
+    function showToast(msg) {
+        const container = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+        toast.className = 'toast';
+        toast.innerHTML = `<span>✔</span> ${msg}`;
+        container.appendChild(toast);
+        setTimeout(() => toast.remove(), 2000);
+    }
+
+    function showTooltip(card, e) {
+        if(!card) return;
+        
+        const tt = document.getElementById('card-tooltip');
+        const description = card.desc_pt || card.desc;
+        document.getElementById('tooltip-img').src = card.card_images[0].image_url;
+        document.getElementById('tooltip-name').innerText = card.name;
+        
+        const racesTrad = { 
+            "Aqua": "Aqua", "Beast": "Besta", "Beast-Warrior": "Besta-Guerreira", "Cyberse": "Ciberso", 
+            "Dinosaur": "Dinossauro", "Dragon": "Dragão", "Fiend": "Demônio", "Fish": "Peixe", 
+            "Insect": "Inseto", "Machine": "Máquina", "Plant": "Planta", "Psychic": "Psíquico", 
+            "Pyro": "Piro", "Reptile": "Réptil", "Rock": "Rocha", "Sea Serpent": "Serpente Marinha", 
+            "Spellcaster": "Mago", "Thunder": "Trovão", "Warrior": "Guerreiro", "Winged Beast": "Besta Alada", 
+            "Wyrm": "Wyrm", "Zombie": "Zumbi", "Divine-Beast": "Besta Divina", "Normal": "Normal", 
+            "Continuous": "Contínua", "Field": "Campo", "Equip": "Equipamento", "Quick-Play": "Rápida", 
+            "Ritual": "Ritual", "Counter": "Resposta" 
+        };
+
+        let infoHtml = "";
+        
+        // Bloco de Atributo e Nível/Rank/Link
+        if(card.attribute || card.type.includes("Spell") || card.type.includes("Trap")) {
+            infoHtml += `<div class="tt-row-split">`;
+            
+            let displayType = "";
+            let iconUrl = "";
+
+            if(card.attribute) {
+                displayType = card.attribute.toUpperCase();
+                iconUrl = `https://images.ygoprodeck.com/images/cards/${displayType}.jpg`;
+            } else {
+                displayType = card.type.includes("Spell") ? "SPELL" : "TRAP";
+                iconUrl = `https://images.ygoprodeck.com/images/cards/icons/${displayType.toLowerCase()}.png`;
+            }
+
+            infoHtml += `<div class="tt-attr-group">
+                <img class="tt-icon" src="${iconUrl}" onerror="this.style.display='none'">
+                <span>${trad[displayType] || displayType}</span>
+            </div>`;
+
+            if(card.level || card.rank || card.linkval) {
+                const val = card.level || card.rank || card.linkval;
+                const isXyz = card.type.includes("XYZ");
+                const isLink = card.type.includes("Link");
+                const starIcon = "https://ygoprodeck.com/wp-content/uploads/2017/01/level.png";
+                
+                infoHtml += `<div class="tt-level-group">
+                    ${!isLink ? `<img src="${starIcon}" style="width:16px; height:16px; ${isXyz ? 'filter:invert(1) brightness(0.5);' : ''}">` : ''}
+                    <span>${isLink ? 'LINK-' + val : val}</span>
+                </div>`;
+            }
+            infoHtml += `</div>`;
+        }
+
+        // 1. Lógica de Tradução do Tipo
+        let tipoTexto = card.type;
+        if (tipoTexto.includes("Effect Monster")) {
+            tipoTexto = "Monstro de Efeito";
+        } else if (tipoTexto.includes("Normal Monster")) {
+            tipoTexto = "Monstro Normal";
+        } else {
+            tipoTexto = tipoTexto
+                .replace("Monster", "Monstro")
+                .replace("Spell Card", "Carta de Magia")
+                .replace("Trap Card", "Carta de Armadilha");
+        }
+
+        // 2. Ícones (Raça e Categoria/Tipo de Carta)
+        const raceTraduzida = racesTrad[card.race] || card.race;
+        const raceIconUrl = `https://images.ygoprodeck.com/images/cards/icons/race/${card.race}.png`;
+        // Novo ícone que você indicou (ex: Effect Monster.jpg)
+        const typeIconUrl = `https://images.ygoprodeck.com/images/cards/icons/${encodeURIComponent(card.type)}.jpg`;
+
+        // 3. Montagem da linha: [ Ícone Raça / Ícone Tipo TipoTraduzido ]
+        infoHtml += `<div style="display: flex; align-items: center; gap: 4px; color: #aaa; font-size: 11px; margin-bottom: 8px; flex-wrap: wrap;">
+            <span>[</span>
+            <img src="${raceIconUrl}" title="Raça" style="width: 14px; height: 14px;" onerror="this.style.display='none'">
+            <span>${raceTraduzida} / </span>
+            <img src="${typeIconUrl}" title="Tipo" style="width: 14px; height: 14px; border-radius: 2px;" onerror="this.style.display='none'">
+            <span>${tipoTexto} ]</span>
+        </div>`;
+
+        // 4. Ataque e Defesa com o SVG de Espada e Ícone de Escudo
+        if(card.atk !== undefined) {
+            const swordSvg = `<svg width="14" height="14" viewBox="0 0 512 512" style="fill: #e74c3c;"><path d="M507.3 5.7c-7.6-7.6-19.8-7.6-27.4 0l-144 144c-3.1 3.1-4.7 7.2-4.7 11.3 0 4.1 1.6 8.2 4.7 11.3l24.7 24.7-149.7 149.7-50.3-50.3c-7.6-7.6-19.8-7.6-27.4 0s-7.6 19.8 0 27.4l50.3 50.3-64.7 64.7c-1.8 1.8-4.3 2.8-6.9 2.8s-5.1-1-6.9-2.8l-40-40c-3.8-3.8-10.1-3.8-13.9 0s-3.8 10.1 0 13.9l40 40c7.6 7.6 19.8 7.6 27.4 0l64.7-64.7 50.3 50.3c7.6 7.6 19.8 7.6 27.4 0s7.6-19.8 0-27.4l-50.3-50.3 149.7-149.7 24.7 24.7c3.1 3.1 7.2 4.7 11.3 4.7s8.2-1.6 11.3-4.7l144-144c7.6-7.5 7.6-19.7 0-27.3z"/></svg>`;
+            
+            infoHtml += `
+                <div class="tt-stats" style="display: flex; gap: 15px; margin-top: 5px; font-weight: bold; font-size: 13px;">
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        ${swordSvg}
+                        <span>ATK/ ${card.atk}</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <i class="fa-solid fa-shield-halved" style="color: #3498db;"></i>
+                        <span>DEF/ ${card.def !== undefined ? card.def : '---'}</span>
+                    </div>
+                </div>`;
+        }
+        
+        document.getElementById('tooltip-info-rows').innerHTML = infoHtml;
+
+        // Datas e Finalização
+        let tcgDate = "N/A", ocgDate = "N/A";
+        if (card.misc_info && card.misc_info[0]) {
+            tcgDate = formatDateBR(card.misc_info[0].tcg_date);
+            ocgDate = formatDateBR(card.misc_info[0].ocg_date);
+        }
+        const datesHtml = `<div style="margin-top: 10px; padding-top: 8px; border-top: 1px dashed #444; font-size: 10px; color: #888; display: flex; gap: 12px;"><span>📅 TCG: ${tcgDate}</span><span>📅 OCG: ${ocgDate}</span></div>`;
+        document.getElementById('tooltip-text').innerHTML = `<div>${description}</div>${datesHtml}`;
+
+        tt.style.display = 'block';
+        if (window.innerWidth < 900) {
+            tt.style.left = '50%'; tt.style.top = '50%';
+            tt.style.transform = 'translate(-50%, -50%)';
+        } else { moveTooltip(e); }
+    }
+
+    function moveTooltip(e) {
+        if (window.innerWidth < 900) return; // IMPEDE O MOVIMENTO NO MOBILE
+        
+        const tt = document.getElementById('card-tooltip');
+        let x = e.clientX + 20, y = e.clientY + 20;
+        if (x + 350 > window.innerWidth) x = e.clientX - 360;
+        if (y + 420 > window.innerHeight) y = window.innerHeight - 440;
+        tt.style.left = x + 'px'; 
+        tt.style.top = y + 'px';
+    }
+
+    function hideTooltip() { document.getElementById('card-tooltip').style.display = 'none'; }
+
+    function getItemsPerPage() {
+        if (window.innerWidth < 900) return currentView === 'list' ? 15 : 20;
+        const isQueueEmpty = cardQueue.length === 0;
+        return currentView === 'list' ? (isQueueEmpty ? 25 : 15) : (isQueueEmpty ? 44 : 21);
+    }
+
+    for(let i=0; i<=13; i++) document.getElementById('filter-lv').innerHTML += `<option value="${i}">${i}</option>`;
+    window.onload = () => { performSearch(true); };
+
+    function changeView(view) {
+        currentView = view;
+        document.getElementById('btn-list').classList.toggle('active', view === 'list');
+        document.getElementById('btn-grid').classList.toggle('active', view === 'grid');
+        currentPage = 1; renderResults();
+    }
+
+    function adjustVal(id, amount) {
+        const el = document.getElementById(id);
+        let val = (parseInt(el.value) || 0) + amount;
+        el.value = val < 0 ? "" : val; triggerSearch();
+    }
+
+    function adjustScale(amount) {
+        const el = document.getElementById('print-scale');
+        el.value = (parseFloat(el.value) + amount).toFixed(1); triggerPDFUpdate();
+    }
+
+    document.getElementById('filter-type').onchange = function() {
+        const v = this.value;
+        const fSub = document.getElementById('filter-subtype'), fRace = document.getElementById('filter-race');
+        
+        // Reset dos selects
+        fSub.innerHTML = fRace.innerHTML = '<option value="">Qualquer</option>';
+        
+        document.getElementById('group-subtype').style.display = (v === "Monster" ? "flex" : "none");
+        document.getElementById('monster-extras').style.display = (v === "Monster" ? "block" : "none");
+
+        if(v) {
+            if(v === "Monster") {
+                const subTypes = {
+                    "Normal Monster": "Monstro Normal",
+                    "Effect Monster": "Monstro de Efeito",
+                    "Fusion Monster": "Monstro de Fusão",
+                    "Synchro Monster": "Monstro Sincro",
+                    "XYZ Monster": "Monstro Xyz",
+                    "Link Monster": "Monstro Link",
+                    "Ritual Monster": "Monstro Ritual",
+                    "Token": "Ficha"
+                };
+                Object.entries(subTypes).forEach(([val, text]) => {
+                    fSub.innerHTML += `<option value="${val}">${text}</option>`;
+                });
+            }
+
+            const races = {
+                "Monster": {
+                    "Aqua": "Aqua", "Beast": "Besta", "Beast-Warrior": "Besta-Guerreira", "Cyberse": "Ciberso",
+                    "Dinosaur": "Dinossauro", "Dragon": "Dragão", "Fiend": "Demônio", "Fish": "Peixe",
+                    "Insect": "Inseto", "Machine": "Máquina", "Plant": "Planta", "Psychic": "Psíquico",
+                    "Pyro": "Piro", "Reptile": "Réptil", "Rock": "Rocha", "Sea Serpent": "Serpente Marinha",
+                    "Spellcaster": "Mago", "Thunder": "Trovão", "Warrior": "Guerreiro", "Winged Beast": "Besta Alada",
+                    "Wyrm": "Wyrm", "Zombie": "Zumbi", "Divine-Beast": "Besta Divina"
+                },
+                "Spell Card": {
+                    "Normal": "Normal", "Continuous": "Contínua", "Field": "Campo", 
+                    "Equip": "Equipamento", "Quick-Play": "Rápida", "Ritual": "Ritual"
+                },
+                "Trap Card": {
+                    "Normal": "Normal", "Continuous": "Contínua", "Counter": "Resposta"
+                }
+            };
+
+            // Preenche as Raças/Tipos com tradução
+            Object.entries(races[v]).forEach(([val, text]) => {
+                fRace.innerHTML += `<option value="${val}">${text}</option>`;
+            });
+
+            document.getElementById('group-race').style.display = "flex";
+        } else {
+            document.getElementById('group-race').style.display = "none";
+        }
+        triggerSearch();
+    };
+
+    ['search-input', 'filter-desc', 'filter-subtype', 'filter-race', 'filter-attribute', 'filter-lv', 'filter-atk', 'filter-def'].forEach(id => document.getElementById(id).addEventListener('input', triggerSearch));
+
+    function triggerSearch() { clearTimeout(window.sTimeout); window.sTimeout = setTimeout(performSearch, 500); }
+
+    async function performSearch(initial = false) {
+        const q = document.getElementById('search-input').value;
+        const desc = document.getElementById('filter-desc').value;
+        const type = document.getElementById('filter-type').value;
+        const sub = document.getElementById('filter-subtype').value;
+        const atk = document.getElementById('filter-atk').value;
+        const def = document.getElementById('filter-def').value;
+
+        const hasEnoughName = q.length >= 3;
+        const hasEnoughDesc = desc.length >= 3;
+        const hasOtherFilters = type || atk || def || document.getElementById('filter-attribute').value;
+
+        if(!initial && !hasEnoughName && !hasEnoughDesc && !hasOtherFilters) return;
+
+        // Configuração dos parâmetros base
+        let p = new URLSearchParams();
+        if(hasEnoughName) p.append('fname', q);
+        if(hasEnoughDesc) p.append('desc', desc);
+        if(type) { 
+            if(type === "Monster" && sub) p.append('type', sub); 
+            else if(type !== "Monster") p.append('type', type); 
+        }
+        const race = document.getElementById('filter-race').value; 
+        if(race) p.append('race', race);
+        if(atk) p.append('atk', atk); 
+        if(def) p.append('def', def);
+        const lv = document.getElementById('filter-lv').value;
+        if(lv) p.append('level', lv);
+        const attr = document.getElementById('filter-attribute').value;
+        if(attr) p.append('attribute', attr);
+        p.append('misc', 'yes');
+
+        try {
+            // Criamos as duas URLs: Uma global e uma forçada em PT
+            const urlGlobal = `https://db.ygoprodeck.com/api/v7/cardinfo.php?${p.toString()}`;
+            p.append('language', 'pt');
+            const urlPT = `https://db.ygoprodeck.com/api/v7/cardinfo.php?${p.toString()}`;
+
+            // Executa as duas buscas ao mesmo tempo para ganhar performance
+            const [resGlobal, resPT] = await Promise.all([
+                fetch(urlGlobal).then(r => r.ok ? r.json() : { data: [] }),
+                fetch(urlPT).then(r => r.ok ? r.json() : { data: [] })
+            ]);
+
+            const dataGlobal = resGlobal.data || [];
+            const dataPT = resPT.data || [];
+
+            // MAPA DE FUSÃO: Usamos o ID como chave única
+            // Se a carta vier no dataPT, ela substitui ou complementa a do Global
+            const mergedMap = new Map();
+
+            // 1. Adicionamos as globais primeiro
+            dataGlobal.forEach(card => mergedMap.set(card.id, card));
+
+            // 2. Sobrepomos com as em PT (elas terão name_pt e desc_pt preenchidos)
+            dataPT.forEach(card => {
+                const existing = mergedMap.get(card.id);
+                if (existing) {
+                    // Mescla os campos de tradução no objeto existente
+                    mergedMap.set(card.id, { ...existing, ...card });
+                } else {
+                    mergedMap.set(card.id, card);
+                }
+            });
+
+            let finalData = Array.from(mergedMap.values());
+
+            // Filtro adicional de segurança para Monstros
+            if(type === "Monster" && !sub) {
+                finalData = finalData.filter(c => c.type.toLowerCase().includes("monster"));
+            }
+
+            searchResults = finalData;            
+            searchResults.forEach(c => cardCache[c.id] = c);            
+            sortAndRender();
+
+        } catch(e) { 
+            console.error("Erro na busca dual:", e);
+            searchResults = []; 
+            renderResults(); 
+        }
+    }
+
+    function renderResults() {
+        const container = document.getElementById('results-view'); 
+        container.innerHTML = "";
+        container.className = `results-view ${currentView}-mode`;
+        
+        const items = getItemsPerPage();
+
+        if (searchResults.length === 0) {
+            document.getElementById('result-info').innerText = "Nenhuma carta encontrada";
+            document.getElementById('page-total').innerText = "/ 1";
+            document.getElementById('page-jump').value = 1;
+            container.innerHTML = `<div style="grid-column: 1/-1; padding: 60px 20px; text-align: center; opacity: 0.6;"><div style="font-size: 3em; margin-bottom: 15px;">🔍</div><b style="font-size: 1.2em; color: var(--accent);">Nenhuma carta encontrada</b></div>`;
+            return;
+        }
+
+        const start = (currentPage - 1) * items;
+        const pageItems = searchResults.slice(start, start + items);
+        
+        document.getElementById('result-info').innerText = `Exibindo ${start + 1}-${Math.min(start + items, searchResults.length)} de ${searchResults.length}`;
+        document.getElementById('page-total').innerText = `/ ${Math.ceil(searchResults.length / items) || 1}`;
+        document.getElementById('page-jump').value = currentPage;
+
+        const racesTrad = { "Aqua": "Aqua", "Beast": "Besta", "Beast-Warrior": "Besta-Guerreira", "Cyberse": "Ciberso", "Dinosaur": "Dinossauro", "Dragon": "Dragão", "Fiend": "Demônio", "Fish": "Peixe", "Insect": "Inseto", "Machine": "Máquina", "Plant": "Planta", "Psychic": "Psíquico", "Pyro": "Piro", "Reptile": "Réptil", "Rock": "Rocha", "Sea Serpent": "Serpente Marinha", "Spellcaster": "Mago", "Thunder": "Trovão", "Warrior": "Guerreiro", "Winged Beast": "Besta Alada", "Wyrm": "Wyrm", "Zombie": "Zumbi", "Divine-Beast": "Besta Divina", "Normal": "Normal", "Continuous": "Contínua", "Field": "Campo", "Equip": "Equipamento", "Quick-Play": "Rápida", "Ritual": "Ritual", "Counter": "Resposta" };
+
+        pageItems.forEach(card => {
+            const div = document.createElement('div'); 
+            div.className = 'suggestion-item';
+            
+            const attrRaw = card.attribute ? card.attribute.toUpperCase() : (card.type.includes("Spell") ? "SPELL" : "TRAP");
+            // Link dos Atributos
+            const attrIconUrl = card.attribute ? `https://images.ygoprodeck.com/images/cards/${attrRaw}.jpg` : "";
+            // Link das Raças que você achou
+            const raceIconUrl = `https://images.ygoprodeck.com/images/cards/icons/race/${card.race}.png`;
+            const starIcon = "https://ygoprodeck.com/wp-content/uploads/2017/01/level.png";
+
+            const raceTraduzida = racesTrad[card.race] || card.race;
+
+            div.innerHTML = `
+                <img src="${card.card_images[0].image_url_small}">
+                <div class="card-info-box">
+                    <b class="card-name">${card.name_pt || card.name}</b>
+                    <div class="info-row" style="align-items: center; gap: 8px;">
+                        ${attrIconUrl ? `<div style="display: flex; align-items: center; gap: 4px;"><img src="${attrIconUrl}" style="width: 14px; height: 14px; border-radius: 50%;"> <span style="font-size: 10px;">${trad[attrRaw] || attrRaw}</span></div>` : ''}
+                        ${(card.level || card.rank) ? `
+                            <div style="display: flex; align-items: center; gap: 2px;">
+                                <img src="${starIcon}" style="width: 12px; height: 12px; ${card.type.includes('XYZ') ? 'filter:invert(1) brightness(0.5);' : ''}">
+                                <span style="font-size: 10px;">${card.level || card.rank}</span>
+                            </div>` : ''}
+                    </div>
+                    <div class="info-row" style="color:var(--accent); align-items: center; gap: 4px;">
+                        <img src="${raceIconUrl}" style="width: 14px; height: 14px;" onerror="this.style.display='none'">
+                        <span>${raceTraduzida}</span>
+                    </div>
+                    ${card.atk !== undefined ? `<div class="info-row atk-def-row"><span>ATK/ ${card.atk}</span><span>DEF/ ${card.def}</span></div>` : ''}
+                </div>`;
+
+            // Eventos de Tooltip e Clique (Manteve igual)
+            let pressTimer;
+            const startPress = (cardObj, e) => {
+                pressTimer = setTimeout(() => {
+                    const fakeEvent = { clientX: e.touches ? e.touches[0].clientX : e.clientX, clientY: e.touches ? e.touches[0].clientY : e.clientY };
+                    showTooltip(cardObj, fakeEvent);
+                    if (navigator.vibrate) navigator.vibrate(50);
+                }, 600);
+            };
+            const cancelPress = () => clearTimeout(pressTimer);
+            div.onmouseenter = (e) => showTooltip(card, e);
+            div.onmousemove = (e) => moveTooltip(e);
+            div.onmouseleave = () => hideTooltip();
+            div.ontouchstart = (e) => startPress(card, e);
+            div.ontouchend = cancelPress;
+            div.ontouchmove = cancelPress;
+            div.onclick = () => {
+                const qty = parseInt(document.getElementById('search-qty').value);
+                for(let i=0; i<qty; i++) cardQueue.push({ id: card.id, name: card.name, imgId: card.card_images[0].id });
+                updateUI();
+                if(window.innerWidth < 900) showToast(`${qty}x ${card.name} adicionado(a)!`);
+            };
+            container.appendChild(div);
+        });
+    }
+
+    function updateUI() {
+        const list = document.getElementById('deck-items');
+        const layout = document.getElementById('app-layout');
+        
+        if(cardQueue.length === 0) layout.classList.add('empty-queue'); 
+        else layout.classList.remove('empty-queue');
+        
+        list.innerHTML = "";
+        const counts = {};
+        
+        cardQueue.forEach(c => counts[c.imgId] = (counts[c.imgId] || 0) + 1);
+        
+        Object.keys(counts).forEach(imgId => {
+            // Encontramos a referência da carta na fila
+            const c = cardQueue.find(x => x.imgId == imgId);
+            
+            // BUSCAMOS O OBJETO COMPLETO NO CACHE (que tem o misc_info)
+            const fullCardData = cardCache[c.id]; 
+
+            const row = document.createElement('div');
+            row.style = "padding:8px; border-bottom:1px solid #222; font-size:11px; display:flex; justify-content:space-between; align-items:center; cursor:default;";
+            row.innerHTML = `<span><b>${counts[imgId]}x</b> ${c.name}</span><span style="color:red; cursor:pointer; font-weight:bold;" onclick="removeItem('${imgId}')">✖</span>`;
+            
+            // Associamos o tooltip ao objeto COMPLETO do cache
+            if(fullCardData) {
+                row.onmouseenter = (e) => showTooltip(fullCardData, e);
+                row.onmousemove = (e) => moveTooltip(e);
+                row.onmouseleave = () => hideTooltip();
+            }
+            
+            list.appendChild(row);
+        });
+        
+        document.getElementById('count-total').innerText = cardQueue.length; 
+        triggerPDFUpdate();
+    }
+
+    function triggerPDFUpdate() { if(isGenerating || cardQueue.length === 0) return; generatePDF(); }
+
+    async function generatePDF() {
+        if(isGenerating) return; isGenerating = true;
+        document.getElementById('import-overlay').style.display = 'flex';
+        const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+        const scale = parseFloat(document.getElementById('print-scale').value) / 100;
+        const w = 59 * scale, h = 86 * scale, gap = 6;
+        const mx = (297 - (4 * w + 3 * gap)) / 2, my = (210 - (2 * h + 1 * gap)) / 2;
+        const totalPagesPDF = Math.ceil(cardQueue.length / 8);
+        
+        for(let i=0; i<cardQueue.length; i++) {
+            const currentPagePDF = Math.floor(i / 8) + 1;
+            if (i % 8 === 0 && i > 0) doc.addPage();
+            if (i % 8 === 0) {
+                doc.setFillColor(30, 30, 30); doc.rect(0, 0, 297, 210, 'F');
+                doc.setTextColor(255); doc.setFontSize(18); doc.text("Imprimir no tamanho real", 148.5, 7, { align: "center" });
+                // RESTAURADO: NUMERAÇÃO DE PÁGINA
+                doc.setFontSize(12); doc.setTextColor(180);
+                doc.text(`Página ${currentPagePDF} de ${totalPagesPDF}`, 148.5, 205, { align: "center" });
+            }
+            const pos = i % 8, col = pos % 4, row = Math.floor(pos / 4);
+            const x = mx + (col * (w + gap)), y = my + (row * (h + gap));
+            document.getElementById('progress-bar').style.width = Math.round(((i + 1) / cardQueue.length) * 100) + '%';
+            try {
+                const imgUrl = `https://images.weserv.nl/?url=images.ygoprodeck.com/images/cards/${cardQueue[i].imgId}.jpg&q=100`;
+                const resp = await fetch(imgUrl); const blob = await resp.blob();
+                const b64 = await new Promise(r => { const rd = new FileReader(); rd.onloadend = () => r(rd.result); rd.readAsDataURL(blob); });
+                doc.addImage(b64, 'JPEG', x, y, w, h, undefined, 'NONE');
+                doc.setDrawColor(255); doc.setLineWidth(0.4); const offset = 2, len = 5;
+                doc.line(x-offset, y, x-offset-len, y); doc.line(x, y-offset, x, y-offset-len);
+                doc.line(x+w+offset, y, x+w+offset+len, y); doc.line(x+w, y-offset, x+w, y-offset-len);
+                doc.line(x-offset, y+h, x-offset-len, y+h); doc.line(x, y+h+offset, x, y+h+offset+len);
+                doc.line(x+w+offset, y+h, x+w+offset+len, y+h); doc.line(x+w, y+h+offset, x+w, y+h+offset+len);
+            } catch(e) {}
+        }
+        window.currentPdf = doc.output('blob');
+        document.getElementById('preview-frame').src = URL.createObjectURL(window.currentPdf);
+        document.getElementById('import-overlay').style.display = 'none'; isGenerating = false;
+    }
+
+    window.removeItem = (imgId) => { cardQueue = cardQueue.filter(c => c.imgId != imgId); updateUI(); hideTooltip(); };
+    window.clearQueue = () => { if(confirm("Limpar tudo?")) { cardQueue = []; updateUI(); hideTooltip(); } };
+    window.changePage = (dir) => { 
+        const max = Math.ceil(searchResults.length/getItemsPerPage());
+        if((currentPage + dir) > 0 && (currentPage + dir) <= max) { currentPage += dir; renderResults(); }
+    };
+    window.jumpToPage = (val) => { 
+        const max = Math.ceil(searchResults.length/getItemsPerPage());
+        currentPage = Math.max(1, Math.min(max, parseInt(val) || 1)); renderResults(); 
+    };
+    window.downloadPDF = () => { 
+        if(window.currentPdf) { 
+            const agora = new Date(); const dataF = `${String(agora.getDate()).padStart(2, '0')}-${String(agora.getMonth() + 1).padStart(2, '0')}-${agora.getFullYear()}`;
+            const a = document.createElement('a'); a.href = URL.createObjectURL(window.currentPdf); 
+            a.download = `Cartas_Proxies_Yu-Gi-Oh!_${dataF}.pdf`; a.click(); 
+        } 
+    };
+    window.importYDK = async (input) => {
+        const file = input.files[0]; if(!file) return; const text = await file.text();
+        const ids = text.split('\n').map(l => l.trim()).filter(l => /^\d+$/.test(l));
+        
+        // ADICIONADO &misc=yes para trazer as datas no import também
+        const res = await fetch(`https://db.ygoprodeck.com/api/v7/cardinfo.php?id=${ids.join(',')}&misc=yes`);
+        const data = await res.json();
+        if(data.data) {
+            data.data.forEach(card => {
+                cardCache[card.id] = card; 
+                const count = ids.filter(id => id == card.id).length;
+                for(let i=0; i<count; i++) cardQueue.push({ id: card.id, name: card.name, imgId: card.card_images[0].id });
+            });
+            updateUI(); showToast("Deck Importado com sucesso!");
+        }
+    };
+    window.resetFilters = () => {
+        // 1. Resetar inputs de texto e seletores principais
+        document.getElementById('search-input').value = "";
+        document.getElementById('filter-desc').value = "";
+        document.getElementById('filter-type').value = "";
+        document.getElementById('search-qty').value = "1";
+        
+        // 2. Resetar seletores dependentes e campos numéricos
+        document.getElementById('filter-subtype').innerHTML = '<option value="">Qualquer</option>';
+        document.getElementById('filter-race').innerHTML = '<option value="">Qualquer</option>';
+        document.getElementById('filter-attribute').value = "";
+        document.getElementById('filter-lv').value = "";
+        document.getElementById('filter-atk').value = "";
+        document.getElementById('filter-def').value = "";
+
+        // 3. Esconder os grupos de filtros dinâmicos
+        document.getElementById('group-subtype').style.display = "none";
+        document.getElementById('group-race').style.display = "none";
+        document.getElementById('monster-extras').style.display = "none";
+
+        // 4. Resetar o estado da paginação e disparar a busca inicial
+        currentPage = 1;
+        performSearch(true);
+        
+        showToast("Filtros resetados");
+    };
+    
+    // Fecha o tooltip ao tocar nele mesmo (útil no mobile)
+    document.getElementById('card-tooltip').addEventListener('click', hideTooltip);
+</script>
+</body>
+</html>
