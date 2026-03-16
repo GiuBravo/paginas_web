@@ -25,7 +25,6 @@
             overflow: hidden; 
         }
 
-        /* --- TOOLTIP ATUALIZADO (Com suporte a ícones) --- */
         #card-tooltip {
             display: none;
             position: fixed;
@@ -38,6 +37,7 @@
             padding: 15px;
             box-shadow: 0 10px 40px rgba(0,0,0,0.9);
             backdrop-filter: blur(5px);
+            overflow: hidden; 
         }
         #tooltip-header { display: flex; gap: 12px; margin-bottom: 10px; }
         #tooltip-img { width: 100px; border-radius: 4px; border: 1px solid #444; object-fit: contain; }
@@ -72,8 +72,6 @@
             border-top: 1px solid #444; 
             padding-top: 10px; 
             white-space: pre-wrap;
-            max-height: 200px;
-            overflow-y: auto;
         }
         .tt-stats { 
             font-weight: bold; color: #fff; margin-top: 8px; font-size: 13px; border-top: 1px solid #444; 
@@ -583,12 +581,24 @@
     }
 
     function moveTooltip(e) {
-        if (window.innerWidth < 900) return; // IMPEDE O MOVIMENTO NO MOBILE
+        if (window.innerWidth < 900) return; 
         
         const tt = document.getElementById('card-tooltip');
-        let x = e.clientX + 20, y = e.clientY + 20;
-        if (x + 350 > window.innerWidth) x = e.clientX - 360;
-        if (y + 420 > window.innerHeight) y = window.innerHeight - 440;
+        let x = e.clientX + 20;
+        let y = e.clientY + 20;
+
+        // Ajuste horizontal (evita sair da tela pela direita)
+        if (x + tt.offsetWidth > window.innerWidth) {
+            x = e.clientX - tt.offsetWidth - 20;
+        }
+
+        // Ajuste vertical (evita sair da tela por baixo)
+        // Se a posição Y + a altura do tooltip passar da altura da janela, 
+        // ele sobe o suficiente para aparecer inteiro.
+        if (y + tt.offsetHeight > window.innerHeight) {
+            y = window.innerHeight - tt.offsetHeight - 20;
+        }
+
         tt.style.left = x + 'px'; 
         tt.style.top = y + 'px';
     }
