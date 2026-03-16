@@ -548,7 +548,7 @@
     function getItemsPerPage() {
         if (window.innerWidth < 900) return currentView === 'list' ? 15 : 20;
         const isQueueEmpty = cardQueue.length === 0;
-        return currentView === 'list' ? (isQueueEmpty ? 25 : 15) : (isQueueEmpty ? 44 : 21);
+        return currentView === 'list' ? (isQueueEmpty ? 25 : 15) : (isQueueEmpty ? 33 : 21);
     }
 
     for(let i=0; i<=13; i++) document.getElementById('filter-lv').innerHTML += `<option value="${i}">${i}</option>`;
@@ -827,6 +827,7 @@
         const list = document.getElementById('deck-items');
         const layout = document.getElementById('app-layout');
         
+        // Verifica se mudou o estado da fila para ajustar o layout
         if(cardQueue.length === 0) layout.classList.add('empty-queue'); 
         else layout.classList.remove('empty-queue');
         
@@ -836,17 +837,13 @@
         cardQueue.forEach(c => counts[c.imgId] = (counts[c.imgId] || 0) + 1);
         
         Object.keys(counts).forEach(imgId => {
-            // Encontramos a referência da carta na fila
             const c = cardQueue.find(x => x.imgId == imgId);
-            
-            // BUSCAMOS O OBJETO COMPLETO NO CACHE (que tem o misc_info)
             const fullCardData = cardCache[c.id]; 
 
             const row = document.createElement('div');
             row.style = "padding:8px; border-bottom:1px solid #222; font-size:11px; display:flex; justify-content:space-between; align-items:center; cursor:default;";
             row.innerHTML = `<span><b>${counts[imgId]}x</b> ${c.name}</span><span style="color:red; cursor:pointer; font-weight:bold;" onclick="removeItem('${imgId}')">✖</span>`;
             
-            // Associamos o tooltip ao objeto COMPLETO do cache
             if(fullCardData) {
                 row.onmouseenter = (e) => showTooltip(fullCardData, e);
                 row.onmousemove = (e) => moveTooltip(e);
@@ -857,6 +854,9 @@
         });
         
         document.getElementById('count-total').innerText = cardQueue.length; 
+        // Força a atualização da grade de sugestões para respeitar o novo espaço
+        renderResults(); 
+
         triggerPDFUpdate();
     }
 
