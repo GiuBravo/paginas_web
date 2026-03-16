@@ -120,9 +120,26 @@
         .results-view { flex-grow: 1; overflow-y: auto; }
 
         /* --- ITENS DA LISTA (Sugestões) ATUALIZADOS --- */
-        .suggestion-item { display: flex; gap: 12px; padding: 15px 10px; background: var(--bg-dark); align-items: flex-start; cursor: pointer; border-bottom: 1px solid #222; transition: background 0.2s; }
+        .suggestion-item { 
+            display: flex; 
+            gap: 15px;             /* Aumentei um pouco o espaço entre foto e texto */
+            padding: 12px 10px; 
+            background: var(--bg-dark); 
+            align-items: flex-start; /* Alinha pelo topo para nomes de cartas longos */
+            cursor: pointer; 
+            border-bottom: 1px solid #222; 
+            transition: background 0.2s; 
+        }
         .suggestion-item:active { background: #1a1a1a; }
-        .suggestion-item img { height: 110px; border-radius: 4px; border: 1px solid #444; flex-shrink: 0; box-shadow: 0 4px 8px rgba(0,0,0,0.6); }
+        .suggestion-item img { 
+            width: 80px;           /* Defina uma largura fixa em vez de altura */
+            height: auto;          /* Deixe a altura ser proporcional */
+            border-radius: 4px; 
+            border: 1px solid #444; 
+            flex-shrink: 0;        /* ISSO É O MAIS IMPORTANTE: impede o texto de empurrar a imagem */
+            box-shadow: 0 4px 8px rgba(0,0,0,0.6); 
+            object-fit: contain;
+        }
 
         .card-info-box { flex-grow: 1; display: flex; flex-direction: column; gap: 5px; text-align: left; }
         .card-name { color: var(--accent); font-size: 13px; font-weight: bold; }
@@ -320,6 +337,7 @@
     let cardQueue = [], searchResults = [], currentPage = 1, currentView = 'list';
     let isGenerating = false;
     let cardCache = {}; // ESSENCIAL: Armazena dados das cartas para o tooltip
+    let searchTimeout;
 
     let sortDirection = 1; // -1 para Descendente (seta baixo), 1 para Ascendente (seta cima)
 
@@ -396,9 +414,11 @@
         if(!card) return;
         
         const tt = document.getElementById('card-tooltip');
+        // Mantém a lógica de prioridade para o Português
         const description = card.desc_pt || card.desc;
+        
         document.getElementById('tooltip-img').src = card.card_images[0].image_url;
-        document.getElementById('tooltip-name').innerText = card.name;
+        document.getElementById('tooltip-name').innerText = card.name_pt || card.name;
         
         const racesTrad = { 
             "Aqua": "Aqua", "Beast": "Besta", "Beast-Warrior": "Besta-Guerreira", "Cyberse": "Ciberso", 
@@ -463,7 +483,6 @@
         // 2. Ícones (Raça e Categoria/Tipo de Carta)
         const raceTraduzida = racesTrad[card.race] || card.race;
         const raceIconUrl = `https://images.ygoprodeck.com/images/cards/icons/race/${card.race}.png`;
-        // Novo ícone que você indicou (ex: Effect Monster.jpg)
         const typeIconUrl = `https://images.ygoprodeck.com/images/cards/icons/${encodeURIComponent(card.type)}.jpg`;
 
         // 3. Montagem da linha: [ Ícone Raça / Ícone Tipo TipoTraduzido ]
@@ -475,7 +494,7 @@
             <span>${tipoTexto} ]</span>
         </div>`;
 
-        // 4. Ataque e Defesa com o SVG de Espada e Ícone de Escudo
+        // 4. Ataque e Defesa
         if(card.atk !== undefined) {
             const swordSvg = `<svg width="14" height="14" viewBox="0 0 512 512" style="fill: #e74c3c;"><path d="M507.3 5.7c-7.6-7.6-19.8-7.6-27.4 0l-144 144c-3.1 3.1-4.7 7.2-4.7 11.3 0 4.1 1.6 8.2 4.7 11.3l24.7 24.7-149.7 149.7-50.3-50.3c-7.6-7.6-19.8-7.6-27.4 0s-7.6 19.8 0 27.4l50.3 50.3-64.7 64.7c-1.8 1.8-4.3 2.8-6.9 2.8s-5.1-1-6.9-2.8l-40-40c-3.8-3.8-10.1-3.8-13.9 0s-3.8 10.1 0 13.9l40 40c7.6 7.6 19.8 7.6 27.4 0l64.7-64.7 50.3 50.3c7.6 7.6 19.8 7.6 27.4 0s7.6-19.8 0-27.4l-50.3-50.3 149.7-149.7 24.7 24.7c3.1 3.1 7.2 4.7 11.3 4.7s8.2-1.6 11.3-4.7l144-144c7.6-7.5 7.6-19.7 0-27.3z"/></svg>`;
             
@@ -501,7 +520,10 @@
             ocgDate = formatDateBR(card.misc_info[0].ocg_date);
         }
         const datesHtml = `<div style="margin-top: 10px; padding-top: 8px; border-top: 1px dashed #444; font-size: 10px; color: #888; display: flex; gap: 12px;"><span>📅 TCG: ${tcgDate}</span><span>📅 OCG: ${ocgDate}</span></div>`;
-        document.getElementById('tooltip-text').innerHTML = `<div>${description}</div>${datesHtml}`;
+        
+        // AJUSTE FINAL: Conversão de quebras de linha (\n) para <br> para manter a formatação do efeito
+        const formattedDescription = description.replace(/\n/g, '<br>');
+        document.getElementById('tooltip-text').innerHTML = `<div>${formattedDescription}</div>${datesHtml}`;
 
         tt.style.display = 'block';
         if (window.innerWidth < 900) {
@@ -722,56 +744,81 @@
             const div = document.createElement('div'); 
             div.className = 'suggestion-item';
             
+            // Lógica de Atributos e Ícones
             const attrRaw = card.attribute ? card.attribute.toUpperCase() : (card.type.includes("Spell") ? "SPELL" : "TRAP");
-            // Link dos Atributos
             const attrIconUrl = card.attribute ? `https://images.ygoprodeck.com/images/cards/${attrRaw}.jpg` : "";
-            // Link das Raças que você achou
             const raceIconUrl = `https://images.ygoprodeck.com/images/cards/icons/race/${card.race}.png`;
             const starIcon = "https://ygoprodeck.com/wp-content/uploads/2017/01/level.png";
-
             const raceTraduzida = racesTrad[card.race] || card.race;
 
+            // Montagem do HTML Interno
             div.innerHTML = `
-                <img src="${card.card_images[0].image_url_small}">
+                <img src="${card.card_images[0].image_url_small}" 
+                    loading="lazy" 
+                    onerror="this.src='https://images.ygoprodeck.com/images/cards/back_high.jpg'"
+                    alt="${card.name}">
+                    
                 <div class="card-info-box">
                     <b class="card-name">${card.name_pt || card.name}</b>
+                    
                     <div class="info-row" style="align-items: center; gap: 8px;">
-                        ${attrIconUrl ? `<div style="display: flex; align-items: center; gap: 4px;"><img src="${attrIconUrl}" style="width: 14px; height: 14px; border-radius: 50%;"> <span style="font-size: 10px;">${trad[attrRaw] || attrRaw}</span></div>` : ''}
+                        ${attrIconUrl ? `
+                            <div style="display: flex; align-items: center; gap: 4px;">
+                                <img src="${attrIconUrl}" style="width: 14px; height: 14px; border-radius: 50%;"> 
+                                <span style="font-size: 10px;">${trad[attrRaw] || attrRaw}</span>
+                            </div>` : ''}
+                        
                         ${(card.level || card.rank) ? `
                             <div style="display: flex; align-items: center; gap: 2px;">
                                 <img src="${starIcon}" style="width: 12px; height: 12px; ${card.type.includes('XYZ') ? 'filter:invert(1) brightness(0.5);' : ''}">
                                 <span style="font-size: 10px;">${card.level || card.rank}</span>
                             </div>` : ''}
                     </div>
+
                     <div class="info-row" style="color:var(--accent); align-items: center; gap: 4px;">
                         <img src="${raceIconUrl}" style="width: 14px; height: 14px;" onerror="this.style.display='none'">
                         <span>${raceTraduzida}</span>
                     </div>
-                    ${card.atk !== undefined ? `<div class="info-row atk-def-row"><span>ATK/ ${card.atk}</span><span>DEF/ ${card.def}</span></div>` : ''}
+
+                    ${card.atk !== undefined ? `
+                        <div class="info-row atk-def-row">
+                            <span>ATK/ ${card.atk}</span>
+                            <span>DEF/ ${card.def}</span>
+                        </div>` : ''}
                 </div>`;
 
-            // Eventos de Tooltip e Clique (Manteve igual)
+            // --- Lógica de Eventos (Inalterada, pois já está funcional) ---
             let pressTimer;
             const startPress = (cardObj, e) => {
                 pressTimer = setTimeout(() => {
-                    const fakeEvent = { clientX: e.touches ? e.touches[0].clientX : e.clientX, clientY: e.touches ? e.touches[0].clientY : e.clientY };
+                    const fakeEvent = { 
+                        clientX: e.touches ? e.touches[0].clientX : e.clientX, 
+                        clientY: e.touches ? e.touches[0].clientY : e.clientY 
+                    };
                     showTooltip(cardObj, fakeEvent);
                     if (navigator.vibrate) navigator.vibrate(50);
                 }, 600);
             };
+            
             const cancelPress = () => clearTimeout(pressTimer);
+            
             div.onmouseenter = (e) => showTooltip(card, e);
             div.onmousemove = (e) => moveTooltip(e);
             div.onmouseleave = () => hideTooltip();
             div.ontouchstart = (e) => startPress(card, e);
             div.ontouchend = cancelPress;
             div.ontouchmove = cancelPress;
+            
             div.onclick = () => {
-                const qty = parseInt(document.getElementById('search-qty').value);
-                for(let i=0; i<qty; i++) cardQueue.push({ id: card.id, name: card.name, imgId: card.card_images[0].id });
+                const qty = parseInt(document.getElementById('search-qty').value) || 1;
+                const displayName = card.name_pt || card.name; // Pega o nome em PT se existir
+                for(let i=0; i<qty; i++) {
+                    cardQueue.push({ id: card.id, name: displayName, imgId: card.card_images[0].id });
+                }
                 updateUI();
-                if(window.innerWidth < 900) showToast(`${qty}x ${card.name} adicionado(a)!`);
+                if(window.innerWidth < 900) showToast(`${qty}x ${displayName} adicionado(a)!`);
             };
+
             container.appendChild(div);
         });
     }
