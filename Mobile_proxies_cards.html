@@ -29,15 +29,23 @@
             display: none;
             position: fixed;
             z-index: 10000;
-            pointer-events: none;
+            pointer-events: none; /* Mantém none para o mouse "atravessar" e não bugar o hover */
             width: 350px;
+            height: auto; /* Garante altura automática */
+            max-height: calc(100vh - 40px); /* Trava de segurança para não sumir da tela */
             background: rgba(26, 26, 26, 0.98);
             border: 1px solid var(--accent);
             border-radius: 4px;
             padding: 15px;
             box-shadow: 0 10px 40px rgba(0,0,0,0.9);
             backdrop-filter: blur(5px);
-            overflow: hidden; 
+            overflow-y: auto; /* Caso a carta seja MAIOR que a tela inteira (raro), permite scroll */
+        }
+
+        /* Remove o limite do texto interno */
+        #tooltip-text { 
+            max-height: none !important; 
+            overflow: visible !important;
         }
         #tooltip-header { display: flex; gap: 12px; margin-bottom: 10px; }
         #tooltip-img { width: 100px; border-radius: 4px; border: 1px solid #444; object-fit: contain; }
@@ -47,7 +55,7 @@
         /* Linha de Atributo e Nível */
         .tt-row-split { 
             display: flex; 
-            justify-content: space-between; 
+            justify-content: space-between; /* Isso empurra o nível para a direita */
             align-items: center; 
             margin-bottom: 6px; 
             padding: 4px 0;
@@ -365,6 +373,7 @@
 
 <script>
     const { jsPDF } = window.jspdf;
+    const starIcon = "https://ygoprodeck.com/wp-content/uploads/2017/01/level.png";
     let cardQueue = [], searchResults = [], currentPage = 1, currentView = 'list';
     let isGenerating = false;
     let cardCache = {}; // ESSENCIAL: Armazena dados das cartas para o tooltip
@@ -461,11 +470,10 @@
         setTimeout(() => toast.remove(), 2000);
     }
 
-    function showTooltip(card, e) {
+   function showTooltip(card, e) {
         if(!card) return;
         
         const tt = document.getElementById('card-tooltip');
-        // Mantém a lógica de prioridade para o Português
         const description = card.desc_pt || card.desc;
         
         document.getElementById('tooltip-img').src = card.card_images[0].image_url;
@@ -484,34 +492,49 @@
 
         let infoHtml = "";
         
-        // Bloco de Atributo e Nível/Rank/Link
+        // --- BLOCO DE ATRIBUTO / MAGIA / ARMADILHA ---
         if(card.attribute || card.type.includes("Spell") || card.type.includes("Trap")) {
-            infoHtml += `<div class="tt-row-split" style="flex-direction: column; align-items: flex-start; gap: 4px;">`;
+            infoHtml += `<div class="tt-row-split" style="align-items: center; gap: 4px;">`;
             
-            // Atributo
+            let iconUrl = "";
+            let labelText = "";
+
+            if (card.type.includes("Spell")) {
+                iconUrl = "https://static.wikia.nocookie.net/yugioh/images/0/09/SPELL.svg";
+                labelText = "MAGIA";
+            } else if (card.type.includes("Trap")) {
+                iconUrl = "https://static.wikia.nocookie.net/yugioh/images/2/28/TRAP.svg";
+                labelText = "ARMADILHA";
+            } else {
+                iconUrl = `https://images.ygoprodeck.com/images/cards/${card.attribute ? card.attribute.toUpperCase() : 'UNKNOWN'}.jpg`;
+                labelText = trad[card.attribute?.toUpperCase()] || card.attribute || "";
+            }
+
+            // Lado Esquerdo (Ícone + Texto)
             infoHtml += `<div class="tt-attr-group">
-                <img class="tt-icon" src="https://images.ygoprodeck.com/images/cards/${card.attribute ? card.attribute.toUpperCase() : (card.type.includes('Spell') ? 'SPELL' : 'TRAP')}.jpg">
-                <span>${trad[card.attribute?.toUpperCase()] || card.attribute || ''}</span>
+                <img class="tt-icon" src="${iconUrl}" style="width:20px; height:20px; object-fit:contain;">
+                <span>${labelText}</span>
             </div>`;
 
-            // SETAS LINK (Abaixo do Atributo)
-            if(card.type.toLowerCase().includes("link")) {
-                infoHtml += `<div style="color: #ff0000; font-size: 20px; letter-spacing: 4px; margin-top: 2px;">
-                    ${getLinkMarkersHtml(card.linkmarkers)}
-                </div>`;
-            }
-            
-            // Level/Rank (Se não for link)
+            // Lado Direito (Level/Rank - Se não for link)
             if((card.level || card.rank) && !card.type.toLowerCase().includes("link")) {
                 infoHtml += `<div class="tt-level-group">
-                    <img src="${starIcon}" style="width:16px; height:16px;">
+                    <img src="${starIcon}" style="width:16px; height:16px; ${card.type.toUpperCase().includes('XYZ') ? 'filter:invert(1) brightness(0.5);' : ''}">
                     <span>${card.level || card.rank}</span>
                 </div>`;
             }
-            infoHtml += `</div>`;
-        }            
+            
+            infoHtml += `</div>`; // Fecha tt-row-split
 
-        // 1. Lógica de Tradução do Tipo
+            // Setas Link (Linha exclusiva abaixo se for Link)
+            if(card.type.toLowerCase().includes("link")) {
+                infoHtml += `<div style="color: #ff0000; font-size: 20px; letter-spacing: 4px; margin-top: 2px; border-bottom: 1px solid #333; padding-bottom: 4px;">
+                    ${getLinkMarkersHtml(card.linkmarkers)}
+                </div>`;
+            }
+        }           
+
+        // --- TRADUÇÃO DO TIPO ---
         let tipoTexto = card.type;
         if (tipoTexto.includes("Effect Monster")) {
             tipoTexto = "Monstro de Efeito";
@@ -524,12 +547,11 @@
                 .replace("Trap Card", "Carta de Armadilha");
         }
 
-        // 2. Ícones (Raça e Categoria/Tipo de Carta)
-        const raceTraduzida = racesTrad[card.race] || card.race;
+        // --- ÍCONES DE SUBTIPO [ Raça / Tipo ] ---
+        const raceTraduzida = racesTrad[card.race] || card.race || "Desconhecido";
         const raceIconUrl = `https://images.ygoprodeck.com/images/cards/icons/race/${card.race}.png`;
         const typeIconUrl = `https://images.ygoprodeck.com/images/cards/icons/${encodeURIComponent(card.type)}.jpg`;
 
-        // 3. Montagem da linha: [ Ícone Raça / Ícone Tipo TipoTraduzido ]
         infoHtml += `<div style="display: flex; align-items: center; gap: 4px; color: #aaa; font-size: 11px; margin-bottom: 8px; flex-wrap: wrap;">
             <span>[</span>
             <img src="${raceIconUrl}" title="Raça" style="width: 14px; height: 14px;" onerror="this.style.display='none'">
@@ -538,7 +560,7 @@
             <span>${tipoTexto} ]</span>
         </div>`;
 
-        // Bloco de ATK e DEF (Oculta DEF se for Link)
+        // --- BLOCO ATK / DEF ---
         if(card.atk !== undefined) {
             const isLink = card.type.toLowerCase().includes("link");
             infoHtml += `
@@ -561,7 +583,7 @@
         
         document.getElementById('tooltip-info-rows').innerHTML = infoHtml;
 
-        // Datas e Finalização
+        // --- DATAS E DESCRIÇÃO ---
         let tcgDate = "N/A", ocgDate = "N/A";
         if (card.misc_info && card.misc_info[0]) {
             tcgDate = formatDateBR(card.misc_info[0].tcg_date);
@@ -569,7 +591,6 @@
         }
         const datesHtml = `<div style="margin-top: 10px; padding-top: 8px; border-top: 1px dashed #444; font-size: 10px; color: #888; display: flex; gap: 12px;"><span>📅 TCG: ${tcgDate}</span><span>📅 OCG: ${ocgDate}</span></div>`;
         
-        // AJUSTE FINAL: Conversão de quebras de linha (\n) para <br> para manter a formatação do efeito
         const formattedDescription = description.replace(/\n/g, '<br>');
         document.getElementById('tooltip-text').innerHTML = `<div>${formattedDescription}</div>${datesHtml}`;
 
@@ -577,27 +598,35 @@
         if (window.innerWidth < 900) {
             tt.style.left = '50%'; tt.style.top = '50%';
             tt.style.transform = 'translate(-50%, -50%)';
-        } else { moveTooltip(e); }
+        } else { 
+            moveTooltip(e); 
+        }
     }
 
     function moveTooltip(e) {
         if (window.innerWidth < 900) return; 
         
         const tt = document.getElementById('card-tooltip');
+        
+        // Define um valor padrão caso o offsetHeight ainda não tenha sido calculado pelo browser
+        const ttHeight = tt.offsetHeight || 300;
+        const ttWidth = tt.offsetWidth || 350;
+
         let x = e.clientX + 20;
         let y = e.clientY + 20;
 
-        // Ajuste horizontal (evita sair da tela pela direita)
-        if (x + tt.offsetWidth > window.innerWidth) {
-            x = e.clientX - tt.offsetWidth - 20;
+        // Ajuste Horizontal
+        if (x + ttWidth > window.innerWidth) {
+            x = e.clientX - ttWidth - 20;
         }
 
-        // Ajuste vertical (evita sair da tela por baixo)
-        // Se a posição Y + a altura do tooltip passar da altura da janela, 
-        // ele sobe o suficiente para aparecer inteiro.
-        if (y + tt.offsetHeight > window.innerHeight) {
-            y = window.innerHeight - tt.offsetHeight - 20;
+        // Ajuste Vertical (Crítico para descrições longas)
+        if (y + ttHeight > window.innerHeight) {
+            y = window.innerHeight - ttHeight - 20;
         }
+        
+        // Garante que o tooltip nunca saia pelo topo da tela também
+        if (y < 10) y = 10;
 
         tt.style.left = x + 'px'; 
         tt.style.top = y + 'px';
