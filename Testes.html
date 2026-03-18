@@ -1082,116 +1082,124 @@
 
         const racesTrad = { "Aqua": "Aqua", "Beast": "Besta", "Beast-Warrior": "Besta-Guerreira", "Cyberse": "Ciberso", "Dinosaur": "Dinossauro", "Dragon": "Dragão", "Fiend": "Demônio", "Fish": "Peixe", "Insect": "Inseto", "Machine": "Máquina", "Plant": "Planta", "Psychic": "Psíquico", "Pyro": "Piro", "Reptile": "Réptil", "Rock": "Rocha", "Sea Serpent": "Serpente Marinha", "Spellcaster": "Mago", "Thunder": "Trovão", "Warrior": "Guerreiro", "Winged Beast": "Besta Alada", "Wyrm": "Wyrm", "Zombie": "Zumbi", "Divine-Beast": "Besta Divina", "Normal": "Normal", "Continuous": "Contínua", "Field": "Campo", "Equip": "Equipamento", "Quick-Play": "Rápida", "Ritual": "Ritual", "Counter": "Resposta" };
 
-       pageItems.forEach(card => {
-            const div = document.createElement('div'); 
-            div.className = 'suggestion-item';
-            
-            // Lógica de Atributos e Ícones
-            const attrRaw = card.attribute ? card.attribute.toUpperCase() : (card.type.includes("Spell") ? "SPELL" : "TRAP");
-            const attrIconUrl = card.attribute ? `https://images.ygoprodeck.com/images/cards/${attrRaw}.jpg` : "";
-            const raceIconUrl = `https://images.ygoprodeck.com/images/cards/icons/race/${card.race}.png`;
-            const starIcon = "https://ygoprodeck.com/wp-content/uploads/2017/01/level.png";
-            const raceTraduzida = racesTrad[card.race] || card.race;
+        pageItems.forEach(card => {
+            // Adicionado loop para percorrer todas as artes da carta
+            card.card_images.forEach((imageObj, index) => {
+                const div = document.createElement('div'); 
+                div.className = 'suggestion-item';
+                
+                // Lógica de Atributos e Ícones
+                const attrRaw = card.attribute ? card.attribute.toUpperCase() : (card.type.includes("Spell") ? "SPELL" : "TRAP");
+                const attrIconUrl = card.attribute ? `https://images.ygoprodeck.com/images/cards/${attrRaw}.jpg` : "";
+                const raceIconUrl = `https://images.ygoprodeck.com/images/cards/icons/race/${card.race}.png`;
+                const starIcon = "https://ygoprodeck.com/wp-content/uploads/2017/01/level.png";
+                const raceTraduzida = racesTrad[card.race] || card.race;
 
-            // --- NOVA LÓGICA DE TIPO (IGUAL AO TOOLTIP) ---
-            let tipoTexto = card.type;
-            if (tipoTexto.includes("Effect Monster")) {
-                tipoTexto = "Monstro de Efeito";
-            } else if (tipoTexto.includes("Normal Monster")) {
-                tipoTexto = "Monstro Normal";
-            } else {
-                tipoTexto = tipoTexto
-                    .replace("Monster", "Monstro")
-                    .replace("Spell Card", "Carta de Magia")
-                    .replace("Trap Card", "Carta de Armadilha");
-            }
-            const typeIconUrl = `https://images.ygoprodeck.com/images/cards/icons/${encodeURIComponent(card.type)}.jpg`;
-            // ----------------------------------------------
-
-            // Montagem do HTML Interno
-            div.innerHTML = `
-                <img src="${card.card_images[0].image_url_small}" 
-                    loading="lazy" 
-                    onerror="this.src='https://images.ygoprodeck.com/images/cards/back_high.jpg'"
-                    alt="${card.name}">
-                    
-                <div class="card-info-box">
-                    <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
-                        ${getBanIcon(card)} 
-                        <b class="card-name" style="margin: 0; line-height: 1.2;">${card.name_pt || card.name}</b>
-                    </div>
-                    
-                    <div class="info-row" style="display: flex; align-items: center; justify-content: flex-start; gap: 10px;">
-                        ${attrIconUrl ? `
-                            <div style="display: flex; align-items: center; gap: 4px;">
-                                <img src="${attrIconUrl}" style="width: 14px; height: 14px; border-radius: 50%;"> 
-                                <span style="font-size: 10px;">${trad[attrRaw] || attrRaw}</span>
-                            </div>` : ''}
-                        
-                        ${(card.level || card.rank) && !card.type.toLowerCase().includes("link") ? `
-                            <div style="display: flex; align-items: center; gap: 2px;">
-                                <img src="${starIcon}" style="width: 12px; height: 12px; ${card.type.toUpperCase().includes('XYZ') ? 'filter:invert(1) brightness(0.5);' : ''}">
-                                <span style="font-size: 10px;">${card.level || card.rank}</span>
-                            </div>` : ''}
-                    </div>
-
-                    ${card.type.toLowerCase().includes("link") ? 
-                        `<div style="display: block; margin-top: -2px;">
-                            <span style="color: #ff0000; letter-spacing: 2px; font-size: 14px; font-weight: bold;">
-                                ${getLinkMarkersHtml(card.linkmarkers)}
-                            </span>
-                        </div>` : ''}
-
-                    <div class="info-row" style="color:var(--accent); display: flex; align-items: center; gap: 4px; margin-top: 2px; flex-wrap: wrap;">
-                        <img src="${raceIconUrl}" style="width: 14px; height: 14px;" onerror="this.style.display='none'">
-                        <span>${raceTraduzida} / </span>
-                        <img src="${typeIconUrl}" title="Tipo" style="width: 14px; height: 14px; border-radius: 2px;" onerror="this.style.display='none'">
-                        <span style="color: #aaa;">${tipoTexto}</span>
-                    </div>
-
-                    ${card.atk !== undefined ? `
-                        <div class="info-row atk-def-row">
-                            <span>ATK/ ${card.atk}</span>
-                            ${!card.type.toLowerCase().includes("link") ? 
-                                `<span>DEF/ ${card.def}</span>` : 
-                                `<span style="color: #ffffff; font-weight: bold; font-size: 11px;">LINK-${card.linkval}</span>`
-                            }
-                        </div>` : ''}
-                </div>`;
-
-            // --- Lógica de Eventos (Inalterada, pois já está funcional) ---
-            let pressTimer;
-            const startPress = (cardObj, e) => {
-                pressTimer = setTimeout(() => {
-                    const fakeEvent = { 
-                        clientX: e.touches ? e.touches[0].clientX : e.clientX, 
-                        clientY: e.touches ? e.touches[0].clientY : e.clientY 
-                    };
-                    showTooltip(cardObj, fakeEvent);
-                    if (navigator.vibrate) navigator.vibrate(50);
-                }, 600);
-            };
-            
-            const cancelPress = () => clearTimeout(pressTimer);
-            
-            div.onmouseenter = (e) => showTooltip(card, e);
-            div.onmousemove = (e) => moveTooltip(e);
-            div.onmouseleave = () => hideTooltip();
-            div.ontouchstart = (e) => startPress(card, e);
-            div.ontouchend = cancelPress;
-            div.ontouchmove = cancelPress;
-            
-            div.onclick = () => {
-                const qty = parseInt(document.getElementById('search-qty').value) || 1;
-                const displayName = card.name_pt || card.name; // Pega o nome em PT se existir
-                for(let i=0; i<qty; i++) {
-                    cardQueue.push({ id: card.id, name: displayName, imgId: card.card_images[0].id });
+                let tipoTexto = card.type;
+                if (tipoTexto.includes("Effect Monster")) {
+                    tipoTexto = "Monstro de Efeito";
+                } else if (tipoTexto.includes("Normal Monster")) {
+                    tipoTexto = "Monstro Normal";
+                } else {
+                    tipoTexto = tipoTexto
+                        .replace("Monster", "Monstro")
+                        .replace("Spell Card", "Carta de Magia")
+                        .replace("Trap Card", "Carta de Armadilha");
                 }
-                updateUI();
-                if(window.innerWidth < 900) showToast(`${qty}x ${displayName} adicionado(a)!`);
-            };
+                const typeIconUrl = `https://images.ygoprodeck.com/images/cards/icons/${encodeURIComponent(card.type)}.jpg`;
+                
+                // Identificador visual para artes alternativas no nome
+                const variantSuffix = card.card_images.length > 1 ? ` (Arte #${index + 1})` : "";
+                const displayName = (card.name_pt || card.name) + variantSuffix;
 
-            container.appendChild(div);
+                // Montagem do HTML Interno
+                div.innerHTML = `
+                    <img src="${imageObj.image_url_small}" 
+                        loading="lazy" 
+                        onerror="this.src='https://images.ygoprodeck.com/images/cards/back_high.jpg'"
+                        alt="${card.name}">
+                        
+                    <div class="card-info-box">
+                        <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
+                            ${getBanIcon(card)} 
+                            <b class="card-name" style="margin: 0; line-height: 1.2;">${displayName}</b>
+                        </div>
+                        
+                        <div class="info-row" style="display: flex; align-items: center; justify-content: flex-start; gap: 10px;">
+                            ${attrIconUrl ? `
+                                <div style="display: flex; align-items: center; gap: 4px;">
+                                    <img src="${attrIconUrl}" style="width: 14px; height: 14px; border-radius: 50%;"> 
+                                    <span style="font-size: 10px;">${trad[attrRaw] || attrRaw}</span>
+                                </div>` : ''}
+                            
+                            ${(card.level || card.rank) && !card.type.toLowerCase().includes("link") ? `
+                                <div style="display: flex; align-items: center; gap: 2px;">
+                                    <img src="${starIcon}" style="width: 12px; height: 12px; ${card.type.toUpperCase().includes('XYZ') ? 'filter:invert(1) brightness(0.5);' : ''}">
+                                    <span style="font-size: 10px;">${card.level || card.rank}</span>
+                                </div>` : ''}
+                        </div>
+
+                        ${card.type.toLowerCase().includes("link") ? 
+                            `<div style="display: block; margin-top: -2px;">
+                                <span style="color: #ff0000; letter-spacing: 2px; font-size: 14px; font-weight: bold;">
+                                    ${getLinkMarkersHtml(card.linkmarkers)}
+                                </span>
+                            </div>` : ''}
+
+                        <div class="info-row" style="color:var(--accent); display: flex; align-items: center; gap: 4px; margin-top: 2px; flex-wrap: wrap;">
+                            <img src="${raceIconUrl}" style="width: 14px; height: 14px;" onerror="this.style.display='none'">
+                            <span>${raceTraduzida} / </span>
+                            <img src="${typeIconUrl}" title="Tipo" style="width: 14px; height: 14px; border-radius: 2px;" onerror="this.style.display='none'">
+                            <span style="color: #aaa;">${tipoTexto}</span>
+                        </div>
+
+                        ${card.atk !== undefined ? `
+                            <div class="info-row atk-def-row">
+                                <span>ATK/ ${card.atk}</span>
+                                ${!card.type.toLowerCase().includes("link") ? 
+                                    `<span>DEF/ ${card.def}</span>` : 
+                                    `<span style="color: #ffffff; font-weight: bold; font-size: 11px;">LINK-${card.linkval}</span>`
+                                }
+                            </div>` : ''}
+                    </div>`;
+
+                // objeto temporário para o Tooltip mostrar a arte correta
+                const cardWithSpecificArt = { ...card, card_images: [imageObj] };
+
+                let pressTimer;
+                const startPress = (cardObj, e) => {
+                    pressTimer = setTimeout(() => {
+                        const fakeEvent = { 
+                            clientX: e.touches ? e.touches[0].clientX : e.clientX, 
+                            clientY: e.touches ? e.touches[0].clientY : e.clientY 
+                        };
+                        showTooltip(cardObj, fakeEvent);
+                        if (navigator.vibrate) navigator.vibrate(50);
+                    }, 600);
+                };
+                
+                const cancelPress = () => clearTimeout(pressTimer);
+                
+                // Agora as funções de tooltip usam 'cardWithSpecificArt'
+                div.onmouseenter = (e) => showTooltip(cardWithSpecificArt, e);
+                div.onmousemove = (e) => moveTooltip(e);
+                div.onmouseleave = () => hideTooltip();
+                div.ontouchstart = (e) => startPress(cardWithSpecificArt, e);
+                div.ontouchend = cancelPress;
+                div.ontouchmove = cancelPress;
+                
+                div.onclick = () => {
+                    const qty = parseInt(document.getElementById('search-qty').value) || 1;
+                    for(let i=0; i<qty; i++) {
+                        // Enviamos o imageObj.id (ID da arte específica) e o displayName
+                        cardQueue.push({ id: card.id, name: displayName, imgId: imageObj.id });
+                    }
+                    updateUI();
+                    if(window.innerWidth < 900) showToast(`${qty}x ${displayName} adicionado(a)!`);
+                };
+
+                container.appendChild(div);
+            }); // Fim do forEach das artes
         });
     }
 
