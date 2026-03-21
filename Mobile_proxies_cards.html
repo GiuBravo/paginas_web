@@ -212,6 +212,43 @@
             .grid-mode .card-info-box { display: none; }
             .grid-mode .suggestion-item { display: block; text-align: center; border-bottom: none; }
             .grid-mode .suggestion-item img { width: 100%; height: auto; }
+            #card-tooltip {
+                display: none; /* Resolvendo o 'estranho' no carregamento */
+                position: fixed;
+                z-index: 10000;
+                pointer-events: none;
+                background: rgba(10, 10, 10, 0.98);
+                border: 1px solid #444;
+                border-radius: 8px;
+                padding: 18px;
+                width: 680px; /* Largura para acomodar as duas colunas */
+                height: auto; /* Altura cresce conforme o texto */
+                max-height: 92vh; /* Garante que não ultrapasse a tela */
+                box-shadow: 0 10px 40px rgba(0,0,0,0.9);
+                overflow: hidden;
+            }
+
+            /* Container flex para as duas colunas */
+            .tt-container {
+                display: flex;
+                gap: 20px;
+                align-items: flex-start;
+            }
+
+            /* Coluna da Imagem */
+            #tooltip-img {
+                width: 280px !important; /* Tamanho fixo da carta à esquerda */
+                height: auto;
+                border-radius: 6px;
+                flex-shrink: 0;
+            }
+
+            /* Coluna das Informações */
+            .tt-details {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+            }
         }
 
         /* --- RESPONSIVIDADE MOBILE --- */
@@ -260,15 +297,16 @@
 </head>
 <body>
 
-<div id="card-tooltip">
-    <div id="tooltip-header">
-        <img id="tooltip-img" src="">
-        <div id="tooltip-meta">
-            <div id="tooltip-name"></div>
+<div id="card-tooltip" style="display: none;">
+    <div class="tt-container">
+        <img id="tooltip-img" src="" alt="Carta">
+        
+        <div class="tt-details">
+            <h3 id="tooltip-name" style="margin-top: 0; margin-bottom: 10px;"></h3>
             <div id="tooltip-info-rows"></div>
+            <div id="tooltip-text" style="font-size: 13px; color: #fff; line-height: 1.5;"></div>
         </div>
     </div>
-    <div id="tooltip-text"></div>
 </div>
 
 <div id="toast-container"></div>
@@ -344,6 +382,13 @@
                     <input type="checkbox" id="enable-banlist-only" style="width: auto;" onchange="performSearch()"> Exibir somente cartas da Banlist
                 </label>
             </div>
+            <div class="filter-group">
+                <label><i class="fa-solid fa-dollar-sign"></i> Faixa de Preço (USD)</label>
+                <div style="display: flex; gap: 5px;">
+                    <input type="number" id="filter-price-min" placeholder="Min $" step="0.1" style="width: 50%;">
+                    <input type="number" id="filter-price-max" placeholder="Max $" step="0.1" style="width: 50%;">
+                </div>
+            </div>
             <div class="filter-group" style="margin-top:20px;"><label>Escala do PDF (%)</label><div class="stepper"><button onclick="adjustScale(-0.1)">-</button><input type="number" id="print-scale" value="100.0" readonly><button onclick="adjustScale(0.1)">+</button></div></div>
             <hr style="border:0; border-top:1px solid #333; margin: 20px 0;">
             <label class="btn-secondary">IMPORTAR .YDK<input type="file" id="file-ydk" accept=".ydk" style="display:none" onchange="importYDK(this)"></label>
@@ -373,6 +418,7 @@
                         <option value="level">Level/Rank</option>
                         <option value="tcg_date">Data TCG</option>
                         <option value="ocg_date">Data OCG</option>
+                        <option value="price">Preço</option>
                         <option value="banlist">Banlist</option>
                     </select>
                     
@@ -425,6 +471,21 @@
         "goat": "ban_goat",
         "masterduel": "ban_masterduel" // A API usa essas chaves internamente
     };
+
+    // Dentro do performSearch, após obter os dados da API (ou onde você filtra os resultados):
+    function filterByPrice(cards) {
+        const minPrice = parseFloat(document.getElementById('filter-price-min').value) || 0;
+        const maxPrice = parseFloat(document.getElementById('filter-price-max').value) || Infinity;
+
+        return cards.filter(card => {
+            // Pega o primeiro preço disponível (geralmente TCGPlayer)
+            const price = card.card_prices && card.card_prices[0] 
+                        ? parseFloat(card.card_prices[0].tcgplayer_price) 
+                        : 0;
+
+            return price >= minPrice && price <= maxPrice;
+        });
+    }
 
     function getBanIcon(card) {
         const banType = document.getElementById('filter-banlist-type').value;
@@ -533,24 +594,23 @@
             let valA, valB;
 
             switch(criterion) {
-                case 'banlist':
-                    // 1. Definimos os pesos: Banida (1), Limitada (2), Semi-Limitada (3), Fora da lista (4)
-                    const priority = {
-                        'Banned': 1,
-                        'Forbidden': 1,
-                        'Limited': 2,
-                        'Semi-Limited': 3
-                    };
+                case 'price':
+                    // Converte os preços para números. Se não existir, considera 0.
+                    valA = parseFloat(a.card_prices?.[0]?.tcgplayer_price) || 0;
+                    valB = parseFloat(b.card_prices?.[0]?.tcgplayer_price) || 0;
+                    break;
 
-                    // 2. Buscamos o status específico do formato atual (Ex: ban_tcg, ban_ocg ou ban_goat)
-                    // Usamos o banlistType capturado do seu select de filtros
+                case 'banlist':
+                    const priority = {
+                        'Banned': 1, 'Forbidden': 1,
+                        'Limited': 2, 'Semi-Limited': 3
+                    };
                     const statusA = a.banlist_info ? a.banlist_info[`ban_${banlistType}`] : null;
                     const statusB = b.banlist_info ? b.banlist_info[`ban_${banlistType}`] : null;
 
                     valA = priority[statusA] || 4;
                     valB = priority[statusB] || 4;
 
-                    // Se as cartas tiverem o mesmo status, desempatamos pelo nome (A-Z)
                     if (valA === valB) {
                         return (a.name || "").localeCompare(b.name || "");
                     }
@@ -585,7 +645,7 @@
                 default: return 0;
             }
 
-            // Lógica padrão de comparação para números (ATK, DEF, Level, Banlist)
+            // Lógica padrão de comparação para números (Preço, ATK, DEF, Level, Banlist)
             if (valA < valB) return -1 * sortDirection;
             if (valA > valB) return 1 * sortDirection;
             return 0;
@@ -616,47 +676,39 @@
         
         const tt = document.getElementById('card-tooltip');
         const description = card.desc_pt || card.desc;
+
+        const nameElement = document.getElementById('tooltip-name');
+        nameElement.innerText = card.name_pt || card.name;
+        nameElement.style.color = 'var(--accent)'; // Define a cor amarela aqui
+        nameElement.style.fontSize = '1.0em';      // Ajuste opcional de tamanho
+        nameElement.style.fontWeight = 'bold';
         
         document.getElementById('tooltip-img').src = card.card_images[0].image_url;
         document.getElementById('tooltip-name').innerText = card.name_pt || card.name;
 
-        // --- NOVO: LÓGICA DE BANLIST NO TOOLTIP ---
+        // --- LÓGICA DE BANLIST (MANTIDA ORIGINAL) ---
         const banlistType = document.getElementById('filter-banlist-type').value;
         const status = card.banlist_info ? card.banlist_info[`ban_${banlistType}`] : null;
         
-        // Limpa badge anterior para evitar duplicatas ao mover o mouse
         const oldBadge = document.querySelector('.tt-ban-container');
         if (oldBadge) oldBadge.remove();
 
         if (status && banlistType) {
             let icon = '', label = '', cssClass = '';
-
             if (status === 'Banned' || status === 'Forbidden') {
-                icon = '<i class="fa-solid fa-ban"></i>';
-                label = 'Banida';
-                cssClass = 'tt-ban-banned';
+                icon = '<i class="fa-solid fa-ban"></i>'; label = 'Banida'; cssClass = 'tt-ban-banned';
             } else if (status === 'Limited') {
-                icon = '<i class="fa-solid fa-1"></i>';
-                label = 'Limitada';
-                cssClass = 'tt-ban-limited';
+                icon = '<i class="fa-solid fa-1"></i>'; label = 'Limitada'; cssClass = 'tt-ban-limited';
             } else if (status === 'Semi-Limited') {
-                icon = '<i class="fa-solid fa-2"></i>';
-                label = 'Semi-Limitada';
-                cssClass = 'tt-ban-semi';
+                icon = '<i class="fa-solid fa-2"></i>'; label = 'Semi-Limitada'; cssClass = 'tt-ban-semi';
             }
-
             const banContainer = document.createElement('div');
             banContainer.className = 'tt-ban-container';
-            banContainer.innerHTML = `
-                <div class="tt-ban-badge ${cssClass}">
-                    ${icon} <span>${label} (${banlistType.toUpperCase()})</span>
-                </div>
-            `;
-            // Insere logo abaixo do nome da carta
+            banContainer.innerHTML = `<div class="tt-ban-badge ${cssClass}">${icon} <span>${label} (${banlistType.toUpperCase()})</span></div>`;
             document.getElementById('tooltip-name').after(banContainer);
         }
-        // ------------------------------------------
 
+        // --- TRADUÇÕES E ATRIBUTOS (MANTIDO ORIGINAL) ---
         const racesTrad = { 
             "Aqua": "Aqua", "Beast": "Besta", "Beast-Warrior": "Besta-Guerreira", "Cyberse": "Ciberso", 
             "Dinosaur": "Dinossauro", "Dragon": "Dragão", "Fiend": "Demônio", "Fish": "Peixe", 
@@ -668,134 +720,128 @@
             "Ritual": "Ritual", "Counter": "Resposta" 
         };
 
+        // --- TRADUÇÕES E ATRIBUTOS (CORES PADRONIZADAS) ---
         let infoHtml = "";
-        
         if(card.attribute || card.type.includes("Spell") || card.type.includes("Trap")) {
             infoHtml += `<div class="tt-row-split" style="align-items: center; gap: 4px;">`;
             
-            let iconUrl = "";
-            let labelText = "";
+            let iconUrl = card.type.includes("Spell") ? "https://static.wikia.nocookie.net/yugioh/images/0/09/SPELL.svg" :
+                        card.type.includes("Trap") ? "https://static.wikia.nocookie.net/yugioh/images/2/28/TRAP.svg" :
+                        `https://images.ygoprodeck.com/images/cards/${card.attribute ? card.attribute.toUpperCase() : 'UNKNOWN'}.jpg`;
+            
+            let labelText = card.type.includes("Spell") ? "MAGIA" : card.type.includes("Trap") ? "ARMADILHA" : 
+                            (typeof trad !== 'undefined' ? trad[card.attribute?.toUpperCase()] : card.attribute) || card.attribute || "";
 
-            if (card.type.includes("Spell")) {
-                iconUrl = "https://static.wikia.nocookie.net/yugioh/images/0/09/SPELL.svg";
-                labelText = "MAGIA";
-            } else if (card.type.includes("Trap")) {
-                iconUrl = "https://static.wikia.nocookie.net/yugioh/images/2/28/TRAP.svg";
-                labelText = "ARMADILHA";
-            } else {
-                iconUrl = `https://images.ygoprodeck.com/images/cards/${card.attribute ? card.attribute.toUpperCase() : 'UNKNOWN'}.jpg`;
-                labelText = (typeof trad !== 'undefined' ? trad[card.attribute?.toUpperCase()] : card.attribute) || card.attribute || "";
-            }
-
-            infoHtml += `<div class="tt-attr-group">
-                <img class="tt-icon" src="${iconUrl}" style="width:20px; height:20px; object-fit:contain;">
-                <span>${labelText}</span>
-            </div>`;
+            // Atributo em BRANCO
+            infoHtml += `<div class="tt-attr-group" style="color: #ffffff;"><img class="tt-icon" src="${iconUrl}" style="width:20px; height:20px; object-fit:contain;"><span>${labelText}</span></div>`;
 
             if((card.level || card.rank) && !card.type.toLowerCase().includes("link")) {
-                infoHtml += `<div class="tt-level-group">
-                    <img src="${starIcon}" style="width:16px; height:16px; ${card.type.toUpperCase().includes('XYZ') ? 'filter:invert(1) brightness(0.5);' : ''}">
-                    <span>${card.level || card.rank}</span>
-                </div>`;
+                // Level/Rank em BRANCO
+                infoHtml += `<div class="tt-level-group" style="color: #ffffff;"><img src="${starIcon}" style="width:16px; height:16px; ${card.type.toUpperCase().includes('XYZ') ? 'filter:invert(1) brightness(0.5);' : ''}"><span>${card.level || card.rank}</span></div>`;
             }
-            
             infoHtml += `</div>`;
-
-            if(card.type.toLowerCase().includes("link")) {
-                infoHtml += `<div style="color: #ff0000; font-size: 20px; letter-spacing: 4px; margin-top: 2px; border-bottom: 1px solid #333; padding-bottom: 4px;">
-                    ${getLinkMarkersHtml(card.linkmarkers)}
-                </div>`;
-            }
-        }           
-
-        let tipoTexto = card.type;
-        if (tipoTexto.includes("Effect Monster")) {
-            tipoTexto = "Monstro de Efeito";
-        } else if (tipoTexto.includes("Normal Monster")) {
-            tipoTexto = "Monstro Normal";
-        } else {
-            tipoTexto = tipoTexto
-                .replace("Monster", "Monstro")
-                .replace("Spell Card", "Carta de Magia")
-                .replace("Trap Card", "Carta de Armadilha");
         }
 
+        // --- LINHA DE RAÇA / TIPO (EM BRANCO) ---
+        let tipoTexto = card.type.replace("Effect Monster", "Monstro de Efeito").replace("Normal Monster", "Monstro Normal").replace("Monster", "Monstro").replace("Spell Card", "Carta de Magia").replace("Trap Card", "Carta de Armadilha");
         const raceTraduzida = racesTrad[card.race] || card.race || "Desconhecido";
-        const raceIconUrl = `https://images.ygoprodeck.com/images/cards/icons/race/${card.race}.png`;
-        const typeIconUrl = `https://images.ygoprodeck.com/images/cards/icons/${encodeURIComponent(card.type)}.jpg`;
+        
+        infoHtml += `<div style="display: flex; align-items: center; gap: 4px; color: #ffffff; font-size: 11px; margin-bottom: 8px; flex-wrap: wrap;">
+                        <span>[</span>
+                        <img src="https://images.ygoprodeck.com/images/cards/icons/race/${card.race}.png" style="width: 14px; height: 14px;" onerror="this.style.display='none'">
+                        <span>${raceTraduzida} / </span>
+                        <img src="https://images.ygoprodeck.com/images/cards/icons/${encodeURIComponent(card.type)}.jpg" style="width: 14px; height: 14px; border-radius: 2px;" onerror="this.style.display='none'">
+                        <span>${tipoTexto} ]</span>
+                    </div>`;
 
-        infoHtml += `<div style="display: flex; align-items: center; gap: 4px; color: #aaa; font-size: 11px; margin-bottom: 8px; flex-wrap: wrap;">
-            <span>[</span>
-            <img src="${raceIconUrl}" title="Raça" style="width: 14px; height: 14px;" onerror="this.style.display='none'">
-            <span>${raceTraduzida} / </span>
-            <img src="${typeIconUrl}" title="Tipo" style="width: 14px; height: 14px; border-radius: 2px;" onerror="this.style.display='none'">
-            <span>${tipoTexto} ]</span>
-        </div>`;
-
+        // --- BLOCO ATK / DEF COM ÍCONES E CORES PADRONIZADAS ---
         if(card.atk !== undefined) {
-            const isLink = card.type.toLowerCase().includes("link");
             infoHtml += `
-                <div class="tt-stats" style="display: flex; gap: 15px; margin-top: 5px; font-weight: bold; font-size: 13px;">
-                    <div style="display: flex; align-items: center; gap: 4px;">
-                        <span style="color: #e74c3c;">ATK/</span>
-                        <span>${card.atk}</span>
+            <div style="display: flex; gap: 15px; margin-bottom: 8px; font-size: 13px; font-weight: bold;">
+                <div style="display: flex; align-items: center; gap: 5px;">
+                    <i class="fas fa-fist-raised" style="color: #4d94ff;"></i>
+                    <span style="color: #4d94ff;">ATK/</span>
+                    <span style="color: #ffffff;">${card.atk}</span>
+                </div>
+                
+                ${!card.type.toLowerCase().includes("link") ? `
+                    <div style="display: flex; align-items: center; gap: 5px;">
+                        <i class="fas fa-shield-alt" style="color: #ff4d4d;"></i>
+                        <span style="color: #ff4d4d;">DEF/</span>
+                        <span style="color: #ffffff;">${card.def}</span>
                     </div>
-                    ${!isLink ? `
-                        <div style="display: flex; align-items: center; gap: 4px;">
-                            <span style="color: #3498db;">DEF/</span>
-                            <span>${card.def}</span>
-                        </div>` : `
-                        <div style="display: flex; align-items: center; gap: 4px;">
-                            <span style="color: #ffffff;">LINK-${card.linkval}</span>
-                        </div>`
-                    }
-                </div>`;
+                ` : `
+                    <div style="display: flex; align-items: center; gap: 5px; color: #ffffff;">
+                        <span>LINK-${card.linkval}</span>
+                    </div>
+                `}
+            </div>`;
         }
         
         document.getElementById('tooltip-info-rows').innerHTML = infoHtml;
 
+        // --- DATAS E PREÇOS (AJUSTE SOLICITADO) ---
         let tcgDate = "N/A", ocgDate = "N/A";
         if (card.misc_info && card.misc_info[0]) {
             tcgDate = formatDateBR(card.misc_info[0].tcg_date);
             ocgDate = formatDateBR(card.misc_info[0].ocg_date);
         }
-        const datesHtml = `<div style="margin-top: 10px; padding-top: 8px; border-top: 1px dashed #444; font-size: 10px; color: #888; display: flex; gap: 12px;"><span>📅 TCG: ${tcgDate}</span><span>📅 OCG: ${ocgDate}</span></div>`;
-        
+
+        const p = card.card_prices ? card.card_prices[0] : {};
+        const formatP = (val) => (!val || parseFloat(val) === 0) ? "Não encontrado" : `$${val}`;
+
+        // 1. Linha superior (Separa a descrição das datas) - Agora SOLID
+        const datesHtml = `<div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #444; font-size: 13px; color: #fff; display: flex; gap: 12px;">
+            <span>📅 TCG: ${tcgDate}</span>
+            <span>📅 OCG: ${ocgDate}</span>
+        </div>`;
+
+        // 2. Linha intermediária (Separa as datas dos preços) - Também SOLID
+        const separatorHtml = `<hr style="border: 0; border-top: 1px solid #444; margin: 8px 0; opacity: 1;">`;
+
+        // 3. Bloco de Preços
+        const pricesHtml = `<div style="margin-top: 6px; display: flex; flex-wrap: wrap; gap: 12px; font-size: 13px; color: #fff; font-weight: 500;">
+            <span title="TCGPlayer"><i class="fa-solid fa-store" style="color:var(--accent); font-size: 11px;"></i> TCG: ${formatP(p.tcgplayer_price)}</span>
+            <span title="Cardmarket"><i class="fa-solid fa-m" style="color:var(--accent); font-size: 11px;"></i> CM: ${formatP(p.cardmarket_price)}</span>
+            <span title="eBay"><i class="fa-brands fa-ebay" style="color:var(--accent); font-size: 14px;"></i> ${formatP(p.ebay_price)}</span>
+            <span title="Amazon"><i class="fa-brands fa-amazon" style="color:var(--accent); font-size: 13px;"></i> ${formatP(p.amazon_price)}</span>
+        </div>`;
+
         const formattedDescription = description.replace(/\n/g, '<br>');
-        document.getElementById('tooltip-text').innerHTML = `<div>${formattedDescription}</div>${datesHtml}`;
+
+        // Montagem final no elemento
+        document.getElementById('tooltip-text').innerHTML = `<div>${formattedDescription}</div>${datesHtml}${separatorHtml}${pricesHtml}`;
 
         tt.style.display = 'block';
         if (window.innerWidth < 900) {
             tt.style.left = '50%'; tt.style.top = '50%';
             tt.style.transform = 'translate(-50%, -50%)';
-        } else { 
-            moveTooltip(e); 
-        }
+        } else { moveTooltip(e); }
     }
 
     function moveTooltip(e) {
         if (window.innerWidth < 900) return; 
         
         const tt = document.getElementById('card-tooltip');
-        
-        // Define um valor padrão caso o offsetHeight ainda não tenha sido calculado pelo browser
-        const ttHeight = tt.offsetHeight || 300;
-        const ttWidth = tt.offsetWidth || 350;
+        if (tt.style.display !== 'block') return;
 
-        let x = e.clientX + 20;
-        let y = e.clientY + 20;
+        const ttHeight = tt.offsetHeight;
+        const ttWidth = tt.offsetWidth;
 
-        // Ajuste Horizontal
+        let x = e.clientX + 25;
+        let y = e.clientY + 15;
+
+        // Ajuste Horizontal (Inverte se bater na direita)
         if (x + ttWidth > window.innerWidth) {
-            x = e.clientX - ttWidth - 20;
+            x = e.clientX - ttWidth - 25;
         }
 
-        // Ajuste Vertical (Crítico para descrições longas)
+        // Ajuste Vertical (Sobe se bater no rodapé)
         if (y + ttHeight > window.innerHeight) {
-            y = window.innerHeight - ttHeight - 20;
+            y = window.innerHeight - ttHeight - 15;
         }
         
-        // Garante que o tooltip nunca saia pelo topo da tela também
+        // Trava para não subir além do topo
         if (y < 10) y = 10;
 
         tt.style.left = x + 'px'; 
@@ -954,51 +1000,44 @@
         const banlistType = document.getElementById('filter-banlist-type').value;
         const banlistOnly = document.getElementById('enable-banlist-only').checked;
 
+        // Preços (Captura para validação de filtro ativo)
+        const pMinInput = document.getElementById('filter-price-min')?.value;
+        const pMaxInput = document.getElementById('filter-price-max')?.value;
+
         // 2. Validação de busca mínima
         const hasEnoughName = q.length >= 3;
         const hasEnoughDesc = desc.length >= 3;
+        const hasPriceFilter = pMinInput || pMaxInput; // NOVO: Filtro de preço agora ativa a busca
 
-        // AJUSTE AQUI: Consideramos 'initial' ou qualquer mudança nos selects como motivo para buscar.
-        // Se banlistType for "", o 'initial' sendo true (passado pelo onchange) garantirá a busca.
-        const hasOtherFilters = type || atk || def || attr || dateEnabled || banlistOnly || banlistType;
+        const hasOtherFilters = type || atk || def || attr || dateEnabled || banlistOnly || banlistType || hasPriceFilter;
 
         if (!initial && !hasEnoughName && !hasEnoughDesc && !hasOtherFilters) {
             document.getElementById('search-results').innerHTML = '';
             return;
         }
 
-        // 3. Configuração dos parâmetros (URLSearchParams)
+        // 3. Configuração dos parâmetros
         let p = new URLSearchParams();
-        
         if (hasEnoughName) p.append('fname', q);
         if (hasEnoughDesc) p.append('desc', desc);
-        
         if (type) {
             if (type === "Monster" && sub) p.append('type', sub);
             else if (type !== "Monster") p.append('type', type);
         }
-        
         if (race) p.append('race', race);
         if (atk) p.append('atk', atk);
         if (def) p.append('def', def);
         if (lv) p.append('level', lv);
         if (attr) p.append('attribute', attr);
-        
-        // Lógica da Banlist/Format
         if (banlistType) {
-            if (banlistOnly) {
-                p.append('banlist', banlistType);
-            } else {
-                p.append('format', banlistType);
-            }
+            if (banlistOnly) p.append('banlist', banlistType);
+            else p.append('format', banlistType);
         }
-
         p.append('misc', 'yes'); 
 
         try {
             // 4. Execução das Requisições
             const urlGlobal = `https://db.ygoprodeck.com/api/v7/cardinfo.php?${p.toString()}`;
-            
             p.set('language', 'pt');
             const urlPT = `https://db.ygoprodeck.com/api/v7/cardinfo.php?${p.toString()}`;
 
@@ -1010,7 +1049,7 @@
             const dataGlobal = resGlobal.data || [];
             const dataPT = resPT.data || [];
 
-            // 5. Merge dos dados
+            // 5. Merge dos dados (MANTIDO)
             const mergedMap = new Map();
             dataGlobal.forEach(card => mergedMap.set(card.id, card));
             dataPT.forEach(card => {
@@ -1024,11 +1063,21 @@
 
             let finalData = Array.from(mergedMap.values());
 
-            // 6. Filtro de Data
+            // --- 5.1 FILTRO DE PREÇO (INSERIR AQUI - APÓS O MERGE) ---
+            if (hasPriceFilter) {
+                const minP = parseFloat(pMinInput) || 0;
+                const maxP = parseFloat(pMaxInput) || 999999; // Valor muito alto se vazio
+
+                finalData = finalData.filter(card => {
+                    const price = parseFloat(card.card_prices?.[0]?.tcgplayer_price) || 0;
+                    return price >= minP && price <= maxP;
+                });
+            }
+
+            // 6. Filtro de Data (MANTIDO)
             if (dateEnabled) {
                 const start = dateStart || "1900-01-01";
                 const end = dateEnd || "9999-12-31";
-
                 finalData = finalData.filter(card => {
                     const misc = card.misc_info ? card.misc_info[0] : null;
                     if (!misc) return false;
@@ -1041,7 +1090,7 @@
                 finalData = finalData.filter(c => c.type.toLowerCase().includes("monster"));
             }
 
-            // 7. Renderização
+            // 7. Renderização (MANTIDO)
             searchResults = finalData;
             searchResults.forEach(c => cardCache[c.id] = c);
             
@@ -1083,12 +1132,10 @@
         const racesTrad = { "Aqua": "Aqua", "Beast": "Besta", "Beast-Warrior": "Besta-Guerreira", "Cyberse": "Ciberso", "Dinosaur": "Dinossauro", "Dragon": "Dragão", "Fiend": "Demônio", "Fish": "Peixe", "Insect": "Inseto", "Machine": "Máquina", "Plant": "Planta", "Psychic": "Psíquico", "Pyro": "Piro", "Reptile": "Réptil", "Rock": "Rocha", "Sea Serpent": "Serpente Marinha", "Spellcaster": "Mago", "Thunder": "Trovão", "Warrior": "Guerreiro", "Winged Beast": "Besta Alada", "Wyrm": "Wyrm", "Zombie": "Zumbi", "Divine-Beast": "Besta Divina", "Normal": "Normal", "Continuous": "Contínua", "Field": "Campo", "Equip": "Equipamento", "Quick-Play": "Rápida", "Ritual": "Ritual", "Counter": "Resposta" };
 
         pageItems.forEach(card => {
-            // Adicionado loop para percorrer todas as artes da carta
             card.card_images.forEach((imageObj, index) => {
                 const div = document.createElement('div'); 
                 div.className = 'suggestion-item';
                 
-                // Lógica de Atributos e Ícones
                 const attrRaw = card.attribute ? card.attribute.toUpperCase() : (card.type.includes("Spell") ? "SPELL" : "TRAP");
                 const attrIconUrl = card.attribute ? `https://images.ygoprodeck.com/images/cards/${attrRaw}.jpg` : "";
                 const raceIconUrl = `https://images.ygoprodeck.com/images/cards/icons/race/${card.race}.png`;
@@ -1108,11 +1155,9 @@
                 }
                 const typeIconUrl = `https://images.ygoprodeck.com/images/cards/icons/${encodeURIComponent(card.type)}.jpg`;
                 
-                // Identificador visual para artes alternativas no nome
                 const variantSuffix = card.card_images.length > 1 ? ` (Arte #${index + 1})` : "";
                 const displayName = (card.name_pt || card.name) + variantSuffix;
 
-                // Montagem do HTML Interno
                 div.innerHTML = `
                     <img src="${imageObj.image_url_small}" 
                         loading="lazy" 
@@ -1122,20 +1167,20 @@
                     <div class="card-info-box">
                         <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
                             ${getBanIcon(card)} 
-                            <b class="card-name" style="margin: 0; line-height: 1.2;">${displayName}</b>
+                            <b class="card-name" style="margin: 0; line-height: 1.2; color: var(--accent);">${displayName}</b>
                         </div>
                         
-                        <div class="info-row" style="display: flex; align-items: center; justify-content: flex-start; gap: 10px;">
+                        <div class="info-row" style="display: flex; align-items: center; justify-content: flex-start; gap: 10px; color: #ffffff;">
                             ${attrIconUrl ? `
                                 <div style="display: flex; align-items: center; gap: 4px;">
                                     <img src="${attrIconUrl}" style="width: 14px; height: 14px; border-radius: 50%;"> 
-                                    <span style="font-size: 10px;">${trad[attrRaw] || attrRaw}</span>
+                                    <span style="font-size: 10px; color: #ffffff;">${trad[attrRaw] || attrRaw}</span>
                                 </div>` : ''}
                             
                             ${(card.level || card.rank) && !card.type.toLowerCase().includes("link") ? `
                                 <div style="display: flex; align-items: center; gap: 2px;">
                                     <img src="${starIcon}" style="width: 12px; height: 12px; ${card.type.toUpperCase().includes('XYZ') ? 'filter:invert(1) brightness(0.5);' : ''}">
-                                    <span style="font-size: 10px;">${card.level || card.rank}</span>
+                                    <span style="font-size: 10px; color: #ffffff;">${card.level || card.rank}</span>
                                 </div>` : ''}
                         </div>
 
@@ -1146,24 +1191,35 @@
                                 </span>
                             </div>` : ''}
 
-                        <div class="info-row" style="color:var(--accent); display: flex; align-items: center; gap: 4px; margin-top: 2px; flex-wrap: wrap;">
+                        <div class="info-row" style="display: flex; align-items: center; gap: 4px; margin-top: 2px; flex-wrap: wrap; color: #ffffff;">
                             <img src="${raceIconUrl}" style="width: 14px; height: 14px;" onerror="this.style.display='none'">
-                            <span>${raceTraduzida} / </span>
+                            <span style="color: #ffffff;">${raceTraduzida} / </span>
                             <img src="${typeIconUrl}" title="Tipo" style="width: 14px; height: 14px; border-radius: 2px;" onerror="this.style.display='none'">
-                            <span style="color: #aaa;">${tipoTexto}</span>
+                            <span style="color: #ffffff;">${tipoTexto}</span>
                         </div>
 
                         ${card.atk !== undefined ? `
-                            <div class="info-row atk-def-row">
-                                <span>ATK/ ${card.atk}</span>
-                                ${!card.type.toLowerCase().includes("link") ? 
-                                    `<span>DEF/ ${card.def}</span>` : 
-                                    `<span style="color: #ffffff; font-weight: bold; font-size: 11px;">LINK-${card.linkval}</span>`
-                                }
+                            <div class="info-row atk-def-row" style="display: flex; gap: 10px; margin-top: 4px; font-size: 11px;">
+                                <div style="display: flex; align-items: center; gap: 4px;">
+                                    <i class="fas fa-fist-raised" style="color: #4d94ff; font-size: 10px;"></i> 
+                                    <span style="color: #4d94ff; font-weight: bold;">ATK/</span>
+                                    <span style="color: #ffffff;">${card.atk}</span>
+                                </div>
+
+                                ${!card.type.toLowerCase().includes("link") ? `
+                                    <div style="display: flex; align-items: center; gap: 4px;">
+                                        <i class="fas fa-shield-alt" style="color: #ff4d4d; font-size: 10px;"></i>
+                                        <span style="color: #ff4d4d; font-weight: bold;">DEF/</span>
+                                        <span style="color: #ffffff;">${card.def}</span>
+                                    </div>
+                                ` : `
+                                    <div style="display: flex; align-items: center; gap: 4px;">
+                                        <span style="color: #ffffff; font-weight: bold;">LINK-${card.linkval}</span>
+                                    </div>
+                                `}
                             </div>` : ''}
                     </div>`;
 
-                // objeto temporário para o Tooltip mostrar a arte correta
                 const cardWithSpecificArt = { ...card, card_images: [imageObj] };
 
                 let pressTimer;
@@ -1180,7 +1236,6 @@
                 
                 const cancelPress = () => clearTimeout(pressTimer);
                 
-                // Agora as funções de tooltip usam 'cardWithSpecificArt'
                 div.onmouseenter = (e) => showTooltip(cardWithSpecificArt, e);
                 div.onmousemove = (e) => moveTooltip(e);
                 div.onmouseleave = () => hideTooltip();
@@ -1191,7 +1246,6 @@
                 div.onclick = () => {
                     const qty = parseInt(document.getElementById('search-qty').value) || 1;
                     for(let i=0; i<qty; i++) {
-                        // Enviamos o imageObj.id (ID da arte específica) e o displayName
                         cardQueue.push({ id: card.id, name: displayName, imgId: imageObj.id });
                     }
                     updateUI();
@@ -1199,7 +1253,7 @@
                 };
 
                 container.appendChild(div);
-            }); // Fim do forEach das artes
+            });
         });
     }
 
@@ -1344,6 +1398,9 @@
         document.getElementById('enable-banlist-only').checked = false;
         toggleBanlistCheckbox();
 
+        document.getElementById('filter-price-min').value = "";
+        document.getElementById('filter-price-max').value = "";
+
         currentPage = 1;
         performSearch(true);
         showToast("Filtros resetados");
@@ -1351,6 +1408,17 @@
     
     // Fecha o tooltip ao tocar nele mesmo (útil no mobile)
     document.getElementById('card-tooltip').addEventListener('click', hideTooltip);
+
+    // Escutar digitação nos campos de preço
+    document.getElementById('filter-price-min').addEventListener('input', () => {
+        currentPage = 1;
+        performSearch(true);
+    });
+
+    document.getElementById('filter-price-max').addEventListener('input', () => {
+        currentPage = 1;
+        performSearch(true);
+    });
 </script>
 </body>
 </html>
