@@ -192,6 +192,27 @@
             filter: drop-shadow(0 0 1px rgba(0,0,0,0.5));
         }
 
+        /* Quando estiver no modo grid, a imagem deve expandir */
+        .results-view.grid-mode .suggestion-item {
+            aspect-ratio: 0.707; /* Proporção real de uma carta (aprox. 59mm x 86mm) */
+            padding: 0;
+            overflow: hidden;
+            background: transparent !important; /* Remove o fundo para não sobrar bordas se a imagem demorar a carregar */
+        }
+
+        .results-view.grid-mode .suggestion-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain; /* Garante que a imagem inteira apareça sem cortes ou esticar */
+            display: block;
+        }
+
+        /* Esconde informações extras na grade para focar na arte, se desejar */
+        .results-view.grid-mode .card-info-box {
+            padding: 5px;
+            background: rgba(0,0,0,0.6); /* Um fundo semi-transparente para o nome */
+        }
+
         .deck-list { height: 350px; overflow-y: auto; padding: 10px; background: #080808; border-bottom: 1px solid var(--border); }
         .pdf-preview-container { flex-grow: 1; background: #222; position: relative; overflow: hidden; min-height: 300px; }
         #preview-frame { width: 100%; height: 100%; border: none; }
@@ -207,7 +228,21 @@
 
         /* --- RESPONSIVIDADE DESKTOP --- */
         @media (min-width: 901px) {
-            .list-mode { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1px; background: #222; }
+            /* Força 5 colunas quando a classe .empty-queue estiver no app-container */
+            .app-container.empty-queue .list-mode { 
+                display: grid; 
+                grid-template-columns: repeat(5, 1fr); 
+                gap: 1px; 
+                background: #222; 
+            }
+
+            /* Mantém o comportamento flexível padrão para quando a fila estiver aberta */
+            .list-mode { 
+                display: grid; 
+                grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); 
+                gap: 1px; 
+                background: #222; 
+            }
             .grid-mode { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 15px; padding: 15px; }
             .grid-mode .card-info-box { display: none; }
             .grid-mode .suggestion-item { display: block; text-align: center; border-bottom: none; }
@@ -293,6 +328,15 @@
                 display: block;
             }
         }
+
+        @keyframes fadeInPage {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .results-view.grid-mode, .results-view.list-mode {
+        animation: fadeInPage 0.3s ease-out;
+    }
     </style>
 </head>
 <body>
@@ -471,6 +515,21 @@
         "goat": "ban_goat",
         "masterduel": "ban_masterduel" // A API usa essas chaves internamente
     };
+
+    function changePage(step) {
+        const totalPages = Math.ceil(searchResults.length / getItemsPerPage());
+        const newPage = currentPage + step;
+
+        // Garante que não saia dos limites (1 até o total)
+        if (newPage >= 1 && newPage <= totalPages) {
+            currentPage = newPage;
+            renderResults(); // Atualiza a visualização
+            
+            // Feedback visual opcional: faz o container piscar levemente 
+            // ou volta o scroll do container para o topo
+            document.getElementById('results-view').scrollTop = 0;
+        }
+    }
 
     // Dentro do performSearch, após obter os dados da API (ou onde você filtra os resultados):
     function filterByPrice(cards) {
@@ -676,11 +735,28 @@
         
         const tt = document.getElementById('card-tooltip');
         const description = card.desc_pt || card.desc;
+        const typeColors = {
+            "Normal Monster": "#d1b55a",
+            "Effect Monster": "#a6522a",
+            "Spell Card": "#1d7d5c",
+            "Trap Card": "#8c345d",
+            "Fusion Monster": "#6e4a8c",
+            "Synchro Monster": "#8a8a8a",
+            "Xyz Monster": "#1a1a1a",
+            "Link Monster": "#164687",
+            "Ritual Monster": "#3b73a3"
+        };
 
+        const colorKey = Object.keys(typeColors).find(key => card.type.includes(key));
+        const cardColor = typeColors[colorKey] || "var(--accent)";
+
+        // A mágica que você fez:
+        tt.style.borderLeft = `6px solid ${cardColor}`;
+        
         const nameElement = document.getElementById('tooltip-name');
         nameElement.innerText = card.name_pt || card.name;
-        nameElement.style.color = 'var(--accent)'; // Define a cor amarela aqui
-        nameElement.style.fontSize = '1.0em';      // Ajuste opcional de tamanho
+        nameElement.style.color = cardColor; 
+        nameElement.style.fontSize = '1.0em';
         nameElement.style.fontWeight = 'bold';
         
         document.getElementById('tooltip-img').src = card.card_images[0].image_url;
@@ -853,13 +929,27 @@
     function getItemsPerPage() {
         if (window.innerWidth < 900) return currentView === 'list' ? 15 : 20;
         const isQueueEmpty = cardQueue.length === 0;
-        return currentView === 'list' ? (isQueueEmpty ? 25 : 15) : (isQueueEmpty ? 33 : 21);
+        return currentView === 'list' ? (isQueueEmpty ? 25 : 15) : (isQueueEmpty ? 44 : 21);
     }
 
     for(let i=0; i<=13; i++) document.getElementById('filter-lv').innerHTML += `<option value="${i}">${i}</option>`;
     window.onload = () => {
         const hoje = new Date().toISOString().split('T')[0];
         document.getElementById('date-end').value = hoje;
+
+        // Captura o scroll do mouse sobre o container de resultados
+        document.getElementById('results-view').addEventListener('wheel', function(e) {
+            // Impede o scroll padrão do container
+            e.preventDefault();
+
+            if (e.deltaY > 0) {
+                // Scroll para baixo -> Próxima Página
+                changePage(1);
+            } else {
+                // Scroll para cima -> Página Anterior
+                changePage(-1);
+            }
+        }, { passive: false });
 
         // Toggle do painel
         document.getElementById('enable-date-filter').onchange = function() {
@@ -980,7 +1070,7 @@
     function triggerSearch() { clearTimeout(window.sTimeout); window.sTimeout = setTimeout(performSearch, 500); }
 
     async function performSearch(initial = false) {
-        // 1. Captura de Elementos
+        // 1. Captura de Elementos (Mantido)
         const qInput = document.getElementById('search-input');
         const q = qInput.value.trim();
         const desc = document.getElementById('filter-desc').value;
@@ -991,32 +1081,26 @@
         const attr = document.getElementById('filter-attribute').value;
         const lv = document.getElementById('filter-lv').value;
         const race = document.getElementById('filter-race').value;
-
         const dateEnabled = document.getElementById('enable-date-filter').checked;
         const dateRegion = document.getElementById('date-region-type').value;
         const dateStart = document.getElementById('date-start').value;
         const dateEnd = document.getElementById('date-end').value;
-
         const banlistType = document.getElementById('filter-banlist-type').value;
         const banlistOnly = document.getElementById('enable-banlist-only').checked;
-
-        // Preços (Captura para validação de filtro ativo)
         const pMinInput = document.getElementById('filter-price-min')?.value;
         const pMaxInput = document.getElementById('filter-price-max')?.value;
 
-        // 2. Validação de busca mínima
+        // 2. Validação (Mantido)
         const hasEnoughName = q.length >= 3;
         const hasEnoughDesc = desc.length >= 3;
-        const hasPriceFilter = pMinInput || pMaxInput; // NOVO: Filtro de preço agora ativa a busca
-
+        const hasPriceFilter = pMinInput || pMaxInput;
         const hasOtherFilters = type || atk || def || attr || dateEnabled || banlistOnly || banlistType || hasPriceFilter;
 
         if (!initial && !hasEnoughName && !hasEnoughDesc && !hasOtherFilters) {
-            document.getElementById('search-results').innerHTML = '';
+            document.getElementById('results-view').innerHTML = ''; // Ajustado para seu container real
             return;
         }
 
-        // 3. Configuração dos parâmetros
         let p = new URLSearchParams();
         if (hasEnoughName) p.append('fname', q);
         if (hasEnoughDesc) p.append('desc', desc);
@@ -1036,7 +1120,6 @@
         p.append('misc', 'yes'); 
 
         try {
-            // 4. Execução das Requisições
             const urlGlobal = `https://db.ygoprodeck.com/api/v7/cardinfo.php?${p.toString()}`;
             p.set('language', 'pt');
             const urlPT = `https://db.ygoprodeck.com/api/v7/cardinfo.php?${p.toString()}`;
@@ -1049,32 +1132,27 @@
             const dataGlobal = resGlobal.data || [];
             const dataPT = resPT.data || [];
 
-            // 5. Merge dos dados (MANTIDO)
             const mergedMap = new Map();
             dataGlobal.forEach(card => mergedMap.set(card.id, card));
             dataPT.forEach(card => {
                 const existing = mergedMap.get(card.id);
-                if (existing) {
-                    mergedMap.set(card.id, { ...existing, ...card });
-                } else {
-                    mergedMap.set(card.id, card);
-                }
+                if (existing) mergedMap.set(card.id, { ...existing, ...card });
+                else mergedMap.set(card.id, card);
             });
 
             let finalData = Array.from(mergedMap.values());
 
-            // --- 5.1 FILTRO DE PREÇO (INSERIR AQUI - APÓS O MERGE) ---
+            // 5.1 Filtro de Preço
             if (hasPriceFilter) {
                 const minP = parseFloat(pMinInput) || 0;
-                const maxP = parseFloat(pMaxInput) || 999999; // Valor muito alto se vazio
-
+                const maxP = parseFloat(pMaxInput) || 999999;
                 finalData = finalData.filter(card => {
                     const price = parseFloat(card.card_prices?.[0]?.tcgplayer_price) || 0;
                     return price >= minP && price <= maxP;
                 });
             }
 
-            // 6. Filtro de Data (MANTIDO)
+            // 6. Filtro de Data
             if (dateEnabled) {
                 const start = dateStart || "1900-01-01";
                 const end = dateEnd || "9999-12-31";
@@ -1090,9 +1168,27 @@
                 finalData = finalData.filter(c => c.type.toLowerCase().includes("monster"));
             }
 
-            // 7. Renderização (MANTIDO)
-            searchResults = finalData;
-            searchResults.forEach(c => cardCache[c.id] = c);
+            // --- NOVO: PASSO 6.5 - EXPANSÃO DAS ARTES ALTERNATIVAS ---
+            // Aqui transformamos cada imagem em um "item" de resultado único
+            const expandedResults = [];
+            finalData.forEach(card => {
+                card.card_images.forEach((img, idx) => {
+                    expandedResults.push({
+                        ...card,
+                        // Sobrescrevemos card_images para conter apenas ESTA imagem específica
+                        // Isso evita que o renderResults faça um novo loop interno
+                        current_image: img,
+                        variant_idx: idx,
+                        is_variant: card.card_images.length > 1
+                    });
+                });
+            });
+
+            // 7. Salvando os resultados expandidos
+            searchResults = expandedResults; 
+            
+            // Cacheamos o card original (opcional, útil para referências)
+            finalData.forEach(c => cardCache[c.id] = c);
             
             if (initial || hasEnoughName || hasOtherFilters) {
                 currentPage = 1;
@@ -1131,16 +1227,54 @@
 
         const racesTrad = { "Aqua": "Aqua", "Beast": "Besta", "Beast-Warrior": "Besta-Guerreira", "Cyberse": "Ciberso", "Dinosaur": "Dinossauro", "Dragon": "Dragão", "Fiend": "Demônio", "Fish": "Peixe", "Insect": "Inseto", "Machine": "Máquina", "Plant": "Planta", "Psychic": "Psíquico", "Pyro": "Piro", "Reptile": "Réptil", "Rock": "Rocha", "Sea Serpent": "Serpente Marinha", "Spellcaster": "Mago", "Thunder": "Trovão", "Warrior": "Guerreiro", "Winged Beast": "Besta Alada", "Wyrm": "Wyrm", "Zombie": "Zumbi", "Divine-Beast": "Besta Divina", "Normal": "Normal", "Continuous": "Contínua", "Field": "Campo", "Equip": "Equipamento", "Quick-Play": "Rápida", "Ritual": "Ritual", "Counter": "Resposta" };
 
+        const typeColors = {
+            "Normal Monster": "#d1b55a",
+            "Effect Monster": "#a6522a",
+            "Spell Card": "#1d7d5c",
+            "Trap Card": "#8c345d",
+            "Fusion Monster": "#6e4a8c",
+            "Synchro Monster": "#8a8a8a",
+            "Xyz Monster": "#1a1a1a",
+            "Link Monster": "#164687",
+            "Ritual Monster": "#3b73a3",
+            "Token": "#6e6e6e"
+        };
+
         pageItems.forEach(card => {
-            card.card_images.forEach((imageObj, index) => {
-                const div = document.createElement('div'); 
-                div.className = 'suggestion-item';
-                
+            // --- CORREÇÃO AQUI: Pegamos a imagem individual expandida no performSearch ---
+            const imageObj = card.current_image; 
+            const div = document.createElement('div'); 
+            div.className = 'suggestion-item';
+            
+            const colorKey = Object.keys(typeColors).find(key => card.type.includes(key));
+            const cardBgColor = typeColors[colorKey] || "var(--panel-bg)";
+            div.style.backgroundColor = cardBgColor;
+
+            const variantSuffix = card.is_variant ? ` (Arte #${card.variant_idx + 1})` : "";
+            const displayName = (card.name_pt || card.name) + variantSuffix;
+
+            // --- MODO GRADE: APENAS IMAGEM ---
+            if (currentView === 'grid') {
+                div.style.padding = "0";
+                div.style.backgroundColor = "transparent"; 
+                div.innerHTML = `
+                    <img src="${imageObj.image_url}" 
+                        style="width: 100%; height: 100%; object-fit: contain; display: block;" 
+                        loading="lazy" 
+                        onerror="this.src='https://images.ygoprodeck.com/images/cards/back_high.jpg'"
+                        alt="${card.name}">
+                `;
+            }
+            // --- MODO LISTA: DETALHES COMPLETOS ---
+            else {
                 const attrRaw = card.attribute ? card.attribute.toUpperCase() : (card.type.includes("Spell") ? "SPELL" : "TRAP");
                 const attrIconUrl = card.attribute ? `https://images.ygoprodeck.com/images/cards/${attrRaw}.jpg` : "";
                 const raceIconUrl = `https://images.ygoprodeck.com/images/cards/icons/race/${card.race}.png`;
                 const starIcon = "https://ygoprodeck.com/wp-content/uploads/2017/01/level.png";
                 const raceTraduzida = racesTrad[card.race] || card.race;
+
+                const isLightColor = ["Normal Monster", "Synchro Monster"].includes(colorKey);
+                const nameColor = isLightColor ? "#000000" : "var(--accent)";
 
                 let tipoTexto = card.type;
                 if (tipoTexto.includes("Effect Monster")) {
@@ -1154,9 +1288,6 @@
                         .replace("Trap Card", "Carta de Armadilha");
                 }
                 const typeIconUrl = `https://images.ygoprodeck.com/images/cards/icons/${encodeURIComponent(card.type)}.jpg`;
-                
-                const variantSuffix = card.card_images.length > 1 ? ` (Arte #${index + 1})` : "";
-                const displayName = (card.name_pt || card.name) + variantSuffix;
 
                 div.innerHTML = `
                     <img src="${imageObj.image_url_small}" 
@@ -1167,7 +1298,7 @@
                     <div class="card-info-box">
                         <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
                             ${getBanIcon(card)} 
-                            <b class="card-name" style="margin: 0; line-height: 1.2; color: var(--accent);">${displayName}</b>
+                            <b class="card-name" style="margin: 0; line-height: 1.2; color: ${nameColor};">${displayName}</b>
                         </div>
                         
                         <div class="info-row" style="display: flex; align-items: center; justify-content: flex-start; gap: 10px; color: #ffffff;">
@@ -1219,41 +1350,42 @@
                                 `}
                             </div>` : ''}
                     </div>`;
+            }
 
-                const cardWithSpecificArt = { ...card, card_images: [imageObj] };
+            // Criamos o objeto do card com UMA única imagem específica para o Tooltip 🎯
+            const cardWithSpecificArt = { ...card, card_images: [imageObj] };
 
-                let pressTimer;
-                const startPress = (cardObj, e) => {
-                    pressTimer = setTimeout(() => {
-                        const fakeEvent = { 
-                            clientX: e.touches ? e.touches[0].clientX : e.clientX, 
-                            clientY: e.touches ? e.touches[0].clientY : e.clientY 
-                        };
-                        showTooltip(cardObj, fakeEvent);
-                        if (navigator.vibrate) navigator.vibrate(50);
-                    }, 600);
-                };
-                
-                const cancelPress = () => clearTimeout(pressTimer);
-                
-                div.onmouseenter = (e) => showTooltip(cardWithSpecificArt, e);
-                div.onmousemove = (e) => moveTooltip(e);
-                div.onmouseleave = () => hideTooltip();
-                div.ontouchstart = (e) => startPress(cardWithSpecificArt, e);
-                div.ontouchend = cancelPress;
-                div.ontouchmove = cancelPress;
-                
-                div.onclick = () => {
-                    const qty = parseInt(document.getElementById('search-qty').value) || 1;
-                    for(let i=0; i<qty; i++) {
-                        cardQueue.push({ id: card.id, name: displayName, imgId: imageObj.id });
-                    }
-                    updateUI();
-                    if(window.innerWidth < 900) showToast(`${qty}x ${displayName} adicionado(a)!`);
-                };
+            let pressTimer;
+            const startPress = (cardObj, e) => {
+                pressTimer = setTimeout(() => {
+                    const fakeEvent = { 
+                        clientX: e.touches ? e.touches[0].clientX : e.clientX, 
+                        clientY: e.touches ? e.touches[0].clientY : e.clientY 
+                    };
+                    showTooltip(cardObj, fakeEvent);
+                    if (navigator.vibrate) navigator.vibrate(50);
+                }, 600);
+            };
+            
+            const cancelPress = () => clearTimeout(pressTimer);
+            
+            div.onmouseenter = (e) => showTooltip(cardWithSpecificArt, e);
+            div.onmousemove = (e) => moveTooltip(e);
+            div.onmouseleave = () => hideTooltip();
+            div.ontouchstart = (e) => startPress(cardWithSpecificArt, e);
+            div.ontouchend = cancelPress;
+            div.ontouchmove = cancelPress;
+            
+            div.onclick = () => {
+                const qty = parseInt(document.getElementById('search-qty').value) || 1;
+                for(let i=0; i<qty; i++) {
+                    cardQueue.push({ id: card.id, name: displayName, imgId: imageObj.id });
+                }
+                updateUI();
+                if(window.innerWidth < 900) showToast(`${qty}x ${displayName} adicionado(a)!`);
+            };
 
-                container.appendChild(div);
-            });
+            container.appendChild(div);
         });
     }
 
@@ -1394,7 +1526,7 @@
         document.getElementById('group-race').style.display = "none";
         document.getElementById('monster-extras').style.display = "none";
 
-        document.getElementById('filter-banlist-type').value = 'tcg';
+        document.getElementById('filter-banlist-type').value = "";
         document.getElementById('enable-banlist-only').checked = false;
         toggleBanlistCheckbox();
 
