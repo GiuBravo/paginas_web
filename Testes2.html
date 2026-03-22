@@ -346,9 +346,17 @@
             filter: drop-shadow(0 0 1px rgba(0,0,0,0.5));
         }
 
+        .results-view.grid-mode {
+            display: grid !important;
+            grid-template-columns: repeat(10, 1fr) !important;
+            gap: 6px; /* Reduzi de 10px para 6px para ganhar altura */
+            padding: 10px; /* Reduzi as bordas externas */
+            align-content: start;
+        }
+
         /* Quando estiver no modo grid, a imagem deve expandir */
         .results-view.grid-mode .suggestion-item {
-            display: block !important; /* Força a saída do modo flex que empurra o conteúdo pro lado */
+            display: block !important; 
             text-align: center;
             background: none !important;
             border: none !important;
@@ -361,14 +369,8 @@
             max-width: 100%;
             object-fit: contain;
             margin: 0 auto;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.5); /* Dá destaque às cartas na grade */
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5); 
             transition: transform 0.2s;
-        }
-
-        /* Esconde informações extras na grade para focar na arte, se desejar */
-        .results-view.grid-mode .card-info-box {
-            padding: 5px;
-            background: rgba(0,0,0,0.6); /* Um fundo semi-transparente para o nome */
         }
 
         /* Lista do Deck */
@@ -1282,7 +1284,7 @@ function fillTooltipData(card) {
     function getItemsPerPage() {
         if (window.innerWidth < 900) return currentView === 'list' ? 15 : 20;
         const isQueueEmpty = cardQueue.length === 0;
-        return currentView === 'list' ? (isQueueEmpty ? 25 : 15) : (isQueueEmpty ? 33 : 21);
+        return currentView === 'list' ? (isQueueEmpty ? 25 : 15) : (isQueueEmpty ? 30 : 21);
     }
 
     for(let i=0; i<=13; i++) document.getElementById('filter-lv').innerHTML += `<option value="${i}">${i}</option>`;
