@@ -16,6 +16,149 @@
             --success: #27ae60;
         }
 
+        /* TEMA TODO BRANCO (LIGHT MODE) */
+        .theme-white {
+            --bg-dark: #f0f2f5;
+            --panel-bg: #ffffff;
+            --accent: #2563eb;
+            --border: #d1d5db;
+            --text: #1f2937;
+        }
+
+        /* 1. FUNDO GERAL E CONTAINERS */
+        .theme-white body, 
+        .theme-white #workspace, 
+        .theme-white main,
+        .theme-white .main-container,
+        .theme-white [style*="background: #111"],
+        .theme-white [style*="background:#111"],
+        .theme-white [style*="background: rgb(17, 17, 17)"] {
+            background-color: var(--bg-dark) !important;
+            background: var(--bg-dark) !important;
+            background-image: none !important;
+            color: var(--text) !important;
+        }
+
+        /* 2. BARRAS E FILTROS */
+        .theme-white #workspace-header,
+        .theme-white .workspace-header,
+        .theme-white header,
+        .theme-white .search-area,
+        .theme-white .view-controls,
+        .theme-white #date-filters-container {
+            background: #ffffff !important;
+            background-color: #ffffff !important;
+            color: var(--text) !important;
+            border-bottom: 1px solid var(--border) !important;
+        }
+
+        /* 3. TOOLTIP (Dica da carta) - CORREÇÃO ATK, DEF E DESCRIÇÃO */
+        .theme-white #card-tooltip {
+            background: #ffffff !important;
+            border: 1px solid var(--border);
+            box-shadow: 0 8px 30px rgba(0,0,0,0.15) !important;
+            backdrop-filter: blur(5px);
+        }
+
+        /* MATA O BRANCO NO BRANCO: 
+        Se o JS injetou color:white (ou variações) inline, forçamos o cinza escuro. */
+        .theme-white #card-tooltip [style*="color: white"],
+        .theme-white #card-tooltip [style*="color:white"],
+        .theme-white #card-tooltip [style*="color: #fff"],
+        .theme-white #card-tooltip [style*="color:#fff"],
+        .theme-white #card-tooltip [style*="color: rgb(255, 255, 255)"],
+        .theme-white #card-tooltip .card-description,
+        .theme-white #card-tooltip .atk-def-val,
+        .theme-white #card-tooltip p {
+            color: #1f2937 !important;
+        }
+
+        /* EXCEÇÃO: O Nome da carta (H3) deve manter a cor original do JS (raridade) 
+        e a barra lateral deve continuar funcionando com o border-left do JS */
+        .theme-white #card-tooltip h3 {
+            color: inherit; 
+            text-shadow: none !important;
+        }
+
+        /* 4. INPUTS E SELECTS */
+        .theme-white input, 
+        .theme-white select, 
+        .theme-white textarea,
+        .theme-white .search-box,
+        .theme-white #search-qty {
+            background-color: #f9fafb !important;
+            color: #1f2937 !important;
+            border: 1px solid #d1d5db !important;
+        }
+
+        /* 5. COLUNAS E PAINÉIS */
+        .theme-white .column,
+        .theme-white .col-header,
+        .theme-white .deck-header,
+        .theme-white .sidebar,
+        .theme-white .deck-list, 
+        .theme-white .results-view,
+        .theme-white #deck-list-container {
+            background-color: #ffffff !important;
+            color: var(--text) !important;
+            border-color: var(--border) !important;
+        }
+
+        /* 6. CARDS NA LISTA */
+        .theme-white .deck-item,
+        .theme-white .queue-item,
+        .theme-white .suggestion-item {
+            background-color: #ffffff !important;
+            color: var(--text) !important;
+            border-bottom: 1px solid #f0f0f0 !important;
+        }
+
+        /* 7. BOTÕES GERAIS */
+        .theme-white button:not(.action-btn):not(#generate-pdf):not(.btn-accent),
+        .theme-white .btn-secondary,
+        .theme-white .btn-view,
+        .theme-white .stepper button {
+            background-color: #f3f4f6 !important;
+            color: #374151 !important;
+            border: 1px solid #d1d5db !important;
+        }
+
+        /* 8. BOTÕES DE AÇÃO */
+        .theme-white .action-btn, 
+        .theme-white #generate-pdf,
+        .theme-white .btn-primary,
+        .theme-white .btn-accent {
+            background-color: var(--accent) !important;
+            color: #ffffff !important;
+            border: none !important;
+        }
+
+        /* 9. ÍCONES */
+        .theme-white i { color: #4b5563 !important; }
+        .theme-white .action-btn i, .theme-white #generate-pdf i { color: #ffffff !important; }
+
+        /* 10. SCROLLBARS */
+        .theme-white ::-webkit-scrollbar-track { background: #f1f1f1; }
+        .theme-white ::-webkit-scrollbar-thumb { background: #ccc; border-radius: 5px; }
+
+        /* Tema Todo Preto (OLED/Deep Black) */
+        .theme-black {
+            --bg-dark: #000000;
+            --panel-bg: #050505;
+            --accent: #f1c40f;
+            --border: #222;
+            --text: #fff;
+        }
+
+        /* Tema Kaiba Corp (Azul Neon) */
+        .theme-kaiba {
+            --bg-dark: #000814;
+            --panel-bg: #001d3d;
+            --accent: #00b4d8;
+            --border: #003566;
+            --text: #caf0f8;
+        }
+
         body { 
             font-family: 'Segoe UI', Tahoma, sans-serif; 
             background: var(--bg-dark); 
@@ -148,18 +291,22 @@
 
         .results-view { flex-grow: 1; overflow-y: auto; }
 
-        /* --- ITENS DA LISTA (Sugestões) ATUALIZADOS --- */
+        /* --- ITENS DA LISTA (Sugestões)  --- */
         .suggestion-item { 
             display: flex; 
-            gap: 15px;             /* Aumentei um pouco o espaço entre foto e texto */
+            gap: 15px; 
             padding: 12px 10px; 
-            background: var(--bg-dark); 
-            align-items: flex-start; /* Alinha pelo topo para nomes de cartas longos */
+            background: var(--panel-bg); 
+            align-items: flex-start; 
             cursor: pointer; 
-            border-bottom: 1px solid #222; 
+            border-bottom: 1px solid var(--border); 
             transition: background 0.2s; 
+            color: var(--text); /* Garante que o texto mude de cor */
         }
-        .suggestion-item:active { background: #1a1a1a; }
+
+        .suggestion-item:active { 
+            background: var(--bg-dark); 
+        }
         .suggestion-item img { 
             width: 80px;           /* Defina uma largura fixa em vez de altura */
             height: auto;          /* Deixe a altura ser proporcional */
@@ -174,16 +321,23 @@
         .card-name { color: var(--accent); font-size: 13px; font-weight: bold; }
         
         /* Linha interna da lista (Atributo e Estrelas na sugestão) */
-        .info-row { display: flex; align-items: center; gap: 8px; font-size: 11px; color: #999; }
+        .info-row { 
+            display: flex; 
+            align-items: center; 
+            gap: 8px; 
+            font-size: 11px; 
+            color: var(--text); 
+            opacity: 0.8;       /* Deixa levemente mais claro que o nome */
+        }
         .info-row img { width: 14px; height: 14px; object-fit: contain; }
         
         .atk-def-row { 
             font-weight: bold; 
             font-size: 11px; 
-            border-top: 1px solid #222; 
+            border-top: 1px solid var(--border); 
             margin-top: 5px; 
             padding-top: 5px; 
-            color: #fff; 
+            color: var(--text); 
             display: flex; 
             gap: 10px; 
         }
@@ -194,17 +348,21 @@
 
         /* Quando estiver no modo grid, a imagem deve expandir */
         .results-view.grid-mode .suggestion-item {
-            aspect-ratio: 0.707; /* Proporção real de uma carta (aprox. 59mm x 86mm) */
-            padding: 0;
-            overflow: hidden;
-            background: transparent !important; /* Remove o fundo para não sobrar bordas se a imagem demorar a carregar */
+            display: block !important; /* Força a saída do modo flex que empurra o conteúdo pro lado */
+            text-align: center;
+            background: none !important;
+            border: none !important;
+            padding: 0 !important;
         }
 
         .results-view.grid-mode .suggestion-item img {
-            width: 100%;
-            height: 100%;
-            object-fit: contain; /* Garante que a imagem inteira apareça sem cortes ou esticar */
-            display: block;
+            width: 100% !important;
+            height: auto !important;
+            max-width: 100%;
+            object-fit: contain;
+            margin: 0 auto;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5); /* Dá destaque às cartas na grade */
+            transition: transform 0.2s;
         }
 
         /* Esconde informações extras na grade para focar na arte, se desejar */
@@ -213,13 +371,36 @@
             background: rgba(0,0,0,0.6); /* Um fundo semi-transparente para o nome */
         }
 
-        .deck-list { height: 350px; overflow-y: auto; padding: 10px; background: #080808; border-bottom: 1px solid var(--border); }
+        /* Lista do Deck */
+        .deck-list { 
+            height: 350px; 
+            overflow-y: auto; 
+            padding: 10px; 
+            background: var(--bg-dark); 
+            border-bottom: 1px solid var(--border); 
+        }
         .pdf-preview-container { flex-grow: 1; background: #222; position: relative; overflow: hidden; min-height: 300px; }
         #preview-frame { width: 100%; height: 100%; border: none; }
         .btn-accent { background: var(--accent); color: black; width: 100%; padding: 12px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; text-transform: uppercase; }
 
-        .pagination-bar { padding: 8px; background: var(--panel-bg); display: flex; justify-content: center; gap: 10px; align-items: center; border-top: 1px solid var(--border); }
-        .page-input { width: 50px; text-align: center; background: #000; border: 1px solid #444; color: var(--accent); }
+        /* Barra de Paginação */
+        .pagination-bar { 
+            padding: 8px; 
+            background: var(--panel-bg); 
+            display: flex; 
+            justify-content: center; 
+            gap: 10px; 
+            align-items: center; 
+            border-top: 1px solid var(--border); 
+        }
+        /* Input da página */
+        .page-input { 
+            width: 50px; 
+            text-align: center; 
+            background: var(--bg-dark); 
+            border: 1px solid var(--border); 
+            color: var(--accent); 
+        }
 
         #toast-container { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 9999; pointer-events: none; }
         .toast { background: var(--success); color: white; padding: 12px 20px; border-radius: 30px; font-size: 12px; font-weight: bold; margin-bottom: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); animation: slideUp 0.3s ease, fadeOut 0.5s ease 1.5s forwards; display: flex; align-items: center; gap: 10px; white-space: nowrap; }
@@ -261,6 +442,7 @@
                 max-height: 92vh; /* Garante que não ultrapasse a tela */
                 box-shadow: 0 10px 40px rgba(0,0,0,0.9);
                 overflow: hidden;
+                text-align: center;
             }
 
             /* Container flex para as duas colunas */
@@ -272,10 +454,13 @@
 
             /* Coluna da Imagem */
             #tooltip-img {
-                width: 280px !important; /* Tamanho fixo da carta à esquerda */
-                height: auto;
-                border-radius: 6px;
-                flex-shrink: 0;
+                width: 280px !important; /* Aumentado de 220px para 280px */
+                max-width: 85% !important; /* Ocupa até 85% da largura da tela */
+                height: auto !important;
+                margin: 0 auto 20px auto !important;
+                display: block !important;
+                border-radius: 8px;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.8); /* Sombra mais forte para destaque */
             }
 
             /* Coluna das Informações */
@@ -284,11 +469,31 @@
                 display: flex;
                 flex-direction: column;
             }
+
+            #tooltip-info-rows {
+                display: flex;
+                justify-content: center; /* Centraliza os ícones de ATK/DEF e Nível */
+                flex-wrap: wrap;
+                gap: 10px;
+                margin-bottom: 15px;
+            }
+
+            #tooltip-text {
+                text-align: left; /* Mantém o texto da carta alinhado à esquerda para leitura */
+                font-size: 14px !important;
+                line-height: 1.4;
+            }
         }
 
         /* --- RESPONSIVIDADE MOBILE --- */
         @media (max-width: 900px) {
             body { overflow-y: auto !important; height: auto !important; }
+            /* 1. IMPEDIR SCROLL LATERAL NA PÁGINA TODA */
+            html, body {
+                max-width: 100%;
+                overflow-x: hidden !important;
+                position: relative;
+            }
             .app-container, .app-container.empty-queue { display: block !important; height: auto !important; }
             .col { width: 100% !important; height: auto !important; overflow: visible !important; border-bottom: 2px solid var(--border); }
             .results-view { height: 550px; overflow-y: auto; }
@@ -299,44 +504,91 @@
             .pdf-preview-container { display: none !important; }
             #col-preview { margin-top: 20px; }
             .deck-list { height: 250px; }
-            
-            /* Tooltip Mobile Centralizado */
-            #card-tooltip { 
+            #card-tooltip {
                 display: none;
                 position: fixed !important;
-                top: 50% !important;
-                left: 50% !important;
-                transform: translate(-50%, -50%) !important;
-                width: 90vw !important;
-                max-width: 360px !important;
-                height: auto !important;
-                max-height: 85vh !important;
-                overflow-y: auto !important;
-                z-index: 999999 !important;
-                background: #1a1a1a !important;
-                border: 2px solid var(--accent) !important;
+                /* Usamos inset para forçar o preenchimento total da área visível */
+                top: 0 !important;
+                left: 0 !important;
+                right: 0 !important;
+                bottom: 0 !important;
+                width: 100% !important;
+                height: 100% !important;
+                
+                background: rgba(0, 0, 0, 0.98) !important;
+                z-index: 99999 !important;
+                
+                text-align: center !important;
+                /* O segredo para não cortar embaixo: padding e overflow */
+                padding: 60px 15px 30px 15px !important; /* Diminuímos o padding lateral para 15px */
+                padding-top: 60px !important; /* Espaço para o botão X */
+                padding-bottom: 40px !important; /* Margem de segurança inferior */
+                
+                overflow-y: auto !important; /* Permite scroll se o texto for longo */
+                overflow-x: hidden !important; /* Garante que o tooltip não cause scroll lateral */
+                
                 box-sizing: border-box !important;
-                padding: 15px !important;
-                pointer-events: auto !important;
+                transform: none !important;
+            }
+
+            .mobile-close-btn {
+                position: fixed;
+                top: 15px;
+                right: 15px;
+                width: 35px;
+                height: 35px;
+                background: var(--accent);
+                color: #000;
+                border: none;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 18px;
+                z-index: 10000;
+                cursor: pointer;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+            }
+            
+            /* Adicionar um botão visual de "Fechar" no topo (opcional, mas recomendado) */
+            #card-tooltip::before {
+                display: block;
+                text-align: right;
+                color: var(--accent);
+                font-weight: bold;
+                margin-bottom: 15px;
+                font-size: 1.1em;
             }
 
             #tooltip-img {
-                width: 100% !important;
+                /* Largura agressiva para ocupar quase a tela toda lateralmente */
+                width: 90% !important; 
+                max-width: 350px !important; /* Limite para não estourar em tablets */
+                
                 height: auto !important;
-                max-width: 180px;
-                margin: 0 auto 10px auto;
-                display: block;
+                display: block !important;
+                margin: 0 auto 20px auto !important; /* Centraliza e dá espaço abaixo */
+                
+                /* Estética */
+                border-radius: 12px !important;
+                box-shadow: 0 15px 40px rgba(0,0,0,0.9) !important;
+                border: 2px solid rgba(255,255,255,0.1) !important;
+            }
+
+            #tooltip-name {
+                font-size: 1.6em !important; /* Aumenta um pouco o nome para acompanhar a imagem */
+                margin-top: 10px !important;
             }
         }
 
         @keyframes fadeInPage {
         from { opacity: 0; transform: translateY(10px); }
         to { opacity: 1; transform: translateY(0); }
-    }
+        }
 
-    .results-view.grid-mode, .results-view.list-mode {
-        animation: fadeInPage 0.3s ease-out;
-    }
+        .results-view.grid-mode, .results-view.list-mode {
+            animation: fadeInPage 0.3s ease-out;
+        }
     </style>
 </head>
 <body>
@@ -454,6 +706,15 @@
             <span id="result-info" style="font-size: 11px; color: #888;">Carregando...</span>
             
             <div style="display: flex; gap: 15px; align-items: center;">
+                <div class="filter-group">
+                    <label>Tema do Sistema</label>
+                    <select id="theme-selector" onchange="changeTheme(this.value)">
+                        <option value="">Padrão (Dark)</option>
+                        <option value="theme-white">Todo Branco</option>
+                        <option value="theme-black">Todo Preto</option>
+                        <option value="theme-kaiba">Kaiba Corp</option>
+                    </select>
+                </div>
                 <label style="display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 11px; color: #888;">
                     <input type="checkbox" id="enable-tooltip" checked style="width: auto; margin: 0;"> 
                     <span>TOOLTIP</span>
@@ -519,6 +780,20 @@
         "goat": "ban_goat",
         "masterduel": "ban_masterduel" // A API usa essas chaves internamente
     };
+
+    function changeTheme(themeName) {
+        const body = document.body;
+        body.classList.remove('theme-white', 'theme-black', 'theme-kaiba');
+        
+        if (themeName) {
+            body.classList.add(themeName);
+        }
+        
+        localStorage.setItem('selectedTheme', themeName);
+        
+        // REDESENHA OS RESULTADOS para aplicar a lógica de cores nova
+        renderResults(); 
+    }
 
     function changePage(step) {
         const totalPages = Math.ceil(searchResults.length / getItemsPerPage());
@@ -735,174 +1010,233 @@
     }
 
     function showTooltip(card, e) {
-        if(!card) return;
-        
+        if (!card) return;
+
         // VERIFICAÇÃO: Se o checkbox não estiver marcado, encerra a função
         const isTooltipEnabled = document.getElementById('enable-tooltip').checked;
         if (!isTooltipEnabled) return;
-        
+
         const tt = document.getElementById('card-tooltip');
-        tt.style.display = 'block';
-        const description = card.desc_pt || card.desc;
-        const typeColors = {
-            "Normal Monster": "#d1b55a",
-            "Effect Monster": "#a6522a",
-            "Spell Card": "#1d7d5c",
-            "Trap Card": "#8c345d",
-            "Fusion Monster": "#6e4a8c",
-            "Synchro Monster": "#8a8a8a",
-            "Xyz Monster": "#1a1a1a",
-            "Link Monster": "#164687",
-            "Ritual Monster": "#3b73a3"
-        };
 
-        const colorKey = Object.keys(typeColors).find(key => card.type.includes(key));
-        const cardColor = typeColors[colorKey] || "var(--accent)";
-
-        // A mágica que você fez:
-        tt.style.borderLeft = `6px solid ${cardColor}`;
-        
-        const nameElement = document.getElementById('tooltip-name');
-        nameElement.innerText = card.name_pt || card.name;
-        nameElement.style.color = cardColor; 
-        nameElement.style.fontSize = '1.0em';
-        nameElement.style.fontWeight = 'bold';
-        
-        document.getElementById('tooltip-img').src = card.card_images[0].image_url;
-        document.getElementById('tooltip-name').innerText = card.name_pt || card.name;
-
-        // --- LÓGICA DE BANLIST (MANTIDA ORIGINAL) ---
-        const banlistType = document.getElementById('filter-banlist-type').value;
-        const status = card.banlist_info ? card.banlist_info[`ban_${banlistType}`] : null;
-        
-        const oldBadge = document.querySelector('.tt-ban-container');
-        if (oldBadge) oldBadge.remove();
-
-        if (status && banlistType) {
-            let icon = '', label = '', cssClass = '';
-            if (status === 'Banned' || status === 'Forbidden') {
-                icon = '<i class="fa-solid fa-ban"></i>'; label = 'Banida'; cssClass = 'tt-ban-banned';
-            } else if (status === 'Limited') {
-                icon = '<i class="fa-solid fa-1"></i>'; label = 'Limitada'; cssClass = 'tt-ban-limited';
-            } else if (status === 'Semi-Limited') {
-                icon = '<i class="fa-solid fa-2"></i>'; label = 'Semi-Limitada'; cssClass = 'tt-ban-semi';
-            }
-            const banContainer = document.createElement('div');
-            banContainer.className = 'tt-ban-container';
-            banContainer.innerHTML = `<div class="tt-ban-badge ${cssClass}">${icon} <span>${label} (${banlistType.toUpperCase()})</span></div>`;
-            document.getElementById('tooltip-name').after(banContainer);
-        }
-
-        // --- TRADUÇÕES E ATRIBUTOS (MANTIDO ORIGINAL) ---
-        const racesTrad = { 
-            "Aqua": "Aqua", "Beast": "Besta", "Beast-Warrior": "Besta-Guerreira", "Cyberse": "Ciberso", 
-            "Dinosaur": "Dinossauro", "Dragon": "Dragão", "Fiend": "Demônio", "Fish": "Peixe", 
-            "Insect": "Inseto", "Machine": "Máquina", "Plant": "Planta", "Psychic": "Psíquico", 
-            "Pyro": "Piro", "Reptile": "Réptil", "Rock": "Rocha", "Sea Serpent": "Serpente Marinha", 
-            "Spellcaster": "Mago", "Thunder": "Trovão", "Warrior": "Guerreiro", "Winged Beast": "Besta Alada", 
-            "Wyrm": "Wyrm", "Zombie": "Zumbi", "Divine-Beast": "Besta Divina", "Normal": "Normal", 
-            "Continuous": "Contínua", "Field": "Campo", "Equip": "Equipamento", "Quick-Play": "Rápida", 
-            "Ritual": "Ritual", "Counter": "Resposta" 
-        };
-
-        // --- TRADUÇÕES E ATRIBUTOS (CORES PADRONIZADAS) ---
-        let infoHtml = "";
-        if(card.attribute || card.type.includes("Spell") || card.type.includes("Trap")) {
-            infoHtml += `<div class="tt-row-split" style="align-items: center; gap: 4px;">`;
-            
-            let iconUrl = card.type.includes("Spell") ? "https://static.wikia.nocookie.net/yugioh/images/0/09/SPELL.svg" :
-                        card.type.includes("Trap") ? "https://static.wikia.nocookie.net/yugioh/images/2/28/TRAP.svg" :
-                        `https://images.ygoprodeck.com/images/cards/${card.attribute ? card.attribute.toUpperCase() : 'UNKNOWN'}.jpg`;
-            
-            let labelText = card.type.includes("Spell") ? "MAGIA" : card.type.includes("Trap") ? "ARMADILHA" : 
-                            (typeof trad !== 'undefined' ? trad[card.attribute?.toUpperCase()] : card.attribute) || card.attribute || "";
-
-            // Atributo em BRANCO
-            infoHtml += `<div class="tt-attr-group" style="color: #ffffff;"><img class="tt-icon" src="${iconUrl}" style="width:20px; height:20px; object-fit:contain;"><span>${labelText}</span></div>`;
-
-            if((card.level || card.rank) && !card.type.toLowerCase().includes("link")) {
-                // Level/Rank em BRANCO
-                infoHtml += `<div class="tt-level-group" style="color: #ffffff;"><img src="${starIcon}" style="width:16px; height:16px; ${card.type.toUpperCase().includes('XYZ') ? 'filter:invert(1) brightness(0.5);' : ''}"><span>${card.level || card.rank}</span></div>`;
-            }
-            infoHtml += `</div>`;
-        }
-
-        // --- LINHA DE RAÇA / TIPO (EM BRANCO) ---
-        let tipoTexto = card.type.replace("Effect Monster", "Monstro de Efeito").replace("Normal Monster", "Monstro Normal").replace("Monster", "Monstro").replace("Spell Card", "Carta de Magia").replace("Trap Card", "Carta de Armadilha");
-        const raceTraduzida = racesTrad[card.race] || card.race || "Desconhecido";
-        
-        infoHtml += `<div style="display: flex; align-items: center; gap: 4px; color: #ffffff; font-size: 11px; margin-bottom: 8px; flex-wrap: wrap;">
-                        <span>[</span>
-                        <img src="https://images.ygoprodeck.com/images/cards/icons/race/${card.race}.png" style="width: 14px; height: 14px;" onerror="this.style.display='none'">
-                        <span>${raceTraduzida} / </span>
-                        <img src="https://images.ygoprodeck.com/images/cards/icons/${encodeURIComponent(card.type)}.jpg" style="width: 14px; height: 14px; border-radius: 2px;" onerror="this.style.display='none'">
-                        <span>${tipoTexto} ]</span>
-                    </div>`;
-
-        // --- BLOCO ATK / DEF COM ÍCONES E CORES PADRONIZADAS ---
-        if(card.atk !== undefined) {
-            infoHtml += `
-            <div style="display: flex; gap: 15px; margin-bottom: 8px; font-size: 13px; font-weight: bold;">
-                <div style="display: flex; align-items: center; gap: 5px;">
-                    <i class="fas fa-fist-raised" style="color: #4d94ff;"></i>
-                    <span style="color: #4d94ff;">ATK/</span>
-                    <span style="color: #ffffff;">${card.atk}</span>
-                </div>
-                
-                ${!card.type.toLowerCase().includes("link") ? `
-                    <div style="display: flex; align-items: center; gap: 5px;">
-                        <i class="fas fa-shield-alt" style="color: #ff4d4d;"></i>
-                        <span style="color: #ff4d4d;">DEF/</span>
-                        <span style="color: #ffffff;">${card.def}</span>
-                    </div>
-                ` : `
-                    <div style="display: flex; align-items: center; gap: 5px; color: #ffffff;">
-                        <span>LINK-${card.linkval}</span>
-                    </div>
-                `}
-            </div>`;
-        }
-        
-        document.getElementById('tooltip-info-rows').innerHTML = infoHtml;
-
-        // --- DATAS E PREÇOS (AJUSTE SOLICITADO) ---
-        let tcgDate = "N/A", ocgDate = "N/A";
-        if (card.misc_info && card.misc_info[0]) {
-            tcgDate = formatDateBR(card.misc_info[0].tcg_date);
-            ocgDate = formatDateBR(card.misc_info[0].ocg_date);
-        }
-
-        const p = card.card_prices ? card.card_prices[0] : {};
-        const formatP = (val) => (!val || parseFloat(val) === 0) ? "Não encontrado" : `$${val}`;
-
-        // 1. Linha superior (Separa a descrição das datas) - Agora SOLID
-        const datesHtml = `<div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #444; font-size: 13px; color: #fff; display: flex; gap: 12px;">
-            <span>📅 TCG: ${tcgDate}</span>
-            <span>📅 OCG: ${ocgDate}</span>
-        </div>`;
-
-        // 2. Linha intermediária (Separa as datas dos preços) - Também SOLID
-        const separatorHtml = `<hr style="border: 0; border-top: 1px solid #444; margin: 8px 0; opacity: 1;">`;
-
-        // 3. Bloco de Preços
-        const pricesHtml = `<div style="margin-top: 6px; display: flex; flex-wrap: wrap; gap: 12px; font-size: 13px; color: #fff; font-weight: 500;">
-            <span title="TCGPlayer"><i class="fa-solid fa-store" style="color:var(--accent); font-size: 11px;"></i> TCG: ${formatP(p.tcgplayer_price)}</span>
-            <span title="Cardmarket"><i class="fa-solid fa-m" style="color:var(--accent); font-size: 11px;"></i> CM: ${formatP(p.cardmarket_price)}</span>
-            <span title="eBay"><i class="fa-brands fa-ebay" style="color:var(--accent); font-size: 14px;"></i> ${formatP(p.ebay_price)}</span>
-            <span title="Amazon"><i class="fa-brands fa-amazon" style="color:var(--accent); font-size: 13px;"></i> ${formatP(p.amazon_price)}</span>
-        </div>`;
-
-        const formattedDescription = description.replace(/\n/g, '<br>');
-
-        // Montagem final no elemento
-        document.getElementById('tooltip-text').innerHTML = `<div>${formattedDescription}</div>${datesHtml}${separatorHtml}${pricesHtml}`;
-
-        tt.style.display = 'block';
+        // --- LÓGICA ESPECÍFICA PARA MOBILE ---
         if (window.innerWidth < 900) {
-            tt.style.left = '50%'; tt.style.top = '50%';
-            tt.style.transform = 'translate(-50%, -50%)';
-        } else { moveTooltip(e); }
+            setTimeout(() => {
+                tt.style.top = "0";
+                tt.style.left = "0";
+                tt.style.width = "100%";
+                tt.style.height = "100%";
+                tt.style.transform = "none";
+                tt.style.margin = "0";
+                
+                tt.style.display = 'block';
+                
+                // Trava o scroll do fundo de forma agressiva
+                document.documentElement.style.overflow = "hidden";
+                document.body.style.overflow = "hidden";
+                
+                fillTooltipData(card);
+            }, 50);
+            return;
+        }
+
+        // --- LÓGICA PARA DESKTOP (IMEDIATA) ---
+        tt.style.display = 'block';
+        fillTooltipData(card);
+        moveTooltip(e); // Segue o mouse instantaneamente
     }
+
+function fillTooltipData(card) {
+    const tt = document.getElementById('card-tooltip');
+    const description = card.desc_pt || card.desc;
+    const isMobile = window.innerWidth < 900;
+    
+    const typeColors = {
+        "Normal Monster": "#d1b55a", "Effect Monster": "#a6522a", "Spell Card": "#1d7d5c",
+        "Trap Card": "#8c345d", "Fusion Monster": "#6e4a8c", "Synchro Monster": "#8a8a8a",
+        "Xyz Monster": "#1a1a1a", "Link Monster": "#164687", "Ritual Monster": "#3b73a3"
+    };
+
+    const colorKey = Object.keys(typeColors).find(key => card.type.includes(key));
+    const cardColor = typeColors[colorKey] || "var(--accent)";
+
+    // --- 1. LÓGICA MOBILE ---
+    const oldBtn = document.getElementById('mobile-close-x');
+    if (oldBtn) oldBtn.remove();
+
+    if (isMobile) {
+        tt.style.pointerEvents = "auto";
+        tt.style.setProperty("position", "fixed", "important");
+        tt.style.setProperty("top", "0", "important");
+        tt.style.setProperty("left", "0", "important");
+        tt.style.setProperty("transform", "none", "important");
+        tt.style.width = "100vw";
+        tt.style.height = "100vh"; 
+        tt.style.maxWidth = "100vw";
+        tt.style.boxSizing = "border-box";
+        tt.style.margin = "0";
+        tt.style.zIndex = "10000";
+        tt.style.overflowY = "auto";
+        tt.style.borderRadius = "0";
+
+        const closeBtn = document.createElement('button');
+        closeBtn.id = 'mobile-close-x';
+        closeBtn.innerHTML = '<i class="fas fa-times"></i>';
+        closeBtn.onclick = (e) => { e.stopPropagation(); hideTooltip(); };
+        
+        Object.assign(closeBtn.style, {
+            position: 'fixed', top: '15px', right: '15px', width: '35px', height: '35px',
+            borderRadius: '50%', backgroundColor: 'var(--accent)', color: '#000',
+            border: 'none', zIndex: '10001', fontSize: '18px', display: 'flex',
+            alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+            boxShadow: '0 2px 10px rgba(0,0,0,0.5)'
+        });
+        tt.appendChild(closeBtn);
+    } else {
+        tt.style.position = "absolute"; 
+        tt.style.height = "auto";
+        tt.style.width = ""; 
+        tt.style.maxWidth = "";
+        tt.style.top = ""; 
+        tt.style.left = "";
+        tt.style.pointerEvents = "none"; // Evita flicker no desktop
+    }
+
+    // --- 2. CONFIGURAÇÃO VISUAL ---
+    tt.style.borderLeft = isMobile ? "none" : `6px solid ${cardColor}`;
+    
+    const nameElement = document.getElementById('tooltip-name');
+    nameElement.innerText = card.name_pt || card.name;
+    nameElement.style.color = cardColor; 
+    nameElement.style.fontSize = isMobile ? '1.3em' : '1.0em';
+    nameElement.style.fontWeight = 'bold';
+    
+    document.getElementById('tooltip-img').src = card.card_images[0].image_url;
+
+    // --- 3. LÓGICA DE BANLIST ---
+    const banlistType = document.getElementById('filter-banlist-type').value;
+    const status = card.banlist_info ? card.banlist_info[`ban_${banlistType}`] : null;
+    const oldBadge = document.querySelector('.tt-ban-container');
+    if (oldBadge) oldBadge.remove();
+
+    if (status && banlistType) {
+        let icon = '', label = '', cssClass = '';
+        if (status === 'Banned' || status === 'Forbidden') {
+            icon = '<i class="fa-solid fa-ban"></i>'; label = 'Banida'; cssClass = 'tt-ban-banned';
+        } else if (status === 'Limited') {
+            icon = '<i class="fa-solid fa-1"></i>'; label = 'Limitada'; cssClass = 'tt-ban-limited';
+        } else if (status === 'Semi-Limited') {
+            icon = '<i class="fa-solid fa-2"></i>'; label = 'Semi-Limitada'; cssClass = 'tt-ban-semi';
+        }
+        const banContainer = document.createElement('div');
+        banContainer.className = 'tt-ban-container';
+        banContainer.innerHTML = `<div class="tt-ban-badge ${cssClass}">${icon} <span>${label}</span></div>`;
+        nameElement.after(banContainer);
+    }
+
+    // --- 4. ATRIBUTOS E INFO (CORREÇÃO DE LINHAS) ---
+    const racesTrad = { 
+        "Aqua": "Aqua", "Beast": "Besta", "Beast-Warrior": "Besta-Guerreira", "Cyberse": "Ciberso", 
+        "Dinosaur": "Dinossauro", "Dragon": "Dragão", "Fiend": "Demônio", "Fish": "Peixe", 
+        "Insect": "Inseto", "Machine": "Máquina", "Plant": "Planta", "Psychic": "Psíquico", 
+        "Pyro": "Piro", "Reptile": "Réptil", "Rock": "Rocha", "Sea Serpent": "Serpente Marinha", 
+        "Spellcaster": "Mago", "Thunder": "Trovão", "Warrior": "Guerreiro", "Winged Beast": "Besta Alada", 
+        "Wyrm": "Wyrm", "Zombie": "Zumbi", "Divine-Beast": "Besta Divina", "Normal": "Normal", 
+        "Continuous": "Contínua", "Field": "Campo", "Equip": "Equipamento", "Quick-Play": "Rápida", 
+        "Ritual": "Ritual", "Counter": "Resposta" 
+    };
+
+    // INÍCIO DO CONTAINER DE INFORMAÇÕES VERTICAIS
+    let infoHtml = `<div style="display: flex; flex-direction: column; gap: 8px; width: 100%;">`;
+
+    // LINHA 1: Atributo e Nível/Rank
+    if(card.attribute || card.type.includes("Spell") || card.type.includes("Trap")) {
+        let iconUrl = card.type.includes("Spell") ? "https://static.wikia.nocookie.net/yugioh/images/0/09/SPELL.svg" :
+                    card.type.includes("Trap") ? "https://static.wikia.nocookie.net/yugioh/images/2/28/TRAP.svg" :
+                    `https://images.ygoprodeck.com/images/cards/${card.attribute ? card.attribute.toUpperCase() : 'UNKNOWN'}.jpg`;
+        
+        let labelText = card.type.includes("Spell") ? "MAGIA" : card.type.includes("Trap") ? "ARMADILHA" : 
+                        (typeof trad !== 'undefined' ? trad[card.attribute?.toUpperCase()] : card.attribute) || card.attribute || "";
+
+        infoHtml += `<div style="display: flex; align-items: center; gap: 8px;">
+                        <div style="display: flex; align-items: center; gap: 4px; color: #ffffff;">
+                            <img src="${iconUrl}" style="width:20px; height:20px; object-fit:contain;">
+                            <span>${labelText}</span>
+                        </div>`;
+
+        if((card.level || card.rank) && !card.type.toLowerCase().includes("link")) {
+            infoHtml += `<div style="display: flex; align-items: center; gap: 4px; color: #ffffff; margin-left: 5px;">
+                            <img src="https://ygoprodeck.com/wp-content/uploads/2017/01/level.png" style="width:16px; height:16px; ${card.type.toUpperCase().includes('XYZ') ? 'filter:invert(1) brightness(0.5);' : ''}">
+                            <span>${card.level || card.rank}</span>
+                        </div>`;
+        }
+        infoHtml += `</div>`;
+    }
+
+    // LINHA 2: Raça e Tipos [ Raça / Tipo ]
+    let tipoTexto = card.type.replace("Effect Monster", "Monstro de Efeito").replace("Normal Monster", "Monstro Normal").replace("Monster", "Monstro").replace("Spell Card", "Carta de Magia").replace("Trap Card", "Carta de Armadilha");
+    const raceTraduzida = racesTrad[card.race] || card.race || "Desconhecido";
+    
+    infoHtml += `<div style="display: flex; align-items: center; gap: 4px; color: #ffffff; font-size: 11px; margin-bottom: 8px; flex-wrap: wrap;">
+                    <span>[</span>
+                    <img src="https://images.ygoprodeck.com/images/cards/icons/race/${card.race}.png" style="width: 14px; height: 14px;" onerror="this.style.display='none'">
+                    <span>${raceTraduzida} / </span>
+                    <img src="https://images.ygoprodeck.com/images/cards/icons/${encodeURIComponent(card.type)}.jpg" style="width: 14px; height: 14px; border-radius: 2px;" onerror="this.style.display='none'">
+                    <span>${tipoTexto} ]</span>
+                </div>`;
+
+    // LINHA 3: ATK / DEF ou LINK
+    if(card.atk !== undefined) {
+        infoHtml += `
+        <div style="display: flex; gap: 15px; margin-bottom: 8px; font-size: 13px; font-weight: bold;">
+            <div style="display: flex; align-items: center; gap: 5px;">
+                <i class="fas fa-fist-raised" style="color: #4d94ff;"></i>
+                <span style="color: #4d94ff;">ATK/</span>
+                <span style="color: #ffffff;">${card.atk}</span>
+            </div>
+            ${!card.type.toLowerCase().includes("link") ? `
+                <div style="display: flex; align-items: center; gap: 5px;">
+                    <i class="fas fa-shield-alt" style="color: #ff4d4d;"></i>
+                    <span style="color: #ff4d4d;">DEF/</span>
+                    <span style="color: #ffffff;">${card.def}</span>
+                </div>
+            ` : `
+                <div style="display: flex; align-items: center; gap: 5px; color: #ffffff;">
+                    <span>LINK-${card.linkval}</span>
+                </div>
+            `}
+        </div>`;
+    }
+    
+    infoHtml += `</div>`; // FIM DO CONTAINER VERTICAL
+    document.getElementById('tooltip-info-rows').innerHTML = infoHtml;
+
+    // --- 5. DATAS, PREÇOS E DESCRIÇÃO ---
+    let tcgDate = "N/A", ocgDate = "N/A";
+    if (card.misc_info && card.misc_info[0]) {
+        tcgDate = typeof formatDateBR !== 'undefined' ? formatDateBR(card.misc_info[0].tcg_date) : card.misc_info[0].tcg_date;
+        ocgDate = typeof formatDateBR !== 'undefined' ? formatDateBR(card.misc_info[0].ocg_date) : card.misc_info[0].ocg_date;
+    }
+
+    const p = card.card_prices ? card.card_prices[0] : {};
+    const formatP = (val) => (!val || parseFloat(val) === 0) ? "Não encontrado" : `$${val}`;
+
+    const datesHtml = `<div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #444; font-size: 13px; color: #fff; display: flex; gap: 12px; flex-wrap: wrap;">
+        <span>📅 TCG: ${tcgDate}</span>
+        <span>📅 OCG: ${ocgDate}</span>
+    </div>`;
+
+    const separatorHtml = `<hr style="border: 0; border-top: 1px solid #444; margin: 8px 0; opacity: 1;">`;
+
+    const pricesHtml = `<div style="margin-top: 6px; display: flex; flex-wrap: wrap; gap: 12px; font-size: 13px; color: #fff; font-weight: 500;">
+        <span title="TCGPlayer"><i class="fa-solid fa-store" style="color:var(--accent); font-size: 11px;"></i> TCG: ${formatP(p.tcgplayer_price)}</span>
+        <span title="Cardmarket"><i class="fa-solid fa-m" style="color:var(--accent); font-size: 11px;"></i> CM: ${formatP(p.cardmarket_price)}</span>
+        <span title="eBay"><i class="fa-brands fa-ebay" style="color:var(--accent); font-size: 14px;"></i> ${formatP(p.ebay_price)}</span>
+        <span title="Amazon"><i class="fa-brands fa-amazon" style="color:var(--accent); font-size: 13px;"></i> ${formatP(p.amazon_price)}</span>
+    </div>`;
+
+    const formattedDescription = description.replace(/\n/g, '<br>');
+    document.getElementById('tooltip-text').innerHTML = `<div style="word-wrap: break-word;">${formattedDescription}</div>${datesHtml}${separatorHtml}${pricesHtml}`;
+}
 
     function moveTooltip(e) {
         if (window.innerWidth < 900) return; 
@@ -933,12 +1267,22 @@
         tt.style.top = y + 'px';
     }
 
-    function hideTooltip() { document.getElementById('card-tooltip').style.display = 'none'; }
+    function hideTooltip() {
+        const tt = document.getElementById('card-tooltip');
+        tt.style.display = 'none';
+        
+        // Destrava o scroll vertical
+        document.documentElement.style.overflow = "";
+        document.body.style.overflow = "";
+        
+        // Força a remoção do travamento lateral caso tenha ficado resíduo
+        document.body.style.overflowX = "hidden";
+    }
 
     function getItemsPerPage() {
         if (window.innerWidth < 900) return currentView === 'list' ? 15 : 20;
         const isQueueEmpty = cardQueue.length === 0;
-        return currentView === 'list' ? (isQueueEmpty ? 25 : 15) : (isQueueEmpty ? 44 : 21);
+        return currentView === 'list' ? (isQueueEmpty ? 25 : 15) : (isQueueEmpty ? 33 : 21);
     }
 
     for(let i=0; i<=13; i++) document.getElementById('filter-lv').innerHTML += `<option value="${i}">${i}</option>`;
@@ -1223,7 +1567,11 @@
             document.getElementById('result-info').innerText = "Nenhuma carta encontrada";
             document.getElementById('page-total').innerText = "/ 1";
             document.getElementById('page-jump').value = 1;
-            container.innerHTML = `<div style="grid-column: 1/-1; padding: 60px 20px; text-align: center; opacity: 0.6;"><div style="font-size: 3em; margin-bottom: 15px;">🔍</div><b style="font-size: 1.2em; color: var(--accent);">Nenhuma carta encontrada</b></div>`;
+            container.innerHTML = `
+                <div style="grid-column: 1/-1; padding: 60px 20px; text-align: center; opacity: 0.6;">
+                    <div style="font-size: 3em; margin-bottom: 15px;">🔍</div>
+                    <b style="font-size: 1.2em; color: var(--accent);">Nenhuma carta encontrada</b>
+                </div>`;
             return;
         }
 
@@ -1250,19 +1598,28 @@
         };
 
         pageItems.forEach(card => {
-            // --- CORREÇÃO AQUI: Pegamos a imagem individual expandida no performSearch ---
             const imageObj = card.current_image; 
             const div = document.createElement('div'); 
             div.className = 'suggestion-item';
             
             const colorKey = Object.keys(typeColors).find(key => card.type.includes(key));
             const cardBgColor = typeColors[colorKey] || "var(--panel-bg)";
-            div.style.backgroundColor = cardBgColor;
+            
+            const hasCustomTheme = document.body.classList.contains('theme-white') || 
+                                    document.body.classList.contains('theme-black') ||
+                                    document.body.classList.contains('theme-kaiba');
+
+            if (!hasCustomTheme) {
+                div.style.backgroundColor = cardBgColor;
+                div.style.borderLeft = "none";
+            } else {
+                div.style.backgroundColor = "var(--panel-bg)";
+                div.style.borderLeft = `5px solid ${cardBgColor}`;
+            }
 
             const variantSuffix = card.is_variant ? ` (Arte #${card.variant_idx + 1})` : "";
             const displayName = (card.name_pt || card.name) + variantSuffix;
 
-            // --- MODO GRADE: APENAS IMAGEM ---
             if (currentView === 'grid') {
                 div.style.padding = "0";
                 div.style.backgroundColor = "transparent"; 
@@ -1273,125 +1630,91 @@
                         onerror="this.src='https://images.ygoprodeck.com/images/cards/back_high.jpg'"
                         alt="${card.name}">
                 `;
-            }
-            // --- MODO LISTA: DETALHES COMPLETOS ---
-            else {
+            } else {
                 const attrRaw = card.attribute ? card.attribute.toUpperCase() : (card.type.includes("Spell") ? "SPELL" : "TRAP");
                 const attrIconUrl = card.attribute ? `https://images.ygoprodeck.com/images/cards/${attrRaw}.jpg` : "";
                 const raceIconUrl = `https://images.ygoprodeck.com/images/cards/icons/race/${card.race}.png`;
                 const starIcon = "https://ygoprodeck.com/wp-content/uploads/2017/01/level.png";
                 const raceTraduzida = racesTrad[card.race] || card.race;
 
-                const isLightColor = ["Normal Monster", "Synchro Monster"].includes(colorKey);
-                const nameColor = isLightColor ? "#000000" : "var(--accent)";
+                let nameColor = hasCustomTheme ? cardBgColor : (["Normal Monster", "Synchro Monster"].includes(colorKey) ? "#000" : "var(--accent)");
+                const textColor = (!hasCustomTheme) ? "#fff" : "var(--text)";
 
                 let tipoTexto = card.type;
-                if (tipoTexto.includes("Effect Monster")) {
-                    tipoTexto = "Monstro de Efeito";
-                } else if (tipoTexto.includes("Normal Monster")) {
-                    tipoTexto = "Monstro Normal";
-                } else {
-                    tipoTexto = tipoTexto
-                        .replace("Monster", "Monstro")
-                        .replace("Spell Card", "Carta de Magia")
-                        .replace("Trap Card", "Carta de Armadilha");
-                }
+                if (tipoTexto.includes("Effect Monster")) tipoTexto = "Monstro de Efeito";
+                else if (tipoTexto.includes("Normal Monster")) tipoTexto = "Monstro Normal";
+                else tipoTexto = tipoTexto.replace("Monster", "Monstro").replace("Spell Card", "Carta de Magia").replace("Trap Card", "Carta de Armadilha");
+                
                 const typeIconUrl = `https://images.ygoprodeck.com/images/cards/icons/${encodeURIComponent(card.type)}.jpg`;
 
                 div.innerHTML = `
-                    <img src="${imageObj.image_url_small}" 
-                        loading="lazy" 
-                        onerror="this.src='https://images.ygoprodeck.com/images/cards/back_high.jpg'"
-                        alt="${card.name}">
-                        
+                    <img src="${imageObj.image_url_small}" loading="lazy" onerror="this.src='https://images.ygoprodeck.com/images/cards/back_high.jpg'" alt="${card.name}">
                     <div class="card-info-box">
                         <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
                             ${getBanIcon(card)} 
                             <b class="card-name" style="margin: 0; line-height: 1.2; color: ${nameColor};">${displayName}</b>
                         </div>
-                        
-                        <div class="info-row" style="display: flex; align-items: center; justify-content: flex-start; gap: 10px; color: #ffffff;">
-                            ${attrIconUrl ? `
-                                <div style="display: flex; align-items: center; gap: 4px;">
-                                    <img src="${attrIconUrl}" style="width: 14px; height: 14px; border-radius: 50%;"> 
-                                    <span style="font-size: 10px; color: #ffffff;">${trad[attrRaw] || attrRaw}</span>
-                                </div>` : ''}
-                            
-                            ${(card.level || card.rank) && !card.type.toLowerCase().includes("link") ? `
-                                <div style="display: flex; align-items: center; gap: 2px;">
-                                    <img src="${starIcon}" style="width: 12px; height: 12px; ${card.type.toUpperCase().includes('XYZ') ? 'filter:invert(1) brightness(0.5);' : ''}">
-                                    <span style="font-size: 10px; color: #ffffff;">${card.level || card.rank}</span>
-                                </div>` : ''}
+                        <div class="info-row" style="display: flex; align-items: center; gap: 10px; color: ${textColor};">
+                            ${attrIconUrl ? `<div style="display: flex; align-items: center; gap: 4px;"><img src="${attrIconUrl}" style="width: 14px; height: 14px; border-radius: 50%;"><span style="font-size: 10px; color: inherit;">${trad[attrRaw] || attrRaw}</span></div>` : ''}
+                            ${(card.level || card.rank) && !card.type.toLowerCase().includes("link") ? `<div style="display: flex; align-items: center; gap: 2px;"><img src="${starIcon}" style="width: 12px; height: 12px; ${card.type.toUpperCase().includes('XYZ') ? 'filter:invert(1) brightness(0.5);' : ''}"><span style="font-size: 10px; color: inherit;">${card.level || card.rank}</span></div>` : ''}
                         </div>
-
-                        ${card.type.toLowerCase().includes("link") ? 
-                            `<div style="display: block; margin-top: -2px;">
-                                <span style="color: #ff0000; letter-spacing: 2px; font-size: 14px; font-weight: bold;">
-                                    ${getLinkMarkersHtml(card.linkmarkers)}
-                                </span>
-                            </div>` : ''}
-
-                        <div class="info-row" style="display: flex; align-items: center; gap: 4px; margin-top: 2px; flex-wrap: wrap; color: #ffffff;">
+                        <div class="info-row" style="display: flex; align-items: center; gap: 4px; margin-top: 2px; flex-wrap: wrap; color: ${textColor};">
                             <img src="${raceIconUrl}" style="width: 14px; height: 14px;" onerror="this.style.display='none'">
-                            <span style="color: #ffffff;">${raceTraduzida} / </span>
+                            <span style="color: inherit;">${raceTraduzida} / </span>
                             <img src="${typeIconUrl}" title="Tipo" style="width: 14px; height: 14px; border-radius: 2px;" onerror="this.style.display='none'">
-                            <span style="color: #ffffff;">${tipoTexto}</span>
+                            <span style="color: inherit;">${tipoTexto}</span>
                         </div>
-
                         ${card.atk !== undefined ? `
-                            <div class="info-row atk-def-row" style="display: flex; gap: 10px; margin-top: 4px; font-size: 11px;">
-                                <div style="display: flex; align-items: center; gap: 4px;">
-                                    <i class="fas fa-fist-raised" style="color: #4d94ff; font-size: 10px;"></i> 
-                                    <span style="color: #4d94ff; font-weight: bold;">ATK/</span>
-                                    <span style="color: #ffffff;">${card.atk}</span>
-                                </div>
-
-                                ${!card.type.toLowerCase().includes("link") ? `
-                                    <div style="display: flex; align-items: center; gap: 4px;">
-                                        <i class="fas fa-shield-alt" style="color: #ff4d4d; font-size: 10px;"></i>
-                                        <span style="color: #ff4d4d; font-weight: bold;">DEF/</span>
-                                        <span style="color: #ffffff;">${card.def}</span>
-                                    </div>
-                                ` : `
-                                    <div style="display: flex; align-items: center; gap: 4px;">
-                                        <span style="color: #ffffff; font-weight: bold;">LINK-${card.linkval}</span>
-                                    </div>
-                                `}
+                            <div class="info-row atk-def-row" style="border-top: 1px solid ${!hasCustomTheme ? 'rgba(255,255,255,0.1)' : 'var(--border)'};">
+                                <div style="display: flex; align-items: center; gap: 4px;"><i class="fas fa-fist-raised" style="color: #4d94ff; font-size: 10px;"></i><span style="color: #4d94ff; font-weight: bold;">ATK/</span><span style="color: ${textColor};">${card.atk}</span></div>
+                                ${!card.type.toLowerCase().includes("link") ? `<div style="display: flex; align-items: center; gap: 4px;"><i class="fas fa-shield-alt" style="color: #ff4d4d; font-size: 10px;"></i><span style="color: #ff4d4d; font-weight: bold;">DEF/</span><span style="color: ${textColor};">${card.def}</span></div>` 
+                                : `<div style="display: flex; align-items: center; gap: 4px;"><span style="color: ${textColor}; font-weight: bold;">LINK-${card.linkval}</span></div>`}
                             </div>` : ''}
                     </div>`;
             }
 
-            // Criamos o objeto do card com UMA única imagem específica para o Tooltip 🎯
             const cardWithSpecificArt = { ...card, card_images: [imageObj] };
-
+            
             let pressTimer;
-            const startPress = (cardObj, e) => {
+            let isLongPress = false;
+
+            div.onmouseenter = (e) => { if(window.innerWidth >= 900) showTooltip(cardWithSpecificArt, e); };
+            div.onmousemove = (e) => { if(window.innerWidth >= 900) moveTooltip(e); };
+            div.onmouseleave = () => { if(window.innerWidth >= 900) hideTooltip(); };
+
+            div.ontouchstart = (e) => {
+                isLongPress = false;
+                clearTimeout(pressTimer);
                 pressTimer = setTimeout(() => {
-                    const fakeEvent = { 
-                        clientX: e.touches ? e.touches[0].clientX : e.clientX, 
-                        clientY: e.touches ? e.touches[0].clientY : e.clientY 
-                    };
-                    showTooltip(cardObj, fakeEvent);
+                    isLongPress = true;
+                    const touch = e.touches[0];
+                    showTooltip(cardWithSpecificArt, { clientX: touch.clientX, clientY: touch.clientY });
                     if (navigator.vibrate) navigator.vibrate(50);
                 }, 600);
             };
-            
-            const cancelPress = () => clearTimeout(pressTimer);
-            
-            div.onmouseenter = (e) => showTooltip(cardWithSpecificArt, e);
-            div.onmousemove = (e) => moveTooltip(e);
-            div.onmouseleave = () => hideTooltip();
-            div.ontouchstart = (e) => startPress(cardWithSpecificArt, e);
-            div.ontouchend = cancelPress;
-            div.ontouchmove = cancelPress;
-            
-            div.onclick = () => {
-                const qty = parseInt(document.getElementById('search-qty').value) || 1;
-                for(let i=0; i<qty; i++) {
-                    cardQueue.push({ id: card.id, name: displayName, imgId: imageObj.id });
+
+            div.ontouchmove = () => clearTimeout(pressTimer);
+
+            div.ontouchend = (e) => {
+                clearTimeout(pressTimer);
+                if (isLongPress && e.cancelable) e.preventDefault();
+            };
+
+            div.onclick = (e) => {
+                const isMobile = window.innerWidth < 900;
+                const tooltipVisible = document.getElementById('card-tooltip').style.display === 'block';
+
+                // No Mobile: se o tooltip estiver aberto ou for um long press, bloqueia a adição à fila.
+                // No Desktop: tooltipVisible será true mas isMobile será false, então ele ADICIONA normalmente.
+                if (isLongPress || (isMobile && tooltipVisible)) {
+                    isLongPress = false;
+                    return;
                 }
+
+                const qty = parseInt(document.getElementById('search-qty').value) || 1;
+                for(let i=0; i<qty; i++) cardQueue.push({ id: card.id, name: displayName, imgId: imageObj.id });
                 updateUI();
-                if(window.innerWidth < 900) showToast(`${qty}x ${displayName} adicionado(a)!`);
+                if(isMobile) showToast(`${qty}x ${displayName} adicionado(a)! 🃏`);
             };
 
             container.appendChild(div);
@@ -1547,9 +1870,6 @@
         showToast("Filtros resetados");
     };
     
-    // Fecha o tooltip ao tocar nele mesmo (útil no mobile)
-    document.getElementById('card-tooltip').addEventListener('click', hideTooltip);
-
     // Escutar digitação nos campos de preço
     document.getElementById('filter-price-min').addEventListener('input', () => {
         currentPage = 1;
