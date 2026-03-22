@@ -284,8 +284,59 @@
         .stepper input { border: none !important; text-align: center; width: 100%; background: transparent; }
 
         .search-area { background: #111; padding: 15px; border-bottom: 1px solid var(--border); }
-        .view-controls { display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; background: #181818; border-bottom: 1px solid #333; }
-        
+        .view-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            background: var(--panel-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            margin-bottom: 15px;
+        }
+
+        /* Container principal do grupo de ordenação */
+        .sort-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .sort-label {
+            font-size: 12px;
+            font-weight: bold;
+            color: var(--text);
+            white-space: nowrap;
+        }
+
+        /* Container do Select + Botão de seta */
+        .sort-controls {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+        }
+
+        .sort-controls select {
+            width: 110px;
+            font-size: 12px;
+            height: 35px;
+            padding: 0 5px;
+            border-radius: 5px;
+            background: var(--bg-dark);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        .sort-controls button {
+            width: 35px;
+            height: 35px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 5px;
+        }
+       
         .btn-view { background: #333; color: #888; border: 1px solid #444; padding: 5px 10px; cursor: pointer; border-radius: 4px; font-size: 11px; }
         .btn-view.active { background: var(--accent); color: black; border-color: var(--accent); }
 
@@ -596,6 +647,58 @@
                 font-size: 1.6em !important; /* Aumenta um pouco o nome para acompanhar a imagem */
                 margin-top: 10px !important;
             }
+            
+            /* 1. Ajuste do Container Pai */
+            .view-controls {
+                display: flex !important;
+                flex-direction: column !important;
+                align-items: stretch !important;
+                gap: 12px !important;
+                padding: 10px !important; /* Padding reduzido para dar respiro */
+                width: 100% !important;
+                max-width: 100% !important;
+                box-sizing: border-box !important; /* ESSENCIAL */
+                overflow: hidden !important; /* Garante que nada saia dele */
+            }
+
+            /* 2. Ajuste do Grupo de Filtro (Tema e Ordenar) */
+            .filter-group {
+                width: 100% !important;
+                display: flex !important;
+                flex-direction: column !important;
+                gap: 4px !important;
+                box-sizing: border-box !important;
+                margin: 0 !important; /* Remove margens que possam empurrar */
+            }
+
+            /* 3. Controles de Ordenação (Select + Botão) */
+            .sort-controls {
+                display: flex !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                gap: 8px !important;
+                align-items: center !important;
+                box-sizing: border-box !important;
+            }
+
+            .sort-controls select {
+                flex: 1 !important; /* Ocupa o máximo sem estourar */
+                min-width: 0 !important; /* Força o select a respeitar o flexbox */
+                height: 45px !important;
+                font-size: 15px !important;
+                box-sizing: border-box !important;
+            }
+
+            .sort-controls button#btn-order {
+                flex-shrink: 0 !important; /* Não deixa o botão amassar */
+                width: 45px !important;
+                height: 45px !important;
+                padding: 0 !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                box-sizing: border-box !important;
+            }
         }
 
         @keyframes fadeInPage {
@@ -736,23 +839,25 @@
                     <input type="checkbox" id="enable-tooltip" checked style="width: auto; margin: 0;"> 
                     <span>TOOLTIP</span>
                 </label>
-                <div style="display: flex; gap: 5px; align-items: center;">
-                    <select id="sort-by" style="width: 105px; font-size: 11px; height: 32px; padding: 0 5px;" onchange="sortAndRender()">
-                        <option value="name">Nome</option>
-                        <option value="atk">Ataque</option>
-                        <option value="def">Defesa</option>
-                        <option value="level">Level/Rank</option>
-                        <option value="tcg_date">Data TCG</option>
-                        <option value="ocg_date">Data OCG</option>
-                        <option value="price">Preço</option>
-                        <option value="banlist">Banlist</option>
-                    </select>
-                    
-                    <button id="btn-order" class="btn-view" style="width: 32px; height: 32px; font-size: 14px; padding: 0; display: flex; align-items: center; justify-content: center;" onclick="toggleOrder()">
-                        <span id="order-icon">↓</span>
-                    </button>
+                <div class="filter-group">
+                    <label for="sort-by" class="sort-label">Ordenar</label>
+                    <div class="sort-controls" style="display: flex; gap: 5px; align-items: center;">
+                        <select id="sort-by" onchange="sortAndRender()" style="flex: 1;">
+                            <option value="name">Nome</option>
+                            <option value="atk">Ataque</option>
+                            <option value="def">Defesa</option>
+                            <option value="level">Level/Rank</option>
+                            <option value="tcg_date">Data TCG</option>
+                            <option value="ocg_date">Data OCG</option>
+                            <option value="price">Preço</option>
+                            <option value="banlist">Banlist</option>
+                        </select>
+                        
+                        <button id="btn-order" class="btn-view" onclick="toggleOrder()" style="height: 35px; min-width: 35px; display: flex; align-items: center; justify-content: center;">
+                            <span id="order-icon">↓</span>
+                        </button>
+                    </div>
                 </div>
-
                 <div style="display: flex; gap: 5px;">
                     <button id="btn-list" class="btn-view active" style="height: 32px;" onclick="changeView('list')">LISTA</button>
                     <button id="btn-grid" class="btn-view" style="height: 32px;" onclick="changeView('grid')">GRADE</button>
