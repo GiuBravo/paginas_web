@@ -454,6 +454,10 @@
             <span id="result-info" style="font-size: 11px; color: #888;">Carregando...</span>
             
             <div style="display: flex; gap: 15px; align-items: center;">
+                <label style="display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 11px; color: #888;">
+                    <input type="checkbox" id="enable-tooltip" checked style="width: auto; margin: 0;"> 
+                    <span>TOOLTIP</span>
+                </label>
                 <div style="display: flex; gap: 5px; align-items: center;">
                     <select id="sort-by" style="width: 105px; font-size: 11px; height: 32px; padding: 0 5px;" onchange="sortAndRender()">
                         <option value="name">Nome</option>
@@ -733,7 +737,12 @@
     function showTooltip(card, e) {
         if(!card) return;
         
+        // VERIFICAÇÃO: Se o checkbox não estiver marcado, encerra a função
+        const isTooltipEnabled = document.getElementById('enable-tooltip').checked;
+        if (!isTooltipEnabled) return;
+        
         const tt = document.getElementById('card-tooltip');
+        tt.style.display = 'block';
         const description = card.desc_pt || card.desc;
         const typeColors = {
             "Normal Monster": "#d1b55a",
