@@ -348,13 +348,13 @@
 
         .results-view.grid-mode {
             display: grid !important;
-            grid-template-columns: repeat(10, 1fr) !important;
-            gap: 6px; /* Reduzi de 10px para 6px para ganhar altura */
-            padding: 10px; /* Reduzi as bordas externas */
+            grid-template-columns: repeat(2, 1fr) !important; /* Padrão Mobile: 2 colunas */
+            gap: 10px;
+            padding: 10px;
             align-content: start;
         }
 
-        /* Quando estiver no modo grid, a imagem deve expandir */
+        /* Estilo unificado para os itens da grade (Desktop e Mobile) */
         .results-view.grid-mode .suggestion-item {
             display: block !important; 
             text-align: center;
@@ -485,6 +485,16 @@
                 font-size: 14px !important;
                 line-height: 1.4;
             }
+
+            .results-view.grid-mode { 
+                /* Sobrescreve as 2 colunas do mobile para 10 no PC */
+                grid-template-columns: repeat(10, 1fr) !important; 
+                gap: 6px !important; 
+                padding: 15px !important; 
+            }
+
+            /* Remove qualquer info de texto que possa ter sobrado na grade desktop */
+            .grid-mode .card-info-box { display: none !important; }
         }
 
         /* --- RESPONSIVIDADE MOBILE --- */
@@ -499,7 +509,12 @@
             .app-container, .app-container.empty-queue { display: block !important; height: auto !important; }
             .col { width: 100% !important; height: auto !important; overflow: visible !important; border-bottom: 2px solid var(--border); }
             .results-view { height: 550px; overflow-y: auto; }
-            .grid-mode { display: grid !important; grid-template-columns: repeat(2, 1fr) !important; gap: 10px !important; padding: 10px !important; }
+            .grid-mode { 
+                display: grid !important; 
+                grid-template-columns: repeat(2, 1fr) !important; 
+                gap: 10px !important; 
+                padding: 10px !important; 
+            }
             .grid-mode .suggestion-item { display: block !important; text-align: center; padding: 5px; border-bottom: none; }
             .grid-mode .suggestion-item img { width: 100%; height: auto; }
             .grid-mode .card-info-box { display: none !important; }
