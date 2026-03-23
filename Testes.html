@@ -648,56 +648,62 @@
                 margin-top: 10px !important;
             }
             
-            /* 1. Ajuste do Container Pai */
+           /* 1. Removemos a altura fixa e preenchimentos do container principal */
             .view-controls {
-                display: flex !important;
-                flex-direction: column !important;
-                align-items: stretch !important;
-                gap: 12px !important;
-                padding: 10px !important; /* Padding reduzido para dar respiro */
+                height: auto !important;
+                padding: 10px !important;
+            }
+
+            /* 2. O TEXTO de resultados ocupa a largura total no topo */
+            #result-info {
+                display: block !important;
                 width: 100% !important;
-                max-width: 100% !important;
-                box-sizing: border-box !important; /* ESSENCIAL */
-                overflow: hidden !important; /* Garante que nada saia dele */
+                margin-bottom: 10px !important;
+                text-align: center;
             }
 
-            /* 2. Ajuste do Grupo de Filtro (Tema e Ordenar) */
-            .filter-group {
+            /* 3. A DIV que envolve os campos (o coração do problema) */
+            .view-controls > div {
+                display: grid !important; /* Mudamos de Flex para Grid */
+                /* Criamos 2 colunas iguais. Se quiser 3, mude para repeat(3, 1fr) */
+                grid-template-columns: repeat(2, 1fr) !important; 
+                gap: 15px 10px !important;
                 width: 100% !important;
-                display: flex !important;
-                flex-direction: column !important;
-                gap: 4px !important;
-                box-sizing: border-box !important;
-                margin: 0 !important; /* Remove margens que possam empurrar */
             }
 
-            /* 3. Controles de Ordenação (Select + Botão) */
-            .sort-controls {
-                display: flex !important;
+            /* 4. Ajuste dos itens individuais dentro do Grid */
+            .filter-group, 
+            .view-controls > div > label, 
+            .view-controls > div > div {
                 width: 100% !important;
-                max-width: 100% !important;
-                gap: 8px !important;
-                align-items: center !important;
-                box-sizing: border-box !important;
+                margin: 0 !important;
             }
 
-            .sort-controls select {
-                flex: 1 !important; /* Ocupa o máximo sem estourar */
-                min-width: 0 !important; /* Força o select a respeitar o flexbox */
-                height: 45px !important;
-                font-size: 15px !important;
-                box-sizing: border-box !important;
+            /* O grupo da TOOLTIP deve se alinhar melhor */
+            .view-controls > div > label {
+                justify-content: flex-start;
+                align-self: center;
+                height: 35px;
             }
 
-            .sort-controls button#btn-order {
-                flex-shrink: 0 !important; /* Não deixa o botão amassar */
-                width: 45px !important;
-                height: 45px !important;
-                padding: 0 !important;
-                display: flex !important;
-                align-items: center !important;
+            /* 5. Fazemos os BOTÕES de Lista/Grade ocuparem a linha inteira embaixo */
+            .view-controls > div > div:last-child {
+                grid-column: span 2 !important; /* Ocupa as 2 colunas */
                 justify-content: center !important;
-                box-sizing: border-box !important;
+                margin-top: 5px !important;
+                padding-top: 10px;
+                border-top: 1px solid var(--border);
+            }
+
+            /* 6. Ajustes de tamanho para não espremer */
+            .view-controls select, 
+            .view-controls button {
+                height: 35px !important;
+                font-size: 12px !important;
+            }
+
+            .view-controls label {
+                font-size: 10px !important;
             }
         }
 
