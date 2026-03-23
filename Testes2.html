@@ -705,6 +705,15 @@
             .view-controls label {
                 font-size: 10px !important;
             }
+
+            .btn-view {
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                min-width: 50px !important; /* Um pouco mais largo para facilitar o toque */
+                height: 40px !important;
+                font-size: 18px !important; /* Ícone um pouco maior que o texto anterior */
+            }
         }
 
         @keyframes fadeInPage {
@@ -864,9 +873,13 @@
                         </button>
                     </div>
                 </div>
-                <div style="display: flex; gap: 5px;">
-                    <button id="btn-list" class="btn-view active" style="height: 32px;" onclick="changeView('list')">LISTA</button>
-                    <button id="btn-grid" class="btn-view" style="height: 32px;" onclick="changeView('grid')">GRADE</button>
+                <div style="display: flex; gap: 8px;">
+                    <button id="btn-list" class="btn-view active" title="Visualização em Lista" onclick="changeView('list')" style="font-size: 18px">
+                        <i class="fas fa-list"></i>
+                    </button>
+                    <button id="btn-grid" class="btn-view" title="Visualização em Grade" onclick="changeView('grid')" style="font-size: 18px">
+                        <i class="fas fa-th-large"></i>
+                    </button>
                 </div>
             </div>
         </div>
