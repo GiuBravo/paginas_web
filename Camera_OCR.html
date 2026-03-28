@@ -176,8 +176,8 @@
                 const avgR=r/total, avgG=g/total, avgB=b/total;
 
                 if (avgG > avgR && avgG > avgB) { // SPELL (Verde) -> Estratégia V58 (Invert)
-                    ctx.filter = 'grayscale(1) invert(1) contrast(2.2) brightness(1.1)';
-                    visionLabel.innerText = "STRATEGY: SPELL (INVERTED)";
+                    ctx.filter = 'grayscale(1) contrast(4) brightness(1.3)';
+                    visionLabel.innerText = "STRATEGY: SPELL (WHITE BOOST)";
                 } else if (avgR > 170 && avgG > 170 && avgB > 170) { // SYNCRO (Branca) -> Estratégia V58 (Invert Soft)
                     ctx.filter = 'grayscale(1) invert(1) contrast(1.6) brightness(1.0)';
                     visionLabel.innerText = "STRATEGY: SYNCRO (INVERTED)";
