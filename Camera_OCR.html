@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>YGO Vision - V70 Legacy Fusion</title>
+    <script src="https://unpkg.com/tesseract.js@v4.0.1/dist/tesseract.min.js"></script>
+    <style>
+        body { margin: 0; background: #000; font-family: monospace; height: 100dvh; overflow: hidden; color: #fff; }
+        #video { position: absolute; width: 100%; height: 100%; object-fit: cover; z-index: 1; }
+        #scanner-visual {
+            position: absolute; top: 25%; left: 50%; transform: translateX(-50%);
+            width: 45%; height: 35px; z-index: 10; pointer-events: none;
+            border: 2px solid #2ecc71; border-radius: 4px;
+        }
+        .corner { position: absolute; width: 12px; height: 12px; border: 3px solid #2ecc71; }
+        .tl { top: -2px; left: -2px; border-right: 0; border-bottom: 0; }
+        .tr { top: -2px; right: -2px; border-left: 0; border-bottom: 0; }
+        .bl { bottom: -2px; left: -2px; border-right: 0; border-top: 0; }
+        .br { bottom: -2px; right: -2px; border-left: 0; border-top: 0; }
+        #ui-panel { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.9); padding: 10px; z-index: 100; border-top: 2px solid #2ecc71; }
+        #log-console { height: 120px; overflow-y: auto; font-size: 10px; color: #0f0; background: #000; padding: 5px; }
+        #preview-box { position: absolute; top: 10px; right: 10px; width: 180px; border: 2px solid #fff; z-index: 100; background: #000; }
+        #preview-canvas { width: 100%; display: block; height: 45px; }
+        .btn { background: #222; color: #0f0; border: 1px solid #0f0; padding: 6px 12px; font-size: 10px; border-radius: 4px; }
+        #card-popup {
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: #111; border-radius: 20px; padding: 20px; width: 80%;
+            display: none; flex-direction: column; align-items: center; z-index: 2000; border: 3px solid #2ecc71;
+        }
+        #boot-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #000; display: flex; flex-direction: column; align-items: center;
+            justify-content: center; z-index: 3000;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="boot-screen">
+        <div style="font-size: 22px; color: #2ecc71; margin-bottom: 10px; font-weight: bold;">V70 LEGACY FUSION</div>
+        <div id="boot-status">Sincronizando Melhores Estratégias...</div>
+    </div>
+
+    <video id="video" autoplay playsinline></video>
+    <div id="scanner-visual">
+        <div class="corner tl"></div><div class="corner tr"></div>
+        <div class="corner bl"></div><div class="corner br"></div>
+    </div>
+
+    <div id="preview-box">
+        <canvas id="preview-canvas"></canvas>
+        <div id="vision-label" style="font-size:7px; text-align:center; background:#2ecc71; color:#000; font-weight:bold; padding:2px;">OPTIMIZED FILTER</div>
+    </div>
+
+    <div id="card-popup">
+        <img id="res-img" src="" style="width: 140px; border-radius: 8px;">
+        <h2 id="res-name" style="text-align:center; font-size: 16px; margin: 10px 0;"></h2>
+        <div id="res-price" style="font-size: 20px; color: #2ecc71; font-weight: bold;"></div>
+        <button onclick="closePopup()" class="btn" style="width:100%; padding:15px; margin-top:15px;">PRÓXIMA CARTA</button>
+    </div>
+
+    <div id="ui-panel">
+        <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+            <span id="engine-status" style="color:#f1c40f;">AGUARDANDO...</span>
+            <div>
+                <button onclick="takeScreenshot()" class="btn" style="margin-right:5px;">📸 PRINT</button>
+                <button onclick="copyLogs()" class="btn">📋 LOGS</button>
+            </div>
+        </div>
+        <div id="log-console">Iniciando...</div>
+    </div>
+
+    <canvas id="canvas-internal" style="display:none;"></canvas>
+
+    <script>
+        const video = document.getElementById('video');
+        const log = document.getElementById('log-console');
+        const status = document.getElementById('engine-status');
+        const bootScreen = document.getElementById('boot-screen');
+        const mira = document.getElementById('scanner-visual');
+        const canvas = document.getElementById('canvas-internal');
+        const preview = document.getElementById('preview-canvas');
+        const visionLabel = document.getElementById('vision-label');
+        
+        let isPaused = false, isProcessing = false, lastSearch = "", engineReady = false;
+
+        function addLog(msg) {
+            const t = new Date().toLocaleTimeString('pt-BR', {hour12:false});
+            log.innerHTML = `[${t}] ${msg}<br>` + log.innerHTML;
+        }
+
+        window.copyLogs = () => { navigator.clipboard.writeText(log.innerText).then(() => alert("Copiado!")); };
+
+        window.takeScreenshot = () => {
+            const shotCanvas = document.createElement('canvas');
+            shotCanvas.width = 700; shotCanvas.height = 400;
+            const sCtx = shotCanvas.getContext('2d');
+            sCtx.fillStyle = "#000"; sCtx.fillRect(0,0,700,400);
+            sCtx.drawImage(preview, 0, 0, 700, 120);
+            sCtx.fillStyle = "#0f0"; sCtx.font = "13px monospace";
+            const lines = log.innerText.split('\n').slice(0, 15);
+            lines.forEach((l, i) => sCtx.fillText(l, 10, 150 + (i*16)));
+            const link = document.createElement('a');
+            link.download = `v70_legacy.png`;
+            link.href = shotCanvas.toDataURL();
+            link.click();
+        };
+
+        function closePopup() { document.getElementById('card-popup').style.display = 'none'; isPaused = false; }
+
+        async function init() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } }
+                });
+                video.srcObject = stream;
+                const worker = await Tesseract.createWorker();
+                await worker.loadLanguage('eng+por');
+                await worker.initialize('eng+por');
+                window.worker = worker;
+                engineReady = true;
+                bootScreen.style.display = 'none';
+                addLog("V70 Legacy Fusion Online.");
+                requestAnimationFrame(loop);
+            } catch (e) { document.getElementById('boot-status').innerText = "ERRO: " + e.message; }
+        }
+
+        // --- ESTRATÉGIA DE NORMALIZAÇÃO V70 (A MELHOR DE TODAS) ---
+        function smartNormalize(text) {
+            if (!text) return "";
+            let raw = text.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Z ]/g, " ");
+            
+            // Dicionário de Correções "Best Hits" do histórico
+            let clean = raw.replace(/\bBAR[A-Z]ENTO\b|\bBATI[A-Z]NTO\b|\bBATIE+NTO\b/g, "BATIMENTO")
+                           .replace(/\bCARDIA[A-Z]+\b|\bCARDIN[A-Z]+\b|\bCANPIEGE\b/g, "CARDIACO")
+                           .replace(/\bSOIEMN\b|\bSOIE[A-Z]N\b/g, "SOLEMN")
+                           .replace(/\bJU[A-Z]MENT\b|\bJUPOMEENT\b/g, "JUDGMENT")
+                           .replace(/\bALB[A-Z]ON\b/g, "ALBION")
+                           .replace(/\bMARE[A-Z]ADO\b/g, "MARCADO")
+                           .replace(/\bLAGRIME[A-Z]TIARA\b|\bJIACR[A-Z]*\b/g, "LAGRIMENTIARA")
+                           .replace(/\bPITERRII\b/g, "MERRLI");
+
+            // Limpa prefixos e sufixos de lixo (J, I, A soltos)
+            return clean.replace(/^[A-Z0-9]\s+|\s+[A-Z0-9]$/g, " ").replace(/\s+/g, " ").trim();
+        }
+
+        async function loop() {
+            if (isPaused || isProcessing || video.videoWidth === 0 || !engineReady) {
+                requestAnimationFrame(loop);
+                return;
+            }
+
+            isProcessing = true;
+            try {
+                const ctx = canvas.getContext('2d', {willReadFrequently: true});
+                const vW = video.videoWidth, vH = video.videoHeight;
+                const vRect = video.getBoundingClientRect(), mRect = mira.getBoundingClientRect();
+
+                const s = (vW / vH > vRect.width / vRect.height) ? vH / vRect.height : vW / vRect.width;
+                const xO = (vW - vRect.width * s) / 2, yO = (vH - vRect.height * s) / 2;
+
+                const sX = (mRect.left - vRect.left) * s + xO;
+                const sY = (mRect.top - vRect.top) * s + yO;
+                const sW = mRect.width * s, sH = mRect.height * s;
+
+                canvas.width = 1000; canvas.height = 100;
+                ctx.fillStyle = "black"; ctx.fillRect(0, 0, 1000, 100);
+                ctx.drawImage(video, sX, sY, sW, sH, 50, 10, 900, 80);
+                
+                // --- MATRIZ DE FILTRO LEGACY (O que deu certo para cada cor) ---
+                const imgData = ctx.getImageData(50, 10, 900, 80).data;
+                let r=0, g=0, b=0;
+                for(let i=0; i<imgData.length; i+=100) { r+=imgData[i]; g+=imgData[i+1]; b+=imgData[i+2]; }
+                const total = imgData.length/100;
+                const avgR=r/total, avgG=g/total, avgB=b/total;
+
+                if (avgG > avgR && avgG > avgB) { // SPELL (Verde) -> Estratégia V58 (Invert)
+                    ctx.filter = 'grayscale(1) invert(1) contrast(2.2) brightness(1.1)';
+                    visionLabel.innerText = "STRATEGY: SPELL (INVERTED)";
+                } else if (avgR > 170 && avgG > 170 && avgB > 170) { // SYNCRO (Branca) -> Estratégia V58 (Invert Soft)
+                    ctx.filter = 'grayscale(1) invert(1) contrast(1.6) brightness(1.0)';
+                    visionLabel.innerText = "STRATEGY: SYNCRO (INVERTED)";
+                } else if (avgR > avgG && avgB > avgG) { // TRAP/FUSION (Rosa/Roxo) -> Estratégia V56 (Brilho High)
+                    ctx.filter = 'grayscale(1) contrast(1.4) brightness(1.5) saturate(0)';
+                    visionLabel.innerText = "STRATEGY: TRAP/FUSION (BRIGHT)";
+                } else { // MONSTER (Normal) -> Estratégia V44 (Balanced)
+                    ctx.filter = 'grayscale(1) contrast(1.8) brightness(1.2)';
+                    visionLabel.innerText = "STRATEGY: MONSTER (NEUTRAL)";
+                }
+                
+                ctx.drawImage(canvas, 0, 0);
+                preview.width = 1000; preview.height = 100;
+                preview.getContext('2d').drawImage(canvas, 0, 0);
+
+                const result = await window.worker.recognize(canvas);
+                let clean = smartNormalize(result.data.text);
+                let words = clean.split(" ").filter(w => w.length >= 4);
+                
+                if (words.length >= 1) {
+                    addLog(`OCR: ${words.join(" ")}`);
+                    await tryLegacySearch(words, clean);
+                }
+            } catch (e) {}
+
+            isProcessing = false;
+            setTimeout(() => requestAnimationFrame(loop), 450);
+        }
+
+        // --- LÓGICA DE BUSCA LEGACY (Cascata da V64 + Bônus Signature) ---
+        async function tryLegacySearch(words, fullText) {
+            // 1. Tenta o nome inteiro primeiro
+            if (fullText.length > 7 && await searchAndMatch(fullText, fullText)) return;
+
+            // 2. Busca por palavra única (DNA da carta), ignorando o arquétipo comum
+            let signatures = words.filter(w => w !== "LAGRIMENTIARA");
+            let sorted = signatures.sort((a,b) => b.length - a.length);
+
+            for (let sig of sorted) {
+                if (await searchAndMatch(fullText, sig)) return;
+                
+                // 3. Tenta fragmento (estratégia V49) se a palavra for longa
+                if (sig.length >= 8) {
+                    if (await searchAndMatch(fullText, sig.substring(0, 6))) return;
+                }
+            }
+        }
+
+        async function searchAndMatch(ocrFull, key) {
+            if (key === lastSearch || key.length < 4) return false;
+            status.innerText = "SEARCHING: " + key;
+            try {
+                const [resPT, resEN] = await Promise.all([
+                    fetch(`https://db.ygoprodeck.com/api/v7/cardinfo.php?fname=${encodeURIComponent(key)}&language=pt`),
+                    fetch(`https://db.ygoprodeck.com/api/v7/cardinfo.php?fname=${encodeURIComponent(key)}`)
+                ]);
+                const dPT = await resPT.json(), dEN = await resEN.json();
+                const results = [...(dPT.data || []), ...(dEN.data || [])];
+                lastSearch = key;
+
+                let best = null, hi = 0;
+                results.forEach(card => {
+                    const nPT = smartNormalize(card.name), nEN = smartNormalize(card.name_en || card.name);
+                    let score = Math.max(calcSim(ocrFull, nPT), calcSim(ocrFull, nEN));
+                    
+                    // Se a palavra chave que deu o match está na carta, bônus massivo
+                    if (nPT.includes(key) || nEN.includes(key)) score += 0.8;
+                    // Se o nome completo for muito similar, bônus extra
+                    if (nPT.includes(ocrFull) || nEN.includes(ocrFull)) score += 0.5;
+
+                    if (score > hi) { hi = score; best = card; }
+                });
+
+                if (hi > 1.4) { 
+                    isPaused = true;
+                    showPopup(best);
+                    addLog(`MATCH: ${best.name} (${Math.round(hi*50)}%)`);
+                    return true;
+                }
+            } catch (e) { return false; }
+            return false;
+        }
+
+        function calcSim(s1, s2) {
+            let m = s1.length, n = s2.length;
+            let d = Array.from({length: m + 1}, (_, i) => [i].concat(new Array(n).fill(0)));
+            for(let j=1; j<=n; j++) d[0][j] = j;
+            for(let i=1; i<=m; i++) {
+                for(let j=1; j<=n; j++) {
+                    let cost = (s1[i-1] === s2[j-1]) ? 0 : 1;
+                    d[i][j] = Math.min(d[i-1][j]+1, d[i][j-1]+1, d[i-1][j-1]+cost);
+                }
+            }
+            return (Math.max(m, n) - d[m][n]) / Math.max(m, n);
+        }
+
+        function showPopup(card) {
+            document.getElementById('card-popup').style.display = 'flex';
+            document.getElementById('res-img').src = card.card_images[0].image_url;
+            document.getElementById('res-name').innerText = card.name;
+            document.getElementById('res-price').innerText = "VALOR: $" + (card.card_prices[0].tcgplayer_price || "0.00");
+            if (navigator.vibrate) navigator.vibrate(100);
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
