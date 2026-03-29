@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>YGO Proxy Studio Pro - Workspace V4.0</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://unpkg.com/tesseract.js@v4.0.1/dist/tesseract.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
@@ -820,6 +821,11 @@
                     <input type="number" id="filter-price-max" placeholder="Max $" step="0.1" style="width: 50%;">
                 </div>
             </div>
+            <div class="filter-group">
+                <button id="btn-open-scanner" class="btn-secondary" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                    <i class="fa-solid fa-camera"></i> Escanear Carta (OCR)
+                </button>
+            </div>
             <div class="filter-group" style="margin-top:20px;"><label>Escala do PDF (%)</label><div class="stepper"><button onclick="adjustScale(-0.1)">-</button><input type="number" id="print-scale" value="100.0" readonly><button onclick="adjustScale(0.1)">+</button></div></div>
             <hr style="border:0; border-top:1px solid #333; margin: 20px 0;">
             <label class="btn-secondary">IMPORTAR .YDK<input type="file" id="file-ydk" accept=".ydk" style="display:none" onchange="importYDK(this)"></label>
@@ -1590,6 +1596,10 @@ function fillTooltipData(card) {
         const hasPriceFilter = pMinInput || pMaxInput;
         const hasOtherFilters = type || atk || def || attr || dateEnabled || banlistOnly || banlistType || hasPriceFilter;
 
+        if (document.getElementById('ocr-container')?.style.display === 'block') {
+            return; 
+        }
+
         if (!initial && !hasEnoughName && !hasEnoughDesc && !hasOtherFilters) {
             document.getElementById('results-view').innerHTML = ''; // Ajustado para seu container real
             return;
@@ -2021,6 +2031,331 @@ function fillTooltipData(card) {
         currentPage = 1;
         performSearch(true);
     });
+
+    // --- MÓDULO OCR
+    let detectedCards = []; // Armazena o que o OCR encontrou
+    var ocrWorker = null;
+    var isOcrActive = false;
+    var isProcessing = false;
+    var lastMatchedName = ""; 
+    var scannerFoundCards = []; // Cache das cartas encontradas na sessão atual
+
+    function openOCR() {
+        // 1. Limpa a lista visual de cartas antes de abrir
+        const cardList = document.getElementById('card-list');
+        cardList.innerHTML = ''; 
+        
+        // 2. Reseta o array de capturas desta sessão
+        detectedCards = [];
+        
+        // 3. Exibe o container da câmera
+        document.getElementById('video-container').style.display = 'block';
+        startCamera(); // Função que inicia o stream
+    }
+
+    // Esta função deve ser chamada dentro do loop do OCR (no Camera_OCR.html) 
+    // sempre que der um "MATCH" positivo
+    function onCardDetected(card) {
+        // Evita duplicatas na lista de sugestão
+        if (!detectedCards.find(c => c.id === card.id)) {
+            detectedCards.push(card);
+            renderSingleCard(card); // Adiciona visualmente na UI enquanto escaneia
+        }
+    }
+
+    function closeOCR() {
+        stopCamera();
+        document.getElementById('video-container').style.display = 'none';
+        
+        // Ao fechar, a lista já estará apenas com as cartas de 'detectedCards'
+        // Se quiser garantir que o filtro persista:
+        if (detectedCards.length === 0) {
+            // Opcional: mostrar mensagem que nada foi encontrado
+            console.log("Nenhuma carta detectada.");
+        }
+    }
+
+    // 2. CONTROLE DO SCANNER
+    async function startScanner() {
+        const container = document.getElementById('ocr-container');
+        const video = document.getElementById('ocr-video');
+        const results = document.getElementById('search-results'); // Onde as cartas aparecem
+
+        if (container) container.style.display = 'block';
+        
+        // ZERA A LISTA DA PÁGINA PRINCIPAL
+        if (results) {
+            results.innerHTML = ''; 
+            scannerFoundCards = []; // Limpa o cache da sessão
+        }
+
+        try {
+            window.addOcrLog("Iniciando câmera...");
+            const stream = await navigator.mediaDevices.getUserMedia({ 
+                video: { facingMode: 'environment', width: { ideal: 1280 } } 
+            });
+            
+            video.srcObject = stream;
+            await video.play();
+
+            if (!ocrWorker) {
+                window.addOcrLog("Ligando Tesseract...");
+                ocrWorker = await Tesseract.createWorker();
+                await ocrWorker.loadLanguage('eng');
+                await ocrWorker.initialize('eng');
+            }
+
+            isOcrActive = true;
+            window.addOcrLog("Robô Online!");
+            requestAnimationFrame(processOcrFrame);
+        } catch (err) {
+            window.addOcrLog("ERRO: " + err.message);
+        }
+    }
+
+    // 3. PROCESSAMENTO E FILTROS
+    async function processOcrFrame() {
+        if (!isOcrActive) return;
+        if (isProcessing) { requestAnimationFrame(processOcrFrame); return; }
+
+        const video = document.getElementById('ocr-video');
+        const canvas = document.getElementById('ocr-canvas-internal');
+        const visualBox = document.getElementById('scanner-visual');
+
+        if (!video || video.readyState < 2) { requestAnimationFrame(processOcrFrame); return; }
+
+        isProcessing = true;
+        try {
+            const ctx = canvas.getContext('2d', {willReadFrequently: true});
+            const rect = visualBox.getBoundingClientRect();
+            const vRect = video.getBoundingClientRect();
+
+            canvas.width = 800; canvas.height = 100;
+            ctx.fillStyle = "black";
+            ctx.fillRect(0, 0, 800, 100);
+
+            ctx.drawImage(video, 
+                video.videoWidth * ((rect.left - vRect.left) / vRect.width), 
+                video.videoHeight * ((rect.top - vRect.top) / vRect.height), 
+                video.videoWidth * (rect.width / vRect.width), 
+                video.videoHeight * (rect.height / vRect.height), 
+                0, 0, 800, 100
+            );
+
+            ctx.filter = 'grayscale(1) contrast(3.8) brightness(1.1) invert(1)';
+            ctx.drawImage(canvas, 0, 0);
+            const previewCanvas = document.getElementById('preview-canvas');
+            if (previewCanvas) {
+                const pCtx = previewCanvas.getContext('2d');
+                previewCanvas.width = 800;
+                previewCanvas.height = 100;
+                pCtx.drawImage(canvas, 0, 0); // Mostra o processamento P&B no topo
+            }
+
+            const { data: { text, confidence } } = await ocrWorker.recognize(canvas);
+            
+            // Limpa o texto: remove caracteres especiais e letras soltas (ruído)
+            let cleanName = text.toUpperCase().replace(/[^A-Z0-9 ]/g, " ").split(" ").filter(w => w.length > 1).join(" ");
+
+            if (cleanName.length > 3 && confidence > 25) {
+                window.addOcrLog(`Lido: "${cleanName}" (${confidence}%)`);
+                
+                // Busca PT, se não achar, busca global (EN)
+                let card = await fetchYGO(cleanName, "pt") || await fetchYGO(cleanName, null);
+
+                if (card && card.name !== lastMatchedName) {
+                    lastMatchedName = card.name;
+                    if (!scannerFoundCards.find(c => c.id === card.id)) {
+                        scannerFoundCards.push(card); // Salva na memória da sessão
+                        window.showScannerToast(card.name);
+                        window.addOcrLog(`✅ MATCH: ${card.name}`);
+                        // Opcional: atualiza a lista em tempo real por trás do scanner
+                        updateScannerResultsUI(); 
+                    }
+                }
+            }
+        } catch (e) { }
+
+        isProcessing = false;
+        setTimeout(() => requestAnimationFrame(processOcrFrame), 700);
+    }
+
+    // 4. API E SIMILARIDADE
+    async function fetchYGO(name, lang) {
+        try {
+            const query = name.split(" ").slice(0, 3).join(" ");
+            let url = `https://db.ygoprodeck.com/api/v7/cardinfo.php?fname=${encodeURIComponent(query)}`;
+            if (lang) url += `&language=${lang}`;
+
+            const r = await fetch(url);
+            const j = await r.json();
+            
+            if (j.data && j.data.length > 0) {
+                let best = null;
+                let hi = 0;
+                j.data.slice(0, 10).forEach(c => {
+                    let s = window.calcSimilarity(name, (c.name_pt || c.name).toUpperCase());
+                    if (s > hi) { hi = s; best = c; }
+                });
+                return hi > 0.45 ? best : null;
+            }
+        } catch (e) { return null; }
+        return null;
+    }
+
+    // 5. ATUALIZAÇÃO DA LISTA (SOMENTE ENCONTRADAS PELA CÂMERA)
+    function updateScannerResultsUI() {
+        // Tenta encontrar o container principal de exibição do seu projeto
+        const container = document.getElementById('search-results') || document.getElementById('card-list');
+        if (!container) return;
+
+        container.innerHTML = ""; // Garante que as 14 mil cartas sumam de vez
+        
+        scannerFoundCards.forEach(card => {
+            // Aqui usamos o mesmo layout de card do seu projeto original
+            const html = `
+                <div class="card-item scanner-result" data-id="${card.id}" style="border: 2px solid #2ecc71;">
+                    <img src="${card.card_images[0].image_url_small}">
+                    <div class="card-info">
+                        <div class="card-name" style="color:#2ecc71">${card.name}</div>
+                        <div class="card-price">$${card.card_prices[0].tcgplayer_price}</div>
+                    </div>
+                    <button class="btn-add" onclick="window.forceAdd('${card.id}')"><i class="fas fa-plus"></i></button>
+                </div>`;
+            container.insertAdjacentHTML('beforeend', html);
+        });
+    }
+
+    // 6. EVENTOS E COMPARAÇÃO
+    // --- GESTÃO DE EVENTOS (ABRIR / FECHAR) ---
+    document.addEventListener('click', (e) => {
+        // 1. ABRIR SCANNER
+        if (e.target.id === 'btn-open-scanner' || e.target.closest('#btn-open-scanner')) {
+            // Limpa a visualização para não misturar com resultados antigos
+            const resultsView = document.getElementById('results-view');
+            if (resultsView) resultsView.innerHTML = '<div style="grid-column:1/-1; text-align:center; color:#2ecc71; padding:20px;">MODO SCANNER ATIVO 🤖</div>';
+            
+            scannerFoundCards = []; // Zera o que o robô achou
+            lastMatchedName = "";
+            startScanner();
+        }
+        
+        // 2. FECHAR SCANNER
+        // No final do seu script, dentro do document.addEventListener('click', ...)
+        if (e.target.id === 'btn-close-ocr' || e.target.closest('#btn-close-ocr')) {
+            isOcrActive = false;
+            const video = document.getElementById('ocr-video');
+            if (video.srcObject) video.srcObject.getTracks().forEach(t => t.stop());
+            
+            document.getElementById('ocr-container').style.display = 'none';
+
+            // 1. Referência ao container visual
+            const resultsView = document.getElementById('results-view');
+            
+            // 2. Sincronização com o sistema principal
+            if (scannerFoundCards.length > 0) {
+                // ESSENCIAL: Injetar as cartas do scanner na variável global do Testes.html
+                // Precisamos garantir que elas estejam no formato expandido que o seu render espera
+                searchResults = scannerFoundCards.map(card => ({
+                    ...card,
+                    current_image: card.card_images[0],
+                    variant_idx: 0,
+                    is_variant: card.card_images.length > 1
+                }));
+
+                currentPage = 1;
+
+                // 3. Forçar a renderização usando a função nativa do seu projeto
+                if (typeof sortAndRender === "function") {
+                    sortAndRender(); 
+                } else {
+                    // Caso sortAndRender não esteja acessível, usamos o fallback
+                    updateScannerResultsUI();
+                }
+            } else {
+                // Se realmente não houver nada, mostra a mensagem de vazio
+                if (resultsView) {
+                    resultsView.innerHTML = "<div style='grid-column:1/-1; text-align:center; padding:20px; color:#e74c3c;'>Nenhuma carta capturada pelo robô. 🤖</div>";
+                }
+            }
+        }
+    });
+
+    window.calcSimilarity = function(s1, s2) {
+        let m = s1.length, n = s2.length;
+        let d = Array.from({length: m + 1}, (_, i) => [i].concat(new Array(n).fill(0)));
+        for(let j=1; j<=n; j++) d[0][j] = j;
+        for(let i=1; i<=m; i++) {
+            for(let j=1; j<=n; j++) {
+                let cost = (s1[i-1] === s2[j-1]) ? 0 : 1;
+                d[i][j] = Math.min(d[i-1][j]+1, d[i][j-1]+1, d[i-1][j-1]+cost);
+            }
+        }
+        return (Math.max(m, n) - d[m][n]) / Math.max(m, n);
+    };
+
+    // 1. UI: LOGS E TOAST
+    window.addOcrLog = function(msg) {
+        let logBox = document.getElementById('ocr-log');
+        if (!logBox) return;
+        const t = new Date().toLocaleTimeString('pt-BR', {hour12:false});
+        const div = document.createElement('div');
+        div.style.cssText = "border-bottom:1px solid #333; padding:2px; font-size:11px; color:#2ecc71;";
+        div.textContent = `[${t}] ${msg}`;
+        logBox.prepend(div); 
+        if (logBox.childElementCount > 20) logBox.removeChild(logBox.lastChild);
+    };
+
+    window.showScannerToast = function(cardName) {
+        const toast = document.createElement('div');
+        toast.style.cssText = `
+            position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+            background: #27ae60; color: white; padding: 12px 25px; border-radius: 50px;
+            font-weight: bold; z-index: 1000003; box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            animation: fadeIn 0.3s;
+        `;
+        toast.innerHTML = `<i class="fas fa-check-circle"></i> Encontrada: ${cardName}`;
+        document.body.appendChild(toast);
+        setTimeout(() => { toast.style.opacity = "0"; setTimeout(() => toast.remove(), 500); }, 2500);
+    };
+
+    // Função para copiar os logs do robô para a área de transferência
+    window.copyLogs = function() {
+        const logs = document.getElementById('ocr-log').innerText;
+        navigator.clipboard.writeText(logs).then(() => {
+            alert("Logs copiados com sucesso! 📋");
+        });
+    };
+
+    // Função para tirar print do que o robô está processando (o canvas P&B)
+    window.takeScreenshot = function() {
+        const canvas = document.getElementById('ocr-canvas-internal');
+        const link = document.createElement('a');
+        link.download = `robo_vision_${Date.now()}.png`;
+        link.href = canvas.toDataURL();
+        link.click();
+        alert("Print da visão do robô salvo! 🖼️");
+    };
+
 </script>
+<div id="ocr-container" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; z-index:999999; background:#000;">
+    <video id="ocr-video" style="position:absolute; width:100%; height:100%; object-fit:cover; opacity: 0.3;" autoplay playsinline></video>    
+    <div style="position:absolute; top:10px; left:50%; transform:translateX(-50%); width:90%; z-index:1000001;">
+        <canvas id="preview-canvas" style="width:100%; height:80px; border:2px solid #0f0; background:#000;"></canvas>
+        <div id="vision-label" style="color:#0f0; font-size:11px; text-align:center; font-family:monospace; margin-top:5px; background:rgba(0,0,0,0.5);">STATUS: ANALYZING...</div>
+    </div>
+    <div id="scanner-visual" style="position:absolute; top:25%; left:50%; transform:translateX(-50%); width:60%; height:45px; border:2px solid #2ecc71; border-radius:5px; z-index:10; pointer-events:none;">
+        <div style="position:absolute; top:-20px; width:100%; text-align:center; color:#2ecc71; font-size:10px; font-weight:bold;">ALINHE O NOME AQUI</div>
+    </div>
+    <div style="position:absolute; top:400px; right:10px; display:flex; flex-direction:column; gap:12px; z-index:1000002;">
+        <button onclick="copyLogs()" style="background:#3498db; color:white; border:none; padding:12px; border-radius:5px; font-weight:bold;">COPIAR LOGS</button>
+        <button onclick="takeScreenshot()" style="background:#f1c40f; color:black; border:none; padding:12px; border-radius:5px; font-weight:bold;">PRINT ROBÔ</button>
+        <button id="btn-close-ocr" style="background:#e74c3c; color:white; border:none; padding:12px; border-radius:5px; font-weight:bold;">FECHAR</button>
+    </div>    
+    <div id="ocr-log" style="position:absolute; bottom:0; left:0; width:100%; height:150px; background:rgba(0,0,0,0.9); color:#2ecc71; font-family:monospace; font-size:11px; overflow-y:auto; padding:10px; z-index:20; border-top:1px solid #2ecc71;">
+        > Engine Standby...
+    </div>    
+    <canvas id="ocr-canvas-internal" style="display:none;"></canvas>
+</div>
 </body>
 </html>
