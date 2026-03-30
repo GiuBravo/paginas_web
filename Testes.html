@@ -2115,69 +2115,136 @@ function fillTooltipData(card) {
 
     // 3. PROCESSAMENTO E FILTROS
     async function processOcrFrame() {
-        if (!isOcrActive) return;
-        if (isProcessing) { requestAnimationFrame(processOcrFrame); return; }
+        if (!isOcrActive || isProcessing) { requestAnimationFrame(processOcrFrame); return; }
 
         const video = document.getElementById('ocr-video');
         const canvas = document.getElementById('ocr-canvas-internal');
         const visualBox = document.getElementById('scanner-visual');
 
-        if (!video || video.readyState < 2) { requestAnimationFrame(processOcrFrame); return; }
+        if (!video || video.videoWidth === 0) { requestAnimationFrame(processOcrFrame); return; }
 
         isProcessing = true;
         try {
             const ctx = canvas.getContext('2d', {willReadFrequently: true});
-            const rect = visualBox.getBoundingClientRect();
-            const vRect = video.getBoundingClientRect();
+            const vW = video.videoWidth, vH = video.videoHeight;
+            const vRect = video.getBoundingClientRect(), mRect = visualBox.getBoundingClientRect();
 
-            canvas.width = 800; canvas.height = 100;
-            ctx.fillStyle = "black";
-            ctx.fillRect(0, 0, 800, 100);
+            // CÁLCULO DE ESCALA V70 (O segredo da precisão)
+            const s = (vW / vH > vRect.width / vRect.height) ? vH / vRect.height : vW / vRect.width;
+            const xO = (vW - vRect.width * s) / 2, yO = (vH - vRect.height * s) / 2;
 
-            ctx.drawImage(video, 
-                video.videoWidth * ((rect.left - vRect.left) / vRect.width), 
-                video.videoHeight * ((rect.top - vRect.top) / vRect.height), 
-                video.videoWidth * (rect.width / vRect.width), 
-                video.videoHeight * (rect.height / vRect.height), 
-                0, 0, 800, 100
-            );
+            const sX = (mRect.left - vRect.left) * s + xO;
+            const sY = (mRect.top - vRect.top) * s + yO;
+            const sW = mRect.width * s, sH = mRect.height * s;
 
-            ctx.filter = 'grayscale(1) contrast(3.8) brightness(1.1) invert(1)';
-            ctx.drawImage(canvas, 0, 0);
-            const previewCanvas = document.getElementById('preview-canvas');
-            if (previewCanvas) {
-                const pCtx = previewCanvas.getContext('2d');
-                previewCanvas.width = 800;
-                previewCanvas.height = 100;
-                pCtx.drawImage(canvas, 0, 0); // Mostra o processamento P&B no topo
-            }
-
-            const { data: { text, confidence } } = await ocrWorker.recognize(canvas);
+            canvas.width = 1000; canvas.height = 100;
+            ctx.fillStyle = "black"; ctx.fillRect(0, 0, 1000, 100);
             
-            // Limpa o texto: remove caracteres especiais e letras soltas (ruído)
-            let cleanName = text.toUpperCase().replace(/[^A-Z0-9 ]/g, " ").split(" ").filter(w => w.length > 1).join(" ");
+            // Captura da área do nome
+            ctx.drawImage(video, sX, sY, sW, sH, 50, 10, 900, 80);
+            
+            // ANÁLISE DE CORES E FILTROS V70
+            const imgData = ctx.getImageData(50, 10, 900, 80).data;
+            let r=0, g=0, b=0;
+            for(let i=0; i<imgData.length; i+=100) { r+=imgData[i]; g+=imgData[i+1]; b+=imgData[i+2]; }
+            const total = imgData.length/100;
+            const avgR=r/total, avgG=g/total, avgB=b/total;
 
-            if (cleanName.length > 3 && confidence > 25) {
-                window.addOcrLog(`Lido: "${cleanName}" (${confidence}%)`);
-                
-                // Busca PT, se não achar, busca global (EN)
-                let card = await fetchYGO(cleanName, "pt") || await fetchYGO(cleanName, null);
-
-                if (card && card.name !== lastMatchedName) {
-                    lastMatchedName = card.name;
-                    if (!scannerFoundCards.find(c => c.id === card.id)) {
-                        scannerFoundCards.push(card); // Salva na memória da sessão
-                        window.showScannerToast(card.name);
-                        window.addOcrLog(`✅ MATCH: ${card.name}`);
-                        // Opcional: atualiza a lista em tempo real por trás do scanner
-                        updateScannerResultsUI(); 
-                    }
-                }
+            if (avgG > avgR && avgG > avgB) { 
+                ctx.filter = 'grayscale(1) contrast(4) brightness(1.3)'; // SPELL
+            } else if (avgR > 170 && avgG > 170 && avgB > 170) { 
+                ctx.filter = 'grayscale(1) invert(1) contrast(1.6) brightness(1.0)'; // SYNCRO
+            } else if (avgR > avgG && avgB > avgG) { 
+                ctx.filter = 'grayscale(1) contrast(1.4) brightness(1.5) saturate(0)'; // FUSION/TRAP
+            } else { 
+                ctx.filter = 'grayscale(1) contrast(1.8) brightness(1.2)'; // MONSTER
             }
-        } catch (e) { }
+            
+            ctx.drawImage(canvas, 0, 0);
+
+            // Preview para você ver o robô trabalhando
+            const preview = document.getElementById('preview-canvas');
+            if (preview) {
+                preview.width = 1000; preview.height = 100;
+                preview.getContext('2d').drawImage(canvas, 0, 0);
+            }
+
+            const result = await ocrWorker.recognize(canvas);
+            let clean = smartNormalize(result.data.text);
+            
+            if (clean.length >= 4) {
+                window.addOcrLog(`LIDO: ${clean}`);
+                await trySmartSearch(clean);
+            }
+        } catch (e) { console.error(e); }
 
         isProcessing = false;
-        setTimeout(() => requestAnimationFrame(processOcrFrame), 700);
+        setTimeout(() => requestAnimationFrame(processOcrFrame), 450);
+    }
+
+        // Limpa o texto lido pelo Tesseract
+    function smartNormalize(text) {
+        if (!text) return "";
+        // 1. Remove acentos e transforma em maiúsculo
+        let clean = text.toUpperCase()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "");
+
+        // 2. Remove TUDO que não for letra ou espaço (limpa os | [ . _ do Tesseract)
+        clean = clean.replace(/[^A-Z ]/g, " ");
+
+        // 3. Limpa letras soltas (Ex: o "B" ou "I" que aparecem no canto da leitura)
+        // Isso evita que o código tente buscar "ALBION B" em vez de apenas "ALBION"
+        clean = clean.replace(/\b[A-Z]\b/g, "");
+
+        // 4. Remove espaços duplos
+        return clean.replace(/\s+/g, " ").trim();
+    }
+
+    // Busca em Cascata: Tenta o nome todo, se falhar, tenta as palavras maiores
+    async function trySmartSearch(fullText) {
+        const words = fullText.split(" ").filter(w => w.length >= 4);
+        if (words.length === 0) return;
+
+        // 1. Tenta o match com o texto completo lido
+        if (await executeMatch(fullText, fullText)) return;
+
+        // 2. Tenta buscar pela palavra mais longa lida (Ex: em "THE ALBION", busca "ALBION")
+        const sortedWords = words.sort((a, b) => b.length - a.length);
+        for (let word of sortedWords.slice(0, 2)) {
+            if (await executeMatch(fullText, word)) return;
+        }
+    }
+
+    // Executa a busca na API e valida com vibração e log
+    async function executeMatch(originalOcr, query) {
+        if (query === lastMatchedName || query.length < 4) return false;
+
+        // Busca na API (Tenta PT, se não achar, tenta Global)
+        let card = await fetchYGO(query, "pt") || await fetchYGO(query, null);
+
+        if (card) {
+            const cardName = (card.name_pt || card.name).toUpperCase();
+            
+            // Calcula similaridade (A função calcSim que você já tem no código)
+            const score = window.calcSim ? window.calcSim(originalOcr, cardName) : 0.5;
+
+            // Se a similaridade for alta OU a palavra buscada estiver contida no nome da carta
+            if (score > 0.45 || cardName.includes(query)) {
+                if (!scannerFoundCards.find(c => c.id === card.id)) {
+                    lastMatchedName = card.name;
+                    scannerFoundCards.push(card);
+                    
+                    // FEEDBACK
+                    if (navigator.vibrate) navigator.vibrate(100); // VIBRAÇÃO 📳
+                    window.showScannerToast(card.name);
+                    window.addOcrLog(`✅ MATCH: ${card.name}`);
+                    updateScannerResultsUI();
+                }
+                return true;
+            }
+        }
+        return false;
     }
 
     // 4. API E SIMILARIDADE
