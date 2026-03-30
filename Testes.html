@@ -2387,21 +2387,54 @@ function fillTooltipData(card) {
     };
 
     // Função para copiar os logs do robô para a área de transferência
-    window.copyLogs = function() {
-        const logs = document.getElementById('ocr-log').innerText;
-        navigator.clipboard.writeText(logs).then(() => {
-            alert("Logs copiados com sucesso! 📋");
-        });
+    window.copyLogs = () => {
+        const logElement = document.getElementById('ocr-log');
+        if (logElement) {
+            navigator.clipboard.writeText(logElement.innerText).then(() => {
+                alert("Todos os logs copiados! 📋");
+            });
+        }
     };
 
     // Função para tirar print do que o robô está processando (o canvas P&B)
-    window.takeScreenshot = function() {
-        const canvas = document.getElementById('ocr-canvas-internal');
+    window.takeScreenshot = () => {
+        // 1. Referências dos elementos do Testes.html
+        const roboCanvas = document.getElementById('ocr-canvas-internal');
+        const logElement = document.getElementById('ocr-log');
+        
+        // 2. Criar um canvas temporário para a montagem
+        const shotCanvas = document.createElement('canvas');
+        shotCanvas.width = 400;  // Largura fixa para manter proporção
+        shotCanvas.height = 550; // Altura maior para caber imagem + logs
+        
+        const sCtx = shotCanvas.getContext('2d');
+        
+        // 3. Pintar fundo preto
+        sCtx.fillStyle = "#000";
+        sCtx.fillRect(0, 0, shotCanvas.width, shotCanvas.height);
+        
+        // 4. Desenhar a visão do robô no topo
+        // Ajustamos para 120px de altura como na versão OCR
+        sCtx.drawImage(roboCanvas, 0, 0, shotCanvas.width, 150);
+        
+        // 5. Desenhar os logs abaixo da imagem
+        sCtx.fillStyle = "#0f0"; // Verde neon clássico
+        sCtx.font = "12px monospace";
+        
+        // Pegamos as últimas 20 linhas de log para o print não ficar vazio
+        const lines = logElement.innerText.split('\n').slice(-20);
+        
+        lines.forEach((line, i) => {
+            sCtx.fillText(line, 10, 180 + (i * 16));
+        });
+        
+        // 6. Gerar o download
         const link = document.createElement('a');
-        link.download = `robo_vision_${Date.now()}.png`;
-        link.href = canvas.toDataURL();
+        link.download = `robo_vision_full_${Date.now()}.png`;
+        link.href = shotCanvas.toDataURL('image/png');
         link.click();
-        alert("Print da visão do robô salvo! 🖼️");
+        
+        alert("Print completo (Visão + Logs) salvo! 🖼️✅");
     };
 
 </script>
