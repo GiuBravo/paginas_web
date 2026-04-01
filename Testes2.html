@@ -2103,6 +2103,11 @@ function fillTooltipData(card) {
                 ocrWorker = await Tesseract.createWorker();
                 await ocrWorker.loadLanguage('eng');
                 await ocrWorker.initialize('eng');
+                await ocrWorker.setParameters({
+                    // Permitir letras, números, acentos comuns, vírgula e dois pontos
+                    tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 ,:ÁÉÍÓÚÂÊÎÔÛÃÕÇ',
+                    tessedit_pageseg_mode: '7', // Trata como uma linha única (melhora muito a precisão de nomes)
+                });
             }
 
             isOcrActive = true;
@@ -2129,7 +2134,6 @@ function fillTooltipData(card) {
             const vW = video.videoWidth, vH = video.videoHeight;
             const vRect = video.getBoundingClientRect(), mRect = visualBox.getBoundingClientRect();
 
-            // CÁLCULO DE ESCALA V70 (O segredo da precisão)
             const s = (vW / vH > vRect.width / vRect.height) ? vH / vRect.height : vW / vRect.width;
             const xO = (vW - vRect.width * s) / 2, yO = (vH - vRect.height * s) / 2;
 
@@ -2137,79 +2141,99 @@ function fillTooltipData(card) {
             const sY = (mRect.top - vRect.top) * s + yO;
             const sW = mRect.width * s, sH = mRect.height * s;
 
-            canvas.width = 1000; canvas.height = 100;
-            ctx.fillStyle = "black"; ctx.fillRect(0, 0, 1000, 100);
+            // --- PREPARAÇÃO DO CANVAS ---
+            ctx.filter = 'none'; // CRÍTICO: Reseta filtros anteriores
+            canvas.width = 1000; canvas.height = 150;
+            ctx.fillStyle = "white"; 
+            ctx.fillRect(0, 0, 1000, 150);
+
+            // 1. Captura a imagem pura primeiro para analisar cor
+            // Aumentamos o deslocamento lateral (de 50 para 100) e reduzimos a largura (de 900 para 800)
+            // Isso ignora as bordas pretas da "caixinha" do nome
+            ctx.drawImage(video, sX, sY, sW, sH, 100, 30, 800, 90);
+            const imgData = ctx.getImageData(50, 30, 900, 90).data;
             
-            // Captura da área do nome
-            ctx.drawImage(video, sX, sY, sW, sH, 50, 10, 900, 80);
-            
-            // ANÁLISE DE CORES E FILTROS V70
-            const imgData = ctx.getImageData(50, 10, 900, 80).data;
             let r=0, g=0, b=0;
-            for(let i=0; i<imgData.length; i+=100) { r+=imgData[i]; g+=imgData[i+1]; b+=imgData[i+2]; }
-            const total = imgData.length/100;
+            for(let i=0; i<imgData.length; i+=200) { r+=imgData[i]; g+=imgData[i+1]; b+=imgData[i+2]; }
+            const total = imgData.length/200;
             const avgR=r/total, avgG=g/total, avgB=b/total;
 
+            // 2. Aplica o filtro baseado na cor detectada
             if (avgG > avgR && avgG > avgB) { 
-                ctx.filter = 'grayscale(1) contrast(4) brightness(1.3)'; // SPELL
-            } else if (avgR > 170 && avgG > 170 && avgB > 170) { 
-                ctx.filter = 'grayscale(1) invert(1) contrast(1.6) brightness(1.0)'; // SYNCRO
+                // SPELL (Verde): 
+                ctx.filter = 'grayscale(1) contrast(1.6) brightness(0.9)'; 
+            } else if (avgR > 185 && avgG > 185 && avgB > 185) { 
+                // SYNCRO (Branco)
+                ctx.filter = 'grayscale(1) contrast(2.0) brightness(0.9)'; 
             } else if (avgR > avgG && avgB > avgG) { 
-                ctx.filter = 'grayscale(1) contrast(1.4) brightness(1.5) saturate(0)'; // FUSION/TRAP
+                // FUSION / TRAP (Roxo/Rosa)
+                ctx.filter = "grayscale(1) brightness(1.4) contrast(1.5)"; 
             } else { 
-                ctx.filter = 'grayscale(1) contrast(1.8) brightness(1.2)'; // MONSTER
+                // MONSTROS EFEITO/NORMAL (Amarelo/Marrom):
+                ctx.filter = 'grayscale(1) contrast(1.6) brightness(1.0)'; 
             }
-            
+
+            // 3. Redesenha com o filtro aplicado
             ctx.drawImage(canvas, 0, 0);
 
-            // Preview para você ver o robô trabalhando
             const preview = document.getElementById('preview-canvas');
             if (preview) {
-                preview.width = 1000; preview.height = 100;
+                preview.width = 1000; preview.height = 150;
                 preview.getContext('2d').drawImage(canvas, 0, 0);
             }
 
             const result = await ocrWorker.recognize(canvas);
+            console.log("OCR Bruto:", result.data.text); // Veja no console do navegador (F12)
+            window.addOcrLog(`BRUTO: ${result.data.text}`); // Força aparecer no log da tela
+
             let clean = smartNormalize(result.data.text);
             
             if (clean.length >= 4) {
                 window.addOcrLog(`LIDO: ${clean}`);
                 await trySmartSearch(clean);
             }
-        } catch (e) { console.error(e); }
+        } catch (e) { console.error(e); isProcessing = false;}
 
         isProcessing = false;
-        setTimeout(() => requestAnimationFrame(processOcrFrame), 450);
+        setTimeout(() => requestAnimationFrame(processOcrFrame), 400);
     }
 
         // Limpa o texto lido pelo Tesseract
     function smartNormalize(text) {
         if (!text) return "";
-        // 1. Remove acentos e transforma em maiúsculo
-        let clean = text.toUpperCase()
-            .normalize("NFD")
-            .replace(/[\u0300-\u036f]/g, "");
+        let clean = text.toUpperCase().replace(/[^A-Z0-9 ,:\u00C0-\u00FF]/g, " ");
 
-        // 2. Remove TUDO que não for letra ou espaço (limpa os | [ . _ do Tesseract)
-        clean = clean.replace(/[^A-Z ]/g, " ");
+        // Colapso de letras repetidas (3 ou mais)
+        clean = clean.replace(/(.)\1{2,}/g, "$1");
 
-        // 3. Limpa letras soltas (Ex: o "B" ou "I" que aparecem no canto da leitura)
-        // Isso evita que o código tente buscar "ALBION B" em vez de apenas "ALBION"
-        clean = clean.replace(/\b[A-Z]\b/g, "");
+        // FILTRO DE RUÍDO: Remove palavras minúsculas (1-2 letras) que costumam ser erro de leitura
+        // exceto palavras comuns como "OF", "TO", "A".
+        const validShortWords = ["OF", "TO", "A", "DE", "DO"];
+        clean = clean.split(" ")
+            .filter(word => word.length > 2 || validShortWords.includes(word))
+            .join(" ");
 
-        // 4. Remove espaços duplos
+        const badWords = ["LUZ", "TREVAS", "FOGO", "ÁGUA", "VENTO", "TERRA", "DIVINO"];
+        clean = clean.split(" ").filter(w => !badWords.includes(w)).join(" ");
+
         return clean.replace(/\s+/g, " ").trim();
     }
 
     // Busca em Cascata: Tenta o nome todo, se falhar, tenta as palavras maiores
     async function trySmartSearch(fullText) {
-        const words = fullText.split(" ").filter(w => w.length >= 4);
-        if (words.length === 0) return;
-
-        // 1. Tenta o match com o texto completo lido
+        const ignoreList = ["DRAGÃO", "DRAGAO", "MÁGICA", "MAGICA", "ARMADILHA", "TOKEN", "FUSÃO", "FUSAO", "EFFECT", "EFEITO"];
+        
+        // 1. Tenta o texto exatamente como lido
         if (await executeMatch(fullText, fullText)) return;
 
-        // 2. Tenta buscar pela palavra mais longa lida (Ex: em "THE ALBION", busca "ALBION")
+        // 2. Tenta o texto sem espaços (Ex: "BATI MENTO" vira "BATIMENTO")
+        const noSpaces = fullText.replace(/\s+/g, "");
+        if (noSpaces.length > 4 && await executeMatch(fullText, noSpaces)) return;
+
+        // 3. Tenta as palavras individuais
+        const words = fullText.split(" ")
+            .filter(w => w.length >= 4 && !ignoreList.includes(w));
+        
         const sortedWords = words.sort((a, b) => b.length - a.length);
         for (let word of sortedWords.slice(0, 2)) {
             if (await executeMatch(fullText, word)) return;
