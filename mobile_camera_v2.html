@@ -1,0 +1,2767 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YGO Proxy Studio Pro - Workspace V4.0</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://unpkg.com/tesseract.js@v4.0.1/dist/tesseract.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-dark: #0c0c0c;
+            --panel-bg: #1a1a1a;
+            --accent: #f1c40f;
+            --border: #333;
+            --text: #e0e0e0;
+            --success: #27ae60;
+        }
+
+        /* TEMA TODO BRANCO (LIGHT MODE) */
+        .theme-white {
+            --bg-dark: #f0f2f5;
+            --panel-bg: #ffffff;
+            --accent: #2563eb;
+            --border: #d1d5db;
+            --text: #1f2937;
+        }
+
+        /* 1. FUNDO GERAL E CONTAINERS */
+        .theme-white body, 
+        .theme-white #workspace, 
+        .theme-white main,
+        .theme-white .main-container,
+        .theme-white [style*="background: #111"],
+        .theme-white [style*="background:#111"],
+        .theme-white [style*="background: rgb(17, 17, 17)"] {
+            background-color: var(--bg-dark) !important;
+            background: var(--bg-dark) !important;
+            background-image: none !important;
+            color: var(--text) !important;
+        }
+
+        /* 2. BARRAS E FILTROS */
+        .theme-white #workspace-header,
+        .theme-white .workspace-header,
+        .theme-white header,
+        .theme-white .search-area,
+        .theme-white .view-controls,
+        .theme-white #date-filters-container {
+            background: #ffffff !important;
+            background-color: #ffffff !important;
+            color: var(--text) !important;
+            border-bottom: 1px solid var(--border) !important;
+        }
+
+        /* 3. TOOLTIP (Dica da carta) - CORREÇÃO ATK, DEF E DESCRIÇÃO */
+        .theme-white #card-tooltip {
+            background: #ffffff !important;
+            border: 1px solid var(--border);
+            box-shadow: 0 8px 30px rgba(0,0,0,0.15) !important;
+            backdrop-filter: blur(5px);
+        }
+
+        /* MATA O BRANCO NO BRANCO: 
+        Se o JS injetou color:white (ou variações) inline, forçamos o cinza escuro. */
+        .theme-white #card-tooltip [style*="color: white"],
+        .theme-white #card-tooltip [style*="color:white"],
+        .theme-white #card-tooltip [style*="color: #fff"],
+        .theme-white #card-tooltip [style*="color:#fff"],
+        .theme-white #card-tooltip [style*="color: rgb(255, 255, 255)"],
+        .theme-white #card-tooltip .card-description,
+        .theme-white #card-tooltip .atk-def-val,
+        .theme-white #card-tooltip p {
+            color: #1f2937 !important;
+        }
+
+        /* EXCEÇÃO: O Nome da carta (H3) deve manter a cor original do JS (raridade) 
+        e a barra lateral deve continuar funcionando com o border-left do JS */
+        .theme-white #card-tooltip h3 {
+            color: inherit; 
+            text-shadow: none !important;
+        }
+
+        /* 4. INPUTS E SELECTS */
+        .theme-white input, 
+        .theme-white select, 
+        .theme-white textarea,
+        .theme-white .search-box,
+        .theme-white #search-qty {
+            background-color: #f9fafb !important;
+            color: #1f2937 !important;
+            border: 1px solid #d1d5db !important;
+        }
+
+        /* 5. COLUNAS E PAINÉIS */
+        .theme-white .column,
+        .theme-white .col-header,
+        .theme-white .deck-header,
+        .theme-white .sidebar,
+        .theme-white .deck-list, 
+        .theme-white .results-view,
+        .theme-white #deck-list-container {
+            background-color: #ffffff !important;
+            color: var(--text) !important;
+            border-color: var(--border) !important;
+        }
+
+        /* 6. CARDS NA LISTA */
+        .theme-white .deck-item,
+        .theme-white .queue-item,
+        .theme-white .suggestion-item {
+            background-color: #ffffff !important;
+            color: var(--text) !important;
+            border-bottom: 1px solid #f0f0f0 !important;
+        }
+
+        /* 7. BOTÕES GERAIS */
+        .theme-white button:not(.action-btn):not(#generate-pdf):not(.btn-accent),
+        .theme-white .btn-secondary,
+        .theme-white .btn-view,
+        .theme-white .stepper button {
+            background-color: #f3f4f6 !important;
+            color: #374151 !important;
+            border: 1px solid #d1d5db !important;
+        }
+
+        /* 8. BOTÕES DE AÇÃO */
+        .theme-white .action-btn, 
+        .theme-white #generate-pdf,
+        .theme-white .btn-primary,
+        .theme-white .btn-accent {
+            background-color: var(--accent) !important;
+            color: #ffffff !important;
+            border: none !important;
+        }
+
+        /* 9. ÍCONES */
+        .theme-white i { color: #4b5563 !important; }
+        .theme-white .action-btn i, .theme-white #generate-pdf i { color: #ffffff !important; }
+
+        /* 10. SCROLLBARS */
+        .theme-white ::-webkit-scrollbar-track { background: #f1f1f1; }
+        .theme-white ::-webkit-scrollbar-thumb { background: #ccc; border-radius: 5px; }
+
+        /* Tema Todo Preto (OLED/Deep Black) */
+        .theme-black {
+            --bg-dark: #000000;
+            --panel-bg: #050505;
+            --accent: #f1c40f;
+            --border: #222;
+            --text: #fff;
+        }
+
+        /* Tema Kaiba Corp (Azul Neon) */
+        .theme-kaiba {
+            --bg-dark: #000814;
+            --panel-bg: #001d3d;
+            --accent: #00b4d8;
+            --border: #003566;
+            --text: #caf0f8;
+        }
+
+        body { 
+            font-family: 'Segoe UI', Tahoma, sans-serif; 
+            background: var(--bg-dark); 
+            color: var(--text); 
+            margin: 0; 
+            height: 100vh;
+            overflow: hidden; 
+        }
+
+        #card-tooltip {
+            display: none;
+            position: fixed;
+            z-index: 10000;
+            pointer-events: none;
+            width: 350px;
+            height: auto;
+            max-height: calc(100vh - 40px);
+            background: rgba(26, 26, 26, 0.98);
+            border: 1px solid var(--accent);
+            border-radius: 4px;
+            padding: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.9);
+            backdrop-filter: blur(5px);
+            overflow-y: auto;
+        }
+
+        #tooltip-text { 
+            max-height: none !important; 
+            overflow: visible !important;
+        }
+        #tooltip-header { display: flex; gap: 12px; margin-bottom: 10px; }
+        #tooltip-img { width: 100px; border-radius: 4px; border: 1px solid #444; object-fit: contain; }
+        #tooltip-meta { flex: 1; display: flex; flex-direction: column; }
+        #tooltip-name { color: white; font-weight: bold; font-size: 16px; margin-bottom: 8px; }
+
+        .tt-ban-container {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 10px;
+        }
+
+        .tt-ban-badge {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 11px;
+            font-weight: bold;
+            padding: 2px 8px;
+            border-radius: 12px;
+            text-transform: uppercase;
+        }
+
+        .tt-ban-banned { background: rgba(231, 76, 60, 0.2); color: #e74c3c; border: 1px solid #e74c3c; }
+        .tt-ban-limited { background: rgba(230, 126, 34, 0.2); color: #e67e22; border: 1px solid #e67e22; }
+        .tt-ban-semi { background: rgba(241, 196, 15, 0.2); color: #f1c40f; border: 1px solid #f1c40f; }
+        
+        .tt-row-split { 
+            display: flex; 
+            justify-content: space-between;
+            align-items: center; 
+            margin-bottom: 6px; 
+            padding: 4px 0;
+            border-bottom: 1px solid #333;
+        }
+        .tt-attr-group { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #ccc; text-transform: uppercase; font-weight: bold; }
+        .tt-level-group { display: flex; align-items: center; gap: 4px; font-size: 15px; font-weight: bold; color: #fff; }
+        
+        .tt-icon { 
+            width: 22px; 
+            height: 22px; 
+            object-fit: contain; 
+            filter: drop-shadow(0px 0px 2px rgba(0,0,0,0.8));
+        }
+        .tt-level-group img { width: 18px; height: 18px; object-fit: contain; }
+        
+        #tooltip-text { 
+            font-size: 12px; 
+            color: #eee; 
+            line-height: 1.5; 
+            border-top: 1px solid #444; 
+            padding-top: 10px; 
+            white-space: pre-wrap;
+        }
+        .tt-stats { 
+            font-weight: bold; color: #fff; margin-top: 8px; font-size: 13px; border-top: 1px solid #444; 
+            padding-top: 5px; display: flex; justify-content: flex-start; gap: 10px;
+        }
+
+        input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type=number] { -moz-appearance: textfield; }
+
+        .app-container { display: grid; grid-template-columns: 300px 1fr 450px; height: 100vh; gap: 1px; background: var(--border); transition: grid-template-columns 0.3s ease; }
+        .app-container.empty-queue { grid-template-columns: 300px 1fr 0px; }
+        .col { background: var(--bg-dark); display: flex; flex-direction: column; overflow: hidden; }
+        
+        .col-header { 
+            padding: 12px 15px; background: var(--panel-bg); border-bottom: 1px solid var(--border); 
+            font-size: 11px; font-weight: bold; color: var(--accent); display: flex; 
+            justify-content: space-between; align-items: center; text-transform: uppercase;
+        }
+
+        .sidebar-content { padding: 15px; overflow-y: auto; flex-grow: 1; }
+        .filter-group { margin-bottom: 12px; display: flex; flex-direction: column; gap: 4px; }
+        .filter-group label { font-size: 10px; color: #888; text-transform: uppercase; font-weight: bold; }
+        
+        select, input { background: #111; border: 1px solid #444; color: white; padding: 8px; border-radius: 4px; font-size: 13px; width: 100%; box-sizing: border-box; }
+        
+        .btn-secondary { 
+            display: block; background: #333; color: white; width: 100%; padding: 10px; border-radius: 4px; 
+            cursor: pointer; text-align: center; border: 1px solid #444; font-size: 11px; font-weight: bold;
+            box-sizing: border-box; text-transform: uppercase;
+        }
+
+        .stepper { display: flex; border: 1px solid #444; border-radius: 4px; overflow: hidden; height: 35px; background: #111; }
+        .stepper button { background: #333; color: white; border: none; width: 35px; cursor: pointer; font-size: 18px; font-weight: bold; }
+        .stepper input { border: none !important; text-align: center; width: 100%; background: transparent; }
+
+        .search-area { background: #111; padding: 15px; border-bottom: 1px solid var(--border); }
+        .view-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            background: var(--panel-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            margin-bottom: 15px;
+        }
+
+        .sort-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .sort-label {
+            font-size: 12px;
+            font-weight: bold;
+            color: var(--text);
+            white-space: nowrap;
+        }
+
+        .sort-controls {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+        }
+
+        .sort-controls select {
+            width: 110px;
+            font-size: 12px;
+            height: 35px;
+            padding: 0 5px;
+            border-radius: 5px;
+            background: var(--bg-dark);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        .sort-controls button {
+            width: 35px;
+            height: 35px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 5px;
+        }
+       
+        .btn-view { background: #333; color: #888; border: 1px solid #444; padding: 5px 10px; cursor: pointer; border-radius: 4px; font-size: 11px; }
+        .btn-view.active { background: var(--accent); color: black; border-color: var(--accent); }
+
+        .results-view { flex-grow: 1; overflow-y: auto; }
+
+        .suggestion-item { 
+            display: flex; 
+            gap: 15px; 
+            padding: 12px 10px; 
+            background: var(--panel-bg); 
+            align-items: flex-start; 
+            cursor: pointer; 
+            border-bottom: 1px solid var(--border); 
+            transition: background 0.2s; 
+            color: var(--text);
+        }
+
+        .suggestion-item:active { 
+            background: var(--bg-dark); 
+        }
+        .suggestion-item img { 
+            width: 80px;
+            height: auto;
+            border-radius: 4px; 
+            border: 1px solid #444; 
+            flex-shrink: 0;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.6); 
+            object-fit: contain;
+        }
+
+        .card-info-box { flex-grow: 1; display: flex; flex-direction: column; gap: 5px; text-align: left; }
+        .card-name { color: var(--accent); font-size: 13px; font-weight: bold; }
+        
+        .info-row { 
+            display: flex; 
+            align-items: center; 
+            gap: 8px; 
+            font-size: 11px; 
+            color: var(--text); 
+            opacity: 0.8;
+        }
+        .info-row img { width: 14px; height: 14px; object-fit: contain; }
+        
+        .atk-def-row { 
+            font-weight: bold; 
+            font-size: 11px; 
+            border-top: 1px solid var(--border); 
+            margin-top: 5px; 
+            padding-top: 5px; 
+            color: var(--text); 
+            display: flex; 
+            gap: 10px; 
+        }
+        .tt-stats i {
+            font-size: 14px;
+            filter: drop-shadow(0 0 1px rgba(0,0,0,0.5));
+        }
+
+        .results-view.grid-mode {
+            display: grid !important;
+            grid-template-columns: repeat(2, 1fr) !important;
+            gap: 10px;
+            padding: 10px;
+            align-content: start;
+        }
+
+        .results-view.grid-mode .suggestion-item {
+            display: block !important; 
+            text-align: center;
+            background: none !important;
+            border: none !important;
+            padding: 0 !important;
+        }
+
+        .results-view.grid-mode .suggestion-item img {
+            width: 100% !important;
+            height: auto !important;
+            max-width: 100%;
+            object-fit: contain;
+            margin: 0 auto;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5); 
+            transition: transform 0.2s;
+        }
+
+        .deck-list { 
+            height: 350px; 
+            overflow-y: auto; 
+            padding: 10px; 
+            background: var(--bg-dark); 
+            border-bottom: 1px solid var(--border); 
+        }
+        .pdf-preview-container { flex-grow: 1; background: #222; position: relative; overflow: hidden; min-height: 300px; }
+        #preview-frame { width: 100%; height: 100%; border: none; }
+        .btn-accent { background: var(--accent); color: black; width: 100%; padding: 12px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; text-transform: uppercase; }
+
+        .pagination-bar { 
+            padding: 8px; 
+            background: var(--panel-bg); 
+            display: flex; 
+            justify-content: center; 
+            gap: 10px; 
+            align-items: center; 
+            border-top: 1px solid var(--border); 
+        }
+        .page-input { 
+            width: 50px; 
+            text-align: center; 
+            background: var(--bg-dark); 
+            border: 1px solid var(--border); 
+            color: var(--accent); 
+        }
+
+        #toast-container { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 9999; pointer-events: none; }
+        .toast { background: var(--success); color: white; padding: 12px 20px; border-radius: 30px; font-size: 12px; font-weight: bold; margin-bottom: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); animation: slideUp 0.3s ease, fadeOut 0.5s ease 1.5s forwards; display: flex; align-items: center; gap: 10px; white-space: nowrap; }
+        
+        /* A mira será definida pelo JavaScript, esta regra será sobrescrita */
+        
+        @keyframes slideUp { from { transform: translateY(100px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        @keyframes fadeOut { to { opacity: 0; } }
+
+        /* --- RESPONSIVIDADE DESKTOP --- */
+        @media (min-width: 901px) {
+            .app-container.empty-queue .list-mode { 
+                display: grid; 
+                grid-template-columns: repeat(5, 1fr); 
+                gap: 1px; 
+                background: #222; 
+            }
+            .list-mode { 
+                display: grid; 
+                grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); 
+                gap: 1px; 
+                background: #222; 
+            }
+            .grid-mode { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 15px; padding: 15px; }
+            .grid-mode .card-info-box { display: none; }
+            .grid-mode .suggestion-item { display: block; text-align: center; border-bottom: none; }
+            .grid-mode .suggestion-item img { width: 100%; height: auto; }
+            #card-tooltip {
+                display: none;
+                position: fixed;
+                z-index: 10000;
+                pointer-events: none;
+                background: rgba(10, 10, 10, 0.98);
+                border: 1px solid #444;
+                border-radius: 8px;
+                padding: 18px;
+                width: 680px;
+                height: auto;
+                max-height: 92vh;
+                box-shadow: 0 10px 40px rgba(0,0,0,0.9);
+                overflow: hidden;
+                text-align: center;
+            }
+            .tt-container {
+                display: flex;
+                gap: 20px;
+                align-items: flex-start;
+            }
+            #tooltip-img {
+                width: 280px !important;
+                max-width: 85% !important;
+                height: auto !important;
+                margin: 0 auto 20px auto !important;
+                display: block !important;
+                border-radius: 8px;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+            }
+            .tt-details {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+            }
+            #tooltip-info-rows {
+                display: flex;
+                justify-content: center;
+                flex-wrap: wrap;
+                gap: 10px;
+                margin-bottom: 15px;
+            }
+            #tooltip-text {
+                text-align: left;
+                font-size: 14px !important;
+                line-height: 1.4;
+            }
+            .results-view.grid-mode { 
+                grid-template-columns: repeat(10, 1fr) !important; 
+                gap: 6px !important; 
+                padding: 15px !important; 
+            }
+            .grid-mode .card-info-box { display: none !important; }
+        }
+
+        /* --- RESPONSIVIDADE MOBILE --- */
+        @media (max-width: 900px) {
+            body { overflow-y: auto !important; height: auto !important; }
+            html, body {
+                max-width: 100%;
+                overflow-x: hidden !important;
+                position: relative;
+            }
+            .app-container, .app-container.empty-queue { display: block !important; height: auto !important; }
+            .col { width: 100% !important; height: auto !important; overflow: visible !important; border-bottom: 2px solid var(--border); }
+            .results-view { height: 550px; overflow-y: auto; }
+            .grid-mode { 
+                display: grid !important; 
+                grid-template-columns: repeat(2, 1fr) !important; 
+                gap: 10px !important; 
+                padding: 10px !important; 
+            }
+            .grid-mode .suggestion-item { display: block !important; text-align: center; padding: 5px; border-bottom: none; }
+            .grid-mode .suggestion-item img { width: 100%; height: auto; }
+            .grid-mode .card-info-box { display: none !important; }
+            .pdf-preview-container { display: none !important; }
+            #col-preview { margin-top: 20px; }
+            .deck-list { height: 250px; }
+            #card-tooltip {
+                display: none;
+                position: fixed !important;
+                top: 0 !important;
+                left: 0 !important;
+                right: 0 !important;
+                bottom: 0 !important;
+                width: 100% !important;
+                height: 100% !important;
+                background: rgba(0, 0, 0, 0.98) !important;
+                z-index: 99999 !important;
+                text-align: center !important;
+                padding: 60px 15px 30px 15px !important;
+                padding-top: 60px !important;
+                padding-bottom: 40px !important;
+                overflow-y: auto !important;
+                overflow-x: hidden !important;
+                box-sizing: border-box !important;
+                transform: none !important;
+            }
+            .mobile-close-btn {
+                position: fixed;
+                top: 15px;
+                right: 15px;
+                width: 35px;
+                height: 35px;
+                background: var(--accent);
+                color: #000;
+                border: none;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 18px;
+                z-index: 10000;
+                cursor: pointer;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+            }
+            #card-tooltip::before {
+                display: block;
+                text-align: right;
+                color: var(--accent);
+                font-weight: bold;
+                margin-bottom: 15px;
+                font-size: 1.1em;
+            }
+            #tooltip-img {
+                width: 90% !important; 
+                max-width: 350px !important;
+                height: auto !important;
+                display: block !important;
+                margin: 0 auto 20px auto !important;
+                border-radius: 12px !important;
+                box-shadow: 0 15px 40px rgba(0,0,0,0.9) !important;
+                border: 2px solid rgba(255,255,255,0.1) !important;
+            }
+            #tooltip-name {
+                font-size: 1.6em !important;
+                margin-top: 10px !important;
+            }
+            .view-controls {
+                height: auto !important;
+                padding: 10px !important;
+            }
+            #result-info {
+                display: block !important;
+                width: 100% !important;
+                margin-bottom: 10px !important;
+                text-align: center;
+            }
+            .view-controls > div {
+                display: grid !important;
+                grid-template-columns: repeat(2, 1fr) !important; 
+                gap: 15px 10px !important;
+                width: 100% !important;
+            }
+            .filter-group, 
+            .view-controls > div > label, 
+            .view-controls > div > div {
+                width: 100% !important;
+                margin: 0 !important;
+            }
+            .view-controls > div > label {
+                justify-content: flex-start;
+                align-self: center;
+                height: 35px;
+            }
+            .view-controls > div > div:last-child {
+                grid-column: span 2 !important;
+                justify-content: center !important;
+                margin-top: 5px !important;
+                padding-top: 10px;
+                border-top: 1px solid var(--border);
+            }
+            .view-controls select, 
+            .view-controls button {
+                height: 35px !important;
+                font-size: 12px !important;
+            }
+            .view-controls label {
+                font-size: 10px !important;
+            }
+            .btn-view {
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                min-width: 50px !important;
+                height: 40px !important;
+                font-size: 18px !important;
+            }
+        }
+
+        @keyframes fadeInPage {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+        }
+
+        .results-view.grid-mode, .results-view.list-mode {
+            animation: fadeInPage 0.3s ease-out;
+        }
+    </style>
+</head>
+<body>
+
+<div id="card-tooltip" style="display: none;">
+    <div class="tt-container">
+        <img id="tooltip-img" src="" alt="Carta">
+        <div class="tt-details">
+            <h3 id="tooltip-name" style="margin-top: 0; margin-bottom: 10px;"></h3>
+            <div id="tooltip-info-rows"></div>
+            <div id="tooltip-text" style="font-size: 13px; color: #fff; line-height: 1.5;"></div>
+        </div>
+    </div>
+</div>
+
+<div id="toast-container"></div>
+
+<div class="app-container empty-queue" id="app-layout">
+    <div class="col">
+        <div class="col-header"><span>Filtros</span><button class="btn-view" onclick="resetFilters()">Resetar</button></div>
+        <div class="sidebar-content">
+            <div class="filter-group"><label>Tipo de Carta</label>
+                <select id="filter-type">
+                    <option value="">Selecione...</option>
+                    <option value="Monster">Monstro</option>
+                    <option value="Spell Card">Magia</option>
+                    <option value="Trap Card">Armadilha</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Descrição/Efeito</label>
+                <input type="text" id="filter-desc" placeholder="Ex: 'banir', 'cemitério'...">
+            </div>
+            <div id="group-subtype" class="filter-group" style="display:none"><label>Categoria</label><select id="filter-subtype"></select></div>
+            <div id="group-race" class="filter-group" style="display:none"><label>Raça/Tipo</label><select id="filter-race"></select></div>
+            <div id="monster-extras" style="display:none">
+                <div class="filter-group"><label>Atributo</label><select id="filter-attribute"><option value="">Todos</option><option value="dark">Trevas</option><option value="light">Luz</option><option value="earth">Terra</option><option value="fire">Fogo</option><option value="water">Água</option><option value="wind">Vento</option><option value="divine">Divino</option></select></div>
+                <div class="filter-group"><label>Nível</label><select id="filter-lv"><option value="">Todos</option></select></div>
+                <div class="filter-group"><label>ATK</label><div class="stepper"><button onclick="adjustVal('filter-atk', -50)">-</button><input type="number" id="filter-atk" placeholder="---"><button onclick="adjustVal('filter-atk', 50)">+</button></div></div>
+                <div class="filter-group"><label>DEF</label><div class="stepper"><button onclick="adjustVal('filter-def', -50)">-</button><input type="number" id="filter-def" placeholder="---"><button onclick="adjustVal('filter-def', 50)">+</button></div></div>
+            </div>
+            <div class="filter-group">
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 11px; color: var(--accent); text-transform: uppercase; font-weight: bold;">
+                    <input type="checkbox" id="enable-date-filter" style="width: auto;"> Ativar Filtro de Data/Era
+                </label>
+            </div>
+            <div id="date-filters-container" style="display: none; border: 1px solid #333; padding: 10px; border-radius: 4px; margin-bottom: 15px; background: #111;">
+                <div class="filter-group">
+                    <label>Era Yu-Gi-Oh!</label>
+                    <select id="filter-era">
+                        <option value="">Todas as Eras</option>
+                        <option value="dm">Duel Monsters (2002-2004)</option>
+                        <option value="gx">GX (2004-2008)</option>
+                        <option value="5ds">5D's (2008-2011)</option>
+                        <option value="zexal">Zexal (2011-2014)</option>
+                        <option value="arc-v">Arc-V (2014-2017)</option>
+                        <option value="vrains">Vrains (2017-2020)</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Basear busca em:</label>
+                    <select id="date-region-type">
+                        <option value="tcg">Lançamento TCG (Ocidente)</option>
+                        <option value="ocg">Lançamento OCG (Japão)</option>
+                    </select>
+                </div>                
+                <div class="filter-group">
+                    <label>Período (De -> Até)</label>
+                    <div style="display: flex; gap: 5px;">
+                        <input type="date" id="date-start" value="1999-01-01" style="flex:1;">
+                        <input type="date" id="date-end" style="flex:1;">
+                    </div>
+                </div>
+            </div>
+            <div class="filter-group">
+                <label>Formato / Banlist</label>
+                <select id="filter-banlist-type" onchange="toggleBanlistCheckbox(); performSearch(true);">
+                    <option value="">Nenhuma</option>
+                    <option value="tcg">TCG</option>
+                    <option value="ocg">OCG</option>
+                    <option value="goat">Goat</option>
+                </select>
+            </div>
+            <div id="banlist-only-container" class="filter-group">
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 11px; color: var(--accent);">
+                    <input type="checkbox" id="enable-banlist-only" style="width: auto;" onchange="performSearch()"> Exibir somente cartas da Banlist
+                </label>
+            </div>
+            <div class="filter-group">
+                <label><i class="fa-solid fa-dollar-sign"></i> Faixa de Preço (USD)</label>
+                <div style="display: flex; gap: 5px;">
+                    <input type="number" id="filter-price-min" placeholder="Min $" step="0.1" style="width: 50%;">
+                    <input type="number" id="filter-price-max" placeholder="Max $" step="0.1" style="width: 50%;">
+                </div>
+            </div>
+            <div class="filter-group">
+                <button id="btn-open-scanner" class="btn-secondary" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                    <i class="fa-solid fa-camera"></i> Escanear Carta (OCR)
+                </button>
+            </div>
+            <div class="filter-group" style="margin-top:20px;"><label>Escala do PDF (%)</label><div class="stepper"><button onclick="adjustScale(-0.1)">-</button><input type="number" id="print-scale" value="100.0" readonly><button onclick="adjustScale(0.1)">+</button></div></div>
+            <hr style="border:0; border-top:1px solid #333; margin: 20px 0;">
+            <label class="btn-secondary">IMPORTAR .YDK<input type="file" id="file-ydk" accept=".ydk" style="display:none" onchange="importYDK(this)"></label>
+        </div>
+    </div>
+
+    <div class="col">
+        <div class="search-area">
+            <div style="display: flex; gap: 10px;">
+                <input type="text" id="search-input" placeholder="Buscar pelo nome...">
+                <div class="stepper" style="width: 100px;">
+                    <button onclick="document.getElementById('search-qty').stepDown()">-</button>
+                    <input type="number" id="search-qty" value="1" min="1" readonly>
+                    <button onclick="document.getElementById('search-qty').stepUp()">+</button>
+                </div>
+            </div>
+        </div>
+        <div class="view-controls">
+            <span id="result-info" style="font-size: 11px; color: #888;">Carregando...</span>
+            
+            <div style="display: flex; gap: 15px; align-items: center;">
+                <div class="filter-group">
+                    <label>Tema do Sistema</label>
+                    <select id="theme-selector" onchange="changeTheme(this.value)">
+                        <option value="">Padrão (Dark)</option>
+                        <option value="theme-white">Todo Branco</option>
+                        <option value="theme-black">Todo Preto</option>
+                        <option value="theme-kaiba">Kaiba Corp</option>
+                    </select>
+                </div>
+                <label style="display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 11px; color: #888;">
+                    <input type="checkbox" id="enable-tooltip" checked style="width: auto; margin: 0;"> 
+                    <span>TOOLTIP</span>
+                </label>
+                <div class="filter-group">
+                    <label for="sort-by" class="sort-label">Ordenar</label>
+                    <div class="sort-controls" style="display: flex; gap: 5px; align-items: center;">
+                        <select id="sort-by" onchange="sortAndRender()" style="flex: 1;">
+                            <option value="name">Nome</option>
+                            <option value="atk">Ataque</option>
+                            <option value="def">Defesa</option>
+                            <option value="level">Level/Rank</option>
+                            <option value="tcg_date">Data TCG</option>
+                            <option value="ocg_date">Data OCG</option>
+                            <option value="price">Preço</option>
+                            <option value="banlist">Banlist</option>
+                        </select>
+                        
+                        <button id="btn-order" class="btn-view" onclick="toggleOrder()" style="height: 35px; min-width: 35px; display: flex; align-items: center; justify-content: center;">
+                            <span id="order-icon">↓</span>
+                        </button>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <button id="btn-list" class="btn-view active" title="Visualização em Lista" onclick="changeView('list')" style="font-size: 18px">
+                        <i class="fas fa-list"></i>
+                    </button>
+                    <button id="btn-grid" class="btn-view" title="Visualização em Grade" onclick="changeView('grid')" style="font-size: 18px">
+                        <i class="fas fa-th-large"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div id="results-view" class="results-view list-mode"></div>
+        <div class="pagination-bar">
+            <button class="btn-view" onclick="changePage(-1)">◄</button>
+            <div style="display: flex; align-items: center; gap: 5px;">
+                <input type="number" id="page-jump" class="page-input" value="1" min="1" onchange="jumpToPage(this.value)">
+                <span id="page-total" style="font-size: 11px; color: #888;">/ 1</span>
+            </div>
+            <button class="btn-view" onclick="changePage(1)">►</button>
+        </div>
+    </div>
+
+    <div class="col" id="col-preview">
+        <div class="col-header"><span>Fila (<span id="count-total">0</span>)</span><button class="btn-view" onclick="clearQueue()" style="font-size: 9px;">Limpar</button></div>
+        <div class="deck-list" id="deck-items"></div>
+        <div class="pdf-preview-container">
+            <div id="import-overlay" style="position: absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); display:none; flex-direction:column; justify-content:center; align-items:center; z-index:10;"><span style="color:var(--accent); font-size:11px;">GERANDO PDF...</span><div style="width:80%; height:4px; background:#333; margin-top:10px;"><div id="progress-bar" style="width:0; height:100%; background:var(--accent);"></div></div></div>
+            <iframe id="preview-frame"></iframe>
+        </div>
+        <div style="padding: 10px; background: #111;"><button class="btn-accent" onclick="downloadPDF()">BAIXAR PDF HQ</button></div>
+    </div>
+</div>
+
+<script>
+    const { jsPDF } = window.jspdf;
+    const starIcon = "https://ygoprodeck.com/wp-content/uploads/2017/01/level.png";
+    let cardQueue = [], searchResults = [], currentPage = 1, currentView = 'list';
+    let isGenerating = false;
+    let cardCache = {};
+    let searchTimeout;
+    let sortDirection = 1;
+
+    const banKeyMap = {
+        "tcg": "ban_tcg",
+        "ocg": "ban_ocg",
+        "goat": "ban_goat",
+        "masterduel": "ban_masterduel"
+    };
+
+    function changeTheme(themeName) {
+        const body = document.body;
+        body.classList.remove('theme-white', 'theme-black', 'theme-kaiba');
+        if (themeName) body.classList.add(themeName);
+        localStorage.setItem('selectedTheme', themeName);
+        renderResults(); 
+    }
+
+    function changePage(step) {
+        const totalPages = Math.ceil(searchResults.length / getItemsPerPage());
+        const newPage = currentPage + step;
+        if (newPage >= 1 && newPage <= totalPages) {
+            currentPage = newPage;
+            renderResults();
+            document.getElementById('results-view').scrollTop = 0;
+        }
+    }
+
+    function filterByPrice(cards) {
+        const minPrice = parseFloat(document.getElementById('filter-price-min').value) || 0;
+        const maxPrice = parseFloat(document.getElementById('filter-price-max').value) || Infinity;
+        return cards.filter(card => {
+            const price = card.card_prices && card.card_prices[0] 
+                        ? parseFloat(card.card_prices[0].tcgplayer_price) 
+                        : 0;
+            return price >= minPrice && price <= maxPrice;
+        });
+    }
+
+    function getBanIcon(card) {
+        const banType = document.getElementById('filter-banlist-type').value;
+        if (!banType || !card.banlist_info) return '';
+        const banKey = `ban_${banType}`;
+        const status = card.banlist_info[banKey];
+        const svgStyle = "width: 20px; height: 20px; vertical-align: middle; margin-left: 5px; filter: drop-shadow(1px 1px 1px rgba(0,0,0,0.8));";
+        const redColor = "#ff0000";
+        const bgCircle = `<circle cx="50" cy="50" r="44" fill="black" stroke="${redColor}" stroke-width="12" />`;
+        if (status === "Banned" || status === "Forbidden") {
+            return `<svg viewBox="0 0 100 100" style="${svgStyle}" title="Banned">
+                        ${bgCircle}
+                        <line x1="32" y1="32" x2="68" y2="68" stroke="${redColor}" stroke-width="10" stroke-linecap="round" />
+                    </svg>`;
+        } 
+        if (status === "Limited") {
+            return `<svg viewBox="0 0 100 100" style="${svgStyle}" title="Limited">
+                        ${bgCircle}
+                        <text x="50" y="72" text-anchor="middle" font-family="Arial Black, sans-serif" font-weight="bold" font-size="60" fill="${redColor}">1</text>
+                    </svg>`;
+        } 
+        if (status === "Semi-Limited") {
+            return `<svg viewBox="0 0 100 100" style="${svgStyle}" title="Semi-Limited">
+                        ${bgCircle}
+                        <text x="50" y="72" text-anchor="middle" font-family="Arial Black, sans-serif" font-weight="bold" font-size="60" fill="${redColor}">2</text>
+                    </svg>`;
+        }
+        return '';
+    }
+
+    function getBanIconHtml(card, type) {
+        const key = banKeyMap[type];
+        if (!card.banlist_info || !card.banlist_info[key]) return '';
+        const status = card.banlist_info[key];
+        const iconUrl = banIcons[status];
+        return `<img src="${iconUrl}" style="width: 18px; height: 18px; vertical-align: middle;" title="${status}">`;
+    }
+
+    function toggleBanlistCheckbox() {
+        const banlistType = document.getElementById('filter-banlist-type').value;
+        const container = document.getElementById('banlist-only-container');
+        const checkbox = document.getElementById('enable-banlist-only');
+        if (banlistType === "") {
+            container.style.display = 'none';
+            checkbox.checked = false;
+        } else {
+            container.style.display = 'block'; 
+        }
+    }
+
+    window.addEventListener('DOMContentLoaded', toggleBanlistCheckbox);
+
+    function formatDateBR(dateStr) {
+        if (!dateStr) return "N/A";
+        const [year, month, day] = dateStr.split('-');
+        return `${day}/${month}/${year}`;
+    }
+
+    function toggleOrder() {
+        sortDirection *= -1;
+        document.getElementById('order-icon').innerText = sortDirection === 1 ? '↑' : '↓';
+        sortAndRender();
+    }
+
+    function getLinkMarkersHtml(markers) {
+        if (!markers) return '';
+        const arrowMap = {
+            "Top": "↑", "Bottom": "↓", "Left": "←", "Right": "→",
+            "Top-Left": "↖", "Top-Right": "↗", "Bottom-Left": "↙", "Bottom-Right": "↘"
+        };
+        return markers.map(m => `<span style="color: #ff0000; font-weight: bold; margin: 0 1px;" title="${m}">${arrowMap[m] || m}</span>`).join('');
+    }
+
+    function sortAndRender() {
+        const criterion = document.getElementById('sort-by').value;
+        const banlistType = document.getElementById('filter-banlist-type').value;
+        searchResults.sort((a, b) => {
+            let valA, valB;
+            switch(criterion) {
+                case 'price':
+                    valA = parseFloat(a.card_prices?.[0]?.tcgplayer_price) || 0;
+                    valB = parseFloat(b.card_prices?.[0]?.tcgplayer_price) || 0;
+                    break;
+                case 'banlist':
+                    const priority = { 'Banned':1, 'Forbidden':1, 'Limited':2, 'Semi-Limited':3 };
+                    const statusA = a.banlist_info ? a.banlist_info[`ban_${banlistType}`] : null;
+                    const statusB = b.banlist_info ? b.banlist_info[`ban_${banlistType}`] : null;
+                    valA = priority[statusA] || 4;
+                    valB = priority[statusB] || 4;
+                    if (valA === valB) return (a.name || "").localeCompare(b.name || "");
+                    break;
+                case 'name':
+                    return sortDirection === 1 ? (a.name || "").localeCompare(b.name || "") : (b.name || "").localeCompare(a.name || "");
+                case 'atk': valA = a.atk ?? -1; valB = b.atk ?? -1; break;
+                case 'def': valA = a.def ?? -1; valB = b.def ?? -1; break;
+                case 'level': valA = a.level || a.rank || a.linkval || 0; valB = b.level || b.rank || b.linkval || 0; break;
+                case 'tcg_date':
+                    valA = a.misc_info?.[0]?.tcg_date || "1900-01-01";
+                    valB = b.misc_info?.[0]?.tcg_date || "1900-01-01";
+                    return sortDirection === 1 ? valA.localeCompare(valB) : valB.localeCompare(valA);
+                case 'ocg_date':
+                    valA = a.misc_info?.[0]?.ocg_date || "1900-01-01";
+                    valB = b.misc_info?.[0]?.ocg_date || "1900-01-01";
+                    return sortDirection === 1 ? valA.localeCompare(valB) : valB.localeCompare(valA);
+                default: return 0;
+            }
+            if (valA < valB) return -1 * sortDirection;
+            if (valA > valB) return 1 * sortDirection;
+            return 0;
+        });
+        currentPage = 1;
+        renderResults();
+    }
+
+    const trad = { 
+        "DARK": "TREVAS", "LIGHT": "LUZ", "EARTH": "TERRA", "FIRE": "FOGO", 
+        "WATER": "ÁGUA", "WIND": "VENTO", "DIVINE": "DIVINO",
+        "Monster": "Monstro", "Spell Card": "Magia", "Trap Card": "Armadilha",
+        "SPELL": "MAGIA", "TRAP": "ARMADILHA"
+    };
+
+    function showToast(msg) {
+        const container = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+        toast.className = 'toast';
+        toast.innerHTML = `<span>✔</span> ${msg}`;
+        container.appendChild(toast);
+        setTimeout(() => toast.remove(), 2000);
+    }
+
+    function showTooltip(card, e) {
+        if (!card) return;
+        const isTooltipEnabled = document.getElementById('enable-tooltip').checked;
+        if (!isTooltipEnabled) return;
+        const tt = document.getElementById('card-tooltip');
+        if (window.innerWidth < 900) {
+            setTimeout(() => {
+                tt.style.top = "0";
+                tt.style.left = "0";
+                tt.style.width = "100%";
+                tt.style.height = "100%";
+                tt.style.transform = "none";
+                tt.style.margin = "0";
+                tt.style.display = 'block';
+                document.documentElement.style.overflow = "hidden";
+                document.body.style.overflow = "hidden";
+                fillTooltipData(card);
+            }, 50);
+            return;
+        }
+        tt.style.display = 'block';
+        fillTooltipData(card);
+        moveTooltip(e);
+    }
+
+    function fillTooltipData(card) {
+        const tt = document.getElementById('card-tooltip');
+        const description = card.desc_pt || card.desc;
+        const isMobile = window.innerWidth < 900;
+        const typeColors = {
+            "Normal Monster": "#d1b55a", "Effect Monster": "#a6522a", "Spell Card": "#1d7d5c",
+            "Trap Card": "#8c345d", "Fusion Monster": "#6e4a8c", "Synchro Monster": "#8a8a8a",
+            "Xyz Monster": "#1a1a1a", "Link Monster": "#164687", "Ritual Monster": "#3b73a3"
+        };
+        const colorKey = Object.keys(typeColors).find(key => card.type.includes(key));
+        const cardColor = typeColors[colorKey] || "var(--accent)";
+        const oldBtn = document.getElementById('mobile-close-x');
+        if (oldBtn) oldBtn.remove();
+        if (isMobile) {
+            tt.style.pointerEvents = "auto";
+            tt.style.setProperty("position", "fixed", "important");
+            tt.style.setProperty("top", "0", "important");
+            tt.style.setProperty("left", "0", "important");
+            tt.style.setProperty("transform", "none", "important");
+            tt.style.width = "100vw";
+            tt.style.height = "100vh"; 
+            tt.style.maxWidth = "100vw";
+            tt.style.boxSizing = "border-box";
+            tt.style.margin = "0";
+            tt.style.zIndex = "10000";
+            tt.style.overflowY = "auto";
+            tt.style.borderRadius = "0";
+            const closeBtn = document.createElement('button');
+            closeBtn.id = 'mobile-close-x';
+            closeBtn.innerHTML = '<i class="fas fa-times"></i>';
+            closeBtn.onclick = (e) => { e.stopPropagation(); hideTooltip(); };
+            Object.assign(closeBtn.style, {
+                position: 'fixed', top: '15px', right: '15px', width: '35px', height: '35px',
+                borderRadius: '50%', backgroundColor: 'var(--accent)', color: '#000',
+                border: 'none', zIndex: '10001', fontSize: '18px', display: 'flex',
+                alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+                boxShadow: '0 2px 10px rgba(0,0,0,0.5)'
+            });
+            tt.appendChild(closeBtn);
+        } else {
+            tt.style.position = "absolute"; 
+            tt.style.height = "auto";
+            tt.style.width = ""; 
+            tt.style.maxWidth = "";
+            tt.style.top = ""; 
+            tt.style.left = "";
+            tt.style.pointerEvents = "none";
+        }
+        tt.style.borderLeft = isMobile ? "none" : `6px solid ${cardColor}`;
+        const nameElement = document.getElementById('tooltip-name');
+        nameElement.innerText = card.name_pt || card.name;
+        nameElement.style.color = cardColor; 
+        nameElement.style.fontSize = isMobile ? '1.3em' : '1.0em';
+        nameElement.style.fontWeight = 'bold';
+        document.getElementById('tooltip-img').src = card.card_images[0].image_url;
+        const banlistType = document.getElementById('filter-banlist-type').value;
+        const status = card.banlist_info ? card.banlist_info[`ban_${banlistType}`] : null;
+        const oldBadge = document.querySelector('.tt-ban-container');
+        if (oldBadge) oldBadge.remove();
+        if (status && banlistType) {
+            let icon = '', label = '', cssClass = '';
+            if (status === 'Banned' || status === 'Forbidden') {
+                icon = '<i class="fa-solid fa-ban"></i>'; label = 'Banida'; cssClass = 'tt-ban-banned';
+            } else if (status === 'Limited') {
+                icon = '<i class="fa-solid fa-1"></i>'; label = 'Limitada'; cssClass = 'tt-ban-limited';
+            } else if (status === 'Semi-Limited') {
+                icon = '<i class="fa-solid fa-2"></i>'; label = 'Semi-Limitada'; cssClass = 'tt-ban-semi';
+            }
+            const banContainer = document.createElement('div');
+            banContainer.className = 'tt-ban-container';
+            banContainer.innerHTML = `<div class="tt-ban-badge ${cssClass}">${icon} <span>${label}</span></div>`;
+            nameElement.after(banContainer);
+        }
+        const racesTrad = { 
+            "Aqua": "Aqua", "Beast": "Besta", "Beast-Warrior": "Besta-Guerreira", "Cyberse": "Ciberso", 
+            "Dinosaur": "Dinossauro", "Dragon": "Dragão", "Fiend": "Demônio", "Fish": "Peixe", 
+            "Insect": "Inseto", "Machine": "Máquina", "Plant": "Planta", "Psychic": "Psíquico", 
+            "Pyro": "Piro", "Reptile": "Réptil", "Rock": "Rocha", "Sea Serpent": "Serpente Marinha", 
+            "Spellcaster": "Mago", "Thunder": "Trovão", "Warrior": "Guerreiro", "Winged Beast": "Besta Alada", 
+            "Wyrm": "Wyrm", "Zombie": "Zumbi", "Divine-Beast": "Besta Divina", "Normal": "Normal", 
+            "Continuous": "Contínua", "Field": "Campo", "Equip": "Equipamento", "Quick-Play": "Rápida", 
+            "Ritual": "Ritual", "Counter": "Resposta" 
+        };
+        let infoHtml = `<div style="display: flex; flex-direction: column; gap: 8px; width: 100%;">`;
+        if(card.attribute || card.type.includes("Spell") || card.type.includes("Trap")) {
+            let iconUrl = card.type.includes("Spell") ? "https://static.wikia.nocookie.net/yugioh/images/0/09/SPELL.svg" :
+                        card.type.includes("Trap") ? "https://static.wikia.nocookie.net/yugioh/images/2/28/TRAP.svg" :
+                        `https://images.ygoprodeck.com/images/cards/${card.attribute ? card.attribute.toUpperCase() : 'UNKNOWN'}.jpg`;
+            let labelText = card.type.includes("Spell") ? "MAGIA" : card.type.includes("Trap") ? "ARMADILHA" : 
+                            (typeof trad !== 'undefined' ? trad[card.attribute?.toUpperCase()] : card.attribute) || card.attribute || "";
+            infoHtml += `<div style="display: flex; align-items: center; gap: 8px;">
+                            <div style="display: flex; align-items: center; gap: 4px; color: #ffffff;">
+                                <img src="${iconUrl}" style="width:20px; height:20px; object-fit:contain;">
+                                <span>${labelText}</span>
+                            </div>`;
+            if((card.level || card.rank) && !card.type.toLowerCase().includes("link")) {
+                infoHtml += `<div style="display: flex; align-items: center; gap: 4px; color: #ffffff; margin-left: 5px;">
+                                <img src="https://ygoprodeck.com/wp-content/uploads/2017/01/level.png" style="width:16px; height:16px; ${card.type.toUpperCase().includes('XYZ') ? 'filter:invert(1) brightness(0.5);' : ''}">
+                                <span>${card.level || card.rank}</span>
+                            </div>`;
+            }
+            infoHtml += `</div>`;
+        }
+        let tipoTexto = card.type.replace("Effect Monster", "Monstro de Efeito").replace("Normal Monster", "Monstro Normal").replace("Monster", "Monstro").replace("Spell Card", "Carta de Magia").replace("Trap Card", "Carta de Armadilha");
+        const raceTraduzida = racesTrad[card.race] || card.race || "Desconhecido";
+        infoHtml += `<div style="display: flex; align-items: center; gap: 4px; color: #ffffff; font-size: 11px; margin-bottom: 8px; flex-wrap: wrap;">
+                        <span>[</span>
+                        <img src="https://images.ygoprodeck.com/images/cards/icons/race/${card.race}.png" style="width: 14px; height: 14px;" onerror="this.style.display='none'">
+                        <span>${raceTraduzida} / </span>
+                        <img src="https://images.ygoprodeck.com/images/cards/icons/${encodeURIComponent(card.type)}.jpg" style="width: 14px; height: 14px; border-radius: 2px;" onerror="this.style.display='none'">
+                        <span>${tipoTexto} ]</span>
+                    </div>`;
+        if(card.atk !== undefined) {
+            infoHtml += `
+            <div style="display: flex; gap: 15px; margin-bottom: 8px; font-size: 13px; font-weight: bold;">
+                <div style="display: flex; align-items: center; gap: 5px;">
+                    <i class="fas fa-fist-raised" style="color: #4d94ff;"></i>
+                    <span style="color: #4d94ff;">ATK/</span>
+                    <span style="color: #ffffff;">${card.atk}</span>
+                </div>
+                ${!card.type.toLowerCase().includes("link") ? `
+                    <div style="display: flex; align-items: center; gap: 5px;">
+                        <i class="fas fa-shield-alt" style="color: #ff4d4d;"></i>
+                        <span style="color: #ff4d4d;">DEF/</span>
+                        <span style="color: #ffffff;">${card.def}</span>
+                    </div>
+                ` : `
+                    <div style="display: flex; align-items: center; gap: 5px; color: #ffffff;">
+                        <span>LINK-${card.linkval}</span>
+                    </div>
+                `}
+            </div>`;
+        }
+        infoHtml += `</div>`;
+        document.getElementById('tooltip-info-rows').innerHTML = infoHtml;
+        let tcgDate = "N/A", ocgDate = "N/A";
+        if (card.misc_info && card.misc_info[0]) {
+            tcgDate = typeof formatDateBR !== 'undefined' ? formatDateBR(card.misc_info[0].tcg_date) : card.misc_info[0].tcg_date;
+            ocgDate = typeof formatDateBR !== 'undefined' ? formatDateBR(card.misc_info[0].ocg_date) : card.misc_info[0].ocg_date;
+        }
+        const p = card.card_prices ? card.card_prices[0] : {};
+        const formatP = (val) => (!val || parseFloat(val) === 0) ? "Não encontrado" : `$${val}`;
+        const datesHtml = `<div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #444; font-size: 13px; color: #fff; display: flex; gap: 12px; flex-wrap: wrap;">
+            <span>📅 TCG: ${tcgDate}</span>
+            <span>📅 OCG: ${ocgDate}</span>
+        </div>`;
+        const separatorHtml = `<hr style="border: 0; border-top: 1px solid #444; margin: 8px 0; opacity: 1;">`;
+        const pricesHtml = `<div style="margin-top: 6px; display: flex; flex-wrap: wrap; gap: 12px; font-size: 13px; color: #fff; font-weight: 500;">
+            <span title="TCGPlayer"><i class="fa-solid fa-store" style="color:var(--accent); font-size: 11px;"></i> TCG: ${formatP(p.tcgplayer_price)}</span>
+            <span title="Cardmarket"><i class="fa-solid fa-m" style="color:var(--accent); font-size: 11px;"></i> CM: ${formatP(p.cardmarket_price)}</span>
+            <span title="eBay"><i class="fa-brands fa-ebay" style="color:var(--accent); font-size: 14px;"></i> ${formatP(p.ebay_price)}</span>
+            <span title="Amazon"><i class="fa-brands fa-amazon" style="color:var(--accent); font-size: 13px;"></i> ${formatP(p.amazon_price)}</span>
+        </div>`;
+        const formattedDescription = description.replace(/\n/g, '<br>');
+        document.getElementById('tooltip-text').innerHTML = `<div style="word-wrap: break-word;">${formattedDescription}</div>${datesHtml}${separatorHtml}${pricesHtml}`;
+    }
+
+    function moveTooltip(e) {
+        if (window.innerWidth < 900) return; 
+        const tt = document.getElementById('card-tooltip');
+        if (tt.style.display !== 'block') return;
+        const ttHeight = tt.offsetHeight;
+        const ttWidth = tt.offsetWidth;
+        let x = e.clientX + 25;
+        let y = e.clientY + 15;
+        if (x + ttWidth > window.innerWidth) x = e.clientX - ttWidth - 25;
+        if (y + ttHeight > window.innerHeight) y = window.innerHeight - ttHeight - 15;
+        if (y < 10) y = 10;
+        tt.style.left = x + 'px'; 
+        tt.style.top = y + 'px';
+    }
+
+    function hideTooltip() {
+        const tt = document.getElementById('card-tooltip');
+        tt.style.display = 'none';
+        document.documentElement.style.overflow = "";
+        document.body.style.overflow = "";
+        document.body.style.overflowX = "hidden";
+    }
+
+    function getItemsPerPage() {
+        if (window.innerWidth < 900) return currentView === 'list' ? 15 : 20;
+        const isQueueEmpty = cardQueue.length === 0;
+        return currentView === 'list' ? (isQueueEmpty ? 25 : 15) : (isQueueEmpty ? 30 : 21);
+    }
+
+    for(let i=0; i<=13; i++) document.getElementById('filter-lv').innerHTML += `<option value="${i}">${i}</option>`;
+    window.onload = () => {
+        const hoje = new Date().toISOString().split('T')[0];
+        document.getElementById('date-end').value = hoje;
+        document.getElementById('results-view').addEventListener('wheel', function(e) {
+            e.preventDefault();
+            if (e.deltaY > 0) changePage(1);
+            else changePage(-1);
+        }, { passive: false });
+        document.getElementById('enable-date-filter').onchange = function() {
+            document.getElementById('date-filters-container').style.display = this.checked ? 'block' : 'none';
+            triggerSearch();
+        };
+        const ERAS = {
+            'dm': { tcg: ['2002-03-08', '2004-09-30'], ocg: ['1999-02-04', '2004-09-30'] },
+            'gx': { tcg: ['2004-10-01', '2008-08-31'], ocg: ['2004-10-01', '2008-02-29'] },
+            '5ds': { tcg: ['2008-09-01', '2011-08-31'], ocg: ['2008-03-15', '2011-02-28'] },
+            'zexal': { tcg: ['2011-09-01', '2014-07-31'], ocg: ['2011-03-19', '2014-03-20'] },
+            'arc-v': { tcg: ['2014-08-01', '2017-07-31'], ocg: ['2014-03-21', '2017-03-24'] },
+            'vrains': { tcg: ['2017-08-01', '2020-04-30'], ocg: ['2017-03-25', '2020-04-17'] }
+        };
+        document.getElementById('filter-era').onchange = function() {
+            const eraData = ERAS[this.value];
+            const region = document.getElementById('date-region-type').value;
+            if(eraData) {
+                const dates = eraData[region] || eraData['tcg'];
+                document.getElementById('date-start').value = dates[0];
+                document.getElementById('date-end').value = dates[1];
+                triggerSearch();
+            }
+        };
+        ['date-start', 'date-end', 'date-region-type'].forEach(id => {
+            document.getElementById(id).addEventListener('change', triggerSearch);
+        });
+        document.addEventListener('DOMContentLoaded', () => { updateBanlistDates(); });
+        performSearch(true); 
+    };
+
+    function changeView(view) {
+        currentView = view;
+        document.getElementById('btn-list').classList.toggle('active', view === 'list');
+        document.getElementById('btn-grid').classList.toggle('active', view === 'grid');
+        currentPage = 1; renderResults();
+    }
+
+    function adjustVal(id, amount) {
+        const el = document.getElementById(id);
+        let val = (parseInt(el.value) || 0) + amount;
+        el.value = val < 0 ? "" : val; triggerSearch();
+    }
+
+    function adjustScale(amount) {
+        const el = document.getElementById('print-scale');
+        el.value = (parseFloat(el.value) + amount).toFixed(1); triggerPDFUpdate();
+    }
+
+    document.getElementById('filter-type').onchange = function() {
+        const v = this.value;
+        const fSub = document.getElementById('filter-subtype'), fRace = document.getElementById('filter-race');
+        fSub.innerHTML = fRace.innerHTML = '<option value="">Qualquer</option>';
+        document.getElementById('group-subtype').style.display = (v === "Monster" ? "flex" : "none");
+        document.getElementById('monster-extras').style.display = (v === "Monster" ? "block" : "none");
+        if(v) {
+            if(v === "Monster") {
+                const subTypes = {
+                    "Normal Monster": "Monstro Normal", "Effect Monster": "Monstro de Efeito",
+                    "Fusion Monster": "Monstro de Fusão", "Synchro Monster": "Monstro Sincro",
+                    "XYZ Monster": "Monstro Xyz", "Link Monster": "Monstro Link",
+                    "Ritual Monster": "Monstro Ritual", "Token": "Ficha"
+                };
+                Object.entries(subTypes).forEach(([val, text]) => {
+                    fSub.innerHTML += `<option value="${val}">${text}</option>`;
+                });
+            }
+            const races = {
+                "Monster": {
+                    "Aqua": "Aqua", "Beast": "Besta", "Beast-Warrior": "Besta-Guerreira", "Cyberse": "Ciberso",
+                    "Dinosaur": "Dinossauro", "Dragon": "Dragão", "Fiend": "Demônio", "Fish": "Peixe",
+                    "Insect": "Inseto", "Machine": "Máquina", "Plant": "Planta", "Psychic": "Psíquico",
+                    "Pyro": "Piro", "Reptile": "Réptil", "Rock": "Rocha", "Sea Serpent": "Serpente Marinha",
+                    "Spellcaster": "Mago", "Thunder": "Trovão", "Warrior": "Guerreiro", "Winged Beast": "Besta Alada",
+                    "Wyrm": "Wyrm", "Zombie": "Zumbi", "Divine-Beast": "Besta Divina"
+                },
+                "Spell Card": {
+                    "Normal": "Normal", "Continuous": "Contínua", "Field": "Campo", 
+                    "Equip": "Equipamento", "Quick-Play": "Rápida", "Ritual": "Ritual"
+                },
+                "Trap Card": {
+                    "Normal": "Normal", "Continuous": "Contínua", "Counter": "Resposta"
+                }
+            };
+            Object.entries(races[v]).forEach(([val, text]) => {
+                fRace.innerHTML += `<option value="${val}">${text}</option>`;
+            });
+            document.getElementById('group-race').style.display = "flex";
+        } else {
+            document.getElementById('group-race').style.display = "none";
+        }
+        triggerSearch();
+    };
+
+    ['search-input', 'filter-desc', 'filter-subtype', 'filter-race', 'filter-attribute', 'filter-lv', 'filter-atk', 'filter-def'].forEach(id => document.getElementById(id).addEventListener('input', triggerSearch));
+
+    function triggerSearch() { clearTimeout(window.sTimeout); window.sTimeout = setTimeout(performSearch, 500); }
+
+    async function performSearch(initial = false) {
+        const qInput = document.getElementById('search-input');
+        const q = qInput.value.trim();
+        const desc = document.getElementById('filter-desc').value;
+        const type = document.getElementById('filter-type').value;
+        const sub = document.getElementById('filter-subtype').value;
+        const atk = document.getElementById('filter-atk').value;
+        const def = document.getElementById('filter-def').value;
+        const attr = document.getElementById('filter-attribute').value;
+        const lv = document.getElementById('filter-lv').value;
+        const race = document.getElementById('filter-race').value;
+        const dateEnabled = document.getElementById('enable-date-filter').checked;
+        const dateRegion = document.getElementById('date-region-type').value;
+        const dateStart = document.getElementById('date-start').value;
+        const dateEnd = document.getElementById('date-end').value;
+        const banlistType = document.getElementById('filter-banlist-type').value;
+        const banlistOnly = document.getElementById('enable-banlist-only').checked;
+        const pMinInput = document.getElementById('filter-price-min')?.value;
+        const pMaxInput = document.getElementById('filter-price-max')?.value;
+
+        const hasEnoughName = q.length >= 3;
+        const hasEnoughDesc = desc.length >= 3;
+        const hasPriceFilter = pMinInput || pMaxInput;
+        const hasOtherFilters = type || atk || def || attr || dateEnabled || banlistOnly || banlistType || hasPriceFilter;
+
+        if (document.getElementById('ocr-container')?.style.display === 'block') return;
+
+        if (!initial && !hasEnoughName && !hasEnoughDesc && !hasOtherFilters) {
+            document.getElementById('results-view').innerHTML = '';
+            return;
+        }
+
+        let p = new URLSearchParams();
+        if (hasEnoughName) p.append('fname', q);
+        if (hasEnoughDesc) p.append('desc', desc);
+        if (type) {
+            if (type === "Monster" && sub) p.append('type', sub);
+            else if (type !== "Monster") p.append('type', type);
+        }
+        if (race) p.append('race', race);
+        if (atk) p.append('atk', atk);
+        if (def) p.append('def', def);
+        if (lv) p.append('level', lv);
+        if (attr) p.append('attribute', attr);
+        if (banlistType) {
+            if (banlistOnly) p.append('banlist', banlistType);
+            else p.append('format', banlistType);
+        }
+        p.append('misc', 'yes'); 
+
+        try {
+            const urlGlobal = `https://db.ygoprodeck.com/api/v7/cardinfo.php?${p.toString()}`;
+            p.set('language', 'pt');
+            const urlPT = `https://db.ygoprodeck.com/api/v7/cardinfo.php?${p.toString()}`;
+            const [resGlobal, resPT] = await Promise.all([
+                fetch(urlGlobal).then(r => r.ok ? r.json() : { data: [] }),
+                fetch(urlPT).then(r => r.ok ? r.json() : { data: [] })
+            ]);
+            const dataGlobal = resGlobal.data || [];
+            const dataPT = resPT.data || [];
+            const mergedMap = new Map();
+            dataGlobal.forEach(card => mergedMap.set(card.id, card));
+            dataPT.forEach(card => {
+                const existing = mergedMap.get(card.id);
+                if (existing) mergedMap.set(card.id, { ...existing, ...card });
+                else mergedMap.set(card.id, card);
+            });
+            let finalData = Array.from(mergedMap.values());
+            if (hasPriceFilter) {
+                const minP = parseFloat(pMinInput) || 0;
+                const maxP = parseFloat(pMaxInput) || 999999;
+                finalData = finalData.filter(card => {
+                    const price = parseFloat(card.card_prices?.[0]?.tcgplayer_price) || 0;
+                    return price >= minP && price <= maxP;
+                });
+            }
+            if (dateEnabled) {
+                const start = dateStart || "1900-01-01";
+                const end = dateEnd || "9999-12-31";
+                finalData = finalData.filter(card => {
+                    const misc = card.misc_info ? card.misc_info[0] : null;
+                    if (!misc) return false;
+                    const cardDate = (dateRegion === 'tcg') ? misc.tcg_date : misc.ocg_date;
+                    return cardDate && cardDate >= start && cardDate <= end;
+                });
+            }
+            if (type === "Monster" && !sub) {
+                finalData = finalData.filter(c => c.type.toLowerCase().includes("monster"));
+            }
+            const expandedResults = [];
+            finalData.forEach(card => {
+                card.card_images.forEach((img, idx) => {
+                    expandedResults.push({
+                        ...card,
+                        current_image: img,
+                        variant_idx: idx,
+                        is_variant: card.card_images.length > 1
+                    });
+                });
+            });
+            searchResults = expandedResults; 
+            finalData.forEach(c => cardCache[c.id] = c);
+            if (initial || hasEnoughName || hasOtherFilters) currentPage = 1;
+            sortAndRender();
+        } catch (e) {
+            console.error("Erro na busca dual:", e);
+            searchResults = [];
+            renderResults();
+        }
+    }
+
+    function renderResults() {
+        const container = document.getElementById('results-view'); 
+        container.innerHTML = "";
+        container.className = `results-view ${currentView}-mode`;
+        const items = getItemsPerPage();
+        if (searchResults.length === 0) {
+            document.getElementById('result-info').innerText = "Nenhuma carta encontrada";
+            document.getElementById('page-total').innerText = "/ 1";
+            document.getElementById('page-jump').value = 1;
+            container.innerHTML = `<div style="grid-column: 1/-1; padding: 60px 20px; text-align: center; opacity: 0.6;">
+                <div style="font-size: 3em; margin-bottom: 15px;">🔍</div>
+                <b style="font-size: 1.2em; color: var(--accent);">Nenhuma carta encontrada</b>
+            </div>`;
+            return;
+        }
+        const start = (currentPage - 1) * items;
+        const pageItems = searchResults.slice(start, start + items);
+        document.getElementById('result-info').innerText = `Exibindo ${start + 1}-${Math.min(start + items, searchResults.length)} de ${searchResults.length}`;
+        document.getElementById('page-total').innerText = `/ ${Math.ceil(searchResults.length / items) || 1}`;
+        document.getElementById('page-jump').value = currentPage;
+
+        const racesTrad = { "Aqua": "Aqua", "Beast": "Besta", "Beast-Warrior": "Besta-Guerreira", "Cyberse": "Ciberso", "Dinosaur": "Dinossauro", "Dragon": "Dragão", "Fiend": "Demônio", "Fish": "Peixe", "Insect": "Inseto", "Machine": "Máquina", "Plant": "Planta", "Psychic": "Psíquico", "Pyro": "Piro", "Reptile": "Réptil", "Rock": "Rocha", "Sea Serpent": "Serpente Marinha", "Spellcaster": "Mago", "Thunder": "Trovão", "Warrior": "Guerreiro", "Winged Beast": "Besta Alada", "Wyrm": "Wyrm", "Zombie": "Zumbi", "Divine-Beast": "Besta Divina", "Normal": "Normal", "Continuous": "Contínua", "Field": "Campo", "Equip": "Equipamento", "Quick-Play": "Rápida", "Ritual": "Ritual", "Counter": "Resposta" };
+        const typeColors = {
+            "Normal Monster": "#d1b55a", "Effect Monster": "#a6522a", "Spell Card": "#1d7d5c",
+            "Trap Card": "#8c345d", "Fusion Monster": "#6e4a8c", "Synchro Monster": "#8a8a8a",
+            "Xyz Monster": "#1a1a1a", "Link Monster": "#164687", "Ritual Monster": "#3b73a3",
+            "Token": "#6e6e6e"
+        };
+        pageItems.forEach(card => {
+            const imageObj = card.current_image; 
+            const div = document.createElement('div'); 
+            div.className = 'suggestion-item';
+            const colorKey = Object.keys(typeColors).find(key => card.type.includes(key));
+            const cardBgColor = typeColors[colorKey] || "var(--panel-bg)";
+            const hasCustomTheme = document.body.classList.contains('theme-white') || 
+                                    document.body.classList.contains('theme-black') ||
+                                    document.body.classList.contains('theme-kaiba');
+            if (!hasCustomTheme) {
+                div.style.backgroundColor = cardBgColor;
+                div.style.borderLeft = "none";
+            } else {
+                div.style.backgroundColor = "var(--panel-bg)";
+                div.style.borderLeft = `5px solid ${cardBgColor}`;
+            }
+            const variantSuffix = card.is_variant ? ` (Arte #${card.variant_idx + 1})` : "";
+            const displayName = (card.name_pt || card.name) + variantSuffix;
+            if (currentView === 'grid') {
+                div.style.padding = "0";
+                div.style.backgroundColor = "transparent"; 
+                div.innerHTML = `<img src="${imageObj.image_url}" style="width: 100%; height: 100%; object-fit: contain; display: block;" loading="lazy" onerror="this.src='https://images.ygoprodeck.com/images/cards/back_high.jpg'" alt="${card.name}">`;
+            } else {
+                const attrRaw = card.attribute ? card.attribute.toUpperCase() : (card.type.includes("Spell") ? "SPELL" : "TRAP");
+                const attrIconUrl = card.attribute ? `https://images.ygoprodeck.com/images/cards/${attrRaw}.jpg` : "";
+                const raceIconUrl = `https://images.ygoprodeck.com/images/cards/icons/race/${card.race}.png`;
+                const starIcon = "https://ygoprodeck.com/wp-content/uploads/2017/01/level.png";
+                const raceTraduzida = racesTrad[card.race] || card.race;
+                let nameColor = hasCustomTheme ? cardBgColor : (["Normal Monster", "Synchro Monster"].includes(colorKey) ? "#000" : "var(--accent)");
+                const textColor = (!hasCustomTheme) ? "#fff" : "var(--text)";
+                let tipoTexto = card.type;
+                if (tipoTexto.includes("Effect Monster")) tipoTexto = "Monstro de Efeito";
+                else if (tipoTexto.includes("Normal Monster")) tipoTexto = "Monstro Normal";
+                else tipoTexto = tipoTexto.replace("Monster", "Monstro").replace("Spell Card", "Carta de Magia").replace("Trap Card", "Carta de Armadilha");
+                const typeIconUrl = `https://images.ygoprodeck.com/images/cards/icons/${encodeURIComponent(card.type)}.jpg`;
+                div.innerHTML = `
+                    <img src="${imageObj.image_url_small}" loading="lazy" onerror="this.src='https://images.ygoprodeck.com/images/cards/back_high.jpg'" alt="${card.name}">
+                    <div class="card-info-box">
+                        <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
+                            ${getBanIcon(card)} 
+                            <b class="card-name" style="margin: 0; line-height: 1.2; color: ${nameColor};">${displayName}</b>
+                        </div>
+                        <div class="info-row" style="display: flex; align-items: center; gap: 10px; color: ${textColor};">
+                            ${attrIconUrl ? `<div style="display: flex; align-items: center; gap: 4px;"><img src="${attrIconUrl}" style="width: 14px; height: 14px; border-radius: 50%;"><span style="font-size: 10px; color: inherit;">${trad[attrRaw] || attrRaw}</span></div>` : ''}
+                            ${(card.level || card.rank) && !card.type.toLowerCase().includes("link") ? `<div style="display: flex; align-items: center; gap: 2px;"><img src="${starIcon}" style="width: 12px; height: 12px; ${card.type.toUpperCase().includes('XYZ') ? 'filter:invert(1) brightness(0.5);' : ''}"><span style="font-size: 10px; color: inherit;">${card.level || card.rank}</span></div>` : ''}
+                        </div>
+                        <div class="info-row" style="display: flex; align-items: center; gap: 4px; margin-top: 2px; flex-wrap: wrap; color: ${textColor};">
+                            <img src="${raceIconUrl}" style="width: 14px; height: 14px;" onerror="this.style.display='none'">
+                            <span style="color: inherit;">${raceTraduzida} / </span>
+                            <img src="${typeIconUrl}" title="Tipo" style="width: 14px; height: 14px; border-radius: 2px;" onerror="this.style.display='none'">
+                            <span style="color: inherit;">${tipoTexto}</span>
+                        </div>
+                        ${card.atk !== undefined ? `
+                            <div class="info-row atk-def-row" style="border-top: 1px solid ${!hasCustomTheme ? 'rgba(255,255,255,0.1)' : 'var(--border)'};">
+                                <div style="display: flex; align-items: center; gap: 4px;"><i class="fas fa-fist-raised" style="color: #4d94ff; font-size: 10px;"></i><span style="color: #4d94ff; font-weight: bold;">ATK/</span><span style="color: ${textColor};">${card.atk}</span></div>
+                                ${!card.type.toLowerCase().includes("link") ? `<div style="display: flex; align-items: center; gap: 4px;"><i class="fas fa-shield-alt" style="color: #ff4d4d; font-size: 10px;"></i><span style="color: #ff4d4d; font-weight: bold;">DEF/</span><span style="color: ${textColor};">${card.def}</span></div>` 
+                                : `<div style="display: flex; align-items: center; gap: 4px;"><span style="color: ${textColor}; font-weight: bold;">LINK-${card.linkval}</span></div>`}
+                            </div>` : ''}
+                    </div>`;
+            }
+            const cardWithSpecificArt = { ...card, card_images: [imageObj] };
+            let pressTimer;
+            let isLongPress = false;
+            div.onmouseenter = (e) => { if(window.innerWidth >= 900) showTooltip(cardWithSpecificArt, e); };
+            div.onmousemove = (e) => { if(window.innerWidth >= 900) moveTooltip(e); };
+            div.onmouseleave = () => { if(window.innerWidth >= 900) hideTooltip(); };
+            div.ontouchstart = (e) => {
+                isLongPress = false;
+                clearTimeout(pressTimer);
+                pressTimer = setTimeout(() => {
+                    isLongPress = true;
+                    const touch = e.touches[0];
+                    showTooltip(cardWithSpecificArt, { clientX: touch.clientX, clientY: touch.clientY });
+                    if (navigator.vibrate) navigator.vibrate(50);
+                }, 600);
+            };
+            div.ontouchmove = () => clearTimeout(pressTimer);
+            div.ontouchend = (e) => {
+                clearTimeout(pressTimer);
+                if (isLongPress && e.cancelable) e.preventDefault();
+            };
+            div.onclick = (e) => {
+                const isMobile = window.innerWidth < 900;
+                const tooltipVisible = document.getElementById('card-tooltip').style.display === 'block';
+                if (isLongPress || (isMobile && tooltipVisible)) {
+                    isLongPress = false;
+                    return;
+                }
+                const qty = parseInt(document.getElementById('search-qty').value) || 1;
+                for(let i=0; i<qty; i++) cardQueue.push({ id: card.id, name: displayName, imgId: imageObj.id });
+                updateUI();
+                if(isMobile) showToast(`${qty}x ${displayName} adicionado(a)! 🃏`);
+            };
+            container.appendChild(div);
+        });
+    }
+
+    function updateUI() {
+        const list = document.getElementById('deck-items');
+        const layout = document.getElementById('app-layout');
+        if(cardQueue.length === 0) layout.classList.add('empty-queue'); 
+        else layout.classList.remove('empty-queue');
+        list.innerHTML = "";
+        const counts = {};
+        cardQueue.forEach(c => counts[c.imgId] = (counts[c.imgId] || 0) + 1);
+        Object.keys(counts).forEach(imgId => {
+            const c = cardQueue.find(x => x.imgId == imgId);
+            const fullCardData = cardCache[c.id]; 
+            const row = document.createElement('div');
+            row.style = "padding:8px; border-bottom:1px solid #222; font-size:11px; display:flex; justify-content:space-between; align-items:center; cursor:default;";
+            row.innerHTML = `<span><b>${counts[imgId]}x</b> ${c.name}</span><span style="color:red; cursor:pointer; font-weight:bold;" onclick="removeItem('${imgId}')">✖</span>`;
+            if(fullCardData) {
+                row.onmouseenter = (e) => showTooltip(fullCardData, e);
+                row.onmousemove = (e) => moveTooltip(e);
+                row.onmouseleave = () => hideTooltip();
+            }
+            list.appendChild(row);
+        });
+        document.getElementById('count-total').innerText = cardQueue.length; 
+        renderResults(); 
+        triggerPDFUpdate();
+    }
+
+    function triggerPDFUpdate() { if(isGenerating || cardQueue.length === 0) return; generatePDF(); }
+
+    async function generatePDF() {
+        if(isGenerating) return; isGenerating = true;
+        document.getElementById('import-overlay').style.display = 'flex';
+        const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+        const scale = parseFloat(document.getElementById('print-scale').value) / 100;
+        const w = 59 * scale, h = 86 * scale, gap = 6;
+        const mx = (297 - (4 * w + 3 * gap)) / 2, my = (210 - (2 * h + 1 * gap)) / 2;
+        const totalPagesPDF = Math.ceil(cardQueue.length / 8);
+        for(let i=0; i<cardQueue.length; i++) {
+            const currentPagePDF = Math.floor(i / 8) + 1;
+            if (i % 8 === 0 && i > 0) doc.addPage();
+            if (i % 8 === 0) {
+                doc.setFillColor(30, 30, 30); doc.rect(0, 0, 297, 210, 'F');
+                doc.setTextColor(255); doc.setFontSize(18); doc.text("Imprimir no tamanho real", 148.5, 7, { align: "center" });
+                doc.setFontSize(12); doc.setTextColor(180);
+                doc.text(`Página ${currentPagePDF} de ${totalPagesPDF}`, 148.5, 205, { align: "center" });
+            }
+            const pos = i % 8, col = pos % 4, row = Math.floor(pos / 4);
+            const x = mx + (col * (w + gap)), y = my + (row * (h + gap));
+            document.getElementById('progress-bar').style.width = Math.round(((i + 1) / cardQueue.length) * 100) + '%';
+            try {
+                const imgUrl = `https://images.weserv.nl/?url=images.ygoprodeck.com/images/cards/${cardQueue[i].imgId}.jpg&q=100`;
+                const resp = await fetch(imgUrl); const blob = await resp.blob();
+                const b64 = await new Promise(r => { const rd = new FileReader(); rd.onloadend = () => r(rd.result); rd.readAsDataURL(blob); });
+                doc.addImage(b64, 'JPEG', x, y, w, h, undefined, 'NONE');
+                doc.setDrawColor(255); doc.setLineWidth(0.4); const offset = 2, len = 5;
+                doc.line(x-offset, y, x-offset-len, y); doc.line(x, y-offset, x, y-offset-len);
+                doc.line(x+w+offset, y, x+w+offset+len, y); doc.line(x+w, y-offset, x+w, y-offset-len);
+                doc.line(x-offset, y+h, x-offset-len, y+h); doc.line(x, y+h+offset, x, y+h+offset+len);
+                doc.line(x+w+offset, y+h, x+w+offset+len, y+h); doc.line(x+w, y+h+offset, x+w, y+h+offset+len);
+            } catch(e) {}
+        }
+        window.currentPdf = doc.output('blob');
+        document.getElementById('preview-frame').src = URL.createObjectURL(window.currentPdf);
+        document.getElementById('import-overlay').style.display = 'none'; isGenerating = false;
+    }
+
+    window.removeItem = (imgId) => { cardQueue = cardQueue.filter(c => c.imgId != imgId); updateUI(); hideTooltip(); };
+    window.clearQueue = () => { if(confirm("Limpar tudo?")) { cardQueue = []; updateUI(); hideTooltip(); } };
+    window.changePage = (dir) => { 
+        const max = Math.ceil(searchResults.length/getItemsPerPage());
+        if((currentPage + dir) > 0 && (currentPage + dir) <= max) { currentPage += dir; renderResults(); }
+    };
+    window.jumpToPage = (val) => { 
+        const max = Math.ceil(searchResults.length/getItemsPerPage());
+        currentPage = Math.max(1, Math.min(max, parseInt(val) || 1)); renderResults(); 
+    };
+    window.downloadPDF = () => { 
+        if(window.currentPdf) { 
+            const agora = new Date(); const dataF = `${String(agora.getDate()).padStart(2, '0')}-${String(agora.getMonth() + 1).padStart(2, '0')}-${agora.getFullYear()}`;
+            const a = document.createElement('a'); a.href = URL.createObjectURL(window.currentPdf); 
+            a.download = `Cartas_Proxies_Yu-Gi-Oh!_${dataF}.pdf`; a.click(); 
+        } 
+    };
+    window.importYDK = async (input) => {
+        const file = input.files[0]; if(!file) return; const text = await file.text();
+        const ids = text.split('\n').map(l => l.trim()).filter(l => /^\d+$/.test(l));
+        const res = await fetch(`https://db.ygoprodeck.com/api/v7/cardinfo.php?id=${ids.join(',')}&misc=yes`);
+        const data = await res.json();
+        if(data.data) {
+            data.data.forEach(card => {
+                cardCache[card.id] = card; 
+                const count = ids.filter(id => id == card.id).length;
+                for(let i=0; i<count; i++) cardQueue.push({ id: card.id, name: card.name, imgId: card.card_images[0].id });
+            });
+            updateUI(); showToast("Deck Importado com sucesso!");
+        }
+    };
+    window.resetFilters = () => {
+        document.getElementById('search-input').value = "";
+        document.getElementById('filter-desc').value = "";
+        document.getElementById('filter-type').value = "";
+        document.getElementById('search-qty').value = "1";
+        document.getElementById('filter-subtype').innerHTML = '<option value="">Qualquer</option>';
+        document.getElementById('filter-race').innerHTML = '<option value="">Qualquer</option>';
+        document.getElementById('filter-attribute').value = "";
+        document.getElementById('filter-lv').value = "";
+        document.getElementById('filter-atk').value = "";
+        document.getElementById('filter-def').value = "";
+        const hoje = new Date().toISOString().split('T')[0];
+        document.getElementById('enable-date-filter').checked = false;
+        document.getElementById('date-filters-container').style.display = 'none';
+        document.getElementById('filter-era').value = "";
+        document.getElementById('date-region-type').value = "tcg";
+        document.getElementById('date-start').value = "1999-01-01";
+        document.getElementById('date-end').value = hoje;
+        document.getElementById('group-subtype').style.display = "none";
+        document.getElementById('group-race').style.display = "none";
+        document.getElementById('monster-extras').style.display = "none";
+        document.getElementById('filter-banlist-type').value = "";
+        document.getElementById('enable-banlist-only').checked = false;
+        toggleBanlistCheckbox();
+        document.getElementById('filter-price-min').value = "";
+        document.getElementById('filter-price-max').value = "";
+        currentPage = 1;
+        performSearch(true);
+        showToast("Filtros resetados");
+    };
+    
+    document.getElementById('filter-price-min').addEventListener('input', () => { currentPage = 1; performSearch(true); });
+    document.getElementById('filter-price-max').addEventListener('input', () => { currentPage = 1; performSearch(true); });
+
+// ==================== MÓDULO OCR - VERSÃO CORRIGIDA ====================
+let ocrWorker = null;
+let isOcrActive = false;
+let isProcessing = false;
+let lastMatchedText = "";
+let lastMatchTime = 0;
+let scannerFoundCards = [];
+let processingCooldown = false;
+
+// ==================== FUNÇÕES AUXILIARES ====================
+
+// Filtro para ignorar texto de lixo
+function isGarbageText(text) {
+    if (!text || text.length < 3) return true;
+    if (text.length < 3 || text.length > 45) return true;
+    const letters = text.replace(/[^A-Z]/g, '');
+    if (letters.length < 3) return true;
+    const vowels = (text.match(/[AEIOU]/gi) || []).length;
+    const consonants = letters.length - vowels;
+    if (consonants > vowels * 2.5 && letters.length > 6) return true;
+    if (/([A-Z])\1{4,}/.test(text)) return true;
+    return false;
+}
+
+// Normaliza texto OCR
+function smartNormalize(text) {
+    if (!text) return "";
+    // Mantém letras (incluindo acentos), números, espaços, hífen, apóstrofo, vírgula e dois pontos
+    let clean = text.replace(/[^\p{L}\p{N}\s\-',:]/gu, ' ');
+    clean = clean.replace(/\s+/g, ' ').trim();
+    if (clean.length < 3) return "";
+    
+    // Lista negativa (palavras muito curtas ou genéricas)
+    const garbageWords = ['SPELL', 'TRAP', 'CARD', 'MONSTER', 'MAGIC', 'CONTINUOUS', 
+                          'QUICK', 'FIELD', 'EQUIP', 'RITUAL', 'COUNTER', 'NORMAL', 
+                          'EFFECT', 'TOKEN', 'FUSION', 'SYNCHRO', 'XYZ', 'LINK', 'THE'];
+    const words = clean.split(' ');
+    const filtered = words.filter(w => {
+        const upper = w.toUpperCase();
+        return !garbageWords.includes(upper) && w.length >= 2;
+    });
+    if (filtered.length === 0 && words.length > 0) return words.slice(0, 2).join(' ');
+    // Retorna até 4 palavras (ajuda em nomes longos)
+    return filtered.slice(0, 4).join(' ');
+}
+
+// Função de similaridade
+function calculateSimilarity(str1, str2) {
+    let m = str1.length, n = str2.length;
+    if (m === 0 || n === 0) return 0;
+    if (m > n) [str1, str2, m, n] = [str2, str1, n, m];
+    let prev = new Array(m + 1);
+    for (let i = 0; i <= m; i++) prev[i] = i;
+    for (let j = 1; j <= n; j++) {
+        let curr = new Array(m + 1);
+        curr[0] = j;
+        for (let i = 1; i <= m; i++) {
+            const cost = str1[i-1] === str2[j-1] ? 0 : 1;
+            curr[i] = Math.min(prev[i] + 1, curr[i-1] + 1, prev[i-1] + cost);
+        }
+        prev = curr;
+    }
+    return (Math.max(m, n) - prev[m]) / Math.max(m, n);
+}
+
+// Busca na API com cache
+const cardCacheAPI = new Map();
+
+async function fetchCardByName(name, lang) {
+    const cacheKey = `${name}_${lang || 'en'}`;
+    if (cardCacheAPI.has(cacheKey)) return cardCacheAPI.get(cacheKey);
+    
+    try {
+        // Usa até 3 palavras para a consulta inicial
+        const query = name.split(' ').slice(0, 4).join(' ');
+        if (query.length < 3) return null;
+        
+        let url = `https://db.ygoprodeck.com/api/v7/cardinfo.php?fname=${encodeURIComponent(query)}&misc=yes`;
+        if (lang) url += `&language=${lang}`;
+        
+        const r = await fetch(url);
+        const j = await r.json();
+        
+        if (j.data && j.data.length > 0) {
+            let best = null;
+            let bestScore = 0;
+            // Aumenta o limite para 20 cartas e usa similaridade
+            for (const card of j.data.slice(0, 20)) {
+                const cardName = (card.name_pt || card.name).toLowerCase();
+                // Similaridade com string original (preserva acentos)
+                const score = calculateSimilarity(name.toLowerCase(), cardName);
+                if (score > bestScore) {
+                    bestScore = score;
+                    best = card;
+                }
+            }
+            // Threshold reduzido para 0.4 (mais tolerante)
+            const result = bestScore > 0.4 ? best : null;
+            cardCacheAPI.set(cacheKey, result);
+            return result;
+        }
+    } catch (err) {
+        console.warn("fetchCardByName error:", err);
+        return null;
+    }
+    return null;
+}
+
+// Busca em cascata
+async function smartSearch(fullText) {
+    if (!fullText || fullText.length < 3) return null;
+    
+    // Evita buscas repetidas do mesmo texto em menos de 1 segundo
+    if (lastMatchedText === fullText && (Date.now() - lastMatchTime) < 1000) return null;
+    
+    let card = await fetchCardByName(fullText, 'pt') || await fetchCardByName(fullText, null);
+    if (card) {
+        lastMatchedText = fullText;
+        lastMatchTime = Date.now();
+        return card;
+    }
+    
+    // Busca por palavras individuais apenas se o texto for longo
+    const words = fullText.split(' ');
+    if (words.length > 2) {
+        for (const word of words) {
+            if (word.length >= 4 && !isGarbageText(word)) {
+                card = await fetchCardByName(word, 'pt') || await fetchCardByName(word, null);
+                if (card) {
+                    lastMatchedText = fullText;
+                    lastMatchTime = Date.now();
+                    return card;
+                }
+            }
+        }
+    }
+    return null;
+}
+
+// Função de log
+function addOcrLog(msg) {
+    const logBox = document.getElementById('ocr-log');
+    if (!logBox) return;
+    const t = new Date().toLocaleTimeString('pt-BR', {hour12: false});
+    const div = document.createElement('div');
+    div.style.cssText = "border-bottom:1px solid #333; padding:2px; font-size:11px; color:#2ecc71; font-family:monospace;";
+    div.textContent = `[${t}] ${msg}`;
+    logBox.prepend(div);
+    if (logBox.childElementCount > 40) logBox.removeChild(logBox.lastChild);
+}
+
+function showScannerToast(cardName) {
+    const toast = document.createElement('div');
+    toast.style.cssText = `
+        position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%);
+        background: #27ae60; color: white; padding: 8px 16px; border-radius: 30px;
+        font-weight: bold; z-index: 1000003; font-size: 12px;
+        animation: fadeIn 0.2s;
+    `;
+    toast.innerHTML = `<i class="fas fa-check-circle"></i> ${cardName}`;
+    document.body.appendChild(toast);
+    setTimeout(() => {
+        toast.style.opacity = "0";
+        setTimeout(() => toast.remove(), 500);
+    }, 2000);
+}
+
+function updateScannerResultsUI() {
+    const container = document.getElementById('search-results');
+    if (!container) return;
+    if (container.innerHTML.includes('Scanner ativo') || container.innerHTML.includes('Aponte')) {
+        container.innerHTML = '';
+    }
+    scannerFoundCards.forEach(card => {
+        const cardName = card.name_pt || card.name;
+        const div = document.createElement('div');
+        div.className = 'suggestion-item';
+        div.style.borderLeft = '3px solid #2ecc71';
+        div.style.marginBottom = '8px';
+        div.style.padding = '8px';
+        div.innerHTML = `
+            <img src="${card.card_images[0].image_url_small}" style="width: 60px;">
+            <div class="card-info-box">
+                <div class="card-name" style="color:#2ecc71; font-size:14px;">${cardName}</div>
+                <div class="info-row" style="font-size:11px;">💰 $${card.card_prices[0]?.tcgplayer_price || 'N/A'}</div>
+                <button onclick="forceAddToQueue('${card.id}')" style="background:#2ecc71; color:#000; border:none; border-radius:4px; padding:4px 12px; margin-top:6px; cursor:pointer; font-weight:bold;">+ ADICIONAR</button>
+            </div>
+        `;
+        container.appendChild(div);
+    });
+}
+
+// ==================== PRÉ-PROCESSAMENTO ====================
+
+async function processImageWithColorFilter(video, cropRect) {
+    if (!ocrWorker) return null;
+    
+    // Usa o tipo e raridade selecionados manualmente (se existirem)
+    let cardType = 'Monstro Efeito';
+    let rarity = 'Comum';
+    const manualTypeSelect = document.getElementById('manual-card-type');
+    const manualRaritySelect = document.getElementById('manual-rarity');
+    if (manualTypeSelect && manualRaritySelect) {
+        cardType = manualTypeSelect.value;
+        rarity = manualRaritySelect.value;
+    } else {
+        // Fallback: detecta automaticamente (pode ser removido se preferir)
+        cardType = await detectCardTypeFromImage(video, cropRect);
+        rarity = 'Comum';
+    }
+    
+    const settings = calibrator ? calibrator.getCalibration(cardType, rarity) : null;
+    if (!settings) return null;
+    
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    canvas.width = 1600;
+    canvas.height = 240; 
+    ctx.fillStyle = "white";
+    ctx.fillRect(0, 0, 1600, 240);
+    ctx.drawImage(video, cropRect.x, cropRect.y, cropRect.width, cropRect.height, 120, 40, 1360, 160);
+    
+    // Aplica filtros usando as configurações calibradas
+    let filterString = '';
+    if (settings.grayscale) filterString += 'grayscale(1) ';
+    if (settings.contrast !== 1.0) filterString += `contrast(${settings.contrast}) `;
+    if (settings.brightness !== 1.0) filterString += `brightness(${settings.brightness}) `;
+    ctx.filter = filterString;
+    ctx.drawImage(canvas, 0, 0);
+    
+    if (settings.invert) {
+        const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = imgData.data;
+        for (let i = 0; i < data.length; i += 4) {
+            data[i] = 255 - data[i];
+            data[i+1] = 255 - data[i+1];
+            data[i+2] = 255 - data[i+2];
+        }
+        ctx.putImageData(imgData, 0, 0);
+    }
+    
+    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data = imgData.data;
+    let threshold = settings.threshold;
+    if (settings.adaptiveThreshold) {
+        let total = 0;
+        for (let i = 0; i < data.length; i += 4) total += data[i];
+        threshold = total / (data.length / 4);
+    }
+    for (let i = 0; i < data.length; i += 4) {
+        const val = data[i] > threshold ? 255 : 0;
+        data[i] = data[i+1] = data[i+2] = val;
+    }
+    ctx.putImageData(imgData, 0, 0);
+    
+    const preview = document.getElementById('preview-canvas');
+    if (preview) {
+        preview.width = canvas.width;
+        preview.height = canvas.height;
+        preview.getContext('2d').drawImage(canvas, 0, 0);
+    }
+    
+    try {
+        const result = await ocrWorker.recognize(canvas);
+        return result.data.text;
+    } catch (err) {
+        return null;
+    }
+}
+
+// ==================== PROCESSAMENTO DO FRAME ====================
+
+async function processOcrFrame() {
+    if (!isOcrActive || isProcessing || processingCooldown) {
+        requestAnimationFrame(processOcrFrame);
+        return;
+    }
+    const video = document.getElementById('ocr-video');
+    if (!video || video.videoWidth === 0) {
+        requestAnimationFrame(processOcrFrame);
+        return;
+    }
+    isProcessing = true;
+    try {
+        const visualBox = document.getElementById('scanner-visual');
+        const vRect = video.getBoundingClientRect();
+        const mRect = visualBox.getBoundingClientRect();
+        const vW = video.videoWidth, vH = video.videoHeight;
+        const s = (vW / vH > vRect.width / vRect.height) ? vH / vRect.height : vW / vRect.width;
+        const xO = (vW - vRect.width * s) / 2;
+        const yO = (vH - vRect.height * s) / 2;
+        const cropX = (mRect.left - vRect.left) * s + xO;
+        const cropY = (mRect.top - vRect.top) * s + yO;
+        const cropWidth = mRect.width * s;
+        const cropHeight = mRect.height * s;
+        const ocrText = await processImageWithColorFilter(video, {
+            x: cropX, y: cropY,
+            width: cropWidth, height: cropHeight
+        });
+        if (ocrText) {
+            const cleaned = smartNormalize(ocrText);
+            if (cleaned && cleaned.length >= 4 && !isGarbageText(cleaned)) {
+                if (cleaned !== lastMatchedText) addOcrLog(`📖 "${cleaned}"`);
+                const card = await smartSearch(cleaned);
+                if (card) {
+                    const cardName = card.name_pt || card.name;
+                    if (!scannerFoundCards.find(c => c.id === card.id)) {
+                        scannerFoundCards.push(card);
+                        lastMatchedText = cardName;
+                        lastMatchTime = Date.now();
+                        if (navigator.vibrate) navigator.vibrate(100);
+                        showScannerToast(cardName);
+                        addOcrLog(`✅ ${cardName}`);
+                        updateScannerResultsUI();
+                        processingCooldown = true;
+                        setTimeout(() => { processingCooldown = false; }, 1200);
+                    }
+                }
+            }
+        }
+    } catch (err) {
+        console.error('Frame error:', err);
+    }
+    isProcessing = false;
+    setTimeout(() => {
+        if (isOcrActive) requestAnimationFrame(processOcrFrame);
+    }, 500);
+}
+
+// ==================== INICIAR SCANNER ====================
+
+async function startScanner() {
+    const container = document.getElementById('ocr-container');
+    const video = document.getElementById('ocr-video');
+    if (container) container.style.display = 'block';
+    scannerFoundCards = [];
+    lastMatchedText = "";
+    cardCacheAPI.clear();
+    const resultsContainer = document.getElementById('search-results');
+    if (resultsContainer) {
+        resultsContainer.innerHTML = '<div style="text-align:center; padding:30px; color:#2ecc71;">🎯 Aponte a mira no NOME da carta</div>';
+    }
+    try {
+        addOcrLog("🎥 Iniciando câmera...");
+        const stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: 'environment', width: { ideal: 1280 } }
+        });
+        video.srcObject = stream;
+        await video.play();
+        try {
+            const track = stream.getVideoTracks()[0];
+            const capabilities = track.getCapabilities();
+            if (capabilities.focusMode) {
+                if (capabilities.focusMode.includes('continuous')) {
+                    await track.applyConstraints({ advanced: [{ focusMode: 'continuous' }] });
+                    addOcrLog("🎯 Foco contínuo");
+                } else if (capabilities.focusMode.includes('auto')) {
+                    await track.applyConstraints({ advanced: [{ focusMode: 'auto' }] });
+                    addOcrLog("🎯 Foco automático");
+                }
+            }
+            if (capabilities.zoom) {
+                const maxZoom = capabilities.zoom.max;
+                const zoom = Math.min(maxZoom, 1.5);
+                await track.applyConstraints({ advanced: [{ zoom: zoom }] });
+                addOcrLog(`🔍 Zoom: ${zoom}x`);
+            }
+        } catch (e) {}
+        video.addEventListener('click', async (e) => {
+            try {
+                const track = stream.getVideoTracks()[0];
+                if (track && track.applyConstraints) {
+                    await track.applyConstraints({ advanced: [{ focusMode: 'manual', focusDistance: 1.0 }] });
+                    addOcrLog("🔍 Foco manual");
+                    setTimeout(async () => {
+                        try {
+                            await track.applyConstraints({ advanced: [{ focusMode: 'continuous' }] });
+                        } catch(e) {}
+                    }, 3000);
+                }
+            } catch(e) {}
+        });
+        if (!ocrWorker) {
+            addOcrLog("🧠 Carregando Tesseract...");
+            ocrWorker = await Tesseract.createWorker();
+            await ocrWorker.loadLanguage('eng+por');
+            await ocrWorker.initialize('eng+por');
+            await ocrWorker.setParameters({
+                tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789áéíóúâêîôûãõçÁÉÍÓÚÂÊÎÔÛÃÕÇ -,:',
+                tessedit_pageseg_mode: '7'
+            });
+            addOcrLog("✅ OCR pronto!");
+        }
+        isOcrActive = true;
+        addOcrLog("🔍 Escaneando...");
+        requestAnimationFrame(processOcrFrame);
+    } catch (err) {
+        addOcrLog(`❌ Erro: ${err.message}`);
+    }
+}
+
+function stopScanner() {
+    isOcrActive = false;
+    const video = document.getElementById('ocr-video');
+    if (video && video.srcObject) {
+        video.srcObject.getTracks().forEach(t => t.stop());
+        video.srcObject = null;
+    }
+}
+
+// ==================== FUNÇÕES DE UI ====================
+
+window.forceAddToQueue = (cardId) => {
+    const card = scannerFoundCards.find(c => c.id == cardId);
+    if (card) {
+        const qty = parseInt(document.getElementById('search-qty').value) || 1;
+        for(let i = 0; i < qty; i++) {
+            cardQueue.push({
+                id: card.id,
+                name: card.name_pt || card.name,
+                imgId: card.card_images[0].id
+            });
+        }
+        updateUI();
+        showToast(`${qty}x ${card.name_pt || card.name} adicionado!`);
+        if (navigator.vibrate) navigator.vibrate(50);
+    }
+};
+
+window.copyLogs = () => {
+    const logElement = document.getElementById('ocr-log');
+    if (logElement) {
+        navigator.clipboard.writeText(logElement.innerText);
+        showToast("📋 Logs copiados!");
+    }
+};
+
+window.takeScreenshot = () => {
+    const previewCanvas = document.getElementById('preview-canvas');
+    const canvas = document.createElement('canvas');
+    canvas.width = previewCanvas?.width || 500;
+    canvas.height = 200;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = "#000";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    if (previewCanvas) {
+        ctx.drawImage(previewCanvas, 0, 0, canvas.width, 80);
+    }
+    ctx.fillStyle = "#0f0";
+    ctx.font = "10px monospace";
+    const logs = document.getElementById('ocr-log')?.innerText.split('\n').slice(0, 12).join('\n') || '';
+    ctx.fillText(logs, 10, 100);
+    const link = document.createElement('a');
+    link.download = `ocr_${Date.now()}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+    showToast("📸 Screenshot salva!");
+};
+
+// ==================== EVENT LISTENERS ====================
+
+function setupCalibratorButton() {
+    const calibratorBtn = document.getElementById('btn-open-calibrator');
+    if (calibratorBtn) {
+        const newBtn = calibratorBtn.cloneNode(true);
+        calibratorBtn.parentNode.replaceChild(newBtn, calibratorBtn);
+        newBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log("🔧 Botão CALIBRAR OCR clicado!");
+            openCalibrator();  // chama a calibração automática
+        });
+    }
+}
+
+document.addEventListener('click', (e) => {
+    if (e.target.id === 'btn-open-scanner' || e.target.closest('#btn-open-scanner')) {
+        e.preventDefault();
+        const resultsView = document.getElementById('results-view');
+        if (resultsView) resultsView.innerHTML = '<div style="grid-column:1/-1; text-align:center; color:#2ecc71; padding:20px;">🤖 MODO SCANNER ATIVO</div>';
+        scannerFoundCards = [];
+        lastMatchedText = "";
+        startScanner();
+        setTimeout(setupCalibratorButton, 1000);
+    }
+    if (e.target.id === 'btn-close-ocr' || e.target.closest('#btn-close-ocr')) {
+        stopScanner();
+        document.getElementById('ocr-container').style.display = 'none';
+        if (scannerFoundCards.length > 0) {
+            searchResults = scannerFoundCards.map(card => ({
+                ...card,
+                current_image: card.card_images[0],
+                variant_idx: 0,
+                is_variant: card.card_images.length > 1
+            }));
+            currentPage = 1;
+            if (typeof sortAndRender === "function") sortAndRender();
+            showToast(`${scannerFoundCards.length} carta(s) detectada(s)!`);
+        } else {
+            const resultsView = document.getElementById('results-view');
+            if (resultsView) {
+                resultsView.innerHTML = "<div style='grid-column:1/-1; text-align:center; padding:20px; color:#e74c3c;'>Nenhuma carta detectada. 🤖</div>";
+            }
+        }
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    setupCalibratorButton();
+});
+
+// ==================== CSS ====================
+
+const styleScanner = document.createElement('style');
+styleScanner.textContent = `
+    #scanner-visual {
+        width: 55% !important;
+        height: 42px !important;
+        top: 22% !important;
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        border: 3px solid #2ecc71 !important;
+        background: rgba(46, 204, 113, 0.25) !important;
+        border-radius: 8px !important;
+        box-shadow: 0 0 0 2px rgba(0,0,0,0.3), 0 0 0 4px rgba(46,204,113,0.2) !important;
+    }
+    #scanner-visual div {
+        font-size: 11px !important;
+        top: -28px !important;
+        background: rgba(0,0,0,0.85) !important;
+        padding: 3px 12px !important;
+        border-radius: 20px !important;
+        white-space: nowrap !important;
+        font-weight: bold !important;
+    }
+    #preview-canvas {
+        background: #000;
+        border: 1px solid #2ecc71;
+        border-radius: 4px;
+        min-height: 50px;
+    }
+    .focus-hint {
+        position: absolute;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(0,0,0,0.7);
+        color: #ffaa00;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 11px;
+        font-family: monospace;
+        z-index: 1000003;
+        pointer-events: none;
+        white-space: nowrap;
+    }
+`;
+document.head.appendChild(styleScanner);
+
+// Aguarda o DOM carregar antes de tentar acessar #ocr-container
+document.addEventListener('DOMContentLoaded', () => {
+    const container = document.getElementById('ocr-container');
+    if (container) {
+        const focusHint = document.createElement('div');
+        focusHint.className = 'focus-hint';
+        focusHint.innerHTML = '📷 Toque na tela para focar';
+        container.appendChild(focusHint);
+    } else {
+        console.warn("Elemento #ocr-container não encontrado ao adicionar focus-hint");
+    }
+});
+
+// ==================== CALIBRADOR DE OCR ====================
+
+class OCRCalibrator {
+    constructor() {
+        this.calibrations = this.loadCalibrations();
+        this.isCalibrating = false;
+        this.currentTestCard = null;
+        this.testResults = [];
+    }
+    
+    getDefaultFilters() {
+        return {
+            grayscale: true,
+            contrast: 1.3,
+            brightness: 1.0,
+            sharpen: 0,
+            threshold: 128,
+            adaptiveThreshold: false,
+            invert: false,
+            denoise: false,
+            erode: false,
+            dilate: false
+        };
+    }
+    
+    getTypePresets() {
+        return {
+            'Monstro Normal': { contrast: 1.4, brightness: 0.95, threshold: 130, invert: false },
+            'Monstro Efeito': { contrast: 1.4, brightness: 0.95, threshold: 130, invert: false },
+            'Monstro Ritual': { contrast: 1.35, brightness: 0.98, threshold: 125, invert: false },
+            'Monstro Fusão': { contrast: 1.35, brightness: 1.0, threshold: 120, invert: true },
+            'Monstro Sincro': { contrast: 1.5, brightness: 0.9, threshold: 115, invert: false },
+            'Monstro Xyz': { contrast: 1.4, brightness: 0.92, threshold: 125, invert: false },
+            'Monstro Link': { contrast: 1.45, brightness: 0.93, threshold: 120, invert: false },
+            'Monstro Pêndulo': { contrast: 1.4, brightness: 0.94, threshold: 125, invert: false },
+            'Magia': { contrast: 1.35, brightness: 0.97, threshold: 115, invert: false },
+            'Armadilha': { contrast: 1.35, brightness: 0.97, threshold: 115, invert: true },
+            'Ficha': { contrast: 1.3, brightness: 0.96, threshold: 120, invert: false }
+        };
+    }
+    
+    getRarityPresets() {
+        return {
+            'Comum': { contrast: 1.35, brightness: 0.96, threshold: 125 },
+            'Rara': { contrast: 1.4, brightness: 0.95, threshold: 128 },
+            'Super Rara': { contrast: 1.45, brightness: 0.93, threshold: 130 },
+            'Ultra Rara': { contrast: 1.5, brightness: 0.92, threshold: 132 },
+            'Secreta': { contrast: 1.55, brightness: 0.9, threshold: 135, invert: true },
+            'Platina': { contrast: 1.5, brightness: 0.91, threshold: 133 },
+            'Starlight': { contrast: 1.6, brightness: 0.88, threshold: 140, invert: true },
+            'Ouro': { contrast: 1.45, brightness: 0.94, threshold: 128 },
+            'Prata': { contrast: 1.4, brightness: 0.95, threshold: 125 }
+        };
+    }
+    
+    loadCalibrations() {
+        const saved = localStorage.getItem('ocr_calibrations');
+        if (saved) {
+            try { return JSON.parse(saved); } catch(e) {}
+        }
+        return {};
+    }
+    
+    saveCalibrations() {
+        localStorage.setItem('ocr_calibrations', JSON.stringify(this.calibrations));
+    }
+    
+    getCalibration(cardType, rarity) {
+        const key = `${cardType}|${rarity}`;
+        if (this.calibrations[key]) return this.calibrations[key];
+        const typePreset = this.getTypePresets()[cardType] || {};
+        const rarityPreset = this.getRarityPresets()[rarity] || {};
+        return { ...this.getDefaultFilters(), ...typePreset, ...rarityPreset };
+    }
+    
+    setCalibration(cardType, rarity, settings) {
+        const key = `${cardType}|${rarity}`;
+        this.calibrations[key] = settings;
+        this.saveCalibrations();
+    }
+    
+    applyFilters(ctx, canvas, settings) {
+        ctx.filter = 'none';
+        let filterString = '';
+        if (settings.grayscale) filterString += 'grayscale(1) ';
+        if (settings.contrast !== 1.0) filterString += `contrast(${settings.contrast}) `;
+        if (settings.brightness !== 1.0) filterString += `brightness(${settings.brightness}) `;
+        if (settings.sharpen > 0) filterString += `sharpen(${settings.sharpen}) `;
+        ctx.filter = filterString;
+        ctx.drawImage(canvas, 0, 0);
+        if (settings.invert) {
+            const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imgData.data;
+            for (let i = 0; i < data.length; i += 4) {
+                data[i] = 255 - data[i];
+                data[i+1] = 255 - data[i+1];
+                data[i+2] = 255 - data[i+2];
+            }
+            ctx.putImageData(imgData, 0, 0);
+        }
+        const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = imgData.data;
+        let threshold = settings.threshold;
+        if (settings.adaptiveThreshold) {
+            let total = 0;
+            for (let i = 0; i < data.length; i += 4) total += data[i];
+            threshold = total / (data.length / 4);
+        }
+        for (let i = 0; i < data.length; i += 4) {
+            const val = data[i] > threshold ? 255 : 0;
+            data[i] = data[i+1] = data[i+2] = val;
+        }
+        ctx.putImageData(imgData, 0, 0);
+        return { filterString, threshold };
+    }
+    
+    async testConfiguration(imageElement, cropRect, settings) {
+        if (!ocrWorker) return { success: false, error: "ocrWorker not ready" };
+        try {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = 800;
+            canvas.height = 90;
+            ctx.fillStyle = "white";
+            ctx.fillRect(0, 0, 800, 90);
+            
+            // Valida cropRect
+            if (!cropRect || isNaN(cropRect.x) || isNaN(cropRect.y) || cropRect.width <= 0 || cropRect.height <= 0) {
+                return { success: false, error: "invalid crop rect" };
+            }
+            
+            ctx.drawImage(imageElement, cropRect.x, cropRect.y, cropRect.width, cropRect.height, 60, 20, 680, 55);
+            
+            // Aplica filtros SEM sharpen
+            let filterString = '';
+            if (settings.grayscale) filterString += 'grayscale(1) ';
+            if (settings.contrast !== 1.0) filterString += `contrast(${settings.contrast}) `;
+            if (settings.brightness !== 1.0) filterString += `brightness(${settings.brightness}) `;
+            ctx.filter = filterString;
+            ctx.drawImage(canvas, 0, 0);
+            
+            // Inversão e threshold
+            if (settings.invert) {
+                const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const data = imgData.data;
+                for (let i = 0; i < data.length; i += 4) {
+                    data[i] = 255 - data[i];
+                    data[i+1] = 255 - data[i+1];
+                    data[i+2] = 255 - data[i+2];
+                }
+                ctx.putImageData(imgData, 0, 0);
+            }
+            
+            const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imgData.data;
+            let threshold = settings.threshold;
+            if (settings.adaptiveThreshold) {
+                let total = 0;
+                for (let i = 0; i < data.length; i += 4) total += data[i];
+                threshold = total / (data.length / 4);
+            }
+            for (let i = 0; i < data.length; i += 4) {
+                const val = data[i] > threshold ? 255 : 0;
+                data[i] = data[i+1] = data[i+2] = val;
+            }
+            ctx.putImageData(imgData, 0, 0);
+            
+            const result = await ocrWorker.recognize(canvas);
+            const cleaned = smartNormalize(result.data.text);
+            return {
+                text: result.data.text,
+                cleaned,
+                settings,
+                success: cleaned && cleaned.length >= 4 && !isGarbageText(cleaned)
+            };
+        } catch (err) {
+            console.error("testConfiguration error:", err);
+            return { success: false, error: err.message };
+        }
+    }
+    
+    async autoOptimize(imageElement, cropRect, cardType, rarity) {
+        console.log("🚀 autoOptimize iniciado");
+        this.isCalibrating = true;
+        this.testResults = [];
+        
+        const baseSettings = this.getCalibration(cardType, rarity);
+        const variations = this.generateVariations(baseSettings);
+        console.log(`🔧 Variações geradas: ${variations.length}`);
+        if (variations.length === 0) return null;
+        
+        let bestResult = null;
+        let bestScore = 0;
+        let currentTest = 0;
+        
+        for (const settings of variations) {
+            currentTest++;
+            console.log(`🔬 Teste ${currentTest}/${variations.length}: contraste=${settings.contrast}, brilho=${settings.brightness}, threshold=${settings.threshold}`);
+            window.dispatchEvent(new CustomEvent('calibrationProgress', { 
+                detail: { current: currentTest, total: variations.length } 
+            }));
+            
+            try {
+                const result = await this.testConfiguration(imageElement, cropRect, settings);
+                this.testResults.push(result);
+                if (result.success && result.cleaned) {
+                    const score = result.cleaned.length + (result.cleaned.match(/[AEIOU]/gi) || []).length * 2;
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestResult = result;
+                        console.log(`   🏆 Nova melhor pontuação: ${score}`);
+                    }
+                }
+            } catch (err) {
+                console.error(`   ❌ Erro no teste ${currentTest}:`, err);
+            }
+            await new Promise(r => setTimeout(r, 80)); // pausa para não sobrecarregar
+        }
+        
+        if (bestResult) {
+            this.setCalibration(cardType, rarity, bestResult.settings);
+            addOcrLog(`✅ Calibração otimizada para ${cardType} (${rarity})`);
+            addOcrLog(`📖 Melhor leitura: "${bestResult.cleaned}"`);
+            return bestResult;
+        }
+        return null;
+    }
+    
+    generateVariations(baseSettings) {
+        const variations = [];
+        for (const contrast of [1.2, 1.3, 1.4, 1.5, 1.6]) variations.push({ ...baseSettings, contrast });
+        for (const brightness of [0.85, 0.9, 0.95, 1.0, 1.05]) variations.push({ ...baseSettings, brightness });
+        for (const threshold of [100, 110, 120, 130, 140, 150]) variations.push({ ...baseSettings, threshold });
+        variations.push({ ...baseSettings, invert: true });
+        variations.push({ ...baseSettings, invert: false });
+        variations.push({ ...baseSettings, grayscale: true });
+        variations.push({ ...baseSettings, grayscale: false });
+        return variations.slice(0, 30);
+    }
+}
+
+// Instancia o calibrador
+const calibrator = new OCRCalibrator();
+
+// ==================== CALIBRADOR AUTOMÁTICO ====================
+
+// Função para detectar o tipo de carta pela cor
+function detectCardTypeFromImage(video, cropRect) {
+    return new Promise((resolve) => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = 100;
+        canvas.height = 50;
+        ctx.drawImage(video, cropRect.x, cropRect.y, cropRect.width, cropRect.height, 0, 0, 100, 50);
+        const imgData = ctx.getImageData(0, 0, 100, 50).data;
+        let r = 0, g = 0, b = 0;
+        let sampleCount = 0;
+        for (let i = 0; i < imgData.length; i += 100) {
+            r += imgData[i];
+            g += imgData[i+1];
+            b += imgData[i+2];
+            sampleCount++;
+        }
+        const avgR = r / sampleCount, avgG = g / sampleCount, avgB = b / sampleCount;
+        
+        // Verde forte -> Magia (cartas de Magia têm fundo verde)
+        if (avgG > avgR + 30 && avgG > avgB + 30 && avgG > 100) {
+            resolve('Magia');
+        }
+        // Laranja/marrom -> Monstro Normal
+        else if (avgR > avgG && avgR > avgB && avgR > 150 && avgG > 100) {
+            resolve('Monstro Normal');
+        }
+        // Roxo/rosa -> Armadilha
+        else if (avgR > avgG && avgB > avgG && avgR > 100 && avgB > 100) {
+            resolve('Armadilha');
+        }
+        // Cinza/prata -> Monstro Sincro
+        else if (avgR > 180 && avgG > 180 && avgB > 180) {
+            resolve('Monstro Sincro');
+        }
+        // Preto/azul escuro -> Monstro Xyz ou Link
+        else if (avgR < 80 && avgG < 80 && avgB > 100) {
+            resolve('Monstro Xyz');
+        }
+        // Roxo forte (Fusão)
+        else if (avgR > 150 && avgG < 100 && avgB > 150) {
+            resolve('Monstro Fusão');
+        }
+        // Azul claro (Ritual)
+        else if (avgB > avgR + 30 && avgB > avgG + 30 && avgB > 120) {
+            resolve('Monstro Ritual');
+        }
+        else {
+            resolve('Monstro Efeito');
+        }
+    });
+}
+
+// Função para detectar raridade (simplificada)
+function detectRarityFromImage(video, cropRect) {
+    return new Promise((resolve) => {
+        resolve('Comum');
+    });
+}
+
+// Calibração automática
+async function autoCalibrate() {
+    if (!calibrator) {
+        addOcrLog("⏳ Calibrador ainda não inicializado. Tente novamente.");
+        return;
+    }
+    
+    addOcrLog("🔧 Iniciando calibração automática...");
+    showToast("🔧 Calibrando OCR... aguarde");
+    
+    const video = document.getElementById('ocr-video');
+    if (!video || video.videoWidth === 0) {
+        addOcrLog("❌ Câmera não está ativa");
+        showToast("❌ Ative o scanner primeiro!");
+        return;
+    }
+    
+    // Obtém tipo e raridade manuais (ou fallback)
+    const manualTypeSelect = document.getElementById('manual-card-type');
+    const manualRaritySelect = document.getElementById('manual-rarity');
+    const cardType = manualTypeSelect ? manualTypeSelect.value : 'Monstro Efeito';
+    const rarity = manualRaritySelect ? manualRaritySelect.value : 'Comum';
+    addOcrLog(`📋 Tipo selecionado: ${cardType}, Raridade: ${rarity}`);
+    
+    // Pausa o scanner
+    const wasActive = isOcrActive;
+    if (wasActive) isOcrActive = false;
+    
+    // Calcula cropRect (igual ao que você já tem)
+    const visualBox = document.getElementById('scanner-visual');
+    const vRect = video.getBoundingClientRect();
+    const mRect = visualBox.getBoundingClientRect();
+    const vW = video.videoWidth, vH = video.videoHeight;
+    const s = (vW / vH > vRect.width / vRect.height) ? vH / vRect.height : vW / vRect.width;
+    const xO = (vW - vRect.width * s) / 2;
+    const yO = (vH - vRect.height * s) / 2;
+    const cropRect = {
+        x: (mRect.left - vRect.left) * s + xO,
+        y: (mRect.top - vRect.top) * s + yO,
+        width: mRect.width * s,
+        height: mRect.height * s
+    };
+    
+    // Toast de progresso
+    const progressToast = document.createElement('div');
+    progressToast.style.cssText = `position:fixed; bottom:150px; left:50%; transform:translateX(-50%); background:#2c3e50; color:#2ecc71; padding:8px 16px; border-radius:20px; font-size:11px; z-index:1000003; font-family:monospace; white-space:nowrap;`;
+    progressToast.innerHTML = `🔧 Testando configurações... 0/30`;
+    document.body.appendChild(progressToast);
+    
+    const onProgress = (e) => {
+        progressToast.innerHTML = `🔧 Testando configurações... ${e.detail.current}/${e.detail.total}`;
+    };
+    window.addEventListener('calibrationProgress', onProgress);
+    
+    let result = null;
+    try {
+        result = await calibrator.autoOptimize(video, cropRect, cardType, rarity);
+    } catch (err) {
+        addOcrLog(`❌ Erro durante calibração: ${err.message}`);
+    } finally {
+        if (progressToast && progressToast.parentNode) progressToast.remove();
+        window.removeEventListener('calibrationProgress', onProgress);
+        if (wasActive) {
+            isOcrActive = true;
+            isProcessing = false;
+            processingCooldown = false;
+            setTimeout(() => requestAnimationFrame(processOcrFrame), 100);
+        }
+    }
+    
+    if (result) {
+        addOcrLog(`✅ Calibração concluída!`);
+        addOcrLog(`📊 Melhor configuração: Contraste=${result.settings.contrast}, Brilho=${result.settings.brightness}, Limiar=${result.settings.threshold}`);
+        addOcrLog(`📖 Leitura obtida: "${result.cleaned}"`);
+        showToast(`✅ Calibrado! Leitura: "${result.cleaned}"`);
+    } else {
+        addOcrLog(`⚠️ Não foi possível encontrar uma configuração ideal`);
+        showToast(`⚠️ Calibração não encontrou configuração ideal`);
+    }
+}
+
+// Função que será chamada pelo botão
+function openCalibrator() {
+    console.log("🔧 openCalibrator chamado!");
+    if (!isOcrActive) {
+        addOcrLog("❌ Ative o scanner primeiro! Clique em 'Escanear Carta'");
+        showToast("❌ Ative o scanner primeiro!");
+        return;
+    }
+    if (!ocrWorker) {
+        addOcrLog("⚠️ OCR ainda não carregou, aguarde alguns segundos...");
+        showToast("⚠️ Aguarde o carregamento do OCR");
+        return;
+    }
+    autoCalibrate();
+}
+
+console.log("🔍 Verificando calibrador...");
+console.log("calibrator:", calibrator);
+// console.log("openCalibrationUI:", typeof calibrator.openCalibrationUI);
+
+window.testCalibrator = function() {
+    console.log("🧪 Teste manual do calibrador");
+    if (!isOcrActive) {
+        alert("Ative o scanner primeiro!");
+        return;
+    }
+    autoCalibrate();
+};
+
+const mobileStyle = document.createElement('style');
+mobileStyle.textContent = `
+    #ocr-calibrator-modal {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        background: #000000 !important;
+        z-index: 999999999 !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+    }
+    #ocr-calibrator-modal * {
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+`;
+document.head.appendChild(mobileStyle);
+
+</script>
+<div id="ocr-container" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; z-index:999999; background:#000;">
+    <video id="ocr-video" style="position:absolute; width:100%; height:100%; object-fit:cover; opacity: 0.8;" autoplay playsinline></video>   
+    <div style="position:absolute; top:10px; left:50%; transform:translateX(-50%); width:90%; z-index:1000001;">
+        <canvas id="preview-canvas" style="width:100%; height:80px; border:2px solid #0f0; background:#000;"></canvas>
+        <div id="vision-label" style="color:#0f0; font-size:11px; text-align:center; font-family:monospace; margin-top:5px; background:rgba(0,0,0,0.5);">STATUS: ANALYZING...</div>
+    </div>    
+    <div id="scanner-visual" style="position:absolute; top:22%; left:50%; transform:translateX(-50%); width:55%; height:42px; border:3px solid #2ecc71; border-radius:8px; z-index:10; pointer-events:none; background:rgba(46,204,113,0.2);">
+        <div style="position:absolute; top:-28px; width:100%; text-align:center; color:#2ecc71; font-size:11px; font-weight:bold; background:rgba(0,0,0,0.8); padding:3px 10px; border-radius:20px; white-space:nowrap;">🎯 MIRA NO NOME DA CARTA</div>
+    </div>    
+    <div style="position:absolute; top:30%; left:50%; transform:translateX(-50%); width:80%; z-index:1000002; background:rgba(0,0,0,0.8); padding:10px; border-radius:8px; text-align:center;">
+        <div style="color:#2ecc71; font-size:12px; margin-bottom:5px;">⚙️ Configuração Manual</div>
+        <select id="manual-card-type" style="width:100%; padding:6px; margin-bottom:8px; background:#111; color:#fff; border:1px solid #2ecc71;">
+            <option value="Magia">Magia</option>
+            <option value="Armadilha">Armadilha</option>
+            <option value="Monstro Normal">Monstro Normal</option>
+            <option value="Monstro Efeito">Monstro Efeito</option>
+            <option value="Monstro Sincro">Monstro Sincro</option>
+            <option value="Monstro Xyz">Monstro Xyz</option>
+            <option value="Monstro Link">Monstro Link</option>
+            <option value="Monstro Fusão">Monstro Fusão</option>
+            <option value="Monstro Ritual">Monstro Ritual</option>
+            <option value="Monstro Pêndulo">Monstro Pêndulo</option>
+            <option value="Ficha">Ficha</option>
+        </select>
+        <select id="manual-rarity" style="width:100%; padding:6px; background:#111; color:#fff; border:1px solid #2ecc71;">
+            <option value="Comum">Comum</option>
+            <option value="Rara">Rara</option>
+            <option value="Super Rara">Super Rara</option>
+            <option value="Ultra Rara">Ultra Rara</option>
+            <option value="Secreta">Secreta</option>
+        </select>
+    </div>
+    <div style="position:absolute; top:400px; right:10px; display:flex; flex-direction:column; gap:12px; z-index:1000002;">
+        <button onclick="copyLogs()" style="background:#3498db; color:white; border:none; padding:12px; border-radius:5px; font-weight:bold;">COPIAR LOGS</button>
+        <button onclick="takeScreenshot()" style="background:#f1c40f; color:black; border:none; padding:12px; border-radius:5px; font-weight:bold;">PRINT ROBÔ</button>
+        <button id="btn-open-calibrator" style="background:#9b59b6; color:white; border:none; padding:12px; border-radius:5px; font-weight:bold;">
+            <i class="fas fa-sliders-h"></i> CALIBRAR OCR
+        </button>
+        <button id="btn-close-ocr" style="background:#e74c3c; color:white; border:none; padding:12px; border-radius:5px; font-weight:bold;">FECHAR</button>
+    </div>      
+    <div id="ocr-log" style="position:absolute; bottom:0; left:0; width:100%; height:150px; background:rgba(0,0,0,0.9); color:#2ecc71; font-family:monospace; font-size:11px; overflow-y:auto; padding:10px; z-index:20; border-top:1px solid #2ecc71;">
+        > Engine Standby...
+    </div>    
+    <canvas id="ocr-canvas-internal" style="display:none;"></canvas>
+</div>
+</body>
+</html>
