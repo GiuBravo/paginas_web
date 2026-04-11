@@ -1117,6 +1117,7 @@
         <img id="tooltip-img" src="" alt="Carta">
         <div class="tt-details">
             <h3 id="tooltip-name" style="margin-top: 0; margin-bottom: 10px;"></h3>
+            <div id="tooltip-archetype-row" style="display: none; margin: 0 0 8px 0; font-size: 11px; color: #e5e7eb; line-height: 1.4;"></div>
             <div id="tooltip-info-rows"></div>
             <div id="tooltip-text" style="font-size: 13px; color: #fff;"></div>
         </div>
@@ -1159,6 +1160,17 @@
                 </div>
                 <div id="filter-desc-chips" class="cardset-chips"></div>
                 <button type="button" id="filter-desc-clear-chips" class="btn-secondary" style="margin-top: 6px; display: none;">Limpar descrições</button>
+            </div>
+            <div class="filter-group">
+                <label>Arquétipo</label>
+                <p class="cardset-hint">Nomes oficiais (inglês), lista YGOPRODeck. Um ou vários chips: união (carta em <strong>qualquer</strong> arquétipo). No tooltip, todas as entradas conhecidas da carta.</p>
+                <div style="display: flex; gap: 6px; align-items: stretch;">
+                    <input type="text" id="filter-archetype-input" list="datalist-filter-archetype" placeholder="Ex.: Branded, Blue-Eyes…" autocomplete="off" style="flex: 1;">
+                    <button type="button" id="filter-archetype-add" class="btn-secondary" style="width: auto; padding: 8px 10px; white-space: nowrap;">Adicionar</button>
+                </div>
+                <datalist id="datalist-filter-archetype"></datalist>
+                <div id="filter-archetype-chips" class="cardset-chips"></div>
+                <button type="button" id="filter-archetype-clear" class="btn-secondary" style="margin-top: 6px; display: none;">Limpar arquétipos</button>
             </div>
             <div id="group-subtype" class="filter-group" style="display:none">
                 <label>Categoria (subtipo)</label>
@@ -1395,6 +1407,7 @@
     let isGenerating = false;
     let cardCache = {};
     let allCardsetsCatalog = [];
+    let allArchetypesCatalog = [];
     window.selectedCardsetNames = [];
     window.filterChipState = {
         typeCategory: [],
@@ -1404,7 +1417,8 @@
         level: [],
         era: [],
         dateRegion: ['tcg'],
-        banlist: []
+        banlist: [],
+        archetype: []
     };
     window.multiTextFilters = { fname: [], desc: [], atk: [], def: [], priceRanges: [] };
     let searchTimeout;
@@ -1554,6 +1568,10 @@
         return a.length ? a[0] : '';
     }
 
+    function getFilterArchetypeChips() {
+        return window.filterChipState.archetype || [];
+    }
+
     function filterChipLabel(key, val) {
         if (key === 'typeCategory') return ({ Monster: 'Monstro', 'Spell Card': 'Magia', 'Trap Card': 'Armadilha' }[val] || val);
         if (key === 'subtype') {
@@ -1580,6 +1598,7 @@
             const row = FILTER_BANLIST_LABELS.find(e => e.v === val);
             return row ? row.label : val;
         }
+        if (key === 'archetype') return val;
         return val;
     }
 
@@ -1590,6 +1609,7 @@
             ['race', 'filter-race-chips', 'filter-race-clear'],
             ['attribute', 'filter-attribute-chips', 'filter-attribute-clear'],
             ['level', 'filter-level-chips', 'filter-level-clear'],
+            ['archetype', 'filter-archetype-chips', 'filter-archetype-clear'],
             ['era', 'filter-era-chips', 'filter-era-clear'],
             ['dateRegion', 'filter-date-region-chips', 'filter-date-region-clear'],
             ['banlist', 'filter-banlist-chips', 'filter-banlist-clear']
@@ -1804,6 +1824,18 @@
         document.getElementById('date-end').value = dates[1];
     }
 
+    function comboInputMatchesDatalistPick(inp) {
+        if (!inp || !inp.value.trim()) return false;
+        const dl = inp.list;
+        if (!dl || !dl.options || !dl.options.length) return false;
+        const v = inp.value.trim();
+        for (let i = 0; i < dl.options.length; i++) {
+            const ov = String(dl.options[i].value || '').trim();
+            if (ov && ov === v) return true;
+        }
+        return false;
+    }
+
     function tryAddComboFilter(kind) {
         const map = {
             type: { input: 'filter-type-input', max: 1, resolve: resolveTypeCategoryInput, key: 'typeCategory', after: () => {
@@ -1827,15 +1859,21 @@
                 const ek = getFilterEraKey();
                 if (ek) applyEraToDateInputs(ek);
             }},
-            banlist: { input: 'filter-banlist-input', max: 1, resolve: resolveBanlistInput, key: 'banlist', after: () => { toggleBanlistCheckbox(); } }
+            banlist: { input: 'filter-banlist-input', max: 1, resolve: resolveBanlistInput, key: 'banlist', after: () => { toggleBanlistCheckbox(); } },
+            archetype: { input: 'filter-archetype-input', max: 99, resolve: resolveArchetypeNameFromInput, key: 'archetype', after: () => {} }
         };
         const cfg = map[kind];
         if (!cfg) return;
         const inp = document.getElementById(cfg.input);
         if (!inp) return;
+        if (!inp.value.trim()) return;
         let val = cfg.resolve(inp.value);
         if (val === null) {
-            showToast('Valor não reconhecido. Use as sugestões ou confira a grafia.');
+            if (kind === 'archetype' && !allArchetypesCatalog.length) {
+                showToast('Lista de arquétipos ainda carregando… tente em instantes.');
+            } else {
+                showToast('Valor não reconhecido. Use as sugestões ou confira a grafia.');
+            }
             return;
         }
         const st = window.filterChipState;
@@ -1892,7 +1930,8 @@
             ['filter-level-add', 'filter-level-input', 'level'],
             ['filter-era-add', 'filter-era-input', 'era'],
             ['filter-date-region-add', 'filter-date-region-input', 'dateRegion'],
-            ['filter-banlist-add', 'filter-banlist-input', 'banlist']
+            ['filter-banlist-add', 'filter-banlist-input', 'banlist'],
+            ['filter-archetype-add', 'filter-archetype-input', 'archetype']
         ];
         binds.forEach(([addId, inpId, kind]) => {
             const add = document.getElementById(addId);
@@ -1901,9 +1940,18 @@
             if (inp) inp.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter') { e.preventDefault(); tryAddComboFilter(kind); }
             });
+            if (inp) {
+                inp.addEventListener('input', (e) => {
+                    if (e.inputType === 'insertReplacementText') tryAddComboFilter(kind);
+                });
+                inp.addEventListener('change', () => {
+                    if (comboInputMatchesDatalistPick(inp)) tryAddComboFilter(kind);
+                });
+            }
         });
         [['filter-type-clear', 'typeCategory'], ['filter-subtype-clear', 'subtype'], ['filter-race-clear', 'race'],
-            ['filter-attribute-clear', 'attribute'], ['filter-level-clear', 'level'], ['filter-era-clear', 'era'],
+            ['filter-attribute-clear', 'attribute'], ['filter-level-clear', 'level'], ['filter-archetype-clear', 'archetype'],
+            ['filter-era-clear', 'era'],
             ['filter-date-region-clear', 'dateRegion'], ['filter-banlist-clear', 'banlist']].forEach(([cid, key]) => {
             const b = document.getElementById(cid);
             if (b) b.onclick = () => clearComboFilterGroup(key);
@@ -1980,6 +2028,56 @@
         }
     }
 
+    async function loadArchetypesCatalog() {
+        try {
+            const res = await fetch('https://db.ygoprodeck.com/api/v7/archetypes.php');
+            if (!res.ok) return;
+            const json = await res.json();
+            const rows = Array.isArray(json) ? json : (json.data || []);
+            allArchetypesCatalog = rows.map(r => (r.archetype_name || r.name || '').trim()).filter(Boolean);
+            const dl = document.getElementById('datalist-filter-archetype');
+            if (!dl) return;
+            dl.innerHTML = allArchetypesCatalog.map(n => `<option value="${escAttr(n)}"></option>`).join('');
+        } catch (e) {
+            console.warn('Archetypes catalog:', e);
+        }
+    }
+
+    /** Valores de arquétipo exibidos na UI / filtro (API costuma enviar um string; aceita lista se existir). */
+    function getCardArchetypes(card) {
+        if (!card) return [];
+        const out = [];
+        const push = (s) => {
+            const t = String(s || '').trim();
+            if (!t) return;
+            if (!out.some(x => x.toLowerCase() === t.toLowerCase())) out.push(t);
+        };
+        if (Array.isArray(card.archetypes)) {
+            card.archetypes.forEach(a => push(a));
+        }
+        const raw = card.archetype;
+        if (raw == null || !String(raw).trim()) return out;
+        const s = String(raw).trim();
+        if (/\s[|/]\s/.test(s)) {
+            s.split(/\s*\|\s*|\s*\/\s*/).forEach(seg => push(seg));
+        } else {
+            push(s);
+        }
+        return out;
+    }
+
+    function resolveArchetypeNameFromInput(raw) {
+        const v = raw.trim();
+        if (!v) return null;
+        if (allArchetypesCatalog.includes(v)) return v;
+        const low = v.toLowerCase();
+        const ci = allArchetypesCatalog.find(n => n.toLowerCase() === low);
+        if (ci) return ci;
+        const partials = allArchetypesCatalog.filter(n => n.toLowerCase().includes(low));
+        if (partials.length === 1) return partials[0];
+        return null;
+    }
+
     function resolveCardsetNameFromInput(raw) {
         const v = raw.trim();
         if (!v) return null;
@@ -2016,6 +2114,7 @@
     function tryAddCardsetFromInput() {
         const inp = document.getElementById('filter-cardset-input');
         if (!inp) return;
+        if (!inp.value.trim()) return;
         const resolved = resolveCardsetNameFromInput(inp.value);
         if (!resolved) {
             showToast(allCardsetsCatalog.length ? 'Set não encontrado. Confira o nome ou as sugestões.' : 'Lista de sets ainda carregando…');
@@ -2534,6 +2633,18 @@
         nameElement.style.fontSize = isMobile ? '1.3em' : '1.0em';
         nameElement.style.fontWeight = 'bold';
         document.getElementById('tooltip-img').src = card.card_images[0].image_url;
+        const archRowEl = document.getElementById('tooltip-archetype-row');
+        const archListTt = getCardArchetypes(card);
+        if (archRowEl) {
+            if (archListTt.length) {
+                const archJoined = archListTt.map(a => `<span>${escAttr(a)}</span>`).join(' <span style="opacity:.55">·</span> ');
+                archRowEl.innerHTML = `<span style="color:var(--accent);font-weight:600;">Arquétipo:</span> ${archJoined}`;
+                archRowEl.style.display = 'block';
+            } else {
+                archRowEl.innerHTML = '';
+                archRowEl.style.display = 'none';
+            }
+        }
         const banlistType = getBanlistTypeFromState();
         const status = card.banlist_info ? card.banlist_info[`ban_${banlistType}`] : null;
         const oldBadge = document.querySelector('.tt-ban-container');
@@ -2550,7 +2661,9 @@
             const banContainer = document.createElement('div');
             banContainer.className = 'tt-ban-container';
             banContainer.innerHTML = `<div class="tt-ban-badge ${cssClass}">${icon} <span>${label}</span></div>`;
-            nameElement.after(banContainer);
+            const archAnchor = document.getElementById('tooltip-archetype-row');
+            if (archAnchor) archAnchor.after(banContainer);
+            else nameElement.after(banContainer);
         }
         const racesTrad = { 
             "Aqua": "Aqua", "Beast": "Besta", "Beast-Warrior": "Besta-Guerreira", "Cyberse": "Ciberso", 
@@ -2722,6 +2835,7 @@
         });
         document.addEventListener('DOMContentLoaded', () => { updateBanlistDates(); });
         loadCardsetsCatalog();
+        loadArchetypesCatalog();
         const fAdd = document.getElementById('filter-cardset-add');
         const fClr = document.getElementById('filter-cardset-clear');
         const fInp = document.getElementById('filter-cardset-input');
@@ -2736,6 +2850,14 @@
         if (fInp) fInp.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') { e.preventDefault(); tryAddCardsetFromInput(); }
         });
+        if (fInp) {
+            fInp.addEventListener('input', (e) => {
+                if (e.inputType === 'insertReplacementText') tryAddCardsetFromInput();
+            });
+            fInp.addEventListener('change', () => {
+                if (comboInputMatchesDatalistPick(fInp)) tryAddCardsetFromInput();
+            });
+        }
         wireComboFilterControls();
         paintAllMultiTextChips();
         const fNameAdd = document.getElementById('filter-fname-add-chip');
@@ -2820,8 +2942,10 @@
         const hasPriceFilter = hasLegacyPrice || hasChipPrices;
         const setNames = window.selectedCardsetNames || [];
         const hasSetFilter = setNames.length > 0;
+        const archFilters = getFilterArchetypeChips();
+        const hasArchFilter = archFilters.length > 0;
         const hasOtherFilters = type || sub || race || attr || lv || atk || def || dateEnabled || banlistOnly || banlistType
-            || hasPriceFilter || hasSetFilter || (mtf.fname || []).length || (mtf.desc || []).length
+            || hasPriceFilter || hasSetFilter || hasArchFilter || (mtf.fname || []).length || (mtf.desc || []).length
             || (mtf.atk || []).length || (mtf.def || []).length;
 
         if (document.getElementById('ocr-container')?.style.display === 'block') return;
@@ -2839,6 +2963,7 @@
         if (race) p.append('race', race);
         if (lv) p.append('level', lv);
         if (attr) p.append('attribute', attr);
+        if (archFilters.length === 1) p.append('archetype', archFilters[0]);
         if (banlistType) {
             if (banlistOnly) p.append('banlist', banlistType);
             else p.append('format', banlistType);
@@ -2850,20 +2975,23 @@
         const atks = atkList.length ? atkList : [null];
         const defs = defList.length ? defList : [null];
         const sets = setNames.length ? setNames : [null];
-        const comboCount = fnames.length * descs.length * atks.length * defs.length * sets.length;
+        const archLoop = archFilters.length > 1 ? archFilters : [null];
+        const comboCount = fnames.length * descs.length * atks.length * defs.length * sets.length * archLoop.length;
         if (comboCount > MULTI_SEARCH_MAX_COMBO) {
-            showToast(`Muitas combinações (${comboCount}). Limite ${MULTI_SEARCH_MAX_COMBO}. Reduza chips de nome, descrição, ATK, DEF ou expansões.`);
+            showToast(`Muitas combinações (${comboCount}). Limite ${MULTI_SEARCH_MAX_COMBO}. Reduza chips de nome, descrição, ATK, DEF, expansões ou arquétipos.`);
             return;
         }
 
         try {
             const mergedMap = new Map();
+            for (const arArch of archLoop) {
             for (const fn of fnames) {
                 for (const d of descs) {
                     for (const a of atks) {
                         for (const df of defs) {
                             for (const sn of sets) {
                                 const pReq = new URLSearchParams(p);
+                                if (archFilters.length > 1 && arArch != null) pReq.append('archetype', arArch);
                                 if (fn != null) pReq.append('fname', fn);
                                 if (d != null) pReq.append('desc', d);
                                 if (a != null) pReq.append('atk', a);
@@ -2889,6 +3017,7 @@
                         }
                     }
                 }
+            }
             }
             let finalData = Array.from(mergedMap.values());
             if (hasChipPrices) {
@@ -3216,11 +3345,11 @@
         document.getElementById('date-end').value = hoje;
         window.filterChipState = {
             typeCategory: [], subtype: [], race: [], attribute: [], level: [], era: [],
-            dateRegion: ['tcg'], banlist: []
+            dateRegion: ['tcg'], banlist: [], archetype: []
         };
         window.multiTextFilters = { fname: [], desc: [], atk: [], def: [], priceRanges: [] };
         ['filter-type-input', 'filter-subtype-input', 'filter-race-input', 'filter-attribute-input', 'filter-level-input',
-            'filter-era-input', 'filter-date-region-input', 'filter-banlist-input'].forEach(id => {
+            'filter-archetype-input', 'filter-era-input', 'filter-date-region-input', 'filter-banlist-input'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.value = '';
         });
