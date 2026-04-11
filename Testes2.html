@@ -80,6 +80,8 @@
             color: inherit; 
             text-shadow: none !important;
         }
+        .theme-white #card-tooltip .tt-card-id-label { color: #6b7280 !important; }
+        .theme-white #card-tooltip .tt-card-id-value { color: #1f2937 !important; }
 
         /* 4. INPUTS E SELECTS */
         .theme-white input, 
@@ -244,6 +246,24 @@
             padding-top: 10px; 
             white-space: pre-wrap;
         }
+        #tooltip-text .tt-card-id {
+            margin-top: 10px;
+            text-align: left;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+        #tooltip-text .tt-card-id-label {
+            color: #888;
+            font-size: 10px;
+            text-transform: uppercase;
+            font-weight: bold;
+            margin-right: 8px;
+        }
+        #tooltip-text .tt-card-id-value {
+            color: #fff;
+            font-weight: 600;
+            font-variant-numeric: tabular-nums;
+        }
         .tt-stats { 
             font-weight: bold; color: #fff; margin-top: 8px; font-size: 13px; border-top: 1px solid #444; 
             padding-top: 5px; display: flex; justify-content: flex-start; gap: 10px;
@@ -264,6 +284,9 @@
 
         .sidebar-content { padding: 15px; overflow-y: auto; flex-grow: 1; }
         .filter-group { margin-bottom: 12px; display: flex; flex-direction: column; gap: 4px; }
+        @media (min-width: 901px) {
+            .filter-pdf-scale { margin-top: 20px; }
+        }
         .filter-group label { font-size: 10px; color: #888; text-transform: uppercase; font-weight: bold; }
         
         select, input { background: #111; border: 1px solid #444; color: white; padding: 8px; border-radius: 4px; font-size: 13px; width: 100%; box-sizing: border-box; }
@@ -622,11 +645,15 @@
                 gap: 15px 10px !important;
                 width: 100% !important;
             }
-            .filter-group, 
-            .view-controls > div > label, 
+            /* Só zera margem nos filtros da barra de resultados — não na sidebar (lá o reset colava todos os filtros) */
+            .view-controls .filter-group,
+            .view-controls > div > label,
             .view-controls > div > div {
                 width: 100% !important;
                 margin: 0 !important;
+            }
+            .sidebar-content .filter-group {
+                margin-bottom: 20px !important;
             }
             .view-controls > div > label {
                 justify-content: flex-start;
@@ -766,7 +793,7 @@
                     <i class="fa-solid fa-camera"></i> Escanear Carta (OCR)
                 </button>
             </div>
-            <div class="filter-group" style="margin-top:20px;"><label>Escala do PDF (%)</label><div class="stepper"><button onclick="adjustScale(-0.1)">-</button><input type="number" id="print-scale" value="100.0" readonly><button onclick="adjustScale(0.1)">+</button></div></div>
+            <div class="filter-group filter-pdf-scale"><label>Escala do PDF (%)</label><div class="stepper"><button onclick="adjustScale(-0.1)">-</button><input type="number" id="print-scale" value="100.0" readonly><button onclick="adjustScale(0.1)">+</button></div></div>
             <hr style="border:0; border-top:1px solid #333; margin: 20px 0;">
             <label class="btn-secondary">IMPORTAR .YDK<input type="file" id="file-ydk" accept=".ydk" style="display:none" onchange="importYDK(this)"></label>
         </div>
@@ -1192,6 +1219,8 @@
         }
         const p = card.card_prices ? card.card_prices[0] : {};
         const formatP = (val) => (!val || parseFloat(val) === 0) ? "Não encontrado" : `$${val}`;
+        const cardIdDisplay = (card.id !== undefined && card.id !== null) ? String(card.id) : '—';
+        const idHtml = `<div class="tt-card-id"><span class="tt-card-id-label">ID</span><span class="tt-card-id-value">${cardIdDisplay}</span></div>`;
         const datesHtml = `<div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #444; font-size: 13px; color: #fff; display: flex; gap: 12px; flex-wrap: wrap;">
             <span>📅 TCG: ${tcgDate}</span>
             <span>📅 OCG: ${ocgDate}</span>
@@ -1204,7 +1233,7 @@
             <span title="Amazon"><i class="fa-brands fa-amazon" style="color:var(--accent); font-size: 13px;"></i> ${formatP(p.amazon_price)}</span>
         </div>`;
         const formattedDescription = description.replace(/\n/g, '<br>');
-        document.getElementById('tooltip-text').innerHTML = `<div style="word-wrap: break-word;">${formattedDescription}</div>${datesHtml}${separatorHtml}${pricesHtml}`;
+        document.getElementById('tooltip-text').innerHTML = `<div style="word-wrap: break-word;">${formattedDescription}</div>${idHtml}${datesHtml}${separatorHtml}${pricesHtml}`;
     }
 
     function moveTooltip(e) {
