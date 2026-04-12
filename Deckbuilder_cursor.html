@@ -82,6 +82,7 @@
         }
         .theme-white #card-tooltip .tt-card-id-label { color: #6b7280 !important; }
         .theme-white #card-tooltip .tt-card-id-value { color: #1f2937 !important; }
+        .theme-white #card-tooltip .tt-konami-id-label { color: #6b7280 !important; }
         .theme-white #card-tooltip .tt-set-price { color: #047857 !important; }
 
         /* 4. INPUTS E SELECTS */
@@ -251,12 +252,6 @@
             margin: 0;
             padding: 0;
         }
-        #tooltip-text .tt-card-id {
-            margin-top: 8px;
-            text-align: left;
-            font-size: 13px;
-            line-height: 1.35;
-        }
         #tooltip-text .tt-card-id-label {
             color: #888;
             font-size: 10px;
@@ -269,6 +264,33 @@
             font-weight: 600;
             font-variant-numeric: tabular-nums;
         }
+        #tooltip-text .tt-card-id-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 10px 16px;
+            margin-top: 8px;
+        }
+        #tooltip-text .tt-card-id-row .tt-card-id-pair {
+            display: inline-flex;
+            align-items: baseline;
+            gap: 8px;
+        }
+        #tooltip-text .tt-konami-id-label {
+            color: #888;
+            font-size: 10px;
+            text-transform: uppercase;
+            font-weight: bold;
+            margin-right: 6px;
+        }
+        #tooltip-text .tt-konami-id-value {
+            color: #c4b5fd;
+            font-weight: 600;
+            font-variant-numeric: tabular-nums;
+        }
+        .theme-white #tooltip-text .tt-konami-id-value { color: #5b21b6 !important; }
+        .theme-white #tooltip-text .tt-konami-id-label { color: #6b7280 !important; }
         .tt-stats { 
             font-weight: bold; color: #fff; margin-top: 8px; font-size: 13px; border-top: 1px solid #444; 
             padding-top: 5px; display: flex; justify-content: flex-start; gap: 10px;
@@ -293,6 +315,69 @@
             .filter-pdf-scale { margin-top: 20px; }
         }
         .filter-group label { font-size: 10px; color: #888; text-transform: uppercase; font-weight: bold; }
+
+        /* Tema + aleatório: coluna [rótulo + dados] à esquerda, coluna [rótulo + select] à direita */
+        .filter-theme-random-wrap {
+            display: flex;
+            flex-direction: row;
+            align-items: flex-end;
+            gap: 14px;
+            width: 100%;
+            min-width: 0;
+            max-width: 420px;
+        }
+        .filter-theme-random-wrap .theme-random-stack {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            flex: 0 0 auto;
+        }
+        .filter-theme-random-wrap .theme-random-stack .theme-row-label {
+            width: auto;
+            max-width: none;
+            margin: 0;
+            text-align: center;
+            white-space: nowrap;
+        }
+        .filter-theme-random-wrap .theme-random-stack .theme-row-label[for="btn-random-filter-card"] { cursor: pointer; }
+        .filter-theme-random-wrap .theme-random-stack .btn-view {
+            flex-shrink: 0;
+            height: 35px;
+            width: 38px;
+            min-width: 38px;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .filter-theme-random-wrap .theme-select-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            flex: 1 1 auto;
+            min-width: 0;
+            align-self: stretch;
+        }
+        .filter-theme-random-wrap .theme-select-stack .theme-row-label {
+            width: auto;
+            max-width: none;
+            margin: 0;
+        }
+        .filter-theme-random-wrap .theme-select-stack select {
+            width: 100%;
+            min-width: 0;
+            height: 35px;
+            box-sizing: border-box;
+        }
+        .theme-row-label {
+            font-size: 10px;
+            color: #888;
+            text-transform: uppercase;
+            font-weight: bold;
+            line-height: 1.2;
+        }
+        .theme-white .filter-theme-random-wrap .theme-row-label { color: #6b7280; }
 
         .cardset-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
         .cardset-chip {
@@ -427,7 +512,7 @@
             align-content: start;
             grid-auto-rows: min-content;
         }
-        #tooltip-text .tt-cardsets-block--compact + .tt-card-id {
+        #tooltip-text .tt-cardsets-block--compact + .tt-card-id-row {
             margin-top: 6px;
             padding-top: 0;
             line-height: 1.28;
@@ -663,6 +748,42 @@
             margin-bottom: 15px;
             flex-shrink: 0;
         }
+
+        .result-info-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            flex: 1 1 auto;
+            min-width: 0;
+            margin-right: 4px;
+        }
+        .result-info-row #result-info {
+            flex: 1 1 auto;
+            min-width: 0;
+        }
+        .result-db-version-wrap {
+            display: flex;
+            align-items: baseline;
+            gap: 6px;
+            flex-shrink: 0;
+            white-space: nowrap;
+        }
+        .result-db-version-label {
+            font-size: 9px;
+            color: #666;
+            text-transform: uppercase;
+            font-weight: bold;
+            letter-spacing: 0.02em;
+        }
+        .result-db-version {
+            font-size: 10px;
+            color: #888;
+            font-weight: 600;
+            font-variant-numeric: tabular-nums;
+        }
+        .theme-white .result-db-version-label { color: #6b7280; }
+        .theme-white .result-db-version { color: #4b5563; }
 
         .sort-group {
             display: flex;
@@ -1048,11 +1169,23 @@
                 height: auto !important;
                 padding: 10px !important;
             }
-            #result-info {
-                display: block !important;
+            .result-info-row {
                 width: 100% !important;
                 margin-bottom: 10px !important;
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+            #result-info {
+                display: inline !important;
+                width: auto !important;
+                margin-bottom: 0 !important;
                 text-align: center;
+            }
+            .result-db-version-wrap {
+                width: 100%;
+                justify-content: center;
+                margin-top: 4px;
+                flex-wrap: wrap;
             }
             .view-controls > div {
                 display: grid !important;
@@ -1305,6 +1438,41 @@
                 <button type="button" id="filter-cardset-clear" class="btn-secondary" style="margin-top: 6px; display: none;">Limpar expansões</button>
             </div>
             <div class="filter-group">
+                <label>Código do set (setcode)</label>
+                <p class="cardset-hint">Código da impressão (ex.: <strong>LOB-EN001</strong>). Sugestões vêm do catálogo <code>cardinfo</code> (todos os <code>set_code</code> conhecidos; carrega em segundo plano). Se escrever <strong>LOB-001</strong>, tentamos também <strong>LOB-EN001</strong>. Vários chips = união.</p>
+                <div style="display: flex; gap: 6px; align-items: stretch;">
+                    <input type="text" id="filter-setcode-input" list="datalist-setcodes" placeholder="Ex.: LOB-EN001 ou LOB" autocomplete="off" style="flex: 1;">
+                    <button type="button" id="filter-setcode-add" class="btn-secondary" style="width: auto; padding: 8px 10px; white-space: nowrap;">Adicionar</button>
+                </div>
+                <datalist id="datalist-setcodes"></datalist>
+                <div id="filter-setcode-chips" class="cardset-chips" aria-live="polite"></div>
+                <button type="button" id="filter-setcode-clear" class="btn-secondary" style="margin-top: 6px; display: none;">Limpar códigos</button>
+            </div>
+            <div class="filter-group">
+                <label>Raridade (impressão)</label>
+                <p class="cardset-hint">Nome em inglês como no banco (ex.: Ultra Rare). Só raridade: percorre o catálogo completo (vários pedidos à API; pode demorar). Com outros filtros, aplica-se só ao resultado já carregado.</p>
+                <div style="display: flex; gap: 6px; align-items: stretch;">
+                    <input type="text" id="filter-rarity-input" list="datalist-rarities" placeholder="Ex.: Secret Rare" autocomplete="off" style="flex: 1;">
+                    <button type="button" id="filter-rarity-add" class="btn-secondary" style="width: auto; padding: 8px 10px; white-space: nowrap;">Adicionar</button>
+                </div>
+                <datalist id="datalist-rarities">
+                    <option value="Common"></option>
+                    <option value="Rare"></option>
+                    <option value="Super Rare"></option>
+                    <option value="Ultra Rare"></option>
+                    <option value="Secret Rare"></option>
+                    <option value="Prismatic Secret Rare"></option>
+                    <option value="Quarter Century Secret Rare"></option>
+                    <option value="Starlight Rare"></option>
+                    <option value="Ghost Rare"></option>
+                    <option value="Platinum Secret Rare"></option>
+                    <option value="Collector's Rare"></option>
+                    <option value="Ultimate Rare"></option>
+                </datalist>
+                <div id="filter-rarity-chips" class="cardset-chips" aria-live="polite"></div>
+                <button type="button" id="filter-rarity-clear" class="btn-secondary" style="margin-top: 6px; display: none;">Limpar raridades</button>
+            </div>
+            <div class="filter-group">
                 <button id="btn-open-scanner" class="btn-secondary" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;">
                     <i class="fa-solid fa-camera"></i> Escanear Carta (OCR)
                 </button>
@@ -1333,17 +1501,30 @@
             <button type="button" id="filter-fname-clear-chips" class="btn-secondary" style="margin-top: 4px; display: none;">Limpar nomes</button>
         </div>
         <div class="view-controls">
-            <span id="result-info" style="font-size: 11px; color: #888;">Carregando...</span>
-            
+            <div class="result-info-row" id="result-info-row">
+                <span id="result-info" style="font-size: 11px; color: #888;">Carregando…</span>
+                <div class="result-db-version-wrap" id="result-db-version-wrap" role="group" aria-label="Versão do banco de dados YGOPRODeck" style="display: none;">
+                    <span class="result-db-version-label" id="result-db-version-label">Versão do banco YGOPRODeck</span>
+                    <span id="result-db-version" class="result-db-version" title="" aria-live="polite"></span>
+                </div>
+            </div>
             <div style="display: flex; gap: 15px; align-items: center;">
-                <div class="filter-group">
-                    <label>Tema do Sistema</label>
-                    <select id="theme-selector" onchange="changeTheme(this.value)">
-                        <option value="">Padrão (Dark)</option>
-                        <option value="theme-white">Todo Branco</option>
-                        <option value="theme-black">Todo Preto</option>
-                        <option value="theme-kaiba">Kaiba Corp</option>
-                    </select>
+                <div class="filter-group filter-theme-random-wrap">
+                    <div class="theme-random-stack">
+                        <label class="theme-row-label" for="btn-random-filter-card">Aleatório</label>
+                        <button type="button" id="btn-random-filter-card" class="btn-view" title="Sorteia uma carta aleatória da lista atual; clique de novo para desfazer">
+                            <i class="fa-solid fa-dice" style="font-size: 16px;"></i>
+                        </button>
+                    </div>
+                    <div class="theme-select-stack">
+                        <label class="theme-row-label" for="theme-selector">Tema do sistema</label>
+                        <select id="theme-selector" onchange="changeTheme(this.value)">
+                            <option value="">Padrão (Dark)</option>
+                            <option value="theme-white">Todo Branco</option>
+                            <option value="theme-black">Todo Preto</option>
+                            <option value="theme-kaiba">Kaiba Corp</option>
+                        </select>
+                    </div>
                 </div>
                 <label style="display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 11px; color: #888;">
                     <input type="checkbox" id="enable-tooltip" checked style="width: auto; margin: 0;"> 
@@ -1404,11 +1585,78 @@
     const { jsPDF } = window.jspdf;
     const starIcon = "https://ygoprodeck.com/wp-content/uploads/2017/01/level.png";
     let cardQueue = [], searchResults = [], currentPage = 1, currentView = 'list';
+    /** Lista expandida antes de reduzir a uma carta aleatória; usado para alternar com o botão. */
+    let randomPickBaseline = null;
+    let randomPickActive = false;
+
+    function clearRandomPickState() {
+        randomPickBaseline = null;
+        randomPickActive = false;
+        updateRandomPickButtonUi();
+    }
+
+    function updateRandomPickButtonUi() {
+        const btn = document.getElementById('btn-random-filter-card');
+        if (!btn) return;
+        btn.classList.toggle('active', randomPickActive);
+        if (randomPickActive) {
+            btn.title = 'Voltar à lista completa (mesmos filtros)';
+        } else {
+            btn.title = 'Sorteia uma carta aleatória da lista atual; clique de novo para desfazer';
+        }
+    }
     let isGenerating = false;
     let cardCache = {};
     let allCardsetsCatalog = [];
     let allArchetypesCatalog = [];
+    let ygoprodeckDbVersionShort = '';
+    let ygoprodeckDbVersionTitle = '';
+
+    function paintResultDbVersion() {
+        const el = document.getElementById('result-db-version');
+        const wrap = document.getElementById('result-db-version-wrap');
+        if (!el) return;
+        const ver = ygoprodeckDbVersionShort || '';
+        el.textContent = ver;
+        const tip = ygoprodeckDbVersionTitle || 'Versão do banco de dados YGOPRODeck (API)';
+        el.setAttribute('title', tip);
+        if (wrap) {
+            wrap.style.display = ver ? 'flex' : 'none';
+            wrap.setAttribute('title', tip);
+        }
+    }
+
+    function applyCheckDbVerJson(j) {
+        const rows = Array.isArray(j) ? j : (j && typeof j === 'object' ? [j] : []);
+        const row = rows[0];
+        if (!row || row.database_version == null || String(row.database_version).trim() === '') {
+            ygoprodeckDbVersionShort = '';
+            ygoprodeckDbVersionTitle = '';
+            return;
+        }
+        const ver = String(row.database_version).trim();
+        const raw = (row.last_update != null && String(row.last_update).trim() !== '')
+            ? String(row.last_update).trim()
+            : (row.date != null ? String(row.date).trim() : '');
+        ygoprodeckDbVersionShort = ver;
+        ygoprodeckDbVersionTitle = raw
+            ? `Banco YGOPRODeck · versão ${ver} · atualizado em ${raw}`
+            : `Banco YGOPRODeck · versão ${ver}`;
+    }
+
+    async function refreshYgoprodeckDbVersion() {
+        try {
+            const res = await fetch('https://db.ygoprodeck.com/api/v7/checkDBVer.php');
+            if (!res.ok) return;
+            applyCheckDbVerJson(await res.json());
+        } catch (e) {
+            console.warn('checkDBVer:', e);
+        }
+        paintResultDbVersion();
+    }
     window.selectedCardsetNames = [];
+    window.selectedSetCodes = [];
+    window.selectedRarities = [];
     window.filterChipState = {
         typeCategory: [],
         subtype: [],
@@ -2013,6 +2261,66 @@
         return String(str ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
     }
 
+    let setcodeDatalistReady = false;
+    let setcodeDatalistPromise = null;
+
+    /** Percorre cardinfo (paginação) e junta todos os set_code das impressões — só códigos que existem em cartas. */
+    async function collectSetcodesFromCardinfoPaginated() {
+        const codes = new Set();
+        const num = 5000;
+        let offset = 0;
+        let totalRows = 0;
+        let first = true;
+        for (;;) {
+            const url = `https://db.ygoprodeck.com/api/v7/cardinfo.php?num=${num}&offset=${offset}`;
+            const res = await fetch(url);
+            if (!res.ok) break;
+            const j = await res.json();
+            if (j && j.error) break;
+            if (first && j.meta && typeof j.meta.total_rows === 'number') {
+                totalRows = j.meta.total_rows;
+                first = false;
+            }
+            const rows = j.data || [];
+            if (!rows.length) break;
+            for (const card of rows) {
+                for (const s of card.card_sets || []) {
+                    const c = String(s.set_code || '').trim().toUpperCase();
+                    if (c) codes.add(c);
+                }
+            }
+            offset += num;
+            if (totalRows > 0 && offset >= totalRows) break;
+            if (offset > 250000) break;
+        }
+        return codes;
+    }
+
+    async function ensureSetcodeDatalistFromApi() {
+        if (setcodeDatalistReady) return;
+        if (setcodeDatalistPromise) return setcodeDatalistPromise;
+        setcodeDatalistPromise = (async () => {
+            try {
+                const codes = await collectSetcodesFromCardinfoPaginated();
+                const dl = document.getElementById('datalist-setcodes');
+                if (!dl) return;
+                const sorted = [...codes].sort((a, b) => a.localeCompare(b, 'en'));
+                const cap = 14000;
+                dl.innerHTML = sorted.slice(0, cap).map(c => `<option value="${escAttr(c)}"></option>`).join('');
+                setcodeDatalistReady = true;
+            } catch (e) {
+                console.warn('Setcode datalist (cardinfo):', e);
+            } finally {
+                setcodeDatalistPromise = null;
+            }
+        })();
+        return setcodeDatalistPromise;
+    }
+
+    function scheduleSetcodeDatalistBuild() {
+        setTimeout(() => { void ensureSetcodeDatalistFromApi(); }, 500);
+    }
+
     async function loadCardsetsCatalog() {
         try {
             const res = await fetch('https://db.ygoprodeck.com/api/v7/cardsets.php');
@@ -2021,8 +2329,7 @@
             const rows = Array.isArray(json) ? json : (json.data || []);
             allCardsetsCatalog = rows;
             const dl = document.getElementById('cardsets-datalist');
-            if (!dl) return;
-            dl.innerHTML = rows.map(cs => `<option value="${escAttr(cs.set_name || '')}"></option>`).join('');
+            if (dl) dl.innerHTML = rows.map(cs => `<option value="${escAttr(cs.set_name || '')}"></option>`).join('');
         } catch (e) {
             console.warn('Card sets catalog:', e);
         }
@@ -2131,6 +2438,265 @@
         renderCardsetFilterChips();
         currentPage = 1;
         performSearch(true);
+    }
+
+    function normalizeSetCodeInput(raw) {
+        return String(raw || '').trim().toUpperCase().replace(/\s+/g, '');
+    }
+
+    function renderSetcodeFilterChips() {
+        const box = document.getElementById('filter-setcode-chips');
+        const clearBtn = document.getElementById('filter-setcode-clear');
+        if (!box) return;
+        const codes = window.selectedSetCodes || [];
+        box.innerHTML = codes.map(c => {
+            const safe = escAttr(c);
+            return `<span class="cardset-chip">${safe}<button type="button" data-set-code="${safe}" title="Remover">&times;</button></span>`;
+        }).join('');
+        box.querySelectorAll('button[data-set-code]').forEach(btn => {
+            btn.onclick = () => {
+                const c = btn.getAttribute('data-set-code');
+                window.selectedSetCodes = (window.selectedSetCodes || []).filter(x => x !== c);
+                renderSetcodeFilterChips();
+                currentPage = 1;
+                performSearch(true);
+            };
+        });
+        if (clearBtn) clearBtn.style.display = codes.length ? 'block' : 'none';
+    }
+
+    function tryAddSetcodeFromInput() {
+        const inp = document.getElementById('filter-setcode-input');
+        if (!inp || !inp.value.trim()) return;
+        const code = normalizeSetCodeInput(inp.value);
+        if (!code || code.length < 3) {
+            showToast('Código de set inválido (mín. 3 caracteres).');
+            return;
+        }
+        if (!window.selectedSetCodes) window.selectedSetCodes = [];
+        if (window.selectedSetCodes.includes(code)) {
+            showToast('Código já selecionado.');
+            inp.value = '';
+            return;
+        }
+        if (window.selectedSetCodes.length >= 16) {
+            showToast('Máximo 16 códigos de set.');
+            return;
+        }
+        window.selectedSetCodes.push(code);
+        inp.value = '';
+        renderSetcodeFilterChips();
+        currentPage = 1;
+        performSearch(true);
+    }
+
+    function renderRarityFilterChips() {
+        const box = document.getElementById('filter-rarity-chips');
+        const clearBtn = document.getElementById('filter-rarity-clear');
+        if (!box) return;
+        const rs = window.selectedRarities || [];
+        box.innerHTML = rs.map(r => {
+            const safe = escAttr(r);
+            return `<span class="cardset-chip">${safe}<button type="button" data-rarity="${safe}" title="Remover">&times;</button></span>`;
+        }).join('');
+        box.querySelectorAll('button[data-rarity]').forEach(btn => {
+            btn.onclick = () => {
+                const r = btn.getAttribute('data-rarity');
+                window.selectedRarities = (window.selectedRarities || []).filter(x => x !== r);
+                renderRarityFilterChips();
+                currentPage = 1;
+                performSearch(true);
+            };
+        });
+        if (clearBtn) clearBtn.style.display = rs.length ? 'block' : 'none';
+    }
+
+    function tryAddRarityFromInput() {
+        const inp = document.getElementById('filter-rarity-input');
+        if (!inp || !inp.value.trim()) return;
+        const r = inp.value.trim();
+        if (r.length < 3) {
+            showToast('Raridade muito curta.');
+            return;
+        }
+        if (!window.selectedRarities) window.selectedRarities = [];
+        const key = r.toLowerCase();
+        if (window.selectedRarities.some(x => x.toLowerCase() === key)) {
+            showToast('Raridade já selecionada.');
+            inp.value = '';
+            return;
+        }
+        if (window.selectedRarities.length >= 12) {
+            showToast('Máximo 12 raridades.');
+            return;
+        }
+        window.selectedRarities.push(r);
+        inp.value = '';
+        renderRarityFilterChips();
+        currentPage = 1;
+        performSearch(true);
+    }
+
+    function cardMatchesRarityFilters(card, rarities) {
+        if (!rarities || !rarities.length) return true;
+        const sets = card.card_sets || [];
+        if (!sets.length) return false;
+        const want = rarities.map(x => String(x).trim().toLowerCase()).filter(Boolean);
+        return want.some(w => sets.some(s => String(s.set_rarity || '').toLowerCase() === w));
+    }
+
+    function parseCardsetsinfoRows(j) {
+        if (!j || typeof j !== 'object') return [];
+        if (Array.isArray(j)) return j;
+        if (Array.isArray(j.data)) return j.data;
+        if (j.id != null) return [j];
+        return [];
+    }
+
+    /** Ex.: LOB-001 → tenta também LOB-EN001 (região TCG comum). */
+    function expandSetcodeCandidates(norm) {
+        const out = [];
+        if (norm) out.push(norm);
+        const m = norm.match(/^([A-Z0-9]+)-(\d{1,4})$/);
+        if (m) {
+            const pre = m[1];
+            const n = m[2];
+            const padded = n.padStart(3, '0');
+            const en = `${pre}-EN${padded}`;
+            if (!out.includes(en)) out.push(en);
+        }
+        return out;
+    }
+
+    async function fetchIdsForOneSetcodeFlexible(norm) {
+        for (const cand of expandSetcodeCandidates(norm)) {
+            const sc = encodeURIComponent(cand);
+            const res = await fetch(`https://db.ygoprodeck.com/api/v7/cardsetsinfo.php?setcode=${sc}`);
+            if (!res.ok) continue;
+            const j = await res.json();
+            if (j && j.error) continue;
+            const rows = parseCardsetsinfoRows(j);
+            const ids = new Set();
+            rows.forEach(row => {
+                const id = row && row.id;
+                if (id != null && id !== '') ids.add(Number(id));
+            });
+            if (ids.size) return ids;
+        }
+        return new Set();
+    }
+
+    async function unionIdsFromSetcodesList(codes) {
+        const parts = await Promise.all(codes.map(c => fetchIdsForOneSetcodeFlexible(c)));
+        const u = new Set();
+        parts.forEach(s => s.forEach(id => u.add(id)));
+        return u;
+    }
+
+    const RARITY_FULL_SCAN_PAGE = 5000;
+
+    /** Catálogo completo (paginação num/offset), fusão EN+PT — para filtro só por raridade. */
+    async function fetchAllCardsPaginatedMerged() {
+        const mergedMap = new Map();
+        let offset = 0;
+        const num = RARITY_FULL_SCAN_PAGE;
+        let totalRows = 0;
+        let first = true;
+        for (;;) {
+            const pBase = new URLSearchParams({ num: String(num), offset: String(offset) });
+            const pPt = new URLSearchParams(pBase);
+            pPt.set('language', 'pt');
+            const urlGlobal = `https://db.ygoprodeck.com/api/v7/cardinfo.php?${pBase.toString()}`;
+            const urlPT = `https://db.ygoprodeck.com/api/v7/cardinfo.php?${pPt.toString()}`;
+            const [resGlobal, resPT] = await Promise.all([
+                fetch(urlGlobal).then(rr => rr.ok ? rr.json() : { data: [], meta: {} }),
+                fetch(urlPT).then(rr => rr.ok ? rr.json() : { data: [], meta: {} })
+            ]);
+            if (first) {
+                first = false;
+                if (resGlobal.meta && typeof resGlobal.meta.total_rows === 'number') {
+                    totalRows = resGlobal.meta.total_rows;
+                }
+            }
+            const dG = resGlobal.data || [];
+            const dP = resPT.data || [];
+            if (!dG.length && !dP.length) break;
+            dG.forEach(card => mergedMap.set(card.id, card));
+            dP.forEach(card => {
+                const existing = mergedMap.get(card.id);
+                if (existing) mergedMap.set(card.id, { ...existing, ...card });
+                else mergedMap.set(card.id, card);
+            });
+            offset += num;
+            if (totalRows > 0 && offset >= totalRows) break;
+            if (offset > 250000) break;
+        }
+        return mergedMap;
+    }
+
+    async function fetchMergedCardinfoDualLoop(p, archFilters, archLoop, fnames, descs, atks, defs, sets) {
+        const mergedMap = new Map();
+        for (const arArch of archLoop) {
+            for (const fn of fnames) {
+                for (const d of descs) {
+                    for (const a of atks) {
+                        for (const df of defs) {
+                            for (const sn of sets) {
+                                const pReq = new URLSearchParams(p);
+                                if (archFilters.length > 1 && arArch != null) pReq.append('archetype', arArch);
+                                if (fn != null) pReq.append('fname', fn);
+                                if (d != null) pReq.append('desc', d);
+                                if (a != null) pReq.append('atk', a);
+                                if (df != null) pReq.append('def', df);
+                                if (sn != null) pReq.append('cardset', sn);
+                                const urlGlobal = `https://db.ygoprodeck.com/api/v7/cardinfo.php?${pReq.toString()}`;
+                                const pPt = new URLSearchParams(pReq);
+                                pPt.set('language', 'pt');
+                                const urlPT = `https://db.ygoprodeck.com/api/v7/cardinfo.php?${pPt.toString()}`;
+                                const [resGlobal, resPT] = await Promise.all([
+                                    fetch(urlGlobal).then(rr => rr.ok ? rr.json() : { data: [] }),
+                                    fetch(urlPT).then(rr => rr.ok ? rr.json() : { data: [] })
+                                ]);
+                                (resGlobal.data || []).forEach(card => mergedMap.set(card.id, card));
+                                (resPT.data || []).forEach(card => {
+                                    const existing = mergedMap.get(card.id);
+                                    if (existing) mergedMap.set(card.id, { ...existing, ...card });
+                                    else mergedMap.set(card.id, card);
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return mergedMap;
+    }
+
+    async function fetchCardsByIdsBatched(idIterable) {
+        const idArr = [...idIterable].filter(id => id != null && !Number.isNaN(Number(id)));
+        const mergedMap = new Map();
+        const BATCH = 60;
+        for (let i = 0; i < idArr.length; i += BATCH) {
+            const chunk = idArr.slice(i, i + BATCH);
+            const pReq = new URLSearchParams();
+            pReq.append('id', chunk.join(','));
+            pReq.append('misc', 'yes');
+            const urlGlobal = `https://db.ygoprodeck.com/api/v7/cardinfo.php?${pReq.toString()}`;
+            const pPt = new URLSearchParams(pReq);
+            pPt.set('language', 'pt');
+            const urlPT = `https://db.ygoprodeck.com/api/v7/cardinfo.php?${pPt.toString()}`;
+            const [resGlobal, resPT] = await Promise.all([
+                fetch(urlGlobal).then(rr => rr.ok ? rr.json() : { data: [] }),
+                fetch(urlPT).then(rr => rr.ok ? rr.json() : { data: [] })
+            ]);
+            (resGlobal.data || []).forEach(card => mergedMap.set(card.id, card));
+            (resPT.data || []).forEach(card => {
+                const existing = mergedMap.get(card.id);
+                if (existing) mergedMap.set(card.id, { ...existing, ...card });
+                else mergedMap.set(card.id, card);
+            });
+        }
+        return mergedMap;
     }
 
     const MULTI_SEARCH_MAX_COMBO = 36;
@@ -2735,7 +3301,13 @@
         const p = card.card_prices ? card.card_prices[0] : {};
         const formatP = (val) => (!val || parseFloat(val) === 0) ? "Não encontrado" : `$${val}`;
         const cardIdDisplay = (card.id !== undefined && card.id !== null) ? String(card.id) : '—';
-        const idHtml = `<div class="tt-card-id"><span class="tt-card-id-label">ID</span><span class="tt-card-id-value">${cardIdDisplay}</span></div>`;
+        const konamiRaw = card.misc_info && card.misc_info[0] && card.misc_info[0].konami_id != null && card.misc_info[0].konami_id !== ''
+            ? String(card.misc_info[0].konami_id) : '';
+        const konamiDisplay = konamiRaw ? escAttr(konamiRaw) : '—';
+        const idHtml = `<div class="tt-card-id-row">
+            <span class="tt-card-id-pair"><span class="tt-card-id-label">ID</span><span class="tt-card-id-value">${cardIdDisplay}</span></span>
+            <span class="tt-card-id-pair"><span class="tt-konami-id-label">Konami</span><span class="tt-konami-id-value">${konamiDisplay}</span></span>
+        </div>`;
         const datesHtml = `<div class="tt-tooltip-dates"><span>📅 TCG: ${tcgDate}</span><span>📅 OCG: ${ocgDate}</span></div>`;
         const separatorHtml = `<hr style="border: 0; border-top: 1px solid #444; margin: 4px 0; opacity: 1;">`;
         const pricesHtml = `<div style="margin-top: 4px; display: flex; flex-wrap: wrap; gap: 8px; font-size: 11px; color: #fff; font-weight: 500;">
@@ -2835,7 +3407,9 @@
         });
         document.addEventListener('DOMContentLoaded', () => { updateBanlistDates(); });
         loadCardsetsCatalog();
+        scheduleSetcodeDatalistBuild();
         loadArchetypesCatalog();
+        void refreshYgoprodeckDbVersion();
         const fAdd = document.getElementById('filter-cardset-add');
         const fClr = document.getElementById('filter-cardset-clear');
         const fInp = document.getElementById('filter-cardset-input');
@@ -2858,6 +3432,58 @@
                 if (comboInputMatchesDatalistPick(fInp)) tryAddCardsetFromInput();
             });
         }
+        const scAdd = document.getElementById('filter-setcode-add');
+        const scClr = document.getElementById('filter-setcode-clear');
+        const scInp = document.getElementById('filter-setcode-input');
+        if (scAdd) scAdd.onclick = () => tryAddSetcodeFromInput();
+        if (scClr) scClr.onclick = () => {
+            window.selectedSetCodes = [];
+            if (scInp) scInp.value = '';
+            renderSetcodeFilterChips();
+            currentPage = 1;
+            performSearch(true);
+        };
+        if (scInp) scInp.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') { e.preventDefault(); tryAddSetcodeFromInput(); }
+        });
+        if (scInp) scInp.addEventListener('focus', () => { void ensureSetcodeDatalistFromApi(); });
+        if (scInp) {
+            scInp.addEventListener('input', (e) => {
+                if (e.inputType === 'insertReplacementText') tryAddSetcodeFromInput();
+            });
+            scInp.addEventListener('change', () => {
+                if (comboInputMatchesDatalistPick(scInp)) tryAddSetcodeFromInput();
+            });
+        }
+        const rAdd = document.getElementById('filter-rarity-add');
+        const rClr = document.getElementById('filter-rarity-clear');
+        const rInp = document.getElementById('filter-rarity-input');
+        if (rAdd) rAdd.onclick = () => tryAddRarityFromInput();
+        if (rClr) rClr.onclick = () => {
+            window.selectedRarities = [];
+            if (rInp) rInp.value = '';
+            renderRarityFilterChips();
+            currentPage = 1;
+            performSearch(true);
+        };
+        if (rInp) rInp.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') { e.preventDefault(); tryAddRarityFromInput(); }
+        });
+        if (rInp) {
+            rInp.addEventListener('input', (e) => {
+                if (e.inputType === 'insertReplacementText') tryAddRarityFromInput();
+            });
+            rInp.addEventListener('change', () => {
+                if (comboInputMatchesDatalistPick(rInp)) tryAddRarityFromInput();
+            });
+        }
+        const rndBtn = document.getElementById('btn-random-filter-card');
+        if (rndBtn) {
+            rndBtn.onclick = () => pickRandomFilteredCard();
+            updateRandomPickButtonUi();
+        }
+        renderSetcodeFilterChips();
+        renderRarityFilterChips();
         wireComboFilterControls();
         paintAllMultiTextChips();
         const fNameAdd = document.getElementById('filter-fname-add-chip');
@@ -2909,7 +3535,11 @@
 
     function triggerSearch() { clearTimeout(window.sTimeout); window.sTimeout = setTimeout(performSearch, 500); }
 
-    async function performSearch(initial = false) {
+    /**
+     * Busca cartas com os filtros atuais (EN+PT); devolve lista sem expandir artes.
+     * kind: 'skip' (OCR aberto), 'clear' (sem critério), 'toast' (validação), 'data', 'error'
+     */
+    async function computeUnexpandedSearchResults(initial) {
         const qInput = document.getElementById('search-input');
         const q = qInput.value.trim();
         const desc = (document.getElementById('filter-desc')?.value || '').trim();
@@ -2944,16 +3574,33 @@
         const hasSetFilter = setNames.length > 0;
         const archFilters = getFilterArchetypeChips();
         const hasArchFilter = archFilters.length > 0;
-        const hasOtherFilters = type || sub || race || attr || lv || atk || def || dateEnabled || banlistOnly || banlistType
-            || hasPriceFilter || hasSetFilter || hasArchFilter || (mtf.fname || []).length || (mtf.desc || []).length
-            || (mtf.atk || []).length || (mtf.def || []).length;
+        const setcodes = window.selectedSetCodes || [];
+        const rarities = window.selectedRarities || [];
+        const hasSetcodeFilter = setcodes.length > 0;
+        const hasRarityFilter = rarities.length > 0;
 
-        if (document.getElementById('ocr-container')?.style.display === 'block') return;
+        const hasLiveAtkDefField = !!(String(atk || '').trim() || String(def || '').trim());
+        const narrowing =
+            hasFnameQuery || hasDescQuery || type || sub || race || attr || lv ||
+            banlistType || hasSetFilter || hasArchFilter || hasLiveAtkDefField ||
+            (mtf.atk || []).length || (mtf.def || []).length;
+
+        const hasOtherFilters = narrowing || hasPriceFilter || dateEnabled || banlistOnly || hasSetcodeFilter || hasRarityFilter;
+
+        if (document.getElementById('ocr-container')?.style.display === 'block') return { kind: 'skip' };
 
         if (!initial && !hasFnameQuery && !hasDescQuery && !hasOtherFilters) {
-            document.getElementById('results-view').innerHTML = '';
-            return;
+            return { kind: 'clear' };
         }
+
+        if (!narrowing && !hasSetcodeFilter && !hasRarityFilter && (hasPriceFilter || dateEnabled)) {
+            return {
+                kind: 'toast',
+                msg: 'Combine preço ou datas com nome, filtros, código(s) de set ou raridade.'
+            };
+        }
+
+        const rarityOnlyPath = hasRarityFilter && !narrowing && !hasSetcodeFilter;
 
         let p = new URLSearchParams();
         if (type) {
@@ -2977,49 +3624,42 @@
         const sets = setNames.length ? setNames : [null];
         const archLoop = archFilters.length > 1 ? archFilters : [null];
         const comboCount = fnames.length * descs.length * atks.length * defs.length * sets.length * archLoop.length;
-        if (comboCount > MULTI_SEARCH_MAX_COMBO) {
-            showToast(`Muitas combinações (${comboCount}). Limite ${MULTI_SEARCH_MAX_COMBO}. Reduza chips de nome, descrição, ATK, DEF, expansões ou arquétipos.`);
-            return;
+        const setcodesOnlyPath = hasSetcodeFilter && !narrowing;
+
+        if (!setcodesOnlyPath && !rarityOnlyPath && comboCount > MULTI_SEARCH_MAX_COMBO) {
+            return {
+                kind: 'toast',
+                msg: `Muitas combinações (${comboCount}). Limite ${MULTI_SEARCH_MAX_COMBO}. Reduza chips de nome, descrição, ATK, DEF, expansões ou arquétipos.`
+            };
         }
 
         try {
-            const mergedMap = new Map();
-            for (const arArch of archLoop) {
-            for (const fn of fnames) {
-                for (const d of descs) {
-                    for (const a of atks) {
-                        for (const df of defs) {
-                            for (const sn of sets) {
-                                const pReq = new URLSearchParams(p);
-                                if (archFilters.length > 1 && arArch != null) pReq.append('archetype', arArch);
-                                if (fn != null) pReq.append('fname', fn);
-                                if (d != null) pReq.append('desc', d);
-                                if (a != null) pReq.append('atk', a);
-                                if (df != null) pReq.append('def', df);
-                                if (sn != null) pReq.append('cardset', sn);
-                                const urlGlobal = `https://db.ygoprodeck.com/api/v7/cardinfo.php?${pReq.toString()}`;
-                                const pPt = new URLSearchParams(pReq);
-                                pPt.set('language', 'pt');
-                                const urlPT = `https://db.ygoprodeck.com/api/v7/cardinfo.php?${pPt.toString()}`;
-                                const [resGlobal, resPT] = await Promise.all([
-                                    fetch(urlGlobal).then(r => r.ok ? r.json() : { data: [] }),
-                                    fetch(urlPT).then(r => r.ok ? r.json() : { data: [] })
-                                ]);
-                                const dataGlobal = resGlobal.data || [];
-                                const dataPT = resPT.data || [];
-                                dataGlobal.forEach(card => mergedMap.set(card.id, card));
-                                dataPT.forEach(card => {
-                                    const existing = mergedMap.get(card.id);
-                                    if (existing) mergedMap.set(card.id, { ...existing, ...card });
-                                    else mergedMap.set(card.id, card);
-                                });
-                            }
-                        }
+            let finalData;
+            if (setcodesOnlyPath) {
+                const idUnion = await unionIdsFromSetcodesList(setcodes);
+                if (idUnion.size === 0) {
+                    return { kind: 'toast', msg: 'Nenhum resultado para o(s) código(s) de set.' };
+                }
+                const mergedById = await fetchCardsByIdsBatched(idUnion);
+                finalData = Array.from(mergedById.values());
+            } else if (rarityOnlyPath) {
+                showToast('A pesquisar por raridade no catálogo completo (vários pedidos)…');
+                const bigMap = await fetchAllCardsPaginatedMerged();
+                finalData = Array.from(bigMap.values()).filter(card => cardMatchesRarityFilters(card, rarities));
+            } else {
+                const mergedMap = await fetchMergedCardinfoDualLoop(
+                    p, archFilters, archLoop, fnames, descs, atks, defs, sets
+                );
+                finalData = Array.from(mergedMap.values());
+                if (hasSetcodeFilter) {
+                    const idUnion = await unionIdsFromSetcodesList(setcodes);
+                    if (idUnion.size === 0) {
+                        return { kind: 'toast', msg: 'Nenhum resultado para o(s) código(s) de set.' };
                     }
+                    finalData = finalData.filter(card => idUnion.has(card.id));
                 }
             }
-            }
-            let finalData = Array.from(mergedMap.values());
+
             if (hasChipPrices) {
                 const pranges = mtf.priceRanges || [];
                 finalData = finalData.filter(card => {
@@ -3050,29 +3690,101 @@
                     return cardDate && cardDate >= start && cardDate <= end;
                 });
             }
+            if (hasRarityFilter && !rarityOnlyPath) {
+                finalData = finalData.filter(card => cardMatchesRarityFilters(card, rarities));
+            }
             if (type === "Monster" && !sub) {
                 finalData = finalData.filter(c => c.type.toLowerCase().includes("monster"));
             }
-            const expandedResults = [];
-            finalData.forEach(card => {
-                card.card_images.forEach((img, idx) => {
-                    expandedResults.push({
-                        ...card,
-                        current_image: img,
-                        variant_idx: idx,
-                        is_variant: card.card_images.length > 1
-                    });
-                });
-            });
-            searchResults = expandedResults; 
-            finalData.forEach(c => cardCache[c.id] = c);
-            if (initial || hasFnameQuery || hasDescQuery || hasOtherFilters) currentPage = 1;
-            sortAndRender();
+
+            return {
+                kind: 'data',
+                finalData,
+                hasFnameQuery,
+                hasDescQuery,
+                hasOtherFilters
+            };
         } catch (e) {
             console.error("Erro na busca dual:", e);
+            return { kind: 'error', err: e };
+        }
+    }
+
+    async function performSearch(initial = false) {
+        const pack = await computeUnexpandedSearchResults(initial);
+        if (pack.kind === 'skip') return;
+        if (pack.kind === 'clear') {
+            clearRandomPickState();
+            document.getElementById('results-view').innerHTML = '';
+            return;
+        }
+        if (pack.kind === 'toast') {
+            showToast(pack.msg || 'Não foi possível buscar.');
+            clearRandomPickState();
             searchResults = [];
             renderResults();
+            return;
         }
+        if (pack.kind === 'error') {
+            clearRandomPickState();
+            searchResults = [];
+            renderResults();
+            return;
+        }
+
+        const finalData = pack.finalData || [];
+        const expandedResults = [];
+        finalData.forEach(card => {
+            (card.card_images || []).forEach((img, idx) => {
+                expandedResults.push({
+                    ...card,
+                    current_image: img,
+                    variant_idx: idx,
+                    is_variant: (card.card_images || []).length > 1
+                });
+            });
+        });
+        searchResults = expandedResults;
+        clearRandomPickState();
+        finalData.forEach(c => { cardCache[c.id] = c; });
+        if (initial || pack.hasFnameQuery || pack.hasDescQuery || pack.hasOtherFilters) currentPage = 1;
+        sortAndRender();
+    }
+
+    function pickRandomFilteredCard() {
+        const list = Array.isArray(searchResults) ? searchResults : [];
+        if (randomPickActive) {
+            if (randomPickBaseline && randomPickBaseline.length) {
+                searchResults = randomPickBaseline.slice();
+                randomPickActive = false;
+                randomPickBaseline = null;
+                currentPage = 1;
+                sortAndRender();
+                showToast('Lista completa restaurada.');
+            } else {
+                clearRandomPickState();
+                if (list.length) sortAndRender();
+            }
+            updateRandomPickButtonUi();
+            return;
+        }
+        if (list.length === 0) {
+            showToast('Lista vazia — faça uma busca para aparecerem cartas antes de sortear.');
+            return;
+        }
+        if (list.length === 1) {
+            showToast('Só há um resultado na lista; nada para alternar com o aleatório.');
+            return;
+        }
+        randomPickBaseline = searchResults.slice();
+        const row = list[Math.floor(Math.random() * list.length)];
+        searchResults = [row];
+        randomPickActive = true;
+        currentPage = 1;
+        sortAndRender();
+        updateRandomPickButtonUi();
+        const nm = row.name_pt || row.name || 'Carta';
+        showToast(`Aleatório: ${nm} — clique de novo para voltar à lista.`);
     }
 
     function renderResults() {
@@ -3084,6 +3796,7 @@
             document.getElementById('result-info').innerText = "Nenhuma carta encontrada";
             document.getElementById('page-total').innerText = "/ 1";
             document.getElementById('page-jump').value = 1;
+            paintResultDbVersion();
             container.innerHTML = `<div style="grid-column: 1/-1; padding: 60px 20px; text-align: center; opacity: 0.6;">
                 <div style="font-size: 3em; margin-bottom: 15px;">🔍</div>
                 <b style="font-size: 1.2em; color: var(--accent);">Nenhuma carta encontrada</b>
@@ -3093,6 +3806,7 @@
         const start = (currentPage - 1) * items;
         const pageItems = searchResults.slice(start, start + items);
         document.getElementById('result-info').innerText = `Exibindo ${start + 1}-${Math.min(start + items, searchResults.length)} de ${searchResults.length}`;
+        paintResultDbVersion();
         document.getElementById('page-total').innerText = `/ ${Math.ceil(searchResults.length / items) || 1}`;
         document.getElementById('page-jump').value = currentPage;
 
@@ -3361,9 +4075,17 @@
         document.getElementById('filter-price-min').value = "";
         document.getElementById('filter-price-max').value = "";
         window.selectedCardsetNames = [];
+        window.selectedSetCodes = [];
+        window.selectedRarities = [];
         const fci = document.getElementById('filter-cardset-input');
         if (fci) fci.value = "";
+        const fsci = document.getElementById('filter-setcode-input');
+        if (fsci) fsci.value = '';
+        const fri = document.getElementById('filter-rarity-input');
+        if (fri) fri.value = '';
         renderCardsetFilterChips();
+        renderSetcodeFilterChips();
+        renderRarityFilterChips();
         paintAllMultiTextChips();
         currentPage = 1;
         performSearch(true);
@@ -4414,6 +5136,7 @@ document.addEventListener('click', (e) => {
         stopScanner();
         document.getElementById('ocr-container').style.display = 'none';
         if (scannerFoundCards.length > 0) {
+            clearRandomPickState();
             searchResults = scannerFoundCards.map(card => ({
                 ...card,
                 current_image: card.card_images[0],
