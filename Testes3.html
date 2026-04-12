@@ -903,6 +903,41 @@
             opacity: 0.8;
         }
         .info-row img { width: 14px; height: 14px; object-fit: contain; }
+
+        /* Link markers + Pêndulo (SVG estilo carta) */
+        .link-markers-band {
+            display: inline-flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0;
+            vertical-align: middle;
+        }
+        .link-marker-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 0;
+        }
+        .link-marker-icon svg {
+            display: block;
+            filter: drop-shadow(0 0 1px rgba(0,0,0,0.9));
+        }
+        .pendulum-scale-band {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            margin-left: 2px;
+        }
+        .pendulum-scale-num {
+            font-weight: 800;
+            font-size: 10px;
+            color: #fff;
+            text-shadow: 0 0 2px #000, 0 0 4px #000;
+            min-width: 8px;
+            text-align: center;
+            line-height: 1;
+        }
+        .pendulum-diamond { flex-shrink: 0; }
         
         .atk-def-row { 
             font-weight: bold; 
@@ -1309,7 +1344,7 @@
                 <label>Categoria (subtipo)</label>
                 <p class="cardset-hint">Apenas com “Monstro” selecionado. Um subtipo por vez.</p>
                 <div style="display: flex; gap: 6px; align-items: stretch;">
-                    <input type="text" id="filter-subtype-input" list="datalist-filter-subtype" placeholder="Ex.: Monstro de Efeito…" autocomplete="off" style="flex: 1;">
+                    <input type="text" id="filter-subtype-input" list="datalist-filter-subtype" placeholder="Ex.: Monstro Pêndulo de efeito…" autocomplete="off" style="flex: 1;">
                     <button type="button" id="filter-subtype-add" class="btn-secondary" style="width: auto; padding: 8px 10px; white-space: nowrap;">Adicionar</button>
                 </div>
                 <datalist id="datalist-filter-subtype"></datalist>
@@ -1450,25 +1485,12 @@
             </div>
             <div class="filter-group">
                 <label>Raridade (impressão)</label>
-                <p class="cardset-hint">Nome em inglês como no banco (ex.: Ultra Rare). Só raridade: percorre o catálogo completo (vários pedidos à API; pode demorar). Com outros filtros, aplica-se só ao resultado já carregado.</p>
+                <p class="cardset-hint">Nome em inglês como no banco (ex.: Ultra Rare). Sugestões vêm do mesmo scan de <code>cardinfo</code> que set codes / tipos / raças (pode demorar na 1ª carga). Só raridade: percorre o catálogo completo. Com outros filtros, aplica-se só ao resultado já carregado.</p>
                 <div style="display: flex; gap: 6px; align-items: stretch;">
                     <input type="text" id="filter-rarity-input" list="datalist-rarities" placeholder="Ex.: Secret Rare" autocomplete="off" style="flex: 1;">
                     <button type="button" id="filter-rarity-add" class="btn-secondary" style="width: auto; padding: 8px 10px; white-space: nowrap;">Adicionar</button>
                 </div>
-                <datalist id="datalist-rarities">
-                    <option value="Common"></option>
-                    <option value="Rare"></option>
-                    <option value="Super Rare"></option>
-                    <option value="Ultra Rare"></option>
-                    <option value="Secret Rare"></option>
-                    <option value="Prismatic Secret Rare"></option>
-                    <option value="Quarter Century Secret Rare"></option>
-                    <option value="Starlight Rare"></option>
-                    <option value="Ghost Rare"></option>
-                    <option value="Platinum Secret Rare"></option>
-                    <option value="Collector's Rare"></option>
-                    <option value="Ultimate Rare"></option>
-                </datalist>
+                <datalist id="datalist-rarities"></datalist>
                 <div id="filter-rarity-chips" class="cardset-chips" aria-live="polite"></div>
                 <button type="button" id="filter-rarity-clear" class="btn-secondary" style="margin-top: 6px; display: none;">Limpar raridades</button>
             </div>
@@ -1723,21 +1745,91 @@
         { v: 'Trap Card', aliases: ['trap', 'armadilha', 'carta de armadilha', 'trap card'] }
     ];
 
-    const MONSTER_SUBTYPE_OPTS = [
-        { v: 'Normal Monster', labelPt: 'Monstro normal', hints: ['normal'] },
-        { v: 'Effect Monster', labelPt: 'Monstro de efeito', hints: ['efeito', 'effect'] },
-        { v: 'Fusion Monster', labelPt: 'Monstro de fusão', hints: ['fusão', 'fusion', 'fusao'] },
-        { v: 'Synchro Monster', labelPt: 'Monstro sincro', hints: ['sincro', 'synchro'] },
-        { v: 'XYZ Monster', labelPt: 'Monstro Xyz', hints: ['xyz'] },
-        { v: 'Link Monster', labelPt: 'Monstro link', hints: ['link'] },
-        { v: 'Ritual Monster', labelPt: 'Monstro de ritual', hints: ['ritual'] },
-        { v: 'Token', labelPt: 'Ficha', hints: ['token'] }
-    ];
+    /**
+     * Rótulos PT opcionais para `type` de monstro (API). Tipos novos no banco aparecem em inglês até alguém acrescentar aqui.
+     * A lista de categorias no filtro vem do scan de cardinfo; isto só enriquece a UI.
+     */
+    const MONSTER_TYPE_LABEL_PT = {
+        'Normal Monster': 'Monstro normal',
+        'Effect Monster': 'Monstro de efeito',
+        'Tuner Monster': 'Monstro afinador',
+        'Normal Tuner Monster': 'Monstro normal afinador',
+        'Flip Effect Monster': 'Monstro de efeito de virar',
+        'Flip Tuner Effect Monster': 'Monstro afinador de efeito de virar',
+        'Gemini Monster': 'Monstro gêmeos',
+        'Pendulum Normal Monster': 'Monstro Pêndulo normal',
+        'Pendulum Effect Monster': 'Monstro Pêndulo de efeito',
+        'Pendulum Tuner Effect Monster': 'Monstro Pêndulo afinador',
+        'Pendulum Flip Effect Monster': 'Monstro Pêndulo de efeito de virar',
+        'Pendulum Effect Ritual Monster': 'Monstro Pêndulo de ritual',
+        'Ritual Monster': 'Monstro de ritual',
+        'Ritual Effect Monster': 'Monstro de ritual de efeito',
+        'Spirit Monster': 'Monstro espírito',
+        'Toon Monster': 'Monstro toon',
+        'Union Effect Monster': 'Monstro de união',
+        'Fusion Monster': 'Monstro de fusão',
+        'Pendulum Effect Fusion Monster': 'Monstro Pêndulo de fusão',
+        'Synchro Monster': 'Monstro Sincro',
+        'Synchro Tuner Monster': 'Monstro Sincro afinador',
+        'Synchro Pendulum Effect Monster': 'Monstro Sincro Pêndulo',
+        'XYZ Monster': 'Monstro Xyz',
+        'XYZ Pendulum Effect Monster': 'Monstro Xyz Pêndulo',
+        'Link Monster': 'Monstro Link',
+        'Token': 'Ficha (Token)'
+    };
+    /** Atalhos de texto para resolver categoria (opcional). */
+    const MONSTER_TYPE_HINTS = {
+        'Normal Monster': ['normal', 'monstro normal'],
+        'Effect Monster': ['efeito', 'effect'],
+        'Tuner Monster': ['tuner', 'afinador'],
+        'Normal Tuner Monster': ['normal tuner'],
+        'Flip Effect Monster': ['flip', 'virar'],
+        'Flip Tuner Effect Monster': ['flip tuner'],
+        'Gemini Monster': ['gemini', 'gemeos', 'gêmeos'],
+        'Pendulum Normal Monster': ['pendulum normal', 'pêndulo normal', 'pendulo normal'],
+        'Pendulum Effect Monster': ['pendulum effect', 'pêndulo de efeito', 'pendulo efeito'],
+        'Pendulum Tuner Effect Monster': ['pendulum tuner', 'pêndulo afinador'],
+        'Pendulum Flip Effect Monster': ['pendulum flip'],
+        'Pendulum Effect Ritual Monster': ['pendulum ritual', 'pêndulo ritual'],
+        'Ritual Monster': ['ritual monster'],
+        'Ritual Effect Monster': ['ritual effect'],
+        'Spirit Monster': ['spirit', 'espirito', 'espírito'],
+        'Toon Monster': ['toon'],
+        'Union Effect Monster': ['union', 'união', 'uniao'],
+        'Fusion Monster': ['fusão', 'fusion', 'fusao'],
+        'Pendulum Effect Fusion Monster': ['pendulum fusion', 'pêndulo fusão'],
+        'Synchro Monster': ['sincro', 'synchro'],
+        'Synchro Tuner Monster': ['synchro tuner'],
+        'Synchro Pendulum Effect Monster': ['synchro pendulum', 'sincro pêndulo'],
+        'XYZ Monster': ['xyz'],
+        'XYZ Pendulum Effect Monster': ['xyz pendulum'],
+        'Link Monster': ['link'],
+        'Token': ['token', 'ficha']
+    };
+
+    let monsterSubtypeFallbackOptsCached = null;
+    function monsterSubtypeFallbackOpts() {
+        if (!monsterSubtypeFallbackOptsCached) {
+            monsterSubtypeFallbackOptsCached = Object.keys(MONSTER_TYPE_LABEL_PT).map(v => ({
+                v,
+                labelPt: MONSTER_TYPE_LABEL_PT[v],
+                hints: MONSTER_TYPE_HINTS[v] || []
+            })).sort((a, b) => (a.labelPt || '').localeCompare(b.labelPt || '', 'pt', { sensitivity: 'base' }));
+        }
+        return monsterSubtypeFallbackOptsCached;
+    }
+
+    /** Opções de subtipo monstro: catálogo API (após scan) ou fallback até o scan terminar. */
+    function getMonsterSubtypeOpts() {
+        if (window.catalogMonsterSubtypeOpts && window.catalogMonsterSubtypeOpts.length)
+            return window.catalogMonsterSubtypeOpts;
+        return monsterSubtypeFallbackOpts();
+    }
 
     const FILTER_RACES = {
         Monster: {
-            Aqua: 'Aqua', Beast: 'Besta', 'Beast-Warrior': 'Besta-Guerreira', Cyberse: 'Ciberso',
-            Dinosaur: 'Dinossauro', Dragon: 'Dragão', Fiend: 'Demônio', Fish: 'Peixe',
+            Aqua: 'Aqua', Beast: 'Besta', 'Beast-Warrior': 'Besta-Guerreira', 'Creator-God': 'Deus-Criador', Cyberse: 'Ciberso',
+            Dinosaur: 'Dinossauro', Dragon: 'Dragão', Fairy: 'Fada', Fiend: 'Demônio', Fish: 'Peixe',
             Insect: 'Inseto', Machine: 'Máquina', Plant: 'Planta', Psychic: 'Psíquico',
             Pyro: 'Piro', Reptile: 'Réptil', Rock: 'Rocha', 'Sea Serpent': 'Serpente Marinha',
             Spellcaster: 'Mago', Thunder: 'Trovão', Warrior: 'Guerreiro', 'Winged Beast': 'Besta Alada',
@@ -1751,6 +1843,22 @@
             Normal: 'Normal', Continuous: 'Contínua', Counter: 'Resposta'
         }
     };
+
+    function getRaceDisplayLabel(cat, apiKey) {
+        const m = FILTER_RACES[cat];
+        return (m && m[apiKey]) || apiKey;
+    }
+
+    /** União das raças/tipos conhecidos no código + valores vistos no cardinfo (API). */
+    function raceApiKeysForCategory(cat) {
+        const m = FILTER_RACES[cat];
+        if (!m) return [];
+        const keys = new Set(Object.keys(m));
+        const ext = window.catalogRaceKeys && window.catalogRaceKeys[cat];
+        if (ext && ext.length) ext.forEach(k => { if (k) keys.add(String(k)); });
+        return [...keys].sort((a, b) =>
+            getRaceDisplayLabel(cat, a).localeCompare(getRaceDisplayLabel(cat, b), 'pt', { sensitivity: 'base' }));
+    }
 
     const FILTER_ATTR_LABEL_PT = {
         dark: 'Trevas', light: 'Luz', earth: 'Terra', fire: 'Fogo', water: 'Água', wind: 'Vento', divine: 'Divino'
@@ -1823,14 +1931,11 @@
     function filterChipLabel(key, val) {
         if (key === 'typeCategory') return ({ Monster: 'Monstro', 'Spell Card': 'Magia', 'Trap Card': 'Armadilha' }[val] || val);
         if (key === 'subtype') {
-            const m = MONSTER_SUBTYPE_OPTS.find(o => o.v === val);
-            if (m && m.labelPt) return m.labelPt;
-            return val;
+            return MONSTER_TYPE_LABEL_PT[val] || val;
         }
         if (key === 'race') {
             const cat = getFilterTypeCategory();
-            const map = FILTER_RACES[cat];
-            return (map && map[val]) || val;
+            return getRaceDisplayLabel(cat, val);
         }
         if (key === 'attribute') return ({ dark: 'Trevas', light: 'Luz', earth: 'Terra', fire: 'Fogo', water: 'Água', wind: 'Vento', divine: 'Divino' }[val] || val);
         if (key === 'level') return `Nv. ${val}`;
@@ -1916,23 +2021,36 @@
         const cat = getFilterTypeCategory();
         if (subDl) {
             if (cat === 'Monster') {
-                subDl.innerHTML = MONSTER_SUBTYPE_OPTS.map(o => `<option value="${escAttr(o.labelPt)}"></option>`).join('');
+                subDl.innerHTML = getMonsterSubtypeOpts().map(o => `<option value="${escAttr(o.labelPt)}"></option>`).join('');
             } else subDl.innerHTML = '';
         }
         if (raceDl) {
             raceDl.innerHTML = '';
             if (cat && FILTER_RACES[cat]) {
                 const seen = new Set();
-                Object.values(FILTER_RACES[cat]).forEach(pt => {
+                for (const apiKey of raceApiKeysForCategory(cat)) {
+                    const pt = getRaceDisplayLabel(cat, apiKey);
                     const k = pt.toLowerCase();
-                    if (seen.has(k)) return;
+                    if (seen.has(k)) continue;
                     seen.add(k);
                     raceDl.innerHTML += `<option value="${escAttr(pt)}"></option>`;
-                });
+                }
             }
         }
     }
 
+    /**
+     * Origem das sugestões dos datalists (chips de filtro):
+     * — Tipo (Monstro/Magia/Armadilha): rótulos locais → mapeia para Monster | Spell Card | Trap Card na API.
+     * — Categoria (subtipo): valores `type` únicos de monstros no cardinfo (scan único) + rótulos PT opcionais.
+     * — Raça / tipo Magia-Armadilha: união FILTER_RACES + `race` visto no cardinfo.
+     * — Atributo: FILTER_ATTR_LABEL_PT / FILTER_ATTR_OPTS → parâmetro `attribute` (dark, light, …).
+     * — Nível: 0–13 local → parâmetro `level`.
+     * — Era / região de data / formato-banlist: listas locais (labels PT) → chaves usadas na busca por data/format.
+     * — Expansão (nome): cardsets.php (carregamento assíncrono).
+     * — Arquétipo: archetypes.php.
+     * — Código de set, raridades, tipos de monstro e raças: mesmo scan paginado em cardinfo.php.
+     */
     function fillStaticComboDatalists() {
         const tdl = document.getElementById('datalist-filter-type');
         if (tdl) {
@@ -1975,13 +2093,14 @@
         const q0 = raw.trim();
         if (!q0) return null;
         const q = q0.toLowerCase();
-        const byLabel = MONSTER_SUBTYPE_OPTS.find(o => (o.labelPt || '').toLowerCase() === q);
+        const opts = getMonsterSubtypeOpts();
+        const byLabel = opts.find(o => (o.labelPt || '').toLowerCase() === q);
         if (byLabel) return byLabel.v;
-        const ex = MONSTER_SUBTYPE_OPTS.find(o => o.v === q0 || o.v.toLowerCase() === q);
+        const ex = opts.find(o => o.v === q0 || o.v.toLowerCase() === q);
         if (ex) return ex.v;
-        const byHint = MONSTER_SUBTYPE_OPTS.find(o => (o.hints || []).some(h => h.toLowerCase() === q));
+        const byHint = opts.find(o => (o.hints || []).some(h => h.toLowerCase() === q));
         if (byHint) return byHint.v;
-        const partials = MONSTER_SUBTYPE_OPTS.filter(o =>
+        const partials = opts.filter(o =>
             (o.labelPt || '').toLowerCase().includes(q) || o.v.toLowerCase().includes(q) ||
             (o.hints || []).some(h => h.toLowerCase().includes(q)));
         if (partials.length === 1) return partials[0].v;
@@ -1993,15 +2112,19 @@
         if (!cat || !FILTER_RACES[cat]) return null;
         const q = raw.trim();
         if (!q) return null;
-        const map = FILTER_RACES[cat];
-        if (map[q]) return q;
         const low = q.toLowerCase();
-        const apiKey = Object.keys(map).find(k => k.toLowerCase() === low);
-        if (apiKey) return apiKey;
-        const byPt = Object.entries(map).find(([, pt]) => pt.toLowerCase() === low);
-        if (byPt) return byPt[0];
-        const partials = Object.entries(map).filter(([k, pt]) => k.toLowerCase().includes(low) || pt.toLowerCase().includes(low));
-        if (partials.length === 1) return partials[0][0];
+        const keys = raceApiKeysForCategory(cat);
+        for (const k of keys) {
+            if (k === q) return k;
+            if (k.toLowerCase() === low) return k;
+            const lab = getRaceDisplayLabel(cat, k);
+            if (lab.toLowerCase() === low) return k;
+        }
+        const partials = keys.filter(k => {
+            const lab = getRaceDisplayLabel(cat, k);
+            return k.toLowerCase().includes(low) || lab.toLowerCase().includes(low);
+        });
+        if (partials.length === 1) return partials[0];
         return null;
     }
 
@@ -2261,20 +2384,31 @@
         return String(str ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
     }
 
-    let setcodeDatalistReady = false;
-    let setcodeDatalistPromise = null;
+    let cardinfoCatalogReady = false;
+    let cardinfoCatalogPromise = null;
 
-    /** Percorre cardinfo (paginação) e junta todos os set_code das impressões — só códigos que existem em cartas. */
-    async function collectSetcodesFromCardinfoPaginated() {
+    const CARDINFO_CATALOG_NUM = 5000;
+    const SETCODE_DATALIST_MAX = 14000;
+    const RARITY_DATALIST_MAX = 5000;
+
+    /**
+     * Um único percurso paginado em cardinfo: set_code, set_rarity, type (monstro), race por categoria.
+     * Mantém o app alinhado a novas cartas/tipos/raridades sem editar listas fixas.
+     */
+    async function fetchCardinfoCatalogAggregates() {
         const codes = new Set();
-        const num = 5000;
+        const monsterTypes = new Set();
+        const monsterRaces = new Set();
+        const spellRaces = new Set();
+        const trapRaces = new Set();
+        const rarities = new Set();
         let offset = 0;
         let totalRows = 0;
         let first = true;
         for (;;) {
-            const url = `https://db.ygoprodeck.com/api/v7/cardinfo.php?num=${num}&offset=${offset}`;
+            const url = `https://db.ygoprodeck.com/api/v7/cardinfo.php?num=${CARDINFO_CATALOG_NUM}&offset=${offset}`;
             const res = await fetch(url);
-            if (!res.ok) break;
+            if (!res.ok) throw new Error(`cardinfo HTTP ${res.status}`);
             const j = await res.json();
             if (j && j.error) break;
             if (first && j.meta && typeof j.meta.total_rows === 'number') {
@@ -2284,41 +2418,72 @@
             const rows = j.data || [];
             if (!rows.length) break;
             for (const card of rows) {
+                const t = String(card.type || '').trim();
+                if (t === 'Spell Card') {
+                    if (card.race) spellRaces.add(String(card.race).trim());
+                } else if (t === 'Trap Card') {
+                    if (card.race) trapRaces.add(String(card.race).trim());
+                } else if (t && t !== 'Skill Card') {
+                    monsterTypes.add(t);
+                    if (card.race) monsterRaces.add(String(card.race).trim());
+                }
                 for (const s of card.card_sets || []) {
                     const c = String(s.set_code || '').trim().toUpperCase();
                     if (c) codes.add(c);
+                    const rar = String(s.set_rarity || '').trim();
+                    if (rar) rarities.add(rar);
                 }
             }
-            offset += num;
+            offset += CARDINFO_CATALOG_NUM;
             if (totalRows > 0 && offset >= totalRows) break;
             if (offset > 250000) break;
         }
-        return codes;
+        return { codes, monsterTypes, monsterRaces, spellRaces, trapRaces, rarities };
     }
 
-    async function ensureSetcodeDatalistFromApi() {
-        if (setcodeDatalistReady) return;
-        if (setcodeDatalistPromise) return setcodeDatalistPromise;
-        setcodeDatalistPromise = (async () => {
+    function applyCardinfoCatalogToDom(agg) {
+        const dlCodes = document.getElementById('datalist-setcodes');
+        if (dlCodes) {
+            const sortedCodes = [...agg.codes].sort((a, b) => a.localeCompare(b, 'en'));
+            dlCodes.innerHTML = sortedCodes.slice(0, SETCODE_DATALIST_MAX).map(c => `<option value="${escAttr(c)}"></option>`).join('');
+        }
+        const dlRar = document.getElementById('datalist-rarities');
+        if (dlRar) {
+            const sortedRar = [...agg.rarities].sort((a, b) => a.localeCompare(b, 'en'));
+            dlRar.innerHTML = sortedRar.slice(0, RARITY_DATALIST_MAX).map(r => `<option value="${escAttr(r)}"></option>`).join('');
+        }
+        window.catalogMonsterSubtypeOpts = [...agg.monsterTypes].sort((a, b) => a.localeCompare(b, 'en')).map(v => ({
+            v,
+            labelPt: MONSTER_TYPE_LABEL_PT[v] || v,
+            hints: MONSTER_TYPE_HINTS[v] || []
+        })).sort((a, b) => (a.labelPt || '').localeCompare(b.labelPt || '', 'pt', { sensitivity: 'base' }));
+        window.catalogRaceKeys = {
+            Monster: [...agg.monsterRaces].sort((a, b) => a.localeCompare(b, 'en')),
+            'Spell Card': [...agg.spellRaces].sort((a, b) => a.localeCompare(b, 'en')),
+            'Trap Card': [...agg.trapRaces].sort((a, b) => a.localeCompare(b, 'en'))
+        };
+        refreshSubtypeRaceDatalists();
+    }
+
+    async function ensureCardinfoCatalogFromApi() {
+        if (cardinfoCatalogReady) return;
+        if (cardinfoCatalogPromise) return cardinfoCatalogPromise;
+        cardinfoCatalogPromise = (async () => {
             try {
-                const codes = await collectSetcodesFromCardinfoPaginated();
-                const dl = document.getElementById('datalist-setcodes');
-                if (!dl) return;
-                const sorted = [...codes].sort((a, b) => a.localeCompare(b, 'en'));
-                const cap = 14000;
-                dl.innerHTML = sorted.slice(0, cap).map(c => `<option value="${escAttr(c)}"></option>`).join('');
-                setcodeDatalistReady = true;
+                const agg = await fetchCardinfoCatalogAggregates();
+                applyCardinfoCatalogToDom(agg);
+                cardinfoCatalogReady = true;
             } catch (e) {
-                console.warn('Setcode datalist (cardinfo):', e);
+                console.warn('Catálogo cardinfo (set codes, raridades, tipos, raças):', e);
             } finally {
-                setcodeDatalistPromise = null;
+                cardinfoCatalogPromise = null;
             }
         })();
-        return setcodeDatalistPromise;
+        return cardinfoCatalogPromise;
     }
 
-    function scheduleSetcodeDatalistBuild() {
-        setTimeout(() => { void ensureSetcodeDatalistFromApi(); }, 500);
+    function scheduleCardinfoCatalogBuild() {
+        setTimeout(() => { void ensureCardinfoCatalogFromApi(); }, 500);
     }
 
     async function loadCardsetsCatalog() {
@@ -2946,13 +3111,49 @@
         sortAndRender();
     }
 
-    function getLinkMarkersHtml(markers) {
-        if (!markers) return '';
-        const arrowMap = {
-            "Top": "↑", "Bottom": "↓", "Left": "←", "Right": "→",
-            "Top-Left": "↖", "Top-Right": "↗", "Bottom-Left": "↙", "Bottom-Right": "↘"
-        };
-        return markers.map(m => `<span style="color: #ff0000; font-weight: bold; margin: 0 1px;" title="${m}">${arrowMap[m] || m}</span>`).join('');
+    const LINK_MARKER_SORT_ORDER = ['Top-Left', 'Top', 'Top-Right', 'Left', 'Right', 'Bottom-Left', 'Bottom', 'Bottom-Right'];
+    const LINK_MARKER_ROTATION = {
+        'Top': 0, 'Top-Right': 45, 'Right': 90, 'Bottom-Right': 135,
+        'Bottom': 180, 'Bottom-Left': 225, 'Left': 270, 'Top-Left': 315
+    };
+
+    function sortLinkMarkers(markers) {
+        if (!markers || !markers.length) return [];
+        return [...markers].sort((a, b) =>
+            LINK_MARKER_SORT_ORDER.indexOf(a) - LINK_MARKER_SORT_ORDER.indexOf(b));
+    }
+
+    /** Setas de Link em SVG (estilo próximo ao frame oficial; API: linkmarkers). */
+    function getLinkMarkersHtml(markers, sizePx = 14) {
+        if (!markers || !markers.length) return '';
+        const sz = Number(sizePx) > 0 ? Number(sizePx) : 14;
+        return `<span class="link-markers-band" aria-label="Marcadores de link">${sortLinkMarkers(markers).map(m => {
+            const deg = LINK_MARKER_ROTATION[m] != null ? LINK_MARKER_ROTATION[m] : 0;
+            const tip = escAttr(String(m || '').replace(/-/g, ' '));
+            return `<span class="link-marker-icon" title="${tip}"><svg width="${sz}" height="${sz}" viewBox="0 0 24 24" aria-hidden="true" style="transform:rotate(${deg}deg);transform-origin:50% 50%"><path d="M12 3.5 L20.5 19.5 L14.2 16.8 L12 21 L9.8 16.8 L3.5 19.5 Z" fill="#d62828" stroke="#ff9b9b" stroke-width="0.45" stroke-linejoin="round"/></svg></span>`;
+        }).join('')}</span>`;
+    }
+
+    function cardHasPendulumScale(card) {
+        if (!card || !String(card.type || '').toLowerCase().includes('pendulum')) return false;
+        const sc = card.scale;
+        if (sc === undefined || sc === null) return false;
+        if (typeof sc === 'string' && String(sc).trim() === '') return false;
+        return true;
+    }
+
+    /** Losangos azul/vermelho + número (campo scale da API YGOPRODeck). */
+    function getPendulumScaleHtml(scale, sizePx = 13) {
+        if (scale === undefined || scale === null) return '';
+        const raw = String(scale).trim();
+        if (raw === '') return '';
+        const s = escAttr(raw);
+        const w = Number(sizePx) > 0 ? Number(sizePx) : 13;
+        const h = Math.round(w * 1.22);
+        const path = 'M11 1.5 L20.5 13.5 L11 25.5 L1.5 13.5 Z';
+        const leftSvg = `<svg class="pendulum-diamond" width="${w}" height="${h}" viewBox="0 0 22 27" aria-hidden="true"><path d="${path}" fill="#0d47a1" stroke="#90caf9" stroke-width="0.65" stroke-linejoin="round"/></svg>`;
+        const rightSvg = `<svg class="pendulum-diamond" width="${w}" height="${h}" viewBox="0 0 22 27" aria-hidden="true"><path d="${path}" fill="#b71c1c" stroke="#ffcdd2" stroke-width="0.65" stroke-linejoin="round"/></svg>`;
+        return `<span class="pendulum-scale-band" title="Escala de Pêndulo: ${s}">${leftSvg}<span class="pendulum-scale-num">${s}</span>${rightSvg}</span>`;
     }
 
     function sortAndRender() {
@@ -3242,22 +3443,29 @@
             "Ritual": "Ritual", "Counter": "Resposta" 
         };
         let infoHtml = `<div style="display: flex; flex-direction: column; gap: 8px; width: 100%;">`;
+        const isLinkTt = card.type.toLowerCase().includes("link");
         if(card.attribute || card.type.includes("Spell") || card.type.includes("Trap")) {
             let iconUrl = card.type.includes("Spell") ? "https://static.wikia.nocookie.net/yugioh/images/0/09/SPELL.svg" :
                         card.type.includes("Trap") ? "https://static.wikia.nocookie.net/yugioh/images/2/28/TRAP.svg" :
                         `https://images.ygoprodeck.com/images/cards/${card.attribute ? card.attribute.toUpperCase() : 'UNKNOWN'}.jpg`;
             let labelText = card.type.includes("Spell") ? "MAGIA" : card.type.includes("Trap") ? "ARMADILHA" : 
                             (typeof trad !== 'undefined' ? trad[card.attribute?.toUpperCase()] : card.attribute) || card.attribute || "";
-            infoHtml += `<div style="display: flex; align-items: center; gap: 8px;">
+            infoHtml += `<div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
                             <div style="display: flex; align-items: center; gap: 4px; color: #ffffff;">
                                 <img src="${iconUrl}" style="width:20px; height:20px; object-fit:contain;">
                                 <span>${labelText}</span>
                             </div>`;
-            if((card.level || card.rank) && !card.type.toLowerCase().includes("link")) {
+            if (cardHasPendulumScale(card)) {
+                infoHtml += getPendulumScaleHtml(card.scale, isMobile ? 16 : 15);
+            }
+            if((card.level || card.rank) && !isLinkTt) {
                 infoHtml += `<div style="display: flex; align-items: center; gap: 4px; color: #ffffff; margin-left: 5px;">
                                 <img src="https://ygoprodeck.com/wp-content/uploads/2017/01/level.png" style="width:16px; height:16px; ${card.type.toUpperCase().includes('XYZ') ? 'filter:invert(1) brightness(0.5);' : ''}">
                                 <span>${card.level || card.rank}</span>
                             </div>`;
+            }
+            if (isLinkTt && card.linkmarkers && card.linkmarkers.length) {
+                infoHtml += `<div style="display: flex; align-items: center; margin-left: 4px;">${getLinkMarkersHtml(card.linkmarkers, isMobile ? 17 : 16)}</div>`;
             }
             infoHtml += `</div>`;
         }
@@ -3407,7 +3615,7 @@
         });
         document.addEventListener('DOMContentLoaded', () => { updateBanlistDates(); });
         loadCardsetsCatalog();
-        scheduleSetcodeDatalistBuild();
+        scheduleCardinfoCatalogBuild();
         loadArchetypesCatalog();
         void refreshYgoprodeckDbVersion();
         const fAdd = document.getElementById('filter-cardset-add');
@@ -3446,7 +3654,14 @@
         if (scInp) scInp.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') { e.preventDefault(); tryAddSetcodeFromInput(); }
         });
-        if (scInp) scInp.addEventListener('focus', () => { void ensureSetcodeDatalistFromApi(); });
+        const prefetchCatalog = () => { void ensureCardinfoCatalogFromApi(); };
+        if (scInp) scInp.addEventListener('focus', prefetchCatalog);
+        const rarInp = document.getElementById('filter-rarity-input');
+        if (rarInp) rarInp.addEventListener('focus', prefetchCatalog);
+        const subInp = document.getElementById('filter-subtype-input');
+        if (subInp) subInp.addEventListener('focus', prefetchCatalog);
+        const raceInp = document.getElementById('filter-race-input');
+        if (raceInp) raceInp.addEventListener('focus', prefetchCatalog);
         if (scInp) {
             scInp.addEventListener('input', (e) => {
                 if (e.inputType === 'insertReplacementText') tryAddSetcodeFromInput();
@@ -3866,6 +4081,10 @@
                 else if (tipoTexto.includes("Normal Monster")) tipoTexto = "Monstro Normal";
                 else tipoTexto = tipoTexto.replace("Monster", "Monstro").replace("Spell Card", "Carta de Magia").replace("Trap Card", "Carta de Armadilha");
                 const typeIconUrl = `https://images.ygoprodeck.com/images/cards/icons/${encodeURIComponent(card.type)}.jpg`;
+                const isLinkMonster = card.type.toLowerCase().includes("link");
+                const pendulumHtml = cardHasPendulumScale(card) ? getPendulumScaleHtml(card.scale, 12) : '';
+                const linkMarkersHtml = (isLinkMonster && card.linkmarkers && card.linkmarkers.length)
+                    ? getLinkMarkersHtml(card.linkmarkers, 13) : '';
                 div.innerHTML = `
                     <div class="list-card-thumb">
                     <img src="${imageObj.image_url_small}" loading="lazy" onerror="this.src='https://images.ygoprodeck.com/images/cards/back_high.jpg'" alt="${card.name}">
@@ -3875,9 +4094,11 @@
                             ${getBanIcon(card)} 
                             <b class="card-name" style="margin: 0; line-height: 1.2; color: ${nameColor};">${displayName}</b>
                         </div>
-                        <div class="info-row" style="display: flex; align-items: center; gap: 10px; color: ${textColor};">
+                        <div class="info-row" style="display: flex; align-items: center; flex-wrap: wrap; gap: 10px; row-gap: 4px; color: ${textColor};">
                             ${attrIconUrl ? `<div style="display: flex; align-items: center; gap: 4px;"><img src="${attrIconUrl}" style="width: 14px; height: 14px; border-radius: 50%;"><span style="font-size: 10px; color: inherit;">${trad[attrRaw] || attrRaw}</span></div>` : ''}
-                            ${(card.level || card.rank) && !card.type.toLowerCase().includes("link") ? `<div style="display: flex; align-items: center; gap: 2px;"><img src="${starIcon}" style="width: 12px; height: 12px; ${card.type.toUpperCase().includes('XYZ') ? 'filter:invert(1) brightness(0.5);' : ''}"><span style="font-size: 10px; color: inherit;">${card.level || card.rank}</span></div>` : ''}
+                            ${pendulumHtml}
+                            ${(card.level || card.rank) && !isLinkMonster ? `<div style="display: flex; align-items: center; gap: 2px;"><img src="${starIcon}" style="width: 12px; height: 12px; ${card.type.toUpperCase().includes('XYZ') ? 'filter:invert(1) brightness(0.5);' : ''}"><span style="font-size: 10px; color: inherit;">${card.level || card.rank}</span></div>` : ''}
+                            ${linkMarkersHtml}
                         </div>
                         <div class="info-row" style="display: flex; align-items: center; gap: 4px; margin-top: 2px; flex-wrap: wrap; color: ${textColor};">
                             <img src="${raceIconUrl}" style="width: 14px; height: 14px;" onerror="this.style.display='none'">
