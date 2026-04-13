@@ -2235,20 +2235,15 @@
                 <div id="filter-rarity-chips" class="cardset-chips" aria-live="polite"></div>
                 <button type="button" id="filter-rarity-clear" class="btn-secondary" style="margin-top: 6px; display: none;">Limpar raridades</button>
             </div>
-            <div class="filter-group">
-                <button id="btn-open-scanner" class="btn-secondary" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;">
-                    <i class="fa-solid fa-camera"></i> Escanear Carta (OCR)
-                </button>
-            </div>
-            <div class="filter-group filter-pdf-scale"><label>Escala do PDF (%)</label><div class="stepper"><button onclick="adjustScale(-0.1)">-</button><input type="number" id="print-scale" value="100.0" readonly><button onclick="adjustScale(0.1)">+</button></div></div>
-            <hr style="border:0; border-top:1px solid #333; margin: 20px 0;">
-            <label class="btn-secondary">IMPORTAR .YDK<input type="file" id="file-ydk" accept=".ydk" style="display:none" onchange="importYDK(this)"></label>
         </div>
     </div>
 
     <div class="col" id="col-results">
         <div class="search-area">
             <div style="display: flex; gap: 10px; align-items: stretch;">
+                <button id="btn-open-scanner" class="btn-secondary" style="width: auto; padding: 8px 10px; white-space: nowrap; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                    <i class="fa-solid fa-camera"></i> Escanear Carta (OCR)
+                </button>
                 <div style="flex: 1; display: flex; gap: 6px; min-width: 0;">
                     <input type="text" id="search-input" placeholder="Buscar pelo nome..." autocomplete="off" style="flex: 1;">
                     <button type="button" id="filter-fname-add-chip" class="btn-secondary" style="width: auto; padding: 8px 10px; white-space: nowrap;">Adicionar</button>
@@ -2395,6 +2390,11 @@
                 </div>
             </div>
         </div>
+        <div style="padding: 10px 10px 0 10px;">
+            <label class="btn-secondary" style="width: 100%; display: block; text-align: center;">IMPORTAR .YDK
+                <input type="file" id="file-ydk" accept=".ydk" style="display:none" onchange="importYDK(this)">
+            </label>
+        </div>
         <div id="deck-stats-bar" class="deck-stats-bar" role="region" aria-label="Totais do deck">
             <div class="deck-stats-bar-inner">
                 <span class="deck-stat-block deck-stat-total-wrap" title="Total de cartas (cópias)">
@@ -2418,7 +2418,17 @@
             <div id="import-overlay" style="position: absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); display:none; flex-direction:column; justify-content:center; align-items:center; z-index:10;"><span style="color:var(--accent); font-size:11px;">GERANDO PDF...</span><div style="width:80%; height:4px; background:#333; margin-top:10px;"><div id="progress-bar" style="width:0; height:100%; background:var(--accent);"></div></div></div>
             <iframe id="preview-frame"></iframe>
         </div>
-        <div style="padding: 10px; background: #111;"><button class="btn-accent" onclick="downloadPDF()">BAIXAR PDF HQ</button></div>
+        <div style="padding: 10px; background: #111;">
+            <div class="filter-group filter-pdf-scale" style="margin-top: 0;">
+                <label>Escala do PDF (%)</label>
+                <div class="stepper">
+                    <button onclick="adjustScale(-0.1)">-</button>
+                    <input type="number" id="print-scale" value="100.0" readonly>
+                    <button onclick="adjustScale(0.1)">+</button>
+                </div>
+            </div>
+            <button class="btn-accent" onclick="downloadPDF()">BAIXAR PDF HQ</button>
+        </div>
     </div>
 </div>
 
