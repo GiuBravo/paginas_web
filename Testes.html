@@ -296,8 +296,8 @@
             padding-top: 5px; display: flex; justify-content: flex-start; gap: 10px;
         }
 
-        input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-        input[type=number] { -moz-appearance: textfield; }
+        input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; appearance: none; margin: 0; }
+        input[type=number] { -moz-appearance: textfield; appearance: textfield; }
 
         .app-container { display: grid; grid-template-columns: 300px 1fr 450px; height: 100vh; gap: 1px; background: var(--border); transition: grid-template-columns 0.3s ease; }
         /* Largura da 3.ª coluna: só o ciclo do botão do deck (deck-col-*), não o estado vazio da fila. */
@@ -306,6 +306,16 @@
         }
         .app-container.deck-col-wide {
             grid-template-columns: 300px minmax(0, 1fr) minmax(0, 1fr) !important;
+        }
+        /* Largura da 1.ª coluna: coluna dos filtros (sidebar). */
+        .app-container.filters-col-hidden {
+            grid-template-columns: 0px 1fr 450px !important;
+        }
+        .app-container.filters-col-hidden.deck-col-hidden {
+            grid-template-columns: 0px 1fr 0px !important;
+        }
+        .app-container.filters-col-hidden.deck-col-wide {
+            grid-template-columns: 0px minmax(0, 1fr) minmax(0, 1fr) !important;
         }
         .col { background: var(--bg-dark); display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
         
@@ -384,6 +394,28 @@
             line-height: 1.2;
         }
         .theme-white .filter-theme-random-wrap .theme-row-label { color: #6b7280; }
+
+        /* Botões (ícone) com label acima, como o “Aleatório” */
+        .icon-btn-row {
+            display: flex;
+            gap: 8px;
+            align-items: flex-end;
+        }
+        .icon-btn-stack {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            flex: 0 0 auto;
+        }
+        .icon-btn-stack .theme-row-label {
+            width: auto;
+            max-width: none;
+            margin: 0;
+            text-align: center;
+            white-space: nowrap;
+        }
+        .icon-btn-stack .theme-row-label[for] { cursor: pointer; }
 
         .cardset-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
         .cardset-chip {
@@ -670,6 +702,168 @@
             min-height: 36px;
             padding: 0 16px;
             font-size: 11px;
+        }
+
+        /* Modal de detalhes (conteúdo do tooltip) */
+        .tooltip-details-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 10070;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        .tooltip-details-modal.is-open { display: flex; }
+        .tooltip-details-modal-backdrop {
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.78);
+            cursor: pointer;
+        }
+        .tooltip-details-modal-dialog {
+            position: relative;
+            z-index: 1;
+            width: 100vw;
+            height: 100vh;
+            background: var(--panel-bg);
+            border: 1px solid var(--border);
+            border-radius: 0;
+            box-shadow: 0 30px 90px rgba(0, 0, 0, 0.8);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        body.theme-white .tooltip-details-modal-dialog { background: #fff; }
+        .tooltip-details-modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 12px 14px;
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+        .tooltip-details-modal-title {
+            margin: 0;
+            font-size: 12px;
+            font-weight: 800;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+        .tooltip-details-modal-close {
+            flex-shrink: 0;
+            width: 38px;
+            height: 38px;
+            border: none;
+            border-radius: 10px;
+            background: rgba(255,255,255,0.06);
+            color: var(--accent);
+            cursor: pointer;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        body.theme-white .tooltip-details-modal-close { background: #f3f4f6; }
+        .tooltip-details-modal-body {
+            flex: 1;
+            overflow: hidden;
+            padding: 10px;
+            padding-right: 56px;
+        }
+        .tooltip-details-modal-body #card-tooltip.tt-in-modal {
+            display: block !important;
+            position: static !important;
+            width: 100% !important;
+            max-width: none !important;
+            height: 100% !important;
+            max-height: none !important;
+            transform: none !important;
+            margin: 0 !important;
+            pointer-events: auto !important;
+            border-radius: 10px;
+            overflow: hidden !important; /* sem scrollbars na modal */
+            max-height: 100% !important;
+            padding: 0 !important; /* imagem encosta em cima/baixo */
+            padding-right: 34px !important; /* respiro interno à direita */
+        }
+        .tooltip-details-modal-body #card-tooltip.tt-in-modal::before { display: none !important; }
+        .tooltip-details-modal-body #card-tooltip.tt-in-modal .tt-container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            gap: 12px;
+            align-items: stretch;
+            overflow: hidden;
+        }
+        .tooltip-details-modal-body #card-tooltip.tt-in-modal #tooltip-img {
+            width: min(32vw, 320px);
+            height: 100%;
+            max-height: none;
+            align-self: stretch;
+            object-fit: contain;
+            max-height: 100%;
+            display: block;
+        }
+        .tooltip-details-modal-body #card-tooltip.tt-in-modal .tt-details {
+            flex: 1;
+            min-width: 0;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            padding: 14px 10px 14px 14px; /* respiro só no texto */
+        }
+        .tooltip-details-modal-body #card-tooltip.tt-in-modal #tooltip-name {
+            font-size: clamp(22px, 3.0vw, 26px) !important;
+            margin-bottom: 6px !important;
+        }
+        .tooltip-details-modal-body #card-tooltip.tt-in-modal #tooltip-info-rows {
+            flex: 0 0 auto;
+        }
+        .tooltip-details-modal-body #card-tooltip.tt-in-modal #tooltip-text {
+            flex: 1 1 auto;
+            overflow: hidden !important;
+            font-size: 16px !important;
+            line-height: 1.36 !important;
+            padding-top: 8px !important;
+            word-break: break-word;
+        }
+        .tooltip-details-modal-body #card-tooltip.tt-in-modal #tooltip-info-rows {
+            font-size: 15px !important;
+        }
+        .tooltip-details-modal-body #card-tooltip.tt-in-modal .tt-row-split {
+            font-size: 15px !important;
+        }
+        .tooltip-details-modal-body #card-tooltip.tt-in-modal .tt-cardsets-grid {
+            gap: 6px 10px;
+        }
+        @media (max-width: 900px) {
+            .tooltip-details-modal-body { padding: 10px; }
+            .tooltip-details-modal-body #card-tooltip.tt-in-modal .tt-container { gap: 10px; }
+            .tooltip-details-modal-body #card-tooltip.tt-in-modal #tooltip-img {
+                width: min(44vw, 220px);
+                height: 100%;
+                max-height: none;
+                align-self: stretch;
+            }
+        }
+
+        /* Garantir que a modal sempre sobrescreva regras mobile do tooltip (há #tooltip-img com !important mais abaixo). */
+        .tooltip-details-modal-body #card-tooltip.tt-in-modal #tooltip-img {
+            width: min(48vw, 580px) !important;
+            max-width: none !important;
+            height: 100% !important;
+            max-height: 100% !important;
+            margin: 0 !important;
+            display: block !important;
+            object-fit: contain !important;
+            flex: 0 0 auto;
+        }
+        .tooltip-details-modal-body #card-tooltip.tt-in-modal .tt-container {
+            align-items: stretch;
         }
 
         .csp-header {
@@ -1517,6 +1711,13 @@
                 gap: 1px;
                 background: #222;
             }
+            /* Com a coluna de filtros oculta, cabe mais 1 coluna na área central. */
+            .app-container.filters-col-hidden .results-view.list-mode {
+                grid-template-columns: repeat(5, 1fr);
+            }
+            .app-container.filters-col-hidden.deck-col-hidden .results-view.list-mode {
+                grid-template-columns: repeat(6, 1fr);
+            }
             .list-mode { 
                 display: grid; 
                 grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); 
@@ -1595,6 +1796,15 @@
             }
             .app-container.deck-col-wide .results-view.grid-mode {
                 grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+            }
+            .app-container.filters-col-hidden .results-view.grid-mode {
+                grid-template-columns: repeat(9, minmax(0, 1fr)) !important;
+            }
+            .app-container.filters-col-hidden.deck-col-hidden .results-view.grid-mode {
+                grid-template-columns: repeat(12, minmax(0, 1fr)) !important;
+            }
+            .app-container.filters-col-hidden.deck-col-wide .results-view.grid-mode {
+                grid-template-columns: repeat(7, minmax(0, 1fr)) !important;
             }
             .results-view.grid-mode .suggestion-item {
                 display: flex !important;
@@ -1819,8 +2029,21 @@
     </div>
 </div>
 
+<div id="tooltip-details-modal" class="tooltip-details-modal" aria-hidden="true">
+    <div class="tooltip-details-modal-backdrop" id="tooltip-details-modal-backdrop"></div>
+    <div class="tooltip-details-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="tooltip-details-modal-title">
+        <div class="tooltip-details-modal-header">
+            <h3 class="tooltip-details-modal-title" id="tooltip-details-modal-title">Detalhes da carta</h3>
+            <button type="button" class="tooltip-details-modal-close" id="tooltip-details-modal-close" aria-label="Fechar detalhes da carta">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="tooltip-details-modal-body" id="tooltip-details-modal-body"></div>
+    </div>
+</div>
+
 <div class="app-container empty-queue deck-col-hidden" id="app-layout">
-    <div class="col">
+    <div class="col" id="col-filters">
         <div class="col-header"><span>Filtros</span><button class="btn-view" onclick="resetFilters()">Resetar</button></div>
         <div class="sidebar-content">
             <div class="filter-group"><label>Tipo de carta</label>
@@ -2046,12 +2269,6 @@
             </div>
             <div style="display: flex; gap: 15px; align-items: center;">
                 <div class="filter-group filter-theme-random-wrap">
-                    <div class="theme-random-stack">
-                        <label class="theme-row-label" for="btn-random-filter-card">Aleatório</label>
-                        <button type="button" id="btn-random-filter-card" class="btn-view" title="Sorteia uma carta aleatória da lista atual; clique de novo para desfazer">
-                            <i class="fa-solid fa-dice" style="font-size: 16px;"></i>
-                        </button>
-                    </div>
                     <div class="theme-select-stack">
                         <label class="theme-row-label" for="theme-selector">Tema do sistema</label>
                         <select id="theme-selector" onchange="changeTheme(this.value)">
@@ -2081,22 +2298,55 @@
                         </button>
                     </div>
                 </div>
-                <div style="display: flex; gap: 8px; align-items: center;">
-                    <button type="button" id="btn-toggle-tooltip" class="btn-view active" title="Tooltip ao passar o rato: ligado (clique para desligar)" aria-pressed="true" aria-label="Alternar tooltip" onclick="toggleTooltipButton()" style="min-width: 38px; height: 35px; display: flex; align-items: center; justify-content: center;">
-                        <i class="fas fa-comment-alt" style="font-size: 15px;" aria-hidden="true"></i>
-                    </button>
-                    <button type="button" id="btn-toggle-fullscreen" class="btn-view" title="Tela inteira (como F11)" aria-pressed="false" aria-label="Entrar em tela inteira" onclick="togglePageFullscreen()" style="min-width: 38px; height: 35px; display: flex; align-items: center; justify-content: center;">
-                        <i class="fas fa-expand" id="icon-toggle-fullscreen" style="font-size: 14px;" aria-hidden="true"></i>
-                    </button>
-                    <button id="btn-list" class="btn-view active" title="Visualização em Lista" onclick="changeView('list')" style="font-size: 18px">
-                        <i class="fas fa-list"></i>
-                    </button>
-                    <button id="btn-grid" class="btn-view" title="Visualização em Grade" onclick="changeView('grid')" style="font-size: 18px">
-                        <i class="fas fa-th-large"></i>
-                    </button>
-                    <button type="button" id="btn-toggle-deck-column" class="btn-view" title="Coluna do deck: ocultar / normal / ampliada" style="font-size: 16px; min-width: 38px;" aria-label="Alternar coluna do deck: ocultar, normal ou ampliada">
-                        <i class="fas fa-columns" id="icon-toggle-deck-column" aria-hidden="true"></i>
-                    </button>
+                <div class="icon-btn-row">
+                    <div class="icon-btn-stack">
+                        <label class="theme-row-label" for="btn-random-filter-card">Aleatório</label>
+                        <button type="button" id="btn-random-filter-card" class="btn-view" title="Sorteia uma carta aleatória da lista atual; clique de novo para desfazer" style="min-width: 38px; height: 35px; display: flex; align-items: center; justify-content: center;">
+                            <i class="fa-solid fa-dice" style="font-size: 16px;" aria-hidden="true"></i>
+                        </button>
+                    </div>
+
+                    <div class="icon-btn-stack">
+                        <label class="theme-row-label" for="btn-toggle-tooltip">Tooltip</label>
+                        <button type="button" id="btn-toggle-tooltip" class="btn-view active" title="Tooltip ao passar o rato: ligado (clique para desligar)" aria-pressed="true" aria-label="Alternar tooltip" onclick="toggleTooltipButton()" style="min-width: 38px; height: 35px; display: flex; align-items: center; justify-content: center;">
+                            <i class="fas fa-comment-alt" style="font-size: 15px;" aria-hidden="true"></i>
+                        </button>
+                    </div>
+
+                    <div class="icon-btn-stack">
+                        <label class="theme-row-label" for="btn-toggle-filters-column">Filtros</label>
+                        <button type="button" id="btn-toggle-filters-column" class="btn-view active" title="Ocultar coluna de filtros" aria-pressed="true" aria-label="Ocultar/mostrar coluna de filtros" style="min-width: 38px; height: 35px; display: flex; align-items: center; justify-content: center;">
+                            <i class="fas fa-filter" id="icon-toggle-filters-column" style="font-size: 14px;" aria-hidden="true"></i>
+                        </button>
+                    </div>
+
+                    <div class="icon-btn-stack">
+                        <label class="theme-row-label" for="btn-toggle-fullscreen">Tela</label>
+                        <button type="button" id="btn-toggle-fullscreen" class="btn-view" title="Tela inteira (como F11)" aria-pressed="false" aria-label="Entrar em tela inteira" onclick="togglePageFullscreen()" style="min-width: 38px; height: 35px; display: flex; align-items: center; justify-content: center;">
+                            <i class="fas fa-expand" id="icon-toggle-fullscreen" style="font-size: 14px;" aria-hidden="true"></i>
+                        </button>
+                    </div>
+
+                    <div class="icon-btn-stack">
+                        <label class="theme-row-label" for="btn-list">Lista</label>
+                        <button id="btn-list" class="btn-view active" title="Visualização em Lista" onclick="changeView('list')" style="font-size: 18px; min-width: 38px; height: 35px; display: flex; align-items: center; justify-content: center;">
+                            <i class="fas fa-list" aria-hidden="true"></i>
+                        </button>
+                    </div>
+
+                    <div class="icon-btn-stack">
+                        <label class="theme-row-label" for="btn-grid">Grade</label>
+                        <button id="btn-grid" class="btn-view" title="Visualização em Grade" onclick="changeView('grid')" style="font-size: 18px; min-width: 38px; height: 35px; display: flex; align-items: center; justify-content: center;">
+                            <i class="fas fa-th-large" aria-hidden="true"></i>
+                        </button>
+                    </div>
+
+                    <div class="icon-btn-stack">
+                        <label class="theme-row-label" for="btn-toggle-deck-column">Deck</label>
+                        <button type="button" id="btn-toggle-deck-column" class="btn-view" title="Coluna do deck: ocultar / normal / ampliada" style="font-size: 16px; min-width: 38px; height: 35px; display: flex; align-items: center; justify-content: center;" aria-label="Alternar coluna do deck: ocultar, normal ou ampliada">
+                            <i class="fas fa-columns" id="icon-toggle-deck-column" aria-hidden="true"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -4390,6 +4640,41 @@
             : 'Tooltip ao passar o rato: desligado (clique para ligar)';
     }
 
+    function applyFiltersColumnVisibility(hidden) {
+        const layout = document.getElementById('app-layout');
+        const btn = document.getElementById('btn-toggle-filters-column');
+        const icon = document.getElementById('icon-toggle-filters-column') || (btn ? btn.querySelector('i') : null);
+        if (layout) layout.classList.toggle('filters-col-hidden', !!hidden);
+        if (btn) {
+            btn.classList.toggle('active', !hidden);
+            btn.setAttribute('aria-pressed', hidden ? 'false' : 'true');
+            btn.title = hidden ? 'Mostrar coluna de filtros' : 'Ocultar coluna de filtros';
+        }
+        if (icon) icon.className = hidden ? 'fas fa-eye-slash' : 'fas fa-filter';
+        try {
+            localStorage.setItem('ygo_proxy_filters_col_visible', hidden ? '0' : '1');
+        } catch (_) {}
+    }
+
+    function initFiltersColumnToolbar() {
+        const btn = document.getElementById('btn-toggle-filters-column');
+        if (!btn || btn.dataset.init === '1') return;
+        btn.dataset.init = '1';
+        let vis;
+        try {
+            vis = localStorage.getItem('ygo_proxy_filters_col_visible');
+        } catch (_) {
+            vis = null;
+        }
+        applyFiltersColumnVisibility(vis === '0');
+        btn.addEventListener('click', () => {
+            const layout = document.getElementById('app-layout');
+            const currentlyHidden = !!(layout && layout.classList.contains('filters-col-hidden'));
+            applyFiltersColumnVisibility(!currentlyHidden);
+            try { renderResults(); } catch (_) {}
+        });
+    }
+
     function getFullscreenElement() {
         return (
             document.fullscreenElement ||
@@ -4877,33 +5162,137 @@
         document.body.style.overflowX = "hidden";
     }
 
+    let tooltipDetailsModalEscHandler = null;
+    let tooltipDetailsModalRestoreCtx = null;
+
+    function openTooltipDetailsModal(card) {
+        if (!card) return;
+        const modal = document.getElementById('tooltip-details-modal');
+        const backdrop = document.getElementById('tooltip-details-modal-backdrop');
+        const closeBtn = document.getElementById('tooltip-details-modal-close');
+        const body = document.getElementById('tooltip-details-modal-body');
+        const tt = document.getElementById('card-tooltip');
+        if (!modal || !backdrop || !closeBtn || !body || !tt) return;
+
+        hideTooltip();
+
+        if (!tooltipDetailsModalRestoreCtx) {
+            tooltipDetailsModalRestoreCtx = {
+                parent: tt.parentNode,
+                nextSibling: tt.nextSibling
+            };
+        }
+
+        body.innerHTML = '';
+        body.appendChild(tt);
+        tt.classList.add('tt-in-modal');
+        tt.style.display = 'block';
+        tt.style.pointerEvents = 'auto';
+        tt.style.position = 'static';
+        tt.style.top = '';
+        tt.style.left = '';
+        tt.style.transform = '';
+        tt.style.margin = '0';
+        tt.style.width = '100%';
+        tt.style.maxWidth = 'none';
+        tt.style.height = 'auto';
+        tt.style.maxHeight = 'none';
+
+        fillTooltipData(card);
+
+        modal.classList.add('is-open');
+        modal.setAttribute('aria-hidden', 'false');
+        document.body.style.overflow = 'hidden';
+
+        const onClose = () => closeTooltipDetailsModal();
+        backdrop.onclick = onClose;
+        closeBtn.onclick = onClose;
+
+        if (tooltipDetailsModalEscHandler) document.removeEventListener('keydown', tooltipDetailsModalEscHandler);
+        tooltipDetailsModalEscHandler = (ev) => {
+            if (!modal.classList.contains('is-open')) return;
+            if (ev.key === 'Escape') {
+                ev.preventDefault();
+                closeTooltipDetailsModal();
+            }
+        };
+        document.addEventListener('keydown', tooltipDetailsModalEscHandler);
+        closeBtn.focus();
+    }
+
+    function closeTooltipDetailsModal() {
+        const modal = document.getElementById('tooltip-details-modal');
+        const body = document.getElementById('tooltip-details-modal-body');
+        const tt = document.getElementById('card-tooltip');
+        if (!modal || !body || !tt) return;
+        if (!modal.classList.contains('is-open')) return;
+
+        modal.classList.remove('is-open');
+        modal.setAttribute('aria-hidden', 'true');
+
+        tt.classList.remove('tt-in-modal');
+        tt.style.display = 'none';
+        tt.style.pointerEvents = '';
+        tt.style.position = '';
+        tt.style.top = '';
+        tt.style.left = '';
+        tt.style.transform = '';
+        tt.style.margin = '';
+        tt.style.width = '';
+        tt.style.maxWidth = '';
+        tt.style.height = '';
+        tt.style.maxHeight = '';
+
+        if (tooltipDetailsModalRestoreCtx && tooltipDetailsModalRestoreCtx.parent) {
+            const { parent, nextSibling } = tooltipDetailsModalRestoreCtx;
+            if (nextSibling && nextSibling.parentNode === parent) parent.insertBefore(tt, nextSibling);
+            else parent.appendChild(tt);
+        }
+        body.innerHTML = '';
+
+        document.body.style.overflow = '';
+        document.body.style.overflowX = 'hidden';
+        document.documentElement.style.overflow = '';
+
+        if (tooltipDetailsModalEscHandler) {
+            document.removeEventListener('keydown', tooltipDetailsModalEscHandler);
+            tooltipDetailsModalEscHandler = null;
+        }
+    }
+
+    window.openTooltipDetailsModal = openTooltipDetailsModal;
+    window.closeTooltipDetailsModal = closeTooltipDetailsModal;
+
     /**
      * Itens por página nas sugestões: mais cartas com a coluna do deck oculta (0),
      * menos com coluna normal (1), ainda menos com coluna ampliada (2) — grade desktop: 10 / 7 / 5 colunas (oculto / normal / ampliado).
      */
     function getItemsPerPage() {
         const d = deckColumnCycle;
+        const layout = document.getElementById('app-layout');
+        const filtersHidden = !!(layout && layout.classList.contains('filters-col-hidden'));
+        const bonus = filtersHidden ? (currentView === 'list' ? 4 : 6) : 0;
         // Mobile
         if (window.innerWidth < 900) {
             if (currentView === 'list') {
-                if (d === 0) return 20;
-                if (d === 1) return 16;
-                return 12;
+                if (d === 0) return 20 + bonus;
+                if (d === 1) return 16 + bonus;
+                return 12 + bonus;
             }
-            if (d === 0) return 24;
-            if (d === 1) return 22;
-            return 16;
+            if (d === 0) return 24 + bonus;
+            if (d === 1) return 22 + bonus;
+            return 16 + bonus;
         }
         // Desktop List Mode
         if (currentView === 'list') {
-            if (d === 0) return 20;
-            if (d === 1) return 12;
-            return 8;
+            if (d === 0) return 20 + bonus;
+            if (d === 1) return 12 + bonus;
+            return 8 + bonus;
         }
         // Desktop Grid Mode
-        if (d === 0) return 30;
-        if (d === 1) return 21;
-        return 15;
+        if (d === 0) return 30 + bonus;
+        if (d === 1) return 21 + bonus;
+        return 15 + bonus;
     }
 
     window.onload = () => {
@@ -5461,6 +5850,15 @@
             div.onmouseenter = (e) => { if(window.innerWidth >= 900) showTooltip(cardWithSpecificArt, e); };
             div.onmousemove = (e) => { if(window.innerWidth >= 900) moveTooltip(e); };
             div.onmouseleave = () => { if(window.innerWidth >= 900) hideTooltip(); };
+            div.addEventListener('mousedown', (ev) => {
+                if (ev.button === 1) ev.preventDefault();
+            });
+            div.addEventListener('auxclick', (ev) => {
+                if (ev.button !== 1) return;
+                if (ev.target.closest('button')) return;
+                ev.preventDefault();
+                openTooltipDetailsModal(cardWithSpecificArt);
+            });
             div.ontouchstart = (e) => {
                 isLongPress = false;
                 clearTimeout(pressTimer);
@@ -5485,6 +5883,7 @@
                     if (cached) openCardSetsPanel(cached);
                     return;
                 }
+                if (e.button === 1) return;
                 const isMobile = window.innerWidth < 900;
                 const tooltipVisible = document.getElementById('card-tooltip').style.display === 'block';
                 if (isLongPress || (isMobile && tooltipVisible)) {
@@ -5800,10 +6199,12 @@
         document.addEventListener('DOMContentLoaded', () => {
             initDeckDragDrop();
             initSavedDecksAndPdfToolbar();
+            initFiltersColumnToolbar();
         });
     } else {
         initDeckDragDrop();
         initSavedDecksAndPdfToolbar();
+        initFiltersColumnToolbar();
     }
     window.clearQueue = () => {
         if (deckDraftBeforeSavedLoad != null) {
