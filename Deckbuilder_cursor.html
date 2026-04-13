@@ -1718,6 +1718,10 @@
             .app-container.filters-col-hidden.deck-col-hidden .results-view.list-mode {
                 grid-template-columns: repeat(6, 1fr);
             }
+            /* Lista + deck ampliado: com filtros ocultos, reduzir densidade. */
+            .app-container.filters-col-hidden.deck-col-wide .results-view.list-mode {
+                grid-template-columns: repeat(3, 1fr);
+            }
             .list-mode { 
                 display: grid; 
                 grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); 
@@ -5275,6 +5279,11 @@
         // Mobile
         if (window.innerWidth < 900) {
             if (currentView === 'list') {
+                // Regras específicas quando os filtros estão ocultos (modo lista).
+                if (filtersHidden) {
+                    if (d === 1) return 20;
+                    if (d === 2) return 9;
+                }
                 if (d === 0) return 20 + bonus;
                 if (d === 1) return 16 + bonus;
                 return 12 + bonus;
@@ -5285,6 +5294,11 @@
         }
         // Desktop List Mode
         if (currentView === 'list') {
+            // Regras específicas quando os filtros estão ocultos (modo lista).
+            if (filtersHidden) {
+                if (d === 1) return 20;
+                if (d === 2) return 9;
+            }
             if (d === 0) return 20 + bonus;
             if (d === 1) return 12 + bonus;
             return 8 + bonus;
