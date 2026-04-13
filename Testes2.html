@@ -2270,7 +2270,7 @@
                 resultsCol.classList.remove('suggestions-drop-target');
                 const payload = parseDndJson(e.dataTransfer, YGO_DND_QUEUE);
                 if (payload && payload.imgId != null) {
-                    window.removeItem(String(payload.imgId));
+                    removeOneDeckCopy(payload.imgId);
                 }
             });
         }
