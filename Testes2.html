@@ -184,6 +184,183 @@
             --text: #caf0f8;
         }
 
+        /* Temas do anime (Yu-Gi-Oh! DM) */
+        .theme-yugi {
+            --bg-dark: #0b0614;
+            --panel-bg: #160b2a;
+            --accent: #b48cff; /* roxo místico */
+            --border: #2a1450;
+            --text: #efe7ff;
+        }
+
+        /* Yugi: detalhes em vermelho nos botões (sem trocar o roxo do tema) */
+        .theme-yugi .action-btn,
+        .theme-yugi #generate-pdf,
+        .theme-yugi .btn-primary,
+        .theme-yugi .btn-accent {
+            background-color: #ef4444 !important;
+            color: #ffffff !important;
+            border: none !important;
+        }
+        .theme-yugi .btn-view.active {
+            background: #ef4444 !important;
+            border-color: #ef4444 !important;
+            color: #ffffff !important;
+        }
+        .theme-yugi .btn-view:hover {
+            border-color: #ef4444 !important;
+        }
+
+        /* Yugi: botões de Adicionar/Limpar (filtros) em vermelho */
+        .theme-yugi button.btn-secondary#filter-fname-add-chip,
+        .theme-yugi button.btn-secondary#filter-fname-clear-chips,
+        .theme-yugi button.btn-secondary[id^="filter-"][id*="-add"],
+        .theme-yugi button.btn-secondary[id^="filter-"][id*="-clear"] {
+            background-color: #ef4444 !important;
+            color: #ffffff !important;
+            border-color: #7f1d1d !important;
+        }
+
+        /* Yugi: nome das cartas em amarelo */
+        .theme-yugi .card-name {
+            color: #facc15 !important;
+        }
+
+        .theme-joey {
+            --bg-dark: #04130a;
+            --panel-bg: #072615;
+            --accent: #22c55e; /* verde (Joey) */
+            --border: #0f4d2b;
+            --text: #dcffe9;
+        }
+
+        .theme-anzu {
+            --bg-dark: #ffe4ef;   /* fundo rosa (Tea) */
+            --panel-bg: #fff1f7;  /* painel rosa bem claro */
+            --accent: #2563eb;    /* azul */
+            --border: #93c5fd;    /* azul claro */
+            --text: #0f172a;      /* texto escuro p/ contraste */
+        }
+
+        .theme-honda {
+            --bg-dark: #07110d;
+            --panel-bg: #0d2018;
+            --accent: #2ee59d; /* verde energético */
+            --border: #16412f;
+            --text: #d9fff0;
+        }
+
+        .theme-mai {
+            --bg-dark: #13030a;
+            --panel-bg: #260716;
+            --accent: #ff4db8; /* rosa/violeta */
+            --border: #4d0c2c;
+            --text: #ffe1f2;
+        }
+
+        .theme-bakura {
+            --bg-dark: #ffffff;   /* fundo branco */
+            --panel-bg: #f3f7ff;  /* leve azul no painel p/ separar do fundo */
+            --accent: #2563eb;    /* azul */
+            --border: #bfdbfe;    /* azul claro */
+            --text: #0f172a;      /* texto escuro (legível no branco) */
+            --muted-text: #1e40af;
+            --label-text: rgba(37, 99, 235, 0.95);
+            /* onde o layout usa "amarelo de destaque" como texto (ex.: #result-info),
+               no fundo branco fica melhor em azul */
+            --highlight-yellow: #2563eb;
+            --scrollbar-track: #e5efff;
+            --scrollbar-thumb: rgba(37, 99, 235, 0.45);
+        }
+
+        .theme-pegasus {
+            --bg-dark: #1a0306;   /* fundo vermelho escuro */
+            --panel-bg: #2a060a;  /* painéis vermelho vinho */
+            --accent: #ffd166;    /* dourado (mantém texto/ícones sem ficar vermelho) */
+            --border: #5b0f17;
+            --text: #f6f0e6;
+        }
+
+        .theme-marik {
+            --bg-dark: #160625;   /* fundo roxo */
+            --panel-bg: #230a38;  /* painéis roxo escuro */
+            --accent: #facc15;    /* amarelo */
+            --border: #09090b;    /* preto (detalhes/bordas) */
+            --text: #f6f0ff;
+            --muted-text: rgba(246, 240, 255, 0.75);
+            --label-text: rgba(250, 204, 21, 0.92);
+            --highlight-yellow: #facc15;
+            --scrollbar-track: rgba(0, 0, 0, 0.25);
+            --scrollbar-thumb: rgba(250, 204, 21, 0.45);
+        }
+
+        /* Tema Exodia */
+        .theme-exodia {
+            --bg-dark: #0e0b05;
+            --panel-bg: #1a1408;
+            --accent: #caa13a; /* dourado antigo */
+            --border: #3a2c12;
+            --text: #fff3d6;
+        }
+
+        /* Tema Deuses do Egito */
+        .theme-egyptian-gods {
+            --bg-dark: #04070c;
+            --panel-bg: #07121f;
+            --accent: #facc15; /* amarelo (Ra) */
+            --border: #1f2a44;
+            --text: #eaf2ff;
+        }
+
+        /* Deuses do Egito: mix visual azul/vermelho/amarelo */
+        .theme-egyptian-gods body {
+            background-image: linear-gradient(135deg,
+                rgba(59, 130, 246, 0.18),   /* azul (Obelisk) */
+                rgba(239, 68, 68, 0.16),    /* vermelho (Slifer) */
+                rgba(250, 204, 21, 0.10)    /* amarelo (Ra) */
+            ) !important;
+            background-blend-mode: overlay;
+        }
+
+        .theme-egyptian-gods #workspace-header,
+        .theme-egyptian-gods .workspace-header,
+        .theme-egyptian-gods header,
+        .theme-egyptian-gods .search-area,
+        .theme-egyptian-gods .view-controls,
+        .theme-egyptian-gods #date-filters-container {
+            background-image: linear-gradient(90deg,
+                rgba(59, 130, 246, 0.12),
+                rgba(239, 68, 68, 0.12),
+                rgba(250, 204, 21, 0.08)
+            );
+        }
+
+        /* Deuses do Egito: filtros azul, sugestões azul, deck vermelho */
+        .theme-egyptian-gods #col-filters,
+        .theme-egyptian-gods #col-filters .sidebar-content {
+            background: #061a33 !important; /* azul escuro */
+        }
+        .theme-egyptian-gods #col-filters .col-header {
+            background: #0a2a52 !important;
+            border-bottom-color: rgba(250, 204, 21, 0.35) !important;
+        }
+
+        /* Coluna de sugestões (fundo amarelo), mas os cards da lista mantêm a cor normal delas */
+        .theme-egyptian-gods #col-results,
+        .theme-egyptian-gods #col-results .results-view {
+            background: #2a2106 !important; /* amarelo escuro */
+        }
+
+        .theme-egyptian-gods #col-preview,
+        .theme-egyptian-gods #col-preview .deck-queue-pane,
+        .theme-egyptian-gods #col-preview .deck-list {
+            background: #2a060a !important; /* vermelho vinho */
+        }
+        .theme-egyptian-gods #col-preview .col-header {
+            background: #3a0a10 !important;
+            border-bottom-color: rgba(250, 204, 21, 0.35) !important;
+        }
+
         body { 
             font-family: 'Segoe UI', Tahoma, sans-serif; 
             background: var(--bg-dark); 
@@ -2551,6 +2728,16 @@
                             <option value="theme-white">Todo Branco</option>
                             <option value="theme-black">Todo Preto</option>
                             <option value="theme-kaiba">Kaiba Corp</option>
+                            <option value="theme-yugi">Yugi (DM)</option>
+                            <option value="theme-joey">Joey (DM)</option>
+                            <option value="theme-anzu">Anzu/Tea (DM)</option>
+                            <option value="theme-honda">Honda/Tristan (DM)</option>
+                            <option value="theme-mai">Mai (DM)</option>
+                            <option value="theme-bakura">Bakura (DM)</option>
+                            <option value="theme-pegasus">Pegasus (DM)</option>
+                            <option value="theme-marik">Marik (DM)</option>
+                            <option value="theme-exodia">Exodia</option>
+                            <option value="theme-egyptian-gods">Deuses do Egito</option>
                         </select>
                     </div>
                 </div>
@@ -3978,7 +4165,21 @@
 
     function changeTheme(themeName) {
         const body = document.body;
-        body.classList.remove('theme-white', 'theme-black', 'theme-kaiba');
+        body.classList.remove(
+            'theme-white',
+            'theme-black',
+            'theme-kaiba',
+            'theme-yugi',
+            'theme-joey',
+            'theme-anzu',
+            'theme-honda',
+            'theme-mai',
+            'theme-bakura',
+            'theme-pegasus',
+            'theme-marik',
+            'theme-exodia',
+            'theme-egyptian-gods'
+        );
         if (themeName) body.classList.add(themeName);
         setUiPref(UI_PREF_KEYS.theme, themeName);
         // legado (mantém compatibilidade com versões antigas que só liam localStorage)
@@ -6320,7 +6521,21 @@
             const themePref = getUiPref(UI_PREF_KEYS.theme);
             if (themePref) {
                 const body = document.body;
-                body.classList.remove('theme-white', 'theme-black', 'theme-kaiba');
+                body.classList.remove(
+                    'theme-white',
+                    'theme-black',
+                    'theme-kaiba',
+                    'theme-yugi',
+                    'theme-joey',
+                    'theme-anzu',
+                    'theme-honda',
+                    'theme-mai',
+                    'theme-bakura',
+                    'theme-pegasus',
+                    'theme-marik',
+                    'theme-exodia',
+                    'theme-egyptian-gods'
+                );
                 body.classList.add(themePref);
                 const sel = document.getElementById('theme-selector');
                 if (sel) sel.value = themePref;
