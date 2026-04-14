@@ -16,6 +16,11 @@
             --border: #333;
             --text: #e0e0e0;
             --success: #27ae60;
+            --muted-text: rgba(224, 224, 224, 0.72);
+            --label-text: rgba(241, 196, 15, 0.92);
+            --highlight-yellow: #f1c40f;
+            --scrollbar-track: rgba(255, 255, 255, 0.06);
+            --scrollbar-thumb: rgba(241, 196, 15, 0.55);
         }
 
         /* TEMA TODO BRANCO (LIGHT MODE) */
@@ -25,6 +30,11 @@
             --accent: #2563eb;
             --border: #d1d5db;
             --text: #1f2937;
+            --muted-text: #6b7280;
+            --label-text: rgba(37, 99, 235, 0.95);
+            --highlight-yellow: #f1c40f;
+            --scrollbar-track: #e5e7eb;
+            --scrollbar-thumb: #9ca3af;
         }
 
         /* 1. FUNDO GERAL E CONTAINERS */
@@ -144,8 +154,17 @@
         .theme-white .action-btn i, .theme-white #generate-pdf i { color: #ffffff !important; }
 
         /* 10. SCROLLBARS */
-        .theme-white ::-webkit-scrollbar-track { background: #f1f1f1; }
-        .theme-white ::-webkit-scrollbar-thumb { background: #ccc; border-radius: 5px; }
+        /* Firefox */
+        * { scrollbar-width: thin; scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track); }
+        /* WebKit */
+        ::-webkit-scrollbar { width: 10px; height: 10px; }
+        ::-webkit-scrollbar-track { background: var(--scrollbar-track); }
+        ::-webkit-scrollbar-thumb {
+            background: var(--scrollbar-thumb);
+            border-radius: 8px;
+            border: 2px solid var(--scrollbar-track);
+        }
+        ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
 
         /* Tema Todo Preto (OLED/Deep Black) */
         .theme-black {
@@ -351,7 +370,7 @@
         .deck-export-footer-inner #btn-open-export-menu {
             flex: 1 1 200px;
         }
-        .filter-group label { font-size: 10px; color: #888; text-transform: uppercase; font-weight: bold; }
+        .filter-group label { font-size: 10px; color: var(--label-text); text-transform: uppercase; font-weight: 800; letter-spacing: 0.02em; }
 
         /* Tema + aleatório: coluna [rótulo + dados] à esquerda, coluna [rótulo + select] à direita */
         .filter-theme-random-wrap {
@@ -409,12 +428,13 @@
         }
         .theme-row-label {
             font-size: 10px;
-            color: #888;
+            color: var(--label-text);
             text-transform: uppercase;
-            font-weight: bold;
+            font-weight: 800;
             line-height: 1.2;
+            letter-spacing: 0.02em;
         }
-        .theme-white .filter-theme-random-wrap .theme-row-label { color: #6b7280; }
+        .theme-white .filter-theme-random-wrap .theme-row-label { color: var(--label-text); }
 
         /* Botões (ícone) com label acima, como o “Aleatório” */
         .icon-btn-row {
@@ -1027,6 +1047,12 @@
         .result-info-row #result-info {
             flex: 1 1 auto;
             min-width: 0;
+            font-size: 13px;
+            font-weight: 650;
+            color: var(--highlight-yellow) !important;
+        }
+        .theme-white .result-info-row #result-info {
+            color: var(--label-text) !important;
         }
         .result-db-version-wrap {
             display: flex;
@@ -1036,20 +1062,20 @@
             white-space: nowrap;
         }
         .result-db-version-label {
-            font-size: 9px;
-            color: #666;
+            font-size: 10px;
+            color: var(--label-text);
             text-transform: uppercase;
-            font-weight: bold;
+            font-weight: 800;
             letter-spacing: 0.02em;
         }
         .result-db-version {
-            font-size: 10px;
-            color: #888;
+            font-size: 11px;
+            color: var(--highlight-yellow);
             font-weight: 600;
             font-variant-numeric: tabular-nums;
         }
-        .theme-white .result-db-version-label { color: #6b7280; }
-        .theme-white .result-db-version { color: #4b5563; }
+        .theme-white .result-db-version-label { color: var(--label-text); }
+        .theme-white .result-db-version { color: var(--muted-text); }
 
         .sort-group {
             display: flex;
@@ -1059,8 +1085,8 @@
 
         .sort-label {
             font-size: 12px;
-            font-weight: bold;
-            color: var(--text);
+            font-weight: 800;
+            color: var(--label-text);
             white-space: nowrap;
         }
 
@@ -1090,7 +1116,8 @@
             border-radius: 5px;
         }
        
-        .btn-view { background: #333; color: #888; border: 1px solid #444; padding: 5px 10px; cursor: pointer; border-radius: 4px; font-size: 11px; }
+        .btn-view { background: #333; color: var(--muted-text); border: 1px solid #444; padding: 5px 10px; cursor: pointer; border-radius: 4px; font-size: 11px; }
+        .btn-view:hover { border-color: var(--accent); color: var(--text); }
         .btn-view.active { background: var(--accent); color: black; border-color: var(--accent); }
 
         .results-view { flex-grow: 1; min-height: 0; overflow-y: auto; }
@@ -2509,7 +2536,7 @@
         </div>
         <div class="view-controls">
             <div class="result-info-row" id="result-info-row">
-                <span id="result-info" style="font-size: 11px; color: #888;">Carregando…</span>
+                <span id="result-info" style="color: #888;">Carregando…</span>
                 <div class="result-db-version-wrap" id="result-db-version-wrap" role="group" aria-label="Versão do banco de dados YGOPRODeck" style="display: none;">
                     <span class="result-db-version-label" id="result-db-version-label">Versão do banco YGOPRODeck</span>
                     <span id="result-db-version" class="result-db-version" title="" aria-live="polite"></span>
@@ -3400,6 +3427,7 @@
 
     async function deckSortAndRefresh() {
         getDeckSortCriterion();
+        setUiPref(UI_PREF_KEYS.deckSort, String(getDeckSortCriterion() || 'custom'));
         await ensureCardCacheForQueue();
         if (getDeckSortCriterion() === 'random') shuffleDeckQueueRandomWithinBuckets();
         renderDeckQueue();
@@ -3416,6 +3444,7 @@
             return;
         }
         deckSortDirection *= -1;
+        setUiPref(UI_PREF_KEYS.deckSortDir, String(deckSortDirection));
         updateDeckSortOrderIcon();
         renderDeckQueue();
         triggerPDFUpdate();
@@ -3437,6 +3466,36 @@
         const exp = new Date();
         exp.setTime(exp.getTime() + days * 864e5);
         document.cookie = `${name}=${encodeURIComponent(value)};expires=${exp.toUTCString()};path=/;SameSite=Lax`;
+    }
+
+    // Preferências de UI (cookies + fallback localStorage).
+    const UI_PREF_DAYS = 3650;
+    const UI_PREF_KEYS = {
+        theme: 'ygo_proxy_ui_theme',
+        view: 'ygo_proxy_ui_view', // list | grid
+        resultsSort: 'ygo_proxy_ui_results_sort',
+        resultsSortDir: 'ygo_proxy_ui_results_sort_dir', // 1 | -1
+        deckSort: 'ygo_proxy_ui_deck_sort',
+        deckSortDir: 'ygo_proxy_ui_deck_sort_dir' // 1 | -1
+    };
+
+    function getUiPref(key) {
+        try {
+            const c = getCookie(key);
+            if (c != null && String(c) !== '') return c;
+        } catch (_) {}
+        try {
+            const v = localStorage.getItem(key);
+            return v == null ? '' : String(v);
+        } catch (_) {
+            return '';
+        }
+    }
+
+    function setUiPref(key, value) {
+        const v = value == null ? '' : String(value);
+        try { setCookie(key, v, UI_PREF_DAYS); } catch (_) {}
+        try { localStorage.setItem(key, v); } catch (_) {}
     }
 
     function removeOneDeckCopy(imgId) {
@@ -3921,7 +3980,9 @@
         const body = document.body;
         body.classList.remove('theme-white', 'theme-black', 'theme-kaiba');
         if (themeName) body.classList.add(themeName);
-        localStorage.setItem('selectedTheme', themeName);
+        setUiPref(UI_PREF_KEYS.theme, themeName);
+        // legado (mantém compatibilidade com versões antigas que só liam localStorage)
+        try { localStorage.setItem('selectedTheme', themeName); } catch (_) {}
         renderResults(); 
     }
 
@@ -4113,9 +4174,15 @@
         const a = window.filterChipState.typeCategory;
         return a.length ? a[0] : '';
     }
+    function getFilterTypeCategories() {
+        return window.filterChipState.typeCategory || [];
+    }
     function getFilterSubtype() {
         const a = window.filterChipState.subtype;
         return a.length ? a[0] : '';
+    }
+    function getFilterSubtypes() {
+        return window.filterChipState.subtype || [];
     }
     function getFilterRaceParam() {
         return (window.filterChipState.race || []).join(',');
@@ -4127,17 +4194,31 @@
         const a = window.filterChipState.level;
         return a.length ? a[0] : '';
     }
+    function getFilterLevels() {
+        return window.filterChipState.level || [];
+    }
     function getFilterEraKey() {
         const a = window.filterChipState.era;
         return a.length ? a[0] : '';
+    }
+    function getFilterEraKeys() {
+        return window.filterChipState.era || [];
     }
     function getDateRegionType() {
         const a = window.filterChipState.dateRegion;
         return a.length ? a[0] : 'tcg';
     }
+    function getDateRegionTypes() {
+        const a = window.filterChipState.dateRegion || [];
+        // Garantir o comportamento legado: sem seleção => tcg
+        return a.length ? a : ['tcg'];
+    }
     function getBanlistTypeFromState() {
         const a = window.filterChipState.banlist;
         return a.length ? a[0] : '';
+    }
+    function getBanlistTypesFromState() {
+        return window.filterChipState.banlist || [];
     }
 
     function getFilterArchetypeChips() {
@@ -4425,28 +4506,34 @@
 
     function tryAddComboFilter(kind) {
         const map = {
-            type: { input: 'filter-type-input', max: 1, resolve: resolveTypeCategoryInput, key: 'typeCategory', after: () => {
-                window.filterChipState.subtype = [];
-                window.filterChipState.race = [];
-                if (getFilterTypeCategory() !== 'Monster') {
-                    window.filterChipState.attribute = [];
-                    window.filterChipState.level = [];
-                    const a = document.getElementById('filter-atk'); const d = document.getElementById('filter-def');
-                    if (a) a.value = ''; if (d) d.value = '';
+            // typeCategory: permite múltiplos tipos (OR): Monstro + Magia + Armadilha
+            type: { input: 'filter-type-input', max: 3, resolve: resolveTypeCategoryInput, key: 'typeCategory', after: (prevVal, nextVal) => {
+                // Só limpa filtros dependentes quando a categoria realmente muda.
+                // (Re-selecionar "Monstro" não deve apagar raça/atributo/etc.)
+                if (prevVal !== nextVal) {
+                    window.filterChipState.subtype = [];
+                    window.filterChipState.race = [];
+                    if (nextVal !== 'Monster') {
+                        window.filterChipState.attribute = [];
+                        window.filterChipState.level = [];
+                        const a = document.getElementById('filter-atk'); const d = document.getElementById('filter-def');
+                        if (a) a.value = '';
+                        if (d) d.value = '';
+                    }
                 }
                 syncMonsterFilterGroups();
                 refreshSubtypeRaceDatalists();
             }},
-            subtype: { input: 'filter-subtype-input', max: 1, resolve: resolveSubtypeInput, key: 'subtype', after: () => {} },
+            subtype: { input: 'filter-subtype-input', max: 99, resolve: resolveSubtypeInput, key: 'subtype', after: () => {} },
             race: { input: 'filter-race-input', max: 99, resolve: resolveRaceInput, key: 'race', after: () => {} },
             attribute: { input: 'filter-attribute-input', max: 7, resolve: resolveAttributeInput, key: 'attribute', after: () => {} },
-            level: { input: 'filter-level-input', max: 1, resolve: resolveLevelInput, key: 'level', after: () => {} },
-            era: { input: 'filter-era-input', max: 1, resolve: resolveEraInput, key: 'era', after: () => { applyEraToDateInputs(window.filterChipState.era[0]); } },
-            dateRegion: { input: 'filter-date-region-input', max: 1, resolve: resolveDateRegionInput, key: 'dateRegion', after: () => {
+            level: { input: 'filter-level-input', max: 99, resolve: resolveLevelInput, key: 'level', after: () => {} },
+            era: { input: 'filter-era-input', max: 99, resolve: resolveEraInput, key: 'era', after: () => { applyEraToDateInputs(window.filterChipState.era[0]); } },
+            dateRegion: { input: 'filter-date-region-input', max: 2, resolve: resolveDateRegionInput, key: 'dateRegion', after: () => {
                 const ek = getFilterEraKey();
                 if (ek) applyEraToDateInputs(ek);
             }},
-            banlist: { input: 'filter-banlist-input', max: 1, resolve: resolveBanlistInput, key: 'banlist', after: () => { toggleBanlistCheckbox(); } },
+            banlist: { input: 'filter-banlist-input', max: 3, resolve: resolveBanlistInput, key: 'banlist', after: () => { toggleBanlistCheckbox(); } },
             archetype: { input: 'filter-archetype-input', max: 99, resolve: resolveArchetypeNameFromInput, key: 'archetype', after: () => {} }
         };
         const cfg = map[kind];
@@ -4464,6 +4551,7 @@
             return;
         }
         const st = window.filterChipState;
+        const prevSingle = (st[cfg.key] && st[cfg.key].length ? st[cfg.key][0] : '');
         if (cfg.max === 1) st[cfg.key] = [val];
         else {
             if (!st[cfg.key].includes(val)) {
@@ -4479,7 +4567,8 @@
             }
         }
         inp.value = '';
-        cfg.after();
+        // Permite que handlers reajam a mudanças reais (ex.: tipo mudou).
+        cfg.after(prevSingle, val);
         paintComboFilterChips();
         currentPage = 1;
         performSearch(true);
@@ -5332,6 +5421,7 @@
         sortDirection *= -1;
         const icon = document.getElementById('order-icon');
         if (icon) icon.innerText = sortDirection === 1 ? '↑' : '↓';
+        setUiPref(UI_PREF_KEYS.resultsSortDir, String(sortDirection));
         sortAndRender();
     }
 
@@ -5432,6 +5522,7 @@
 
     function sortAndRender() {
         const criterion = document.getElementById('sort-by').value;
+        setUiPref(UI_PREF_KEYS.resultsSort, criterion);
         if (criterion === 'random') {
             shuffleArrayInPlace(searchResults);
             currentPage = 1;
@@ -5772,6 +5863,22 @@
     window.openCardSetsPanel = openCardSetsPanel;
     window.closeCardSetsPanel = closeCardSetsPanel;
 
+    function getTypeColorKeyFromCardType(typeStr) {
+        if (!typeStr) return null;
+        const t = String(typeStr);
+        if (t.includes('Spell Card')) return 'Spell Card';
+        if (t.includes('Trap Card')) return 'Trap Card';
+        if (/fusion/i.test(t) && /monster/i.test(t)) return 'Fusion Monster';
+        if (/synchro/i.test(t) && /monster/i.test(t)) return 'Synchro Monster';
+        if (/xyz/i.test(t) && /monster/i.test(t)) return 'Xyz Monster';
+        if (/link/i.test(t) && /monster/i.test(t)) return 'Link Monster';
+        if (/ritual/i.test(t) && /monster/i.test(t)) return 'Ritual Monster';
+        if (/token/i.test(t)) return 'Token';
+        if (/normal/i.test(t) && /monster/i.test(t)) return 'Normal Monster';
+        if (/monster/i.test(t)) return 'Effect Monster';
+        return null;
+    }
+
     function fillTooltipData(card) {
         const tt = document.getElementById('card-tooltip');
         const description = card.desc_pt || card.desc;
@@ -5779,9 +5886,10 @@
         const typeColors = {
             "Normal Monster": "#d1b55a", "Effect Monster": "#a6522a", "Spell Card": "#1d7d5c",
             "Trap Card": "#8c345d", "Fusion Monster": "#6e4a8c", "Synchro Monster": "#8a8a8a",
-            "Xyz Monster": "#1a1a1a", "Link Monster": "#164687", "Ritual Monster": "#3b73a3"
+            "Xyz Monster": "#1a1a1a", "Link Monster": "#164687", "Ritual Monster": "#3b73a3",
+            "Token": "#6e6e6e"
         };
-        const colorKey = Object.keys(typeColors).find(key => card.type.includes(key));
+        const colorKey = getTypeColorKeyFromCardType(card.type);
         const cardColor = typeColors[colorKey] || "var(--accent)";
         const oldBtn = document.getElementById('mobile-close-x');
         if (oldBtn) oldBtn.remove();
@@ -6206,6 +6314,57 @@
     window.onload = () => {
         const hoje = new Date().toISOString().split('T')[0];
         document.getElementById('date-end').value = hoje;
+
+        // Restaura preferências de UI (cookies; fallback localStorage).
+        try {
+            const themePref = getUiPref(UI_PREF_KEYS.theme);
+            if (themePref) {
+                const body = document.body;
+                body.classList.remove('theme-white', 'theme-black', 'theme-kaiba');
+                body.classList.add(themePref);
+                const sel = document.getElementById('theme-selector');
+                if (sel) sel.value = themePref;
+            }
+        } catch (_) {}
+        try {
+            const viewPref = getUiPref(UI_PREF_KEYS.view);
+            if (viewPref === 'list' || viewPref === 'grid') {
+                currentView = viewPref;
+                const bl = document.getElementById('btn-list');
+                const bg = document.getElementById('btn-grid');
+                if (bl) bl.classList.toggle('active', viewPref === 'list');
+                if (bg) bg.classList.toggle('active', viewPref === 'grid');
+            }
+        } catch (_) {}
+        try {
+            const sortPref = getUiPref(UI_PREF_KEYS.resultsSort);
+            const sel = document.getElementById('sort-by');
+            if (sel && sortPref && [...sel.options].some(o => o.value === sortPref)) sel.value = sortPref;
+        } catch (_) {}
+        try {
+            const dirPref = parseInt(getUiPref(UI_PREF_KEYS.resultsSortDir), 10);
+            if (dirPref === 1 || dirPref === -1) {
+                sortDirection = dirPref;
+                const icon = document.getElementById('order-icon');
+                if (icon) icon.innerText = sortDirection === 1 ? '↑' : '↓';
+            }
+        } catch (_) {}
+        try {
+            const deckSortPref = getUiPref(UI_PREF_KEYS.deckSort);
+            const sel = document.getElementById('deck-sort-by');
+            if (sel && deckSortPref && [...sel.options].some(o => o.value === deckSortPref)) {
+                sel.value = deckSortPref;
+                deckSortCriterionPinned = deckSortPref;
+            }
+        } catch (_) {}
+        try {
+            const deckDirPref = parseInt(getUiPref(UI_PREF_KEYS.deckSortDir), 10);
+            if (deckDirPref === 1 || deckDirPref === -1) {
+                deckSortDirection = deckDirPref;
+                updateDeckSortOrderIcon();
+            }
+        } catch (_) {}
+
         document.getElementById('results-view').addEventListener('wheel', function(e) {
             const panel = document.getElementById('card-sets-panel');
             if (panel && panel.classList.contains('is-open')) return;
@@ -6324,8 +6483,12 @@
         paintAllMultiTextChips();
         const fNameAdd = document.getElementById('filter-fname-add-chip');
         const fNameClr = document.getElementById('filter-fname-clear-chips');
+        const fNameInp = document.getElementById('search-input');
         if (fNameAdd) fNameAdd.onclick = () => tryAddFnameChip();
         if (fNameClr) fNameClr.onclick = () => clearMultiTextGroup('fname');
+        if (fNameInp) fNameInp.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') { e.preventDefault(); tryAddFnameChip(); }
+        });
         const dAdd = document.getElementById('filter-desc-add-chip');
         const dClr = document.getElementById('filter-desc-clear-chips');
         const dInp = document.getElementById('filter-desc');
@@ -6338,14 +6501,30 @@
         const atkClr = document.getElementById('filter-atk-clear-chips');
         if (atkAdd) atkAdd.onclick = () => tryAddAtkChip();
         if (atkClr) atkClr.onclick = () => clearMultiTextGroup('atk');
+        const atkInp = document.getElementById('filter-atk');
+        if (atkInp) atkInp.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') { e.preventDefault(); tryAddAtkChip(); }
+        });
         const defAdd = document.getElementById('filter-def-add-chip');
         const defClr = document.getElementById('filter-def-clear-chips');
         if (defAdd) defAdd.onclick = () => tryAddDefChip();
         if (defClr) defClr.onclick = () => clearMultiTextGroup('def');
+        const defInp = document.getElementById('filter-def');
+        if (defInp) defInp.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') { e.preventDefault(); tryAddDefChip(); }
+        });
         const pAdd = document.getElementById('filter-price-add-chip');
         const pClr = document.getElementById('filter-price-clear-chips');
         if (pAdd) pAdd.onclick = () => tryAddPriceRangeChip();
         if (pClr) pClr.onclick = () => clearMultiTextGroup('price');
+        const pMinInp = document.getElementById('filter-price-min');
+        const pMaxInp = document.getElementById('filter-price-max');
+        [pMinInp, pMaxInp].forEach((el) => {
+            if (!el) return;
+            el.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') { e.preventDefault(); tryAddPriceRangeChip(); }
+            });
+        });
         performSearch(true);
         let resizeItemsPerPageTimer;
         window.addEventListener('resize', () => {
@@ -6365,6 +6544,7 @@
         currentView = view;
         document.getElementById('btn-list').classList.toggle('active', view === 'list');
         document.getElementById('btn-grid').classList.toggle('active', view === 'grid');
+        setUiPref(UI_PREF_KEYS.view, view);
         currentPage = 1; renderResults();
     }
 
@@ -6391,18 +6571,24 @@
         const qInput = document.getElementById('search-input');
         const q = qInput.value.trim();
         const desc = (document.getElementById('filter-desc')?.value || '').trim();
-        const type = getFilterTypeCategory();
-        const sub = getFilterSubtype();
+        const typeCats = getFilterTypeCategories();
+        const type = getFilterTypeCategory(); // usado para UI/compat (primeiro chip)
+        const subtypes = getFilterSubtypes();
+        const sub = getFilterSubtype(); // compat
         const atk = document.getElementById('filter-atk').value;
         const def = document.getElementById('filter-def').value;
         const attr = getFilterAttrParam();
-        const lv = getFilterLevel();
+        const levels = getFilterLevels();
+        const lv = getFilterLevel(); // compat
         const race = getFilterRaceParam();
         const dateEnabled = document.getElementById('enable-date-filter').checked;
-        const dateRegion = getDateRegionType();
+        const dateRegions = getDateRegionTypes();
+        const dateRegion = getDateRegionType(); // compat
+        const eraKeys = getFilterEraKeys();
         const dateStart = document.getElementById('date-start').value;
         const dateEnd = document.getElementById('date-end').value;
-        const banlistType = getBanlistTypeFromState();
+        const banlistTypes = getBanlistTypesFromState();
+        const banlistType = getBanlistTypeFromState(); // compat (primeiro)
         const banlistOnly = document.getElementById('enable-banlist-only').checked;
         const pMinInput = document.getElementById('filter-price-min')?.value;
         const pMaxInput = document.getElementById('filter-price-max')?.value;
@@ -6429,8 +6615,9 @@
 
         const hasLiveAtkDefField = !!(String(atk || '').trim() || String(def || '').trim());
         const narrowing =
-            hasFnameQuery || hasDescQuery || type || sub || race || attr || lv ||
-            banlistType || hasSetFilter || hasArchFilter || hasLiveAtkDefField ||
+            hasFnameQuery || hasDescQuery || (typeCats && typeCats.length) || (subtypes && subtypes.length) ||
+            race || attr || (levels && levels.length) || (banlistTypes && banlistTypes.length) ||
+            hasSetFilter || hasArchFilter || hasLiveAtkDefField ||
             (mtf.atk || []).length || (mtf.def || []).length;
 
         const hasOtherFilters = narrowing || hasPriceFilter || dateEnabled || banlistOnly || hasSetcodeFilter || hasRarityFilter;
@@ -6451,18 +6638,21 @@
         const rarityOnlyPath = hasRarityFilter && !narrowing && !hasSetcodeFilter;
 
         let p = new URLSearchParams();
-        if (type) {
+        const multiTypeMode = (typeCats && typeCats.length > 1);
+        // Em multiTypeMode, evitamos parâmetros dependentes da categoria (race/attr/level/subtype),
+        // porque seriam ambíguos entre Monstro/Magia/Armadilha.
+        if (!multiTypeMode && type) {
+            // categoria única: mantém caminho antigo
             if (type === "Monster" && sub) p.append('type', sub);
             else if (type !== "Monster") p.append('type', type);
         }
-        if (race) p.append('race', race);
-        if (lv) p.append('level', lv);
-        if (attr) p.append('attribute', attr);
-        if (archFilters.length === 1) p.append('archetype', archFilters[0]);
-        if (banlistType) {
-            if (banlistOnly) p.append('banlist', banlistType);
-            else p.append('format', banlistType);
+        if (!multiTypeMode) {
+            if (race) p.append('race', race);
+            // nível pode ser multi: tratado mais abaixo via loop
+            if (levels && levels.length === 1 && levels[0]) p.append('level', levels[0]);
+            if (attr) p.append('attribute', attr);
         }
+        if (archFilters.length === 1) p.append('archetype', archFilters[0]);
         p.append('misc', 'yes');
 
         const fnames = fnameList.length ? fnameList : [null];
@@ -6495,10 +6685,66 @@
                 const bigMap = await fetchAllCardsPaginatedMerged();
                 finalData = Array.from(bigMap.values()).filter(card => cardMatchesRarityFilters(card, rarities));
             } else {
-                const mergedMap = await fetchMergedCardinfoDualLoop(
-                    p, archFilters, archLoop, fnames, descs, atks, defs, sets
-                );
-                finalData = Array.from(mergedMap.values());
+                // Se houver múltiplos tipos selecionados (Monstro/Magia/Armadilha),
+                // fazemos união (OR) por tipo.
+                const mergedById = new Map();
+                const cats = (typeCats && typeCats.length) ? typeCats.filter(Boolean) : [''];
+                const banLoop = (banlistTypes && banlistTypes.length) ? banlistTypes.filter(Boolean) : [null];
+
+                for (const banFmt of banLoop) {
+                    for (const cat of cats) {
+                        // Base params para (banlist x categoria)
+                        const pBase = new URLSearchParams(p);
+                        if (banFmt) {
+                            if (banlistOnly) pBase.append('banlist', banFmt);
+                            else pBase.append('format', banFmt);
+                        }
+
+                        // Loop de níveis só faz sentido para Monster-only (ou quando a categoria é Monster)
+                        const levelLoop = (!multiTypeMode && type === 'Monster')
+                            ? ((levels && levels.length) ? levels.filter(Boolean) : [null])
+                            : ((cat === 'Monster' && (levels && levels.length)) ? levels.filter(Boolean) : [null]);
+
+                        // Loop de subtipos só para Monster (categoria)
+                        const subtypeLoop = (!multiTypeMode && type === 'Monster')
+                            ? ((subtypes && subtypes.length) ? subtypes.filter(Boolean) : [null])
+                            : ((cat === 'Monster' && (subtypes && subtypes.length)) ? subtypes.filter(Boolean) : [null]);
+
+                        for (const lvOne of levelLoop) {
+                            for (const subOne of subtypeLoop) {
+                                const pReq = new URLSearchParams(pBase);
+                                // Limpar nível (caso p já tenha vindo com level)
+                                pReq.delete('level');
+                                if (lvOne) pReq.append('level', lvOne);
+
+                                // Tipo / categoria
+                                pReq.delete('type');
+                                if (multiTypeMode) {
+                                    if (cat && cat !== 'Monster') pReq.append('type', cat);
+                                    else if (cat === 'Monster' && subOne) pReq.append('type', subOne);
+                                } else if (type) {
+                                    if (type === 'Monster' && subOne) pReq.append('type', subOne);
+                                    else if (type !== 'Monster') pReq.append('type', type);
+                                }
+
+                                const m = await fetchMergedCardinfoDualLoop(pReq, archFilters, archLoop, fnames, descs, atks, defs, sets);
+                                let list = Array.from(m.values());
+
+                                // Se Monster sem subtipo, garantir que a categoria Monster esteja aplicada
+                                const wantMonster = multiTypeMode ? (cat === 'Monster') : (type === 'Monster');
+                                const wantSpell = multiTypeMode ? (cat === 'Spell Card') : (type === 'Spell Card');
+                                const wantTrap = multiTypeMode ? (cat === 'Trap Card') : (type === 'Trap Card');
+                                if (wantMonster) list = list.filter(c => String(c.type || '').toLowerCase().includes('monster'));
+                                else if (wantSpell) list = list.filter(c => String(c.type || '').toLowerCase().includes('spell'));
+                                else if (wantTrap) list = list.filter(c => String(c.type || '').toLowerCase().includes('trap'));
+
+                                list.forEach(card => mergedById.set(card.id, card));
+                            }
+                        }
+                    }
+                }
+
+                finalData = Array.from(mergedById.values());
                 if (hasSetcodeFilter) {
                     const idUnion = await unionIdsFromSetcodesList(setcodes);
                     if (idUnion.size === 0) {
@@ -6534,14 +6780,32 @@
                 finalData = finalData.filter(card => {
                     const misc = card.misc_info ? card.misc_info[0] : null;
                     if (!misc) return false;
-                    const cardDate = (dateRegion === 'tcg') ? misc.tcg_date : misc.ocg_date;
-                    return cardDate && cardDate >= start && cardDate <= end;
+                    const regions = (dateRegions && dateRegions.length) ? dateRegions : ['tcg'];
+                    // Se o usuário selecionou eras, usamos os ranges delas (OR). Caso contrário, usamos start/end.
+                    const rangesByRegion = {};
+                    if (eraKeys && eraKeys.length) {
+                        for (const r of regions) {
+                            rangesByRegion[r] = eraKeys
+                                .map(k => FILTER_ERAS[k] && (FILTER_ERAS[k][r] || FILTER_ERAS[k].tcg))
+                                .filter(Boolean);
+                        }
+                    }
+                    for (const r of regions) {
+                        const cardDate = (r === 'ocg') ? misc.ocg_date : misc.tcg_date;
+                        if (!cardDate) continue;
+                        if (rangesByRegion[r] && rangesByRegion[r].length) {
+                            if (rangesByRegion[r].some(([lo, hi]) => cardDate >= lo && cardDate <= hi)) return true;
+                        } else {
+                            if (cardDate >= start && cardDate <= end) return true;
+                        }
+                    }
+                    return false;
                 });
             }
             if (hasRarityFilter && !rarityOnlyPath) {
                 finalData = finalData.filter(card => cardMatchesRarityFilters(card, rarities));
             }
-            if (type === "Monster" && !sub) {
+            if (!multiTypeMode && type === "Monster" && !(subtypes && subtypes.length)) {
                 finalData = finalData.filter(c => c.type.toLowerCase().includes("monster"));
             }
 
@@ -6673,7 +6937,7 @@
             const imageObj = card.current_image; 
             const div = document.createElement('div'); 
             div.className = 'suggestion-item';
-            const colorKey = Object.keys(typeColors).find(key => card.type.includes(key));
+            const colorKey = getTypeColorKeyFromCardType(card.type);
             const cardBgColor = typeColors[colorKey] || "var(--panel-bg)";
             const hasCustomTheme = document.body.classList.contains('theme-white') || 
                                     document.body.classList.contains('theme-black') ||
@@ -6931,7 +7195,7 @@
                 document.body.classList.contains('theme-white') ||
                 document.body.classList.contains('theme-black') ||
                 document.body.classList.contains('theme-kaiba');
-            const colorKey = fullCardData ? Object.keys(typeColors).find((key) => fullCardData.type.includes(key)) : null;
+            const colorKey = fullCardData ? getTypeColorKeyFromCardType(fullCardData.type) : null;
             const cardBgColor = colorKey ? typeColors[colorKey] : 'var(--panel-bg)';
 
             const row = document.createElement('div');
