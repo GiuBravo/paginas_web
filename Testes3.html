@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>YGO Proxy Studio Pro - Workspace V4.0</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://unpkg.com/tesseract.js@v4.0.1/dist/tesseract.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -329,6 +330,26 @@
         .filter-group { margin-bottom: 12px; display: flex; flex-direction: column; gap: 4px; }
         @media (min-width: 901px) {
             .filter-pdf-scale { margin-top: 20px; }
+        }
+        .deck-export-footer {
+            padding: 10px;
+            background: #111;
+        }
+        .deck-export-footer-inner {
+            display: flex;
+            flex-direction: row;
+            align-items: flex-end;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .deck-export-footer-inner .filter-group.filter-pdf-scale {
+            margin-top: 0;
+            margin-bottom: 0;
+            flex: 1 1 160px;
+            min-width: 0;
+        }
+        .deck-export-footer-inner #btn-open-export-menu {
+            flex: 1 1 200px;
         }
         .filter-group label { font-size: 10px; color: #888; text-transform: uppercase; font-weight: bold; }
 
@@ -1468,11 +1489,73 @@
         #col-preview.pdf-preview-hidden .pdf-preview-container {
             display: none !important;
         }
-        #col-preview.pdf-preview-hidden .deck-list {
+        .deck-queue-pane {
+            position: relative;
+            flex-shrink: 0;
+        }
+        #col-preview.pdf-preview-hidden .deck-queue-pane {
+            flex: 1 1 auto;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+        }
+        #col-preview.pdf-preview-hidden .deck-queue-pane .deck-list {
             flex: 1 1 auto;
             height: auto !important;
             min-height: 280px;
             max-height: none;
+        }
+        .deck-import-overlay {
+            position: absolute;
+            inset: 0;
+            z-index: 25;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.82);
+            box-sizing: border-box;
+            text-align: center;
+            pointer-events: auto;
+        }
+        .deck-import-overlay.is-visible {
+            display: flex;
+        }
+        .deck-import-overlay-label {
+            color: var(--accent);
+            font-size: 11px;
+            font-weight: bold;
+            line-height: 1.35;
+            max-width: 100%;
+        }
+        .deck-import-overlay-sub {
+            color: #bbb;
+            font-size: 10px;
+            margin-top: 6px;
+            max-width: 100%;
+            line-height: 1.3;
+        }
+        body.theme-white .deck-import-overlay-sub {
+            color: #4b5563;
+        }
+        .deck-import-overlay-track {
+            width: 85%;
+            max-width: 220px;
+            height: 4px;
+            background: #333;
+            margin-top: 10px;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        body.theme-white .deck-import-overlay-track {
+            background: #e5e7eb;
+        }
+        .deck-import-overlay-bar {
+            height: 100%;
+            width: 0%;
+            background: var(--accent);
+            transition: width 0.12s ease-out;
         }
 
         .deck-list.deck-queue-view.list-mode {
@@ -1694,6 +1777,123 @@
         /* Acima do modal de nome do deck (10060) e do painel de impressões (10050). */
         #toast-container { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 10080; pointer-events: none; }
         .toast { background: var(--success); color: white; padding: 12px 20px; border-radius: 30px; font-size: 12px; font-weight: bold; margin-bottom: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); animation: slideUp 0.3s ease, fadeOut 0.5s ease 1.5s forwards; display: flex; align-items: center; gap: 10px; white-space: nowrap; }
+
+        .export-menu-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 10070;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+        .export-menu-overlay.is-open { display: flex; }
+        .export-menu-panel {
+            background: var(--panel-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            max-width: 420px;
+            width: 100%;
+            max-height: 88vh;
+            overflow: auto;
+            box-shadow: 0 12px 48px rgba(0, 0, 0, 0.5);
+        }
+        .export-menu-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            padding: 12px 14px;
+            border-bottom: 1px solid var(--border);
+        }
+        .export-menu-title { font-weight: bold; color: var(--accent); font-size: 14px; flex: 1; text-align: center; }
+        .export-menu-back {
+            background: transparent;
+            border: none;
+            color: #aaa;
+            cursor: pointer;
+            font-size: 12px;
+            padding: 6px 8px;
+            white-space: nowrap;
+            visibility: hidden;
+        }
+        .export-menu-back.is-visible { visibility: visible; }
+        .export-menu-close {
+            background: transparent;
+            border: none;
+            color: var(--accent);
+            cursor: pointer;
+            font-size: 22px;
+            line-height: 1;
+            padding: 4px 10px;
+        }
+        .export-menu-body { padding: 10px 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+        .export-menu-body .btn-secondary { width: 100%; text-align: center; padding: 10px; }
+        .export-menu-foot { font-size: 9px; color: #888; line-height: 1.4; padding: 0 12px 14px; }
+
+        .global-export-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 10075;
+            background: rgba(0, 0, 0, 0.82);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            padding: 24px;
+        }
+        .global-export-overlay.is-visible { display: flex; }
+        .global-export-overlay-card {
+            background: var(--panel-bg);
+            border: 1px solid rgba(120, 200, 255, 0.4);
+            border-radius: 10px;
+            padding: 28px 32px;
+            max-width: 420px;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 16px 48px rgba(0, 0, 0, 0.55);
+        }
+        .global-export-spinner {
+            width: 40px;
+            height: 40px;
+            margin: 0 auto 16px;
+            border: 3px solid rgba(255, 255, 255, 0.15);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: globalExportSpin 0.7s linear infinite;
+        }
+        @keyframes globalExportSpin {
+            to { transform: rotate(360deg); }
+        }
+        .global-export-overlay-title {
+            color: var(--accent);
+            font-size: 14px;
+            font-weight: bold;
+            margin: 0 0 8px 0;
+            line-height: 1.35;
+        }
+        .global-export-overlay-sub {
+            color: #aaa;
+            font-size: 12px;
+            margin: 0 0 18px 0;
+            min-height: 1.2em;
+            line-height: 1.35;
+        }
+        .global-export-progress-track {
+            width: 100%;
+            height: 8px;
+            background: #222;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .global-export-progress-bar {
+            height: 100%;
+            width: 0%;
+            background: var(--accent);
+            border-radius: 4px;
+            transition: width 0.12s ease-out;
+        }
         
         /* A mira será definida pelo JavaScript, esta regra será sobrescrita */
         
@@ -2391,8 +2591,8 @@
             </div>
         </div>
         <div style="padding: 10px 10px 0 10px;">
-            <label class="btn-secondary" style="width: 100%; display: block; text-align: center;">IMPORTAR .YDK
-                <input type="file" id="file-ydk" accept=".ydk" style="display:none" onchange="importYDK(this)">
+            <label class="btn-secondary" style="width: 100%; display: block; text-align: center;">Importar DECK
+                <input type="file" id="file-deck-import" accept=".ydk,.csv,.pdf,.zip,.png,.jpg,.jpeg,application/pdf,application/zip,image/png,image/jpeg" style="display:none" onchange="importDeckFile(this)">
             </label>
         </div>
         <div id="deck-stats-bar" class="deck-stats-bar" role="region" aria-label="Totais do deck">
@@ -2413,22 +2613,67 @@
                 </span>
             </div>
         </div>
-        <div class="deck-list deck-queue-view list-mode" id="deck-items"></div>
-        <div class="pdf-preview-container">
-            <div id="import-overlay" style="position: absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); display:none; flex-direction:column; justify-content:center; align-items:center; z-index:10;"><span style="color:var(--accent); font-size:11px;">GERANDO PDF...</span><div style="width:80%; height:4px; background:#333; margin-top:10px;"><div id="progress-bar" style="width:0; height:100%; background:var(--accent);"></div></div></div>
-            <iframe id="preview-frame"></iframe>
-        </div>
-        <div style="padding: 10px; background: #111;">
-            <div class="filter-group filter-pdf-scale" style="margin-top: 0;">
-                <label>Escala do PDF (%)</label>
-                <div class="stepper">
-                    <button onclick="adjustScale(-0.1)">-</button>
-                    <input type="number" id="print-scale" value="100.0" readonly>
-                    <button onclick="adjustScale(0.1)">+</button>
+        <div id="deck-queue-pane" class="deck-queue-pane">
+            <div class="deck-list deck-queue-view list-mode" id="deck-items"></div>
+            <div id="deck-import-overlay" class="deck-import-overlay" role="status" aria-live="polite" aria-busy="false">
+                <span id="deck-import-overlay-label" class="deck-import-overlay-label">A importar…</span>
+                <span id="deck-import-overlay-sub" class="deck-import-overlay-sub" style="display: none;"></span>
+                <div class="deck-import-overlay-track" aria-hidden="true">
+                    <div id="deck-import-overlay-bar" class="deck-import-overlay-bar"></div>
                 </div>
             </div>
-            <button class="btn-accent" onclick="downloadPDF()">BAIXAR PDF HQ</button>
         </div>
+        <div class="pdf-preview-container">
+            <div id="import-overlay" style="position: absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); display:none; flex-direction:column; justify-content:center; align-items:center; z-index:10;"><span id="import-overlay-label" style="color:var(--accent); font-size:11px;">GERANDO PDF...</span><div style="width:80%; height:4px; background:#333; margin-top:10px;"><div id="progress-bar" style="width:0; height:100%; background:var(--accent);"></div></div></div>
+            <iframe id="preview-frame"></iframe>
+        </div>
+        <div class="deck-export-footer">
+            <div class="deck-export-footer-inner">
+                <div class="filter-group filter-pdf-scale">
+                    <label>Escala do PDF (%)</label>
+                    <div class="stepper">
+                        <button type="button" onclick="adjustScale(-0.1)">-</button>
+                        <input type="number" id="print-scale" value="100.0" readonly>
+                        <button type="button" onclick="adjustScale(0.1)">+</button>
+                    </div>
+                </div>
+                <button type="button" class="btn-accent" id="btn-open-export-menu">EXPORTAR PARA…</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="export-menu-overlay" class="export-menu-overlay" role="dialog" aria-modal="true" aria-labelledby="export-menu-title-text">
+    <div class="export-menu-panel" id="export-menu-panel">
+        <div class="export-menu-header">
+            <button type="button" class="export-menu-back" id="export-menu-back" aria-label="Voltar">← Voltar</button>
+            <span id="export-menu-title-text" class="export-menu-title">Exportar para…</span>
+            <button type="button" class="export-menu-close" id="export-menu-close" title="Fechar" aria-label="Fechar">×</button>
+        </div>
+        <div class="export-menu-body" id="export-menu-step-root">
+            <button type="button" class="btn-secondary export-scope-btn" data-scope="current">Este deck</button>
+            <button type="button" class="btn-secondary export-scope-btn" data-scope="all">Todos os Decks</button>
+        </div>
+        <div class="export-menu-body" id="export-menu-step-formats" style="display: none;">
+            <button type="button" class="btn-secondary export-format-btn" data-format="pdf">PDF Proxies Cards</button>
+            <button type="button" class="btn-secondary export-format-btn" data-format="ydk">YDK</button>
+            <button type="button" class="btn-secondary export-format-btn" data-format="ydk-clip">YDK → Área de transferência</button>
+            <button type="button" class="btn-secondary export-format-btn" data-format="csv">CSV</button>
+            <button type="button" class="btn-secondary export-format-btn" data-format="png">PNG</button>
+            <button type="button" class="btn-secondary export-format-btn" data-format="jpg">JPG</button>
+            <button type="button" class="btn-secondary export-format-btn" data-format="png-clip">PNG → Área de transferência</button>
+            <button type="button" class="btn-secondary export-format-btn" data-format="jpg-clip">JPG → Área de transferência</button>
+        </div>
+        <p class="export-menu-foot">PNG/JPG: imagem tipo lista de simulador (Principal, Adicional, Side informativo). YDK: main/extra por tipo; side vazio no ficheiro. «Todos os Decks» = guardados no navegador (ZIP quando aplicável).</p>
+    </div>
+</div>
+
+<div id="global-export-overlay" class="global-export-overlay" role="alertdialog" aria-modal="true" aria-live="polite" aria-labelledby="global-export-overlay-label">
+    <div class="global-export-overlay-card">
+        <div class="global-export-spinner" aria-hidden="true"></div>
+        <p id="global-export-overlay-label" class="global-export-overlay-title">A processar…</p>
+        <p id="global-export-overlay-sub" class="global-export-overlay-sub"></p>
+        <div class="global-export-progress-track"><div id="global-export-progress-bar" class="global-export-progress-bar"></div></div>
     </div>
 </div>
 
@@ -2752,9 +2997,9 @@
         delete sel.dataset.suppressChange;
     }
 
-    function serializeCurrentDeckStacks() {
+    function serializeStacksFromQueue(queue) {
         const stacks = {};
-        for (const c of cardQueue) {
+        for (const c of queue || []) {
             const k = String(c.imgId);
             if (!stacks[k]) {
                 stacks[k] = { id: c.id, imgId: c.imgId, name: String(c.name || '').slice(0, 120), qty: 0 };
@@ -2762,6 +3007,10 @@
             stacks[k].qty++;
         }
         return Object.values(stacks);
+    }
+
+    function serializeCurrentDeckStacks() {
+        return serializeStacksFromQueue(cardQueue);
     }
 
     function expandStacksToQueue(stacks) {
@@ -6179,41 +6428,199 @@
 
     function triggerPDFUpdate() { if(isGenerating || cardQueue.length === 0) return; generatePDF(); }
 
-    async function generatePDF() {
-        if(isGenerating) return; isGenerating = true;
-        document.getElementById('import-overlay').style.display = 'flex';
+    /** URL de arte em tamanho completo (API: card_images[].image_url). Evita proxy weserv que reduz nitidez. */
+    function getCardImageUrlForExport(entry) {
+        if (!entry) return 'https://images.ygoprodeck.com/images/cards/back_high.jpg';
+        const full = cardCache[entry.id];
+        if (full && Array.isArray(full.card_images)) {
+            const match =
+                full.card_images.find((ci) => ci && String(ci.id) === String(entry.imgId)) || full.card_images[0];
+            if (match && match.image_url) return match.image_url;
+        }
+        const id = entry.imgId != null ? entry.imgId : entry.id;
+        return `https://images.ygoprodeck.com/images/cards/${id}.jpg`;
+    }
+
+    async function generatePdfBlobFromQueue(queue, onProgress) {
+        if (!queue || !queue.length) return null;
         const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
         const scale = parseFloat(document.getElementById('print-scale').value) / 100;
-        const w = 59 * scale, h = 86 * scale, gap = 6;
-        const mx = (297 - (4 * w + 3 * gap)) / 2, my = (210 - (2 * h + 1 * gap)) / 2;
-        const totalPagesPDF = Math.ceil(cardQueue.length / 8);
-        for(let i=0; i<cardQueue.length; i++) {
+        const w = 59 * scale,
+            h = 86 * scale,
+            gap = 6;
+        const mx = (297 - (4 * w + 3 * gap)) / 2,
+            my = (210 - (2 * h + 1 * gap)) / 2;
+        const totalPagesPDF = Math.ceil(queue.length / 8);
+        for (let i = 0; i < queue.length; i++) {
             const currentPagePDF = Math.floor(i / 8) + 1;
             if (i % 8 === 0 && i > 0) doc.addPage();
             if (i % 8 === 0) {
-                doc.setFillColor(30, 30, 30); doc.rect(0, 0, 297, 210, 'F');
-                doc.setTextColor(255); doc.setFontSize(18); doc.text("Imprimir no tamanho real", 148.5, 7, { align: "center" });
-                doc.setFontSize(12); doc.setTextColor(180);
-                doc.text(`Página ${currentPagePDF} de ${totalPagesPDF}`, 148.5, 205, { align: "center" });
+                doc.setFillColor(30, 30, 30);
+                doc.rect(0, 0, 297, 210, 'F');
+                doc.setTextColor(255);
+                doc.setFontSize(18);
+                doc.text('Imprimir no tamanho real', 148.5, 7, { align: 'center' });
+                doc.setFontSize(12);
+                doc.setTextColor(180);
+                doc.text(`Página ${currentPagePDF} de ${totalPagesPDF}`, 148.5, 205, { align: 'center' });
             }
-            const pos = i % 8, col = pos % 4, row = Math.floor(pos / 4);
-            const x = mx + (col * (w + gap)), y = my + (row * (h + gap));
-            document.getElementById('progress-bar').style.width = Math.round(((i + 1) / cardQueue.length) * 100) + '%';
+            const pos = i % 8,
+                col = pos % 4,
+                row = Math.floor(pos / 4);
+            const x = mx + col * (w + gap),
+                y = my + row * (h + gap);
+            if (onProgress) onProgress(i + 1, queue.length);
             try {
-                const imgUrl = `https://images.weserv.nl/?url=images.ygoprodeck.com/images/cards/${cardQueue[i].imgId}.jpg&q=100`;
-                const resp = await fetch(imgUrl); const blob = await resp.blob();
-                const b64 = await new Promise(r => { const rd = new FileReader(); rd.onloadend = () => r(rd.result); rd.readAsDataURL(blob); });
+                const imgUrl = getCardImageUrlForExport(queue[i]);
+                const resp = await fetch(imgUrl);
+                const blob = await resp.blob();
+                const b64 = await new Promise((r) => {
+                    const rd = new FileReader();
+                    rd.onloadend = () => r(rd.result);
+                    rd.readAsDataURL(blob);
+                });
                 doc.addImage(b64, 'JPEG', x, y, w, h, undefined, 'NONE');
-                doc.setDrawColor(255); doc.setLineWidth(0.4); const offset = 2, len = 5;
-                doc.line(x-offset, y, x-offset-len, y); doc.line(x, y-offset, x, y-offset-len);
-                doc.line(x+w+offset, y, x+w+offset+len, y); doc.line(x+w, y-offset, x+w, y-offset-len);
-                doc.line(x-offset, y+h, x-offset-len, y+h); doc.line(x, y+h+offset, x, y+h+offset+len);
-                doc.line(x+w+offset, y+h, x+w+offset+len, y+h); doc.line(x+w, y+h+offset, x+w, y+h+offset+len);
-            } catch(e) {}
+                doc.setDrawColor(255);
+                doc.setLineWidth(0.4);
+                const offset = 2,
+                    len = 5;
+                doc.line(x - offset, y, x - offset - len, y);
+                doc.line(x, y - offset, x, y - offset - len);
+                doc.line(x + w + offset, y, x + w + offset + len, y);
+                doc.line(x + w, y - offset, x + w, y - offset - len);
+                doc.line(x - offset, y + h, x - offset - len, y + h);
+                doc.line(x, y + h + offset, x, y + h + offset + len);
+                doc.line(x + w + offset, y + h, x + w + offset + len, y + h);
+                doc.line(x + w, y + h + offset, x + w, y + h + offset + len);
+            } catch (e) {}
         }
-        window.currentPdf = doc.output('blob');
-        document.getElementById('preview-frame').src = URL.createObjectURL(window.currentPdf);
-        document.getElementById('import-overlay').style.display = 'none'; isGenerating = false;
+        return doc.output('blob');
+    }
+
+    function showGlobalExportOverlay(title, subtitle) {
+        const el = document.getElementById('global-export-overlay');
+        const lab = document.getElementById('global-export-overlay-label');
+        const sub = document.getElementById('global-export-overlay-sub');
+        const bar = document.getElementById('global-export-progress-bar');
+        if (lab) lab.textContent = title || 'A processar…';
+        if (sub) {
+            sub.textContent = subtitle || '';
+            sub.style.display = subtitle ? 'block' : 'none';
+        }
+        if (bar) bar.style.width = '0%';
+        if (el) {
+            el.classList.add('is-visible');
+            document.body.style.overflow = 'hidden';
+        }
+    }
+
+    function setGlobalExportSubtext(text) {
+        const sub = document.getElementById('global-export-overlay-sub');
+        if (!sub) return;
+        sub.textContent = text || '';
+        sub.style.display = text ? 'block' : 'none';
+    }
+
+    function updateGlobalExportProgress(cur, total) {
+        const bar = document.getElementById('global-export-progress-bar');
+        const sub = document.getElementById('global-export-overlay-sub');
+        if (bar && total > 0) bar.style.width = Math.min(100, Math.round((cur / total) * 100)) + '%';
+        if (sub && total > 0) sub.textContent = `Progresso: ${cur} / ${total}`;
+    }
+
+    function hideGlobalExportOverlay() {
+        const el = document.getElementById('global-export-overlay');
+        const bar = document.getElementById('global-export-progress-bar');
+        if (bar) bar.style.width = '0%';
+        if (el) el.classList.remove('is-visible');
+        document.body.style.overflow = '';
+    }
+
+    function showDeckImportBusy(title, subtitle) {
+        const root = document.getElementById('deck-import-overlay');
+        const lab = document.getElementById('deck-import-overlay-label');
+        const sub = document.getElementById('deck-import-overlay-sub');
+        const bar = document.getElementById('deck-import-overlay-bar');
+        if (lab) lab.textContent = title || 'A importar…';
+        if (sub) {
+            sub.textContent = subtitle || '';
+            sub.style.display = subtitle ? 'block' : 'none';
+        }
+        if (bar) bar.style.width = '0%';
+        if (root) {
+            root.classList.add('is-visible');
+            root.setAttribute('aria-busy', 'true');
+        }
+    }
+
+    function setDeckImportBusySubtext(t) {
+        const sub = document.getElementById('deck-import-overlay-sub');
+        if (!sub) return;
+        sub.textContent = t || '';
+        sub.style.display = t ? 'block' : 'none';
+    }
+
+    function setDeckImportBusyBar(pct) {
+        const bar = document.getElementById('deck-import-overlay-bar');
+        if (bar) bar.style.width = Math.min(100, Math.max(0, Math.round(pct))) + '%';
+    }
+
+    function hideDeckImportBusy() {
+        const root = document.getElementById('deck-import-overlay');
+        const bar = document.getElementById('deck-import-overlay-bar');
+        if (bar) bar.style.width = '0%';
+        if (root) {
+            root.classList.remove('is-visible');
+            root.setAttribute('aria-busy', 'false');
+        }
+    }
+
+    async function runQuickExportWithFeedback(title, asyncFn, subtitle) {
+        showGlobalExportOverlay(title, subtitle || '');
+        const t0 = Date.now();
+        try {
+            await asyncFn();
+        } finally {
+            const dt = Date.now() - t0;
+            if (dt < 400) await new Promise((r) => setTimeout(r, 400 - dt));
+            hideGlobalExportOverlay();
+        }
+    }
+
+    /** @param {boolean} [forUserExport] — se true, overlay a ecrã inteiro; se false, só pré-visualização na coluna. */
+    async function generatePDF(forUserExport) {
+        if (isGenerating) return;
+        if (!cardQueue.length) return;
+        isGenerating = true;
+        const useGlobal = !!forUserExport;
+        const bar = document.getElementById('progress-bar');
+        if (useGlobal) {
+            showGlobalExportOverlay('A gerar PDF de proxies…', 'A carregar arte oficial em alta resolução (YGOPRODeck).');
+        } else {
+            const ov = document.getElementById('import-overlay');
+            const ovLab = document.getElementById('import-overlay-label');
+            if (ovLab) ovLab.textContent = 'GERANDO PDF...';
+            if (ov) ov.style.display = 'flex';
+        }
+        try {
+            const blob = await generatePdfBlobFromQueue(cardQueue, (cur, tot) => {
+                if (useGlobal) updateGlobalExportProgress(cur, tot);
+                else if (bar) bar.style.width = Math.round((cur / tot) * 100) + '%';
+            });
+            if (blob) {
+                window.currentPdf = blob;
+                const fr = document.getElementById('preview-frame');
+                if (fr) fr.src = URL.createObjectURL(blob);
+            }
+        } finally {
+            if (bar) bar.style.width = '0%';
+            if (useGlobal) hideGlobalExportOverlay();
+            else {
+                const io = document.getElementById('import-overlay');
+                if (io) io.style.display = 'none';
+            }
+            isGenerating = false;
+        }
     }
 
     window.removeItem = (imgId) => { cardQueue = cardQueue.filter(c => String(c.imgId) !== String(imgId)); updateUI(); hideTooltip(); };
@@ -6224,11 +6631,13 @@
             initDeckDragDrop();
             initSavedDecksAndPdfToolbar();
             initFiltersColumnToolbar();
+            initExportMenu();
         });
     } else {
         initDeckDragDrop();
         initSavedDecksAndPdfToolbar();
         initFiltersColumnToolbar();
+        initExportMenu();
     }
     window.clearQueue = () => {
         if (deckDraftBeforeSavedLoad != null) {
@@ -6254,27 +6663,1181 @@
         const max = Math.ceil(searchResults.length/getItemsPerPage());
         currentPage = Math.max(1, Math.min(max, parseInt(val) || 1)); renderResults(); 
     };
-    window.downloadPDF = () => { 
-        if(window.currentPdf) { 
-            const agora = new Date(); const dataF = `${String(agora.getDate()).padStart(2, '0')}-${String(agora.getMonth() + 1).padStart(2, '0')}-${agora.getFullYear()}`;
-            const a = document.createElement('a'); a.href = URL.createObjectURL(window.currentPdf); 
-            a.download = `Cartas_Proxies_Yu-Gi-Oh!_${dataF}.pdf`; a.click(); 
-        } 
+    window.downloadPDF = () => {
+        if (window.currentPdf) {
+            const agora = new Date();
+            const dataF = `${String(agora.getDate()).padStart(2, '0')}-${String(agora.getMonth() + 1).padStart(2, '0')}-${agora.getFullYear()}`;
+            downloadBlob(window.currentPdf, `Cartas_Proxies_Yu-Gi-Oh!_${dataF}.pdf`);
+        }
     };
-    window.importYDK = async (input) => {
-        const file = input.files[0]; if(!file) return; const text = await file.text();
-        const ids = text.split('\n').map(l => l.trim()).filter(l => /^\d+$/.test(l));
-        const res = await fetch(`https://db.ygoprodeck.com/api/v7/cardinfo.php?id=${ids.join(',')}&misc=yes`);
-        const data = await res.json();
-        if(data.data) {
-            data.data.forEach(card => {
-                cardCache[card.id] = card; 
-                const count = ids.filter(id => id == card.id).length;
-                for(let i=0; i<count; i++) cardQueue.push({ id: card.id, name: card.name, imgId: card.card_images[0].id });
+
+    function downloadBlob(blob, filename) {
+        if (!blob) return;
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 4000);
+    }
+
+    function exportTimestampForZip() {
+        const t = new Date();
+        return `${t.getFullYear()}${String(t.getMonth() + 1).padStart(2, '0')}${String(t.getDate()).padStart(2, '0')}_${String(t.getHours()).padStart(2, '0')}${String(t.getMinutes()).padStart(2, '0')}`;
+    }
+
+    function getSavedDecksForExport() {
+        return loadSavedDecksFromStorage()
+            .filter((d) => d && d.id != null && Array.isArray(d.stacks))
+            .sort((a, b) => (b.ts || 0) - (a.ts || 0));
+    }
+
+    function getCurrentDeckExportBasename() {
+        const sel = document.getElementById('saved-decks-select');
+        if (sel && sel.value) {
+            const opt = sel.options[sel.selectedIndex];
+            const raw = opt ? String(opt.textContent || '').replace(/\u2026/g, '').trim() : '';
+            if (raw) return raw;
+        }
+        const agora = new Date();
+        return `Deck_${agora.getFullYear()}${String(agora.getMonth() + 1).padStart(2, '0')}${String(agora.getDate()).padStart(2, '0')}`;
+    }
+
+    function sanitizeExportFilename(name) {
+        const s = String(name || 'deck')
+            .replace(/[<>:"/\\|?*\u0000-\u001f]+/g, '_')
+            .replace(/\s+/g, ' ')
+            .trim()
+            .slice(0, 120);
+        return s || 'deck';
+    }
+
+    function downloadTextBlob(filename, text, mime) {
+        const blob = new Blob([text], { type: mime || 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 4000);
+    }
+
+    async function ensureCardCacheForIds(idList) {
+        const ids = [...new Set((idList || []).filter((x) => x != null))];
+        if (!ids.length) return;
+        const missing = ids.filter((id) => {
+            const c = cardCache[id];
+            return !c || !c.type;
+        });
+        if (!missing.length) return;
+        const chunk = 64;
+        for (let i = 0; i < missing.length; i += chunk) {
+            const part = missing.slice(i, i + chunk);
+            const res = await fetch(`https://db.ygoprodeck.com/api/v7/cardinfo.php?id=${part.join(',')}&misc=yes`);
+            const data = await res.json();
+            if (data.data) {
+                data.data.forEach((card) => {
+                    cardCache[card.id] = card;
+                });
+            }
+        }
+    }
+
+    async function ensureCardCacheForQueue() {
+        const ids = [...new Set(cardQueue.map((c) => c.id).filter((x) => x != null))];
+        await ensureCardCacheForIds(ids);
+    }
+
+    async function ensureCardCacheForQueueArray(q) {
+        const ids = [...new Set((q || []).map((c) => c.id).filter((x) => x != null))];
+        await ensureCardCacheForIds(ids);
+    }
+
+    function formatCsvRows(rows) {
+        return rows
+            .map((row) =>
+                row
+                    .map((cell) => {
+                        const s = String(cell ?? '');
+                        if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+                        return s;
+                    })
+                    .join(',')
+            )
+            .join('\r\n');
+    }
+
+    function csvRowsForQueue(q, deckNomeCol) {
+        const header =
+            deckNomeCol != null
+                ? ['deck_nome', 'secao', 'passcode', 'nome', 'tipo', 'qtd']
+                : ['secao', 'passcode', 'nome', 'tipo', 'qtd'];
+        const agg = new Map();
+        for (const entry of q || []) {
+            const full = cardCache[entry.id];
+            const sec = getQueueCardSection(full);
+            const deckPart = sec === 'extra' ? 'extra' : 'main';
+            const key = `${deckPart}|${entry.id}`;
+            if (!agg.has(key)) {
+                agg.set(key, {
+                    deckPart,
+                    passcode: entry.id,
+                    nome: (full && full.name) || entry.name || '',
+                    tipo: (full && full.type) || '',
+                    qtd: 0
+                });
+            }
+            agg.get(key).qtd++;
+        }
+        const rows = [header];
+        for (const r of agg.values()) {
+            if (deckNomeCol != null) rows.push([deckNomeCol, r.deckPart, r.passcode, r.nome, r.tipo, r.qtd]);
+            else rows.push([r.deckPart, r.passcode, r.nome, r.tipo, r.qtd]);
+        }
+        return rows;
+    }
+
+    function buildDeckCsvContent() {
+        return formatCsvRows(csvRowsForQueue(cardQueue, null));
+    }
+
+    function buildAllSavedDecksCsvContent(decks) {
+        const header = ['deck_nome', 'secao', 'passcode', 'nome', 'tipo', 'qtd'];
+        const rows = [header];
+        for (const d of decks) {
+            const q = expandStacksToQueue(d.stacks);
+            if (!q.length) continue;
+            const deckNome = String(d.name || 'Sem nome').trim() || 'Sem nome';
+            for (const r of csvRowsForQueue(q, deckNome).slice(1)) {
+                rows.push(r);
+            }
+        }
+        return formatCsvRows(rows);
+    }
+
+    /** YDK: #main / #extra por tipo; !side vazio. */
+    function buildYdkFileContentForQueue(q) {
+        const lines = ['#created by YGO Proxy Deckbuilder'];
+        const main = [];
+        const extra = [];
+        for (const entry of q || []) {
+            const full = cardCache[entry.id];
+            const sec = getQueueCardSection(full);
+            const code = String(entry.id);
+            if (sec === 'extra') extra.push(code);
+            else main.push(code);
+        }
+        lines.push('#main');
+        lines.push(...main);
+        lines.push('#extra');
+        lines.push(...extra);
+        lines.push('!side');
+        lines.push('');
+        return lines.join('\n');
+    }
+
+    function buildYdkFileContent() {
+        return buildYdkFileContentForQueue(cardQueue);
+    }
+
+    function exportProxyBlobFromCanvas(canvas, mime, jpegQuality) {
+        return new Promise((resolve) => {
+            const quality = mime === 'image/jpeg' ? (jpegQuality != null ? jpegQuality : 0.96) : undefined;
+            canvas.toBlob((b) => resolve(b), mime, quality);
+        });
+    }
+
+    function splitQueueMainExtraSide(q) {
+        const main = [];
+        const extra = [];
+        for (const e of q || []) {
+            const full = cardCache[e.id];
+            if (getQueueCardSection(full) === 'extra') extra.push(e);
+            else main.push(e);
+        }
+        return { main, extra, side: [] };
+    }
+
+    function sumTcgPriceForEntries(entries) {
+        let s = 0;
+        for (const entry of entries || []) {
+            const full = cardCache[entry.id];
+            const p = parseFloat(full?.card_prices?.[0]?.tcgplayer_price);
+            if (Number.isFinite(p)) s += p;
+        }
+        return s;
+    }
+
+    function aggregateMainDeckTypes(entries) {
+        let monsters = 0,
+            spells = 0,
+            traps = 0,
+            unknown = 0;
+        for (const entry of entries || []) {
+            const full = cardCache[entry.id];
+            const sec = getQueueCardSection(full);
+            if (sec === 'spells') spells++;
+            else if (sec === 'traps') traps++;
+            else if (sec === 'monsters') monsters++;
+            else unknown++;
+        }
+        return { monsters, spells, traps, unknown };
+    }
+
+    function aggregateExtraDeckTypes(entries) {
+        let fusion = 0,
+            synchro = 0,
+            xyz = 0,
+            link = 0,
+            other = 0;
+        for (const entry of entries || []) {
+            const full = cardCache[entry.id];
+            const t = String((full && full.type) || '');
+            if (/link monster/i.test(t)) link++;
+            else if (/xyz monster/i.test(t)) xyz++;
+            else if (/synchro/i.test(t) && /monster/i.test(t)) synchro++;
+            else if (/fusion/i.test(t) && /monster/i.test(t)) fusion++;
+            else other++;
+        }
+        return { fusion, synchro, xyz, link, other };
+    }
+
+    function formatExportPriceUsd(n) {
+        if (!Number.isFinite(n) || n <= 0) return '—';
+        try {
+            return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 }).format(n);
+        } catch (_) {
+            return `$${n.toFixed(2)}`;
+        }
+    }
+
+    function canvasRoundRectPath(ctx, x, y, w, h, r) {
+        const rr = Math.min(r, w / 2, h / 2);
+        if (typeof ctx.roundRect === 'function') {
+            ctx.roundRect(x, y, w, h, rr);
+            return;
+        }
+        ctx.moveTo(x + rr, y);
+        ctx.arcTo(x + w, y, x + w, y + h, rr);
+        ctx.arcTo(x + w, y + h, x, y + h, rr);
+        ctx.arcTo(x, y + h, x, y, rr);
+        ctx.arcTo(x, y, x + w, y, rr);
+        ctx.closePath();
+    }
+
+    function drawDeckListChip(ctx, x, y, bg, label) {
+        const w = 28,
+            h = 22;
+        ctx.fillStyle = bg;
+        ctx.beginPath();
+        canvasRoundRectPath(ctx, x, y, w, h, 5);
+        ctx.fill();
+        ctx.beginPath();
+        canvasRoundRectPath(ctx, x + 0.5, y + 0.5, w - 1, h - 1, 4);
+        ctx.strokeStyle = 'rgba(255,255,255,0.22)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 12px Segoe UI, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(String(label), x + w / 2, y + h / 2 + 0.5);
+        return x + w + 6;
+    }
+
+    const DECK_LIST_COLORS = {
+        monster: '#e67e22',
+        spell: '#27ae60',
+        trap: '#e84393',
+        fusion: '#6e4a8c',
+        synchro: '#bdc3c7',
+        xyz: '#1c2833',
+        link: '#1a5276'
+    };
+
+    /**
+     * Imagem estilo “lista de deck” (Principal / Adicional / Side), alinhada a vistas tipo MDPro3.
+     * Side: não existe na fila única desta app — mostra mensagem informativa.
+     */
+    async function exportDeckListImageCanvas(q, deckTitle, onProgress) {
+        /** Supersampling: canvas físico = layout lógico × DPR; cartas com decode ao px exato. */
+        const EXPORT_DECK_LIST_DPR = 3;
+        const W = 1920;
+        const pad = 20;
+        const innerW = W - pad * 2;
+        const titleH = 54;
+        const secHeadH = 44;
+        const cardGap = 8;
+        /** Mesmo n.º de colunas e mesmo tamanho de célula em Principal e Adicional (padronizado). */
+        const GRID_COLS = 10;
+        const sectionBottomPad = 12;
+        const gapBetweenSections = 18;
+        const cardRatio = 86 / 59;
+
+        const totalGridInnerW = innerW;
+        const cardCellW = Math.floor((totalGridInnerW - cardGap * (GRID_COLS - 1)) / GRID_COLS);
+        const cardCellH = Math.round(cardCellW * cardRatio);
+        const usedGridW = GRID_COLS * cardCellW + (GRID_COLS - 1) * cardGap;
+        const gridPadX = pad + Math.max(0, Math.floor((innerW - usedGridW) / 2));
+
+        const { main, extra, side } = splitQueueMainExtraSide(q);
+        const totalSteps = Math.max(1, main.length + extra.length);
+        let step = 0;
+        const bump = () => {
+            step++;
+            if (onProgress) onProgress(step, totalSteps);
+        };
+
+        function measureSection(entries) {
+            if (!entries || !entries.length) {
+                return { gridH: 46, empty: true };
+            }
+            const rows = Math.ceil(entries.length / GRID_COLS);
+            const gridH = rows * cardCellH + Math.max(0, rows - 1) * cardGap;
+            return { gridH, empty: false };
+        }
+
+        const layM = measureSection(main);
+        const layE = measureSection(extra);
+        const layS = { gridH: 50, empty: true };
+
+        const H =
+            pad +
+            titleH +
+            gapBetweenSections +
+            (secHeadH + 8 + layM.gridH + sectionBottomPad) +
+            gapBetweenSections +
+            (secHeadH + 8 + layE.gridH + sectionBottomPad) +
+            gapBetweenSections +
+            (secHeadH + 8 + layS.gridH + sectionBottomPad) +
+            pad;
+
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(W * EXPORT_DECK_LIST_DPR));
+        canvas.height = Math.max(1, Math.round(H * EXPORT_DECK_LIST_DPR));
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return canvas;
+        ctx.setTransform(EXPORT_DECK_LIST_DPR, 0, 0, EXPORT_DECK_LIST_DPR, 0, 0);
+        if ('imageSmoothingQuality' in ctx) ctx.imageSmoothingQuality = 'high';
+        ctx.imageSmoothingEnabled = true;
+
+        const bg = ctx.createLinearGradient(0, 0, W, H);
+        bg.addColorStop(0, '#0a0e18');
+        bg.addColorStop(0.5, '#141c2e');
+        bg.addColorStop(1, '#060810');
+        ctx.fillStyle = bg;
+        ctx.fillRect(0, 0, W, H);
+        for (let i = 0; i < 100; i++) {
+            ctx.fillStyle = `rgba(255,255,255,${0.04 + Math.random() * 0.1})`;
+            ctx.fillRect(Math.random() * W, Math.random() * H, 1, 1);
+        }
+
+        let y = pad;
+        ctx.fillStyle = 'rgba(28, 36, 54, 0.96)';
+        ctx.fillRect(pad, y, innerW, titleH);
+        ctx.strokeStyle = 'rgba(120, 200, 255, 0.45)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(pad + 0.5, y + 0.5, innerW - 1, titleH - 1);
+        ctx.fillStyle = '#ecf0f1';
+        ctx.font = 'bold 19px Segoe UI, system-ui, sans-serif';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(String(deckTitle || 'Deck').slice(0, 72), pad + 16, y + titleH / 2);
+        y += titleH + gapBetweenSections;
+
+        async function drawOneSection(sectionTitle, entries, layout, mode) {
+            const topY = y;
+            const sectionH = secHeadH + 8 + layout.gridH + sectionBottomPad;
+
+            ctx.strokeStyle = 'rgba(110, 200, 255, 0.5)';
+            ctx.lineWidth = 1.5;
+            ctx.strokeRect(pad + 0.5, topY + 0.5, innerW - 1, sectionH - 1);
+
+            ctx.fillStyle = 'rgba(22, 30, 46, 0.94)';
+            ctx.fillRect(pad + 1, topY + 1, innerW - 2, secHeadH - 2);
+
+            ctx.fillStyle = '#ecf0f1';
+            ctx.font = 'bold 14px Segoe UI, system-ui, sans-serif';
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(sectionTitle, pad + 14, topY + secHeadH / 2);
+
+            const count = entries.length;
+            const price = sumTcgPriceForEntries(entries);
+            const pillW = 42;
+            const pillH = 24;
+            const pillX = pad + innerW - pillW - 118;
+            ctx.fillStyle = 'rgba(70, 80, 100, 0.95)';
+            ctx.beginPath();
+            canvasRoundRectPath(ctx, pillX, topY + 10, pillW, pillH, 8);
+            ctx.fill();
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 13px Segoe UI, system-ui, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(String(count), pillX + pillW / 2, topY + secHeadH / 2 + 0.5);
+
+            ctx.textAlign = 'right';
+            ctx.fillStyle = '#aab7c4';
+            ctx.font = '12px Segoe UI, system-ui, sans-serif';
+            ctx.fillText(formatExportPriceUsd(price), pad + innerW - 14, topY + secHeadH / 2 + 0.5);
+
+            let chipX = pad + 200;
+            ctx.textAlign = 'left';
+            if (mode === 'extra') {
+                const ex = aggregateExtraDeckTypes(entries);
+                if (ex.fusion) chipX = drawDeckListChip(ctx, chipX, topY + 11, DECK_LIST_COLORS.fusion, ex.fusion);
+                if (ex.synchro) chipX = drawDeckListChip(ctx, chipX, topY + 11, DECK_LIST_COLORS.synchro, ex.synchro);
+                if (ex.xyz) chipX = drawDeckListChip(ctx, chipX, topY + 11, DECK_LIST_COLORS.xyz, ex.xyz);
+                if (ex.link) chipX = drawDeckListChip(ctx, chipX, topY + 11, DECK_LIST_COLORS.link, ex.link);
+                if (ex.other) chipX = drawDeckListChip(ctx, chipX, topY + 11, '#7f8c8d', ex.other);
+            } else if (mode === 'main') {
+                const m = aggregateMainDeckTypes(entries);
+                if (m.monsters) chipX = drawDeckListChip(ctx, chipX, topY + 11, DECK_LIST_COLORS.monster, m.monsters);
+                if (m.spells) chipX = drawDeckListChip(ctx, chipX, topY + 11, DECK_LIST_COLORS.spell, m.spells);
+                if (m.traps) chipX = drawDeckListChip(ctx, chipX, topY + 11, DECK_LIST_COLORS.trap, m.traps);
+                if (m.unknown) chipX = drawDeckListChip(ctx, chipX, topY + 11, '#95a5a6', m.unknown);
+            }
+
+            const gridTop = topY + secHeadH + 8;
+            if (layout.empty) {
+                ctx.fillStyle = '#95a5a6';
+                ctx.font = '12px Segoe UI, system-ui, sans-serif';
+                ctx.textAlign = 'left';
+                const msg =
+                    mode === 'side'
+                        ? 'Side não está disponível aqui — exporte YDK e edite no MDPro3 / EDOPro.'
+                        : 'Sem cartas nesta secção.';
+                ctx.fillText(msg, pad + 14, gridTop + 24);
+            } else {
+                const cw = cardCellW;
+                const ch = cardCellH;
+                const cols = GRID_COLS;
+                let col = 0;
+                let row = 0;
+                for (let i = 0; i < entries.length; i++) {
+                    const cx = Math.round(gridPadX + col * (cw + cardGap));
+                    const cy = Math.round(gridTop + row * (ch + cardGap));
+                    bump();
+                    try {
+                        const imgUrl = getCardImageUrlForExport(entries[i]);
+                        const resp = await fetch(imgUrl);
+                        const blob = await resp.blob();
+                        const tw = Math.max(2, Math.round(cw * EXPORT_DECK_LIST_DPR));
+                        const th = Math.max(2, Math.round(ch * EXPORT_DECK_LIST_DPR));
+                        let bmp;
+                        let bmpNeedsSmooth = false;
+                        try {
+                            bmp = await createImageBitmap(blob, {
+                                resizeWidth: tw,
+                                resizeHeight: th,
+                                resizeQuality: 'high'
+                            });
+                        } catch (eBmp) {
+                            bmp = await createImageBitmap(blob);
+                            bmpNeedsSmooth = true;
+                        }
+                        ctx.save();
+                        ctx.beginPath();
+                        canvasRoundRectPath(ctx, cx, cy, cw, ch, 4);
+                        ctx.clip();
+                        const prevSmooth = ctx.imageSmoothingEnabled;
+                        ctx.imageSmoothingEnabled = bmpNeedsSmooth;
+                        ctx.drawImage(bmp, cx, cy, cw, ch);
+                        ctx.imageSmoothingEnabled = prevSmooth;
+                        ctx.restore();
+                        ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+                        ctx.lineWidth = 1;
+                        ctx.beginPath();
+                        canvasRoundRectPath(ctx, cx + 0.5, cy + 0.5, cw - 1, ch - 1, 4);
+                        ctx.stroke();
+                        bmp.close();
+                    } catch (e) {}
+                    col++;
+                    if (col >= cols) {
+                        col = 0;
+                        row++;
+                    }
+                }
+            }
+            y = topY + sectionH + gapBetweenSections;
+        }
+
+        await drawOneSection('Deck Principal', main, layM, 'main');
+        await drawOneSection('Deck Adicional', extra, layE, 'extra');
+        await drawOneSection('Side Deck', side, layS, 'side');
+
+        return canvas;
+    }
+
+    async function copyRasterBlobToClipboard(blob, mimeHint) {
+        if (!blob || !navigator.clipboard || !window.ClipboardItem) {
+            showToast('Área de transferência de imagem não disponível.');
+            return;
+        }
+        const type = blob.type || mimeHint || 'image/png';
+        try {
+            await navigator.clipboard.write([new ClipboardItem({ [type]: blob })]);
+            showToast('Imagem copiada.');
+        } catch (e) {
+            showToast('Não foi possível copiar a imagem (tente PNG ou HTTPS).');
+        }
+    }
+
+    async function mergeAllDeckProxiesCanvas(decks) {
+        const stripH = 40;
+        const items = [];
+        let tw = 0;
+        let th = 0;
+        for (const d of decks) {
+            const q = expandStacksToQueue(d.stacks);
+            if (!q.length) continue;
+            await ensureCardCacheForQueueArray(q);
+            const cv = await exportDeckListImageCanvas(q, String(d.name || 'Deck').slice(0, 100), () => {});
+            tw = Math.max(tw, cv.width);
+            items.push({ label: String(d.name || 'Deck').slice(0, 100), cv, stripH });
+            th += stripH + cv.height;
+        }
+        if (!items.length) return null;
+        const maxH = 13500;
+        const scale = th > maxH ? maxH / th : 1;
+        const out = document.createElement('canvas');
+        out.width = Math.max(1, Math.floor(tw * scale));
+        out.height = Math.max(1, Math.floor(th * scale));
+        const ctx = out.getContext('2d');
+        ctx.setTransform(scale, 0, 0, scale, 0, 0);
+        ctx.fillStyle = '#111';
+        ctx.fillRect(0, 0, tw, th);
+        let y = 0;
+        for (const it of items) {
+            ctx.fillStyle = '#1a1a1a';
+            ctx.fillRect(0, y, tw, it.stripH);
+            ctx.fillStyle = '#f1c40f';
+            ctx.font = 'bold 16px sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText(it.label, 10, y + 26);
+            y += it.stripH;
+            ctx.drawImage(it.cv, 0, y);
+            y += it.cv.height;
+        }
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        return out;
+    }
+
+    async function withExportOverlay(label, asyncFn) {
+        if (isGenerating) return null;
+        isGenerating = true;
+        showGlobalExportOverlay(label, '');
+        try {
+            return await asyncFn((cur, tot) => updateGlobalExportProgress(cur, tot));
+        } finally {
+            hideGlobalExportOverlay();
+            isGenerating = false;
+        }
+    }
+
+    async function runExportMenuAction(scope, format) {
+        const allDecks = scope === 'all';
+        const decks = allDecks ? getSavedDecksForExport() : null;
+        if (allDecks && (!decks || !decks.length)) {
+            showToast('Nenhum deck guardado.');
+            return;
+        }
+        if (!allDecks && !cardQueue.length) {
+            showToast('Deck vazio.');
+            return;
+        }
+
+        try {
+            if (format === 'pdf') {
+                if (!allDecks) {
+                    await generatePDF(true);
+                    if (window.currentPdf) {
+                        downloadBlob(window.currentPdf, sanitizeExportFilename(getCurrentDeckExportBasename()) + '_proxies.pdf');
+                        showToast('PDF salvo.');
+                    }
+                    return;
+                }
+                if (typeof JSZip === 'undefined') {
+                    showToast('JSZip não carregado.');
+                    return;
+                }
+                await withExportOverlay('A gerar PDFs de proxies (ZIP)…', async (setProg) => {
+                    let done = 0;
+                    let total = 0;
+                    for (const d of decks) total += expandStacksToQueue(d.stacks).length || 1;
+                    const zip = new JSZip();
+                    let pdfDeckI = 0;
+                    for (const d of decks) {
+                        const q = expandStacksToQueue(d.stacks);
+                        if (!q.length) continue;
+                        pdfDeckI++;
+                        setGlobalExportSubtext(`Deck ${pdfDeckI}: ${String(d.name || 'Sem nome').slice(0, 42)}…`);
+                        await ensureCardCacheForQueueArray(q);
+                        const blob = await generatePdfBlobFromQueue(q, (c, t) => {
+                            setProg(done + c, total);
+                        });
+                        done += q.length;
+                        setProg(done, total);
+                        zip.file(sanitizeExportFilename(d.name || 'deck') + '_proxies.pdf', blob);
+                    }
+                    const fileCount = Object.keys(zip.files).filter((k) => !zip.files[k].dir).length;
+                    if (!fileCount) {
+                        showToast('Todos os decks guardados estão vazios.');
+                        return;
+                    }
+                    setGlobalExportSubtext('A compactar ZIP — aguarde…');
+                    const zblob = await zip.generateAsync({ type: 'blob' });
+                    downloadBlob(zblob, `Decks_proxies_${exportTimestampForZip()}.zip`);
+                    showToast('ZIP com PDFs salvo.');
+                });
+                return;
+            }
+
+            if (format === 'ydk') {
+                if (!allDecks) {
+                    await runQuickExportWithFeedback(
+                        'A exportar YDK…',
+                        async () => {
+                            await ensureCardCacheForQueue();
+                            downloadTextBlob(
+                                sanitizeExportFilename(getCurrentDeckExportBasename()) + '.ydk',
+                                buildYdkFileContentForQueue(cardQueue),
+                                'text/plain;charset=utf-8'
+                            );
+                        },
+                        'A garantir tipos de carta (API YGOPRODeck)'
+                    );
+                    showToast('YDK salvo.');
+                    return;
+                }
+                if (typeof JSZip === 'undefined') {
+                    showToast('JSZip não carregado.');
+                    return;
+                }
+                await withExportOverlay('A gerar ficheiros YDK (ZIP)…', async () => {
+                    const zip = new JSZip();
+                    for (const d of decks) {
+                        const q = expandStacksToQueue(d.stacks);
+                        if (!q.length) continue;
+                        await ensureCardCacheForQueueArray(q);
+                        zip.file(sanitizeExportFilename(d.name || 'deck') + '.ydk', buildYdkFileContentForQueue(q));
+                    }
+                    const fc = Object.keys(zip.files).filter((k) => !zip.files[k].dir).length;
+                    if (!fc) {
+                        showToast('Todos os decks guardados estão vazios.');
+                        return;
+                    }
+                    setGlobalExportSubtext('A compactar ZIP — pode demorar com muitos decks…');
+                    downloadBlob(await zip.generateAsync({ type: 'blob' }), `Decks_ydk_${exportTimestampForZip()}.zip`);
+                    showToast('ZIP com YDKs salvo.');
+                });
+                return;
+            }
+
+            if (format === 'ydk-clip') {
+                if (!allDecks) {
+                    await runQuickExportWithFeedback('A copiar YDK…', async () => {
+                        await ensureCardCacheForQueue();
+                        await navigator.clipboard.writeText(buildYdkFileContentForQueue(cardQueue));
+                    });
+                    showToast('YDK copiado.');
+                    return;
+                }
+                showGlobalExportOverlay('A copiar YDKs (todos os decks)…', '');
+                try {
+                    const parts = [];
+                    let di = 0;
+                    for (const d of decks) {
+                        di++;
+                        setGlobalExportSubtext(`A processar deck ${di} de ${decks.length}…`);
+                        const q = expandStacksToQueue(d.stacks);
+                        if (!q.length) continue;
+                        await ensureCardCacheForQueueArray(q);
+                        const title = String(d.name || 'Deck').replace(/\r?\n/g, ' ');
+                        parts.push(`# --- Deck: ${title} ---\n${buildYdkFileContentForQueue(q)}`);
+                    }
+                    if (!parts.length) {
+                        showToast('Todos os decks guardados estão vazios.');
+                        return;
+                    }
+                    setGlobalExportSubtext('A escrever na área de transferência…');
+                    await navigator.clipboard.writeText(parts.join('\n\n'));
+                    showToast('YDKs copiados (blocos separados por cabeçalho).');
+                } finally {
+                    hideGlobalExportOverlay();
+                }
+                return;
+            }
+
+            if (format === 'csv') {
+                if (!allDecks) {
+                    await runQuickExportWithFeedback('A exportar CSV…', async () => {
+                        await ensureCardCacheForQueue();
+                        downloadTextBlob(
+                            sanitizeExportFilename(getCurrentDeckExportBasename()) + '.csv',
+                            '\ufeff' + buildDeckCsvContent(),
+                            'text/csv;charset=utf-8'
+                        );
+                    });
+                    showToast('CSV salvo.');
+                    return;
+                }
+                showGlobalExportOverlay('A exportar CSV (todos os decks)…', 'A carregar dados das cartas na API');
+                try {
+                    const allIds = [];
+                    for (const d of decks) {
+                        for (const c of expandStacksToQueue(d.stacks)) {
+                            if (c.id != null) allIds.push(c.id);
+                        }
+                    }
+                    await ensureCardCacheForIds(allIds);
+                    setGlobalExportSubtext('A gerar ficheiro único…');
+                    downloadTextBlob(
+                        `Decks_resumo_${exportTimestampForZip()}.csv`,
+                        '\ufeff' + buildAllSavedDecksCsvContent(decks),
+                        'text/csv;charset=utf-8'
+                    );
+                    showToast('CSV único com todos os decks salvo.');
+                } finally {
+                    hideGlobalExportOverlay();
+                }
+                return;
+            }
+
+            if (format === 'png' || format === 'jpg') {
+                const mime = format === 'jpg' ? 'image/jpeg' : 'image/png';
+                const ext = format === 'jpg' ? 'jpg' : 'png';
+                if (!allDecks) {
+                    await withExportOverlay(
+                        format === 'jpg' ? 'A gerar JPG (lista do deck)…' : 'A gerar PNG (lista do deck)…',
+                        async (setProg) => {
+                        await ensureCardCacheForQueue();
+                        setGlobalExportSubtext('Arte em alta resolução (image_url da API)…');
+                        const cv = await exportDeckListImageCanvas(
+                            cardQueue,
+                            getCurrentDeckExportBasename(),
+                            setProg
+                        );
+                        const blob = await exportProxyBlobFromCanvas(
+                            cv,
+                            mime,
+                            mime === 'image/jpeg' ? 0.98 : undefined
+                        );
+                        if (blob) {
+                            downloadBlob(blob, sanitizeExportFilename(getCurrentDeckExportBasename()) + `_lista_deck.${ext}`);
+                            showToast('Imagem lista de deck salva.');
+                        } else showToast('Falha ao gerar imagem.');
+                    }
+                    );
+                    return;
+                }
+                if (typeof JSZip === 'undefined') {
+                    showToast('JSZip não carregado.');
+                    return;
+                }
+                await withExportOverlay(`A gerar imagens ${ext.toUpperCase()} (lista, ZIP)…`, async (setProg) => {
+                    let done = 0;
+                    let total = 0;
+                    for (const d of decks) total += expandStacksToQueue(d.stacks).length || 1;
+                    const zip = new JSZip();
+                    let deckIdx = 0;
+                    for (const d of decks) {
+                        const q = expandStacksToQueue(d.stacks);
+                        if (!q.length) continue;
+                        deckIdx++;
+                        setGlobalExportSubtext(`Deck ${deckIdx}: ${String(d.name || 'Sem nome').slice(0, 42)}…`);
+                        await ensureCardCacheForQueueArray(q);
+                        const nm = String(d.name || 'deck').slice(0, 100);
+                        const cv = await exportDeckListImageCanvas(q, nm, (c, t) => setProg(done + c, total));
+                        done += q.length;
+                        const blob = await exportProxyBlobFromCanvas(
+                            cv,
+                            mime,
+                            mime === 'image/jpeg' ? 0.98 : undefined
+                        );
+                        if (blob) zip.file(sanitizeExportFilename(d.name || 'deck') + `_lista_deck.${ext}`, blob);
+                    }
+                    const fc2 = Object.keys(zip.files).filter((k) => !zip.files[k].dir).length;
+                    if (!fc2) {
+                        showToast('Todos os decks guardados estão vazios.');
+                        return;
+                    }
+                    setGlobalExportSubtext('A compactar imagens no ZIP…');
+                    downloadBlob(await zip.generateAsync({ type: 'blob' }), `Decks_lista_${ext}_${exportTimestampForZip()}.zip`);
+                    showToast(`ZIP com imagens ${ext.toUpperCase()} (lista) salvo.`);
+                });
+                return;
+            }
+
+            if (format === 'png-clip' || format === 'jpg-clip') {
+                const mime = format === 'jpg-clip' ? 'image/jpeg' : 'image/png';
+                if (!allDecks) {
+                    await withExportOverlay('A gerar imagem para a área de transferência…', async (setProg) => {
+                        await ensureCardCacheForQueue();
+                        setGlobalExportSubtext('Arte em alta resolução (API YGOPRODeck)…');
+                        const cv = await exportDeckListImageCanvas(
+                            cardQueue,
+                            getCurrentDeckExportBasename(),
+                            setProg
+                        );
+                        const blob = await exportProxyBlobFromCanvas(
+                            cv,
+                            mime,
+                            mime === 'image/jpeg' ? 0.98 : undefined
+                        );
+                        if (blob) await copyRasterBlobToClipboard(blob, mime);
+                        else showToast('Falha ao gerar imagem.');
+                    });
+                    return;
+                }
+                await withExportOverlay('A combinar listas de todos os decks…', async () => {
+                    const allIds = [];
+                    for (const d of decks) {
+                        for (const c of expandStacksToQueue(d.stacks)) {
+                            if (c.id != null) allIds.push(c.id);
+                        }
+                    }
+                    await ensureCardCacheForIds(allIds);
+                    const merged = await mergeAllDeckProxiesCanvas(decks);
+                    if (!merged) {
+                        showToast('Nada para copiar.');
+                        return;
+                    }
+                    const blob = await exportProxyBlobFromCanvas(
+                        merged,
+                        mime,
+                        mime === 'image/jpeg' ? 0.98 : undefined
+                    );
+                    if (blob) await copyRasterBlobToClipboard(blob, mime);
+                    else showToast('Falha ao gerar imagem.');
+                });
+                return;
+            }
+        } catch (e) {
+            showToast('Exportação falhou.');
+        }
+    }
+
+    let __exportMenuScope = null;
+
+    function exportMenuShowRoot() {
+        const root = document.getElementById('export-menu-step-root');
+        const fmt = document.getElementById('export-menu-step-formats');
+        const back = document.getElementById('export-menu-back');
+        const title = document.getElementById('export-menu-title-text');
+        if (root) root.style.display = '';
+        if (fmt) fmt.style.display = 'none';
+        if (back) back.classList.remove('is-visible');
+        if (title) title.textContent = 'Exportar para…';
+        __exportMenuScope = null;
+    }
+
+    function exportMenuShowFormats(scopeLabel) {
+        const root = document.getElementById('export-menu-step-root');
+        const fmt = document.getElementById('export-menu-step-formats');
+        const back = document.getElementById('export-menu-back');
+        const title = document.getElementById('export-menu-title-text');
+        if (root) root.style.display = 'none';
+        if (fmt) fmt.style.display = '';
+        if (back) back.classList.add('is-visible');
+        if (title) title.textContent = scopeLabel;
+    }
+
+    function closeExportMenu() {
+        const o = document.getElementById('export-menu-overlay');
+        if (o) o.classList.remove('is-open');
+        exportMenuShowRoot();
+    }
+
+    function initExportMenu() {
+        const overlay = document.getElementById('export-menu-overlay');
+        const panel = document.getElementById('export-menu-panel');
+        if (!overlay || overlay.dataset.init === '1') return;
+        overlay.dataset.init = '1';
+        if (panel) panel.addEventListener('click', (e) => e.stopPropagation());
+        document.getElementById('btn-open-export-menu')?.addEventListener('click', () => {
+            exportMenuShowRoot();
+            overlay.classList.add('is-open');
+        });
+        document.getElementById('export-menu-close')?.addEventListener('click', closeExportMenu);
+        document.getElementById('export-menu-back')?.addEventListener('click', exportMenuShowRoot);
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) closeExportMenu();
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && overlay.classList.contains('is-open')) closeExportMenu();
+        });
+        document.querySelectorAll('.export-scope-btn').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const scope = btn.getAttribute('data-scope');
+                if (scope !== 'all') {
+                    if (!cardQueue.length) {
+                        showToast('Deck vazio. Adicione cartas antes de exportar.');
+                        return;
+                    }
+                }
+                __exportMenuScope = scope === 'all' ? 'all' : 'current';
+                exportMenuShowFormats(scope === 'all' ? 'Todos os Decks' : 'Este deck');
             });
-            deckDraftBeforeSavedLoad = null;
-            setSavedDecksSelectValue('');
-            updateUI(); showToast("Deck Importado com sucesso!");
+        });
+        document.querySelectorAll('.export-format-btn').forEach((btn) => {
+            btn.addEventListener('click', async () => {
+                const fmt = btn.getAttribute('data-format');
+                const scope = __exportMenuScope;
+                if (!scope || !fmt) return;
+                closeExportMenu();
+                await runExportMenuAction(scope, fmt);
+            });
+        });
+    }
+
+    /** CSV exportado por esta app (RFC simples com aspas). */
+    function parseCsvSimple(text) {
+        const rows = [];
+        const t = String(text || '').replace(/^\uFEFF/, '');
+        let row = [];
+        let cur = '';
+        let inQuotes = false;
+        for (let i = 0; i < t.length; i++) {
+            const ch = t[i];
+            if (inQuotes) {
+                if (ch === '"') {
+                    if (t[i + 1] === '"') {
+                        cur += '"';
+                        i++;
+                    } else inQuotes = false;
+                } else cur += ch;
+            } else if (ch === '"') inQuotes = true;
+            else if (ch === ',') {
+                row.push(cur);
+                cur = '';
+            } else if (ch === '\n' || ch === '\r') {
+                if (ch === '\r' && t[i + 1] === '\n') i++;
+                row.push(cur);
+                cur = '';
+                if (row.some((c) => String(c).length > 0)) rows.push(row);
+                row = [];
+            } else cur += ch;
+        }
+        row.push(cur);
+        if (row.some((c) => String(c).length > 0)) rows.push(row);
+        return rows;
+    }
+
+    async function ydkTextToCardQueue(text) {
+        const ids = String(text || '')
+            .split(/\n/)
+            .map((l) => l.trim())
+            .filter((l) => /^\d+$/.test(l));
+        if (!ids.length) throw new Error('YDK sem IDs numéricos.');
+        const uniq = [...new Set(ids)];
+        const res = await fetch(`https://db.ygoprodeck.com/api/v7/cardinfo.php?id=${uniq.join(',')}&misc=yes`);
+        const data = await res.json();
+        if (!data.data) throw new Error('API não devolveu dados para estes IDs.');
+        const cardById = {};
+        for (const card of data.data) {
+            cardById[String(card.id)] = card;
+            cardCache[card.id] = card;
+        }
+        const q = [];
+        for (const idStr of ids) {
+            const card = cardById[idStr];
+            if (!card || !card.card_images || !card.card_images[0]) continue;
+            q.push({ id: card.id, name: card.name, imgId: card.card_images[0].id });
+        }
+        if (!q.length) throw new Error('Nenhum ID do YDK corresponde a cartas na API.');
+        return q;
+    }
+
+    async function csvTextToCardQueue(text) {
+        const rows = parseCsvSimple(text);
+        if (rows.length < 2) throw new Error('CSV vazio ou só cabeçalho.');
+        const header = rows[0].map((h) => String(h || '').trim().toLowerCase());
+        const idx = (n) => header.indexOf(n);
+        const iSec = idx('secao');
+        const iPass = idx('passcode');
+        const iQtd = idx('qtd');
+        const iDeck = idx('deck_nome');
+        if (iSec < 0 || iPass < 0 || iQtd < 0) {
+            throw new Error('CSV deve ter colunas secao, passcode e qtd (exportado desta app).');
+        }
+        let dataRows = rows.slice(1).filter((r) => r && r.length);
+        if (iDeck >= 0 && dataRows.length) {
+            const firstName = String(dataRows[0][iDeck] || '').trim();
+            if (firstName) dataRows = dataRows.filter((r) => String(r[iDeck] || '').trim() === firstName);
+        }
+        const orderedIds = [];
+        const pushSec = (secName) => {
+            for (const r of dataRows) {
+                const sec = String(r[iSec] || '').trim().toLowerCase();
+                if (sec !== secName) continue;
+                const idStr = String(r[iPass] || '').trim();
+                if (!/^\d+$/.test(idStr)) continue;
+                const n = Math.max(0, parseInt(String(r[iQtd] || '1').trim(), 10) || 1);
+                for (let i = 0; i < n; i++) orderedIds.push(idStr);
+            }
+        };
+        pushSec('main');
+        pushSec('extra');
+        if (!orderedIds.length) throw new Error('Nenhuma linha main/extra com passcodes válidos.');
+        const uniq = [...new Set(orderedIds)];
+        const res = await fetch(`https://db.ygoprodeck.com/api/v7/cardinfo.php?id=${uniq.join(',')}&misc=yes`);
+        const data = await res.json();
+        if (!data.data) throw new Error('API não devolveu dados para estes passcodes.');
+        const cardById = {};
+        for (const card of data.data) {
+            cardById[String(card.id)] = card;
+            cardCache[card.id] = card;
+        }
+        const q = [];
+        for (const idStr of orderedIds) {
+            const card = cardById[idStr];
+            if (!card || !card.card_images || !card.card_images[0]) continue;
+            q.push({ id: card.id, name: card.name, imgId: card.card_images[0].id });
+        }
+        if (!q.length) throw new Error('Nenhum passcode válido no CSV.');
+        return q;
+    }
+
+    async function applyImportedQueueToEditor(q) {
+        setDeckImportBusySubtext('A sincronizar dados das cartas e a atualizar o deck…');
+        deckDraftBeforeSavedLoad = null;
+        setSavedDecksSelectValue('');
+        cardQueue = q;
+        await ensureCardCacheForQueue();
+        updateUI();
+        showToast('Deck importado com sucesso!');
+    }
+
+    async function importDeckFromZipFile(file) {
+        if (typeof JSZip === 'undefined') throw new Error('JSZip não carregado.');
+        setDeckImportBusySubtext('A descompactar o ZIP…');
+        setDeckImportBusyBar(5);
+        const zip = await JSZip.loadAsync(file);
+        const list = [];
+        zip.forEach((path, entry) => {
+            if (entry.dir) return;
+            const l = path.toLowerCase();
+            if (l.endsWith('.ydk') || l.endsWith('.csv')) list.push({ path, entry });
+        });
+        list.sort((a, b) => a.path.localeCompare(b.path, undefined, { sensitivity: 'base' }));
+        if (!list.length) throw new Error('ZIP sem ficheiros .ydk ou .csv.');
+        setDeckImportBusySubtext(`${list.length} ficheiro(s) YDK/CSV — a processar…`);
+        const parsed = [];
+        const errs = [];
+        const nList = list.length;
+        for (let fi = 0; fi < list.length; fi++) {
+            const { path, entry } = list[fi];
+            const baseLabel = path.split('/').pop() || path;
+            setDeckImportBusySubtext(`ZIP (${fi + 1}/${nList}): ${baseLabel}`);
+            setDeckImportBusyBar(10 + Math.round((fi / Math.max(1, nList)) * 70));
+            try {
+                const txt = await entry.async('string');
+                const q = path.toLowerCase().endsWith('.ydk') ? await ydkTextToCardQueue(txt) : await csvTextToCardQueue(txt);
+                if (!q.length) {
+                    errs.push(`${path}: vazio`);
+                    continue;
+                }
+                const shortName = path.split('/').pop().replace(/\.(ydk|csv)$/i, '') || 'Importado';
+                parsed.push({ name: sanitizeExportFilename(shortName) || 'Importado', q });
+            } catch (e) {
+                errs.push(`${path}: ${e && e.message ? e.message : e}`);
+            }
+        }
+        setDeckImportBusyBar(88);
+        if (!parsed.length) {
+            const hint = errs.length ? ` Ex.: ${errs.slice(0, 2).join('; ')}` : '';
+            throw new Error('Nenhum deck válido no ZIP.' + hint);
+        }
+        if (parsed.length === 1) {
+            await applyImportedQueueToEditor(parsed[0].q);
+            setDeckImportBusyBar(100);
+            if (errs.length) showToast(`Outros ficheiros no ZIP: ${errs.slice(0, 3).join('; ')}`);
+            return;
+        }
+        setDeckImportBusySubtext(`A gravar ${parsed.length} decks nos guardados…`);
+        let decks = loadSavedDecksFromStorage();
+        const addedNames = [];
+        let i = 0;
+        for (const p of parsed) {
+            const uniqueName = suggestUniqueDeckName(p.name, decks);
+            const stacks = serializeStacksFromQueue(p.q);
+            const entry = {
+                id: 'd_imp_' + Date.now() + '_' + i++,
+                name: uniqueName,
+                ts: Date.now(),
+                stacks
+            };
+            decks = [entry, ...decks];
+            addedNames.push(uniqueName);
+        }
+        saveSavedDecksToStorage(decks);
+        paintSavedDecksSelect();
+        deckDraftBeforeSavedLoad = null;
+        setSavedDecksSelectValue('');
+        updateUI();
+        setDeckImportBusyBar(100);
+        let msg = `${parsed.length} decks adicionados aos guardados (${addedNames.slice(0, 3).join(', ')}${addedNames.length > 3 ? '…' : ''}).`;
+        if (errs.length) msg += ` ${errs.length} ficheiro(s) ignorados.`;
+        showToast(msg);
+    }
+
+    window.importDeckFile = async (input) => {
+        const file = input.files && input.files[0];
+        if (!file) return;
+        const name = (file.name || '').toLowerCase();
+        let overlayShown = false;
+        let overlayStart = 0;
+        try {
+            if (name.endsWith('.pdf') || name.endsWith('.png') || name.endsWith('.jpg') || name.endsWith('.jpeg')) {
+                showToast(
+                    'PDF e imagens (PNG/JPG) são só exportação visual/proxy; não dá para reconstruir o deck. Use YDK, CSV ou ZIP com esses ficheiros.'
+                );
+                return;
+            }
+            if (
+                !name.endsWith('.zip') &&
+                !name.endsWith('.csv') &&
+                !name.endsWith('.ydk')
+            ) {
+                showToast('Formato não reconhecido. Use .ydk, .csv ou .zip (com YDK/CSV dentro).');
+                return;
+            }
+
+            overlayShown = true;
+            overlayStart = Date.now();
+            showDeckImportBusy('A importar deck…', '');
+            setDeckImportBusyBar(0);
+
+            if (name.endsWith('.zip')) {
+                await importDeckFromZipFile(file);
+            } else if (name.endsWith('.csv')) {
+                setDeckImportBusySubtext('A ler o CSV…');
+                setDeckImportBusyBar(15);
+                const text = await file.text();
+                setDeckImportBusySubtext('A consultar a API YGOPRODeck…');
+                setDeckImportBusyBar(45);
+                await applyImportedQueueToEditor(await csvTextToCardQueue(text));
+                setDeckImportBusyBar(100);
+            } else if (name.endsWith('.ydk')) {
+                setDeckImportBusySubtext('A ler o ficheiro YDK…');
+                setDeckImportBusyBar(15);
+                const text = await file.text();
+                setDeckImportBusySubtext('A consultar a API YGOPRODeck…');
+                setDeckImportBusyBar(45);
+                await applyImportedQueueToEditor(await ydkTextToCardQueue(text));
+                setDeckImportBusyBar(100);
+            }
+        } catch (e) {
+            console.error(e);
+            showToast(e && e.message ? e.message : 'Falha na importação.');
+        } finally {
+            if (overlayShown) {
+                const dt = Date.now() - overlayStart;
+                if (dt < 400) await new Promise((r) => setTimeout(r, 400 - dt));
+                hideDeckImportBusy();
+            }
+            input.value = '';
         }
     };
     window.resetFilters = () => {
