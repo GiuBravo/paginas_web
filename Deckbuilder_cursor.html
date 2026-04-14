@@ -1094,6 +1094,10 @@
         .btn-view.active { background: var(--accent); color: black; border-color: var(--accent); }
 
         .results-view { flex-grow: 1; min-height: 0; overflow-y: auto; }
+        @media (min-width: 901px) {
+            /* Desktop: não mostrar scrollbar na lista; o scroll do mouse pagina. */
+            .results-view { overflow-y: hidden; }
+        }
 
         .suggestion-item { 
             display: flex; 
@@ -6130,6 +6134,34 @@
             return 5;
         }
 
+        function tryComputeItemsPerPageFromViewport(isMobile) {
+            if (isMobile) return null;
+            const rv = document.getElementById('results-view');
+            if (!rv) return null;
+            const rvStyle = window.getComputedStyle(rv);
+            if (rvStyle.display !== 'grid') return null;
+
+            // Quantas colunas a grade está efetivamente usando agora.
+            const colsRaw = String(rvStyle.gridTemplateColumns || '').trim();
+            if (!colsRaw) return null;
+            const cols = colsRaw.split(/\s+/).filter(Boolean).length || 1;
+
+            // Altura real de um item (inclui variações por device/zoom/texto).
+            const sample = rv.querySelector('.suggestion-item');
+            if (!sample) return null;
+            const itemH = sample.getBoundingClientRect().height;
+            if (!Number.isFinite(itemH) || itemH < 10) return null;
+
+            const rowGap = parseFloat(rvStyle.rowGap || rvStyle.gap || '0') || 0;
+            const availH = rv.clientHeight;
+            if (!Number.isFinite(availH) || availH < 40) return null;
+
+            const rows = Math.max(1, Math.floor((availH + rowGap) / (itemH + rowGap)));
+            const perPage = cols * rows;
+            if (!Number.isFinite(perPage) || perPage < 1) return null;
+            return Math.min(300, Math.max(cols, perPage));
+        }
+
         const d = deckColumnCycle;
         const layout = document.getElementById('app-layout');
         const filtersHidden = !!(layout && layout.classList.contains('filters-col-hidden'));
@@ -6137,6 +6169,7 @@
         const fs = !!getFullscreenElement();
         const isMobile = window.innerWidth < 900;
         const perRow = fs ? getItemsPerRowForCurrentLayout(isMobile, d, filtersHidden, currentView) : 0;
+        const measured = tryComputeItemsPerPageFromViewport(isMobile);
         // Mobile
         if (isMobile) {
             if (currentView === 'list') {
@@ -6157,17 +6190,17 @@
         if (currentView === 'list') {
             // Regras específicas quando os filtros estão ocultos (modo lista).
             if (filtersHidden) {
-                if (d === 1) return 20 + perRow;
-                if (d === 2) return 12 + perRow;
+                if (d === 1) return measured ?? (20 + perRow);
+                if (d === 2) return measured ?? (12 + perRow);
             }
-            if (d === 0) return 20 + bonus + perRow;
-            if (d === 1) return 12 + bonus + perRow;
-            return 8 + bonus + perRow;
+            if (d === 0) return measured ?? (20 + bonus + perRow);
+            if (d === 1) return measured ?? (12 + bonus + perRow);
+            return measured ?? (8 + bonus + perRow);
         }
         // Desktop Grid Mode
-        if (d === 0) return 30 + bonus + perRow;
-        if (d === 1) return 21 + bonus + perRow;
-        return 15 + bonus + perRow;
+        if (d === 0) return measured ?? (30 + bonus + perRow);
+        if (d === 1) return measured ?? (21 + bonus + perRow);
+        return measured ?? (15 + bonus + perRow);
     }
 
     window.onload = () => {
