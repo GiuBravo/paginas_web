@@ -6101,41 +6101,73 @@
      * menos com coluna normal (1), ainda menos com coluna ampliada (2) — grade desktop: 10 / 7 / 5 colunas (oculto / normal / ampliado).
      */
     function getItemsPerPage() {
+        function getItemsPerRowForCurrentLayout(isMobile, d, filtersHidden, currentView) {
+            if (currentView === 'list') {
+                // A "lista" aqui é uma grade de linhas; 1 linha extra em fullscreen = +colunas.
+                if (filtersHidden) {
+                    // Desktop: deck oculto = 6 col; deck normal = 5 col; deck wide = 3 col.
+                    // Mobile: mantemos a mesma regra para não depender de medir DOM.
+                    if (d === 0) return 6;
+                    if (d === 1) return 5;
+                    return 3;
+                }
+                // Sem filtros ocultos: deck oculto = 5 col; deck normal = 3 col; deck wide = 2 col.
+                if (d === 0) return 5;
+                if (d === 1) return 3;
+                return 2;
+            }
+
+            // Grid: colunas desktop já estão descritas no comentário (10/7/5).
+            // Com filtros ocultos, a UI aumenta a grade (9/12/7 etc.), mas o "bonus" atual já cobre a troca de colunas.
+            // Para o incremento de fullscreen queremos sempre "mais 1 linha", então usamos as colunas efetivas por estado.
+            if (filtersHidden) {
+                if (d === 0) return 12; // filters hidden + deck hidden
+                if (d === 1) return 9;  // filters hidden + deck normal
+                return 7;               // filters hidden + deck wide
+            }
+            if (d === 0) return 10;
+            if (d === 1) return 7;
+            return 5;
+        }
+
         const d = deckColumnCycle;
         const layout = document.getElementById('app-layout');
         const filtersHidden = !!(layout && layout.classList.contains('filters-col-hidden'));
         const bonus = filtersHidden ? (currentView === 'list' ? 4 : 6) : 0;
+        const fs = !!getFullscreenElement();
+        const isMobile = window.innerWidth < 900;
+        const perRow = fs ? getItemsPerRowForCurrentLayout(isMobile, d, filtersHidden, currentView) : 0;
         // Mobile
-        if (window.innerWidth < 900) {
+        if (isMobile) {
             if (currentView === 'list') {
                 // Regras específicas quando os filtros estão ocultos (modo lista).
                 if (filtersHidden) {
-                    if (d === 1) return 20;
-                    if (d === 2) return 9;
+                    if (d === 1) return 20 + perRow;
+                    if (d === 2) return 9 + perRow;
                 }
-                if (d === 0) return 20 + bonus;
-                if (d === 1) return 16 + bonus;
-                return 12 + bonus;
+                if (d === 0) return 20 + bonus + perRow;
+                if (d === 1) return 16 + bonus + perRow;
+                return 12 + bonus + perRow;
             }
-            if (d === 0) return 24 + bonus;
-            if (d === 1) return 22 + bonus;
-            return 16 + bonus;
+            if (d === 0) return 24 + bonus + perRow;
+            if (d === 1) return 22 + bonus + perRow;
+            return 16 + bonus + perRow;
         }
         // Desktop List Mode
         if (currentView === 'list') {
             // Regras específicas quando os filtros estão ocultos (modo lista).
             if (filtersHidden) {
-                if (d === 1) return 20;
-                if (d === 2) return 9;
+                if (d === 1) return 20 + perRow;
+                if (d === 2) return 12 + perRow;
             }
-            if (d === 0) return 20 + bonus;
-            if (d === 1) return 12 + bonus;
-            return 8 + bonus;
+            if (d === 0) return 20 + bonus + perRow;
+            if (d === 1) return 12 + bonus + perRow;
+            return 8 + bonus + perRow;
         }
         // Desktop Grid Mode
-        if (d === 0) return 30 + bonus;
-        if (d === 1) return 21 + bonus;
-        return 15 + bonus;
+        if (d === 0) return 30 + bonus + perRow;
+        if (d === 1) return 21 + bonus + perRow;
+        return 15 + bonus + perRow;
     }
 
     window.onload = () => {
