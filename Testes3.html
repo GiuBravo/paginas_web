@@ -56,8 +56,7 @@
         .theme-white .workspace-header,
         .theme-white header,
         .theme-white .search-area,
-        .theme-white .view-controls,
-        .theme-white #date-filters-container {
+        .theme-white .view-controls {
             background: #ffffff !important;
             background-color: #ffffff !important;
             color: var(--text) !important;
@@ -326,8 +325,7 @@
         .theme-egyptian-gods .workspace-header,
         .theme-egyptian-gods header,
         .theme-egyptian-gods .search-area,
-        .theme-egyptian-gods .view-controls,
-        .theme-egyptian-gods #date-filters-container {
+        .theme-egyptian-gods .view-controls {
             background-image: linear-gradient(90deg,
                 rgba(59, 130, 246, 0.12),
                 rgba(239, 68, 68, 0.12),
@@ -632,6 +630,12 @@
             margin: 0;
             text-align: center;
             white-space: nowrap;
+        }
+        .icon-btn-stack .lang-switch {
+            min-height: 35px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         .icon-btn-stack .theme-row-label[for] { cursor: pointer; }
 
@@ -1251,19 +1255,22 @@
 
         .result-info-row {
             display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 10px;
+            flex-direction: column;
+            align-items: flex-start;
+            justify-content: flex-start;
+            gap: 4px;
             flex: 1 1 auto;
             min-width: 0;
             margin-right: 4px;
         }
         .result-info-row #result-info {
-            flex: 1 1 auto;
+            flex: 0 0 auto;
+            width: 100%;
             min-width: 0;
             font-size: 13px;
             font-weight: 650;
             color: var(--highlight-yellow) !important;
+            line-height: 1.35;
         }
         .theme-white .result-info-row #result-info {
             color: var(--label-text) !important;
@@ -1274,6 +1281,7 @@
             gap: 6px;
             flex-shrink: 0;
             white-space: nowrap;
+            margin-top: 1px;
         }
         .result-db-version-label {
             font-size: 10px;
@@ -1338,6 +1346,37 @@
         @media (min-width: 901px) {
             /* Desktop: não mostrar scrollbar na lista; o scroll do mouse pagina. */
             .results-view { overflow-y: hidden; }
+        }
+
+        .results-view > .results-state-placeholder {
+            grid-column: 1 / -1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: min(48vh, 400px);
+            padding: 44px 20px 52px;
+            text-align: center;
+            box-sizing: border-box;
+        }
+        .results-view > .results-state-placeholder .results-state-title {
+            font-size: 1.2em;
+            color: var(--accent);
+            margin-top: 18px;
+        }
+        .results-view > .results-state-placeholder .results-state-hint {
+            opacity: 0.62;
+            margin-top: 10px;
+            max-width: 420px;
+            line-height: 1.45;
+            font-size: 0.95em;
+        }
+        .results-view > .results-state-placeholder #results-loading-count {
+            margin-top: 14px;
+            font-size: 0.95em;
+            color: var(--accent);
+            opacity: 0.82;
+            min-height: 1.35em;
         }
 
         .suggestion-item { 
@@ -2415,17 +2454,18 @@
                 margin-bottom: 10px !important;
                 flex-wrap: wrap;
                 justify-content: center;
+                align-items: center !important;
             }
             #result-info {
-                display: inline !important;
-                width: auto !important;
+                display: block !important;
+                width: 100% !important;
                 margin-bottom: 0 !important;
                 text-align: center;
             }
             .result-db-version-wrap {
                 width: 100%;
                 justify-content: center;
-                margin-top: 4px;
+                margin-top: 6px;
                 flex-wrap: wrap;
             }
             .view-controls > div {
@@ -2630,39 +2670,32 @@
                 </div>
             </div>
             <div class="filter-group">
-                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 11px; color: var(--accent); text-transform: uppercase; font-weight: bold;">
-                    <input type="checkbox" id="enable-date-filter" style="width: auto;"> <span data-i18n="filter.date_enable">Ativar Filtro de Data/Era</span>
-                </label>
-            </div>
-            <div id="date-filters-container" style="display: none; border: 1px solid #333; padding: 10px; border-radius: 4px; margin-bottom: 15px; background: #111;">
-                <div class="filter-group">
-                    <label data-i18n="filter.era_label">Era Yu-Gi-Oh!</label>
-                    <p class="cardset-hint" data-i18n-html="filter.era_hint">Preenche o intervalo de datas. Uma era por vez; limpar deixa só o período manual.</p>
-                    <div style="display: flex; gap: 6px; align-items: stretch;">
-                        <input type="text" id="filter-era-input" list="datalist-filter-era" data-i18n-placeholder="filter.era_ph" placeholder="Ex.: GX, Zexal…" autocomplete="off" style="flex: 1;">
-                        <button type="button" id="filter-era-add" class="btn-secondary" style="width: auto; padding: 8px 10px; white-space: nowrap;" data-i18n="filter.add">Adicionar</button>
-                    </div>
-                    <datalist id="datalist-filter-era"></datalist>
-                    <div id="filter-era-chips" class="cardset-chips"></div>
-                    <button type="button" id="filter-era-clear" class="btn-secondary" style="margin-top: 6px; display: none;" data-i18n="filter.era_clear">Limpar era</button>
+                <label data-i18n="filter.era_label">Era Yu-Gi-Oh!</label>
+                <p class="cardset-hint" data-i18n-html="filter.era_hint">Preenche o intervalo de datas. Uma era por vez; limpar deixa só o período manual.</p>
+                <div style="display: flex; gap: 6px; align-items: stretch;">
+                    <input type="text" id="filter-era-input" list="datalist-filter-era" data-i18n-placeholder="filter.era_ph" placeholder="Ex.: GX, Zexal…" autocomplete="off" style="flex: 1;">
+                    <button type="button" id="filter-era-add" class="btn-secondary" style="width: auto; padding: 8px 10px; white-space: nowrap;" data-i18n="filter.add">Adicionar</button>
                 </div>
-                <div class="filter-group">
-                    <label data-i18n="filter.region_label">Basear busca em</label>
-                    <p class="cardset-hint" data-i18n-html="filter.region_hint">Lançamento TCG ou OCG. Uma opção por vez.</p>
-                    <div style="display: flex; gap: 6px; align-items: stretch;">
-                        <input type="text" id="filter-date-region-input" list="datalist-date-region" data-i18n-placeholder="filter.region_ph" placeholder="Ex.: TCG — lançamento ocidental" autocomplete="off" style="flex: 1;">
-                        <button type="button" id="filter-date-region-add" class="btn-secondary" style="width: auto; padding: 8px 10px; white-space: nowrap;" data-i18n="filter.add">Adicionar</button>
-                    </div>
-                    <datalist id="datalist-date-region"></datalist>
-                    <div id="filter-date-region-chips" class="cardset-chips"></div>
-                    <button type="button" id="filter-date-region-clear" class="btn-secondary" style="margin-top: 6px; display: none;" data-i18n="filter.region_clear">Limpar região</button>
-                </div>                
-                <div class="filter-group">
-                    <label data-i18n="filter.period_label">Período (De -> Até)</label>
-                    <div style="display: flex; gap: 5px;">
-                        <input type="date" id="date-start" value="1999-01-01" style="flex:1;">
-                        <input type="date" id="date-end" style="flex:1;">
-                    </div>
+                <datalist id="datalist-filter-era"></datalist>
+                <div id="filter-era-chips" class="cardset-chips"></div>
+                <button type="button" id="filter-era-clear" class="btn-secondary" style="margin-top: 6px; display: none;" data-i18n="filter.era_clear">Limpar era</button>
+            </div>
+            <div class="filter-group">
+                <label data-i18n="filter.region_label">Filtrar por data de lançamento</label>
+                <p class="cardset-hint" data-i18n-html="filter.region_hint">Adicione <strong>TCG</strong> ou <strong>OCG</strong> para filtrar por lançamento; o período aparece abaixo.</p>
+                <div style="display: flex; gap: 6px; align-items: stretch;">
+                    <input type="text" id="filter-date-region-input" list="datalist-date-region" data-i18n-placeholder="filter.region_ph" placeholder="Ex.: TCG — lançamento ocidental" autocomplete="off" style="flex: 1;">
+                    <button type="button" id="filter-date-region-add" class="btn-secondary" style="width: auto; padding: 8px 10px; white-space: nowrap;" data-i18n="filter.add">Adicionar</button>
+                </div>
+                <datalist id="datalist-date-region"></datalist>
+                <div id="filter-date-region-chips" class="cardset-chips"></div>
+                <button type="button" id="filter-date-region-clear" class="btn-secondary" style="margin-top: 6px; display: none;" data-i18n="filter.region_clear">Limpar região</button>
+            </div>
+            <div id="date-period-group" class="filter-group" style="display: none;">
+                <label data-i18n="filter.period_label">Período (De -> Até)</label>
+                <div style="display: flex; gap: 5px;">
+                    <input type="date" id="date-start" value="1999-02-04" style="flex:1;">
+                    <input type="date" id="date-end" style="flex:1;">
                 </div>
             </div>
             <div class="filter-group">
@@ -2685,8 +2718,8 @@
                 <label><i class="fa-solid fa-dollar-sign" aria-hidden="true"></i> <span data-i18n="filter.price_label">Faixa de Preço (USD)</span></label>
                 <p class="cardset-hint" data-i18n-html="filter.price_hint">Sem faixas salvas: um intervalo (min/max) filtra como antes. Com <strong>Adicionar faixa</strong>: várias faixas em união (carta em qualquer uma).</p>
                 <div style="display: flex; gap: 5px;">
-                    <input type="number" id="filter-price-min" data-i18n-placeholder="filter.price_min_ph" placeholder="Min $" step="0.1" style="width: 50%;">
-                    <input type="number" id="filter-price-max" data-i18n-placeholder="filter.price_max_ph" placeholder="Max $" step="0.1" style="width: 50%;">
+                    <input type="number" id="filter-price-min" data-i18n-placeholder="filter.price_min_ph" placeholder="Valor Mínimo" step="0.1" style="width: 50%;">
+                    <input type="number" id="filter-price-max" data-i18n-placeholder="filter.price_max_ph" placeholder="Valor Máximo" step="0.1" style="width: 50%;">
                 </div>
                 <button type="button" id="filter-price-add-chip" class="btn-secondary" style="width: 100%; margin-top: 6px;" data-i18n="filter.price_add">Adicionar faixa</button>
                 <div id="filter-price-chips" class="cardset-chips"></div>
@@ -2750,7 +2783,7 @@
         </div>
         <div class="view-controls">
             <div class="result-info-row" id="result-info-row">
-                <span id="result-info" style="color: #888;" data-i18n="results.loading">Carregando…</span>
+                <span id="result-info" style="color: #888;">Carregando…</span>
                 <div class="result-db-version-wrap" id="result-db-version-wrap" role="group" data-i18n-aria="ui.result_db_aria" aria-label="Versão do banco de dados YGOPRODeck" style="display: none;">
                     <span class="result-db-version-label" id="result-db-version-label" data-i18n="ui.result_db_label">Versão do banco YGOPRODeck</span>
                     <span id="result-db-version" class="result-db-version" title="" aria-live="polite"></span>
@@ -2779,12 +2812,6 @@
                     </div>
                 </div>
                 <div class="filter-group">
-                    <label class="theme-row-label" for="btn-lang-toggle" data-i18n="lang.label">Idioma</label>
-                    <div class="lang-switch" role="group" data-i18n-aria="lang.switch_aria" aria-label="Idioma das cartas (API)">
-                        <button type="button" id="btn-lang-toggle" class="lang-icon-btn" title="" aria-label=""></button>
-                    </div>
-                </div>
-                <div class="filter-group">
                     <label for="sort-by" class="sort-label" data-i18n="ui.sort_results">Ordenar</label>
                     <div class="sort-controls" style="display: flex; gap: 5px; align-items: center;">
                         <select id="sort-by" onchange="sortAndRender()" style="flex: 1;">
@@ -2805,6 +2832,12 @@
                     </div>
                 </div>
                 <div class="icon-btn-row">
+                    <div class="icon-btn-stack">
+                        <label class="theme-row-label" for="btn-lang-toggle" data-i18n="lang.label">Idioma</label>
+                        <div class="lang-switch" role="group" data-i18n-aria="lang.switch_aria" aria-label="Idioma das cartas (API)">
+                            <button type="button" id="btn-lang-toggle" class="lang-icon-btn" title="" aria-label=""></button>
+                        </div>
+                    </div>
                     <div class="icon-btn-stack">
                         <label class="theme-row-label" for="btn-random-filter-card" data-i18n="ui.random_label">Aleatório</label>
                         <button type="button" id="btn-random-filter-card" class="btn-view" data-i18n-title="ui.random_title" title="Sorteia uma carta aleatória da lista atual; clique de novo para desfazer" style="min-width: 38px; height: 35px; display: flex; align-items: center; justify-content: center;">
@@ -3800,7 +3833,6 @@
         "filter.ban_label": { pt: "Formato / Banlist", en: "Format / Banlist" },
         "filter.ban_ph": { pt: "Ex.: Formato TCG (principal)", en: "e.g. TCG Format (main)" },
         "filter.banlist_only": { pt: "Exibir somente cartas da Banlist", en: "Show only cards on the banlist" },
-        "filter.date_enable": { pt: "Ativar Filtro de Data/Era", en: "Enable date/era filter" },
         "filter.def_add": { pt: "Adicionar DEF \u00e0 busca", en: "Add DEF to search" },
         "filter.def_clear": { pt: "Limpar DEFs", en: "Clear DEFs" },
         "filter.def_hint": { pt: "Igual ao ATK: chips em uni\u00e3o com o valor do campo.", en: "Same as ATK: chips union with the field value." },
@@ -3809,7 +3841,7 @@
         "filter.desc_label": { pt: "Descri\u00e7\u00e3o/Efeito", en: "Description/Effect" },
         "filter.desc_ph": { pt: "Ex: 'banir', 'cemit\u00e9rio'\u2026", en: "e.g. 'banish', 'graveyard'\u2026" },
         "filter.era_clear": { pt: "Limpar era", en: "Clear era" },
-        "filter.era_hint": { pt: "Preenche o intervalo de datas. Uma era por vez; limpar deixa s\u00f3 o per\u00edodo manual.", en: "Fills the date range. One era at a time; clear leaves only the manual period." },
+        "filter.era_hint": { pt: "Preenche as datas do per\u00edodo (o bloco de datas aparece ap\u00f3s adicionar TCG ou OCG abaixo). Uma era de cada vez.", en: "Fills the period dates (the date fields appear after you add TCG or OCG below). One era at a time." },
         "filter.era_label": { pt: "Era Yu-Gi-Oh!", en: "Yu-Gi-Oh! era" },
         "filter.era_ph": { pt: "Ex.: GX, Zexal\u2026", en: "e.g. GX, ZEXAL\u2026" },
         "filter.level_clear": { pt: "Limpar n\u00edvel", en: "Clear level" },
@@ -3821,8 +3853,9 @@
         "filter.price_clear": { pt: "Limpar faixas salvas", en: "Clear saved ranges" },
         "filter.price_hint": { pt: "Sem faixas salvas: um intervalo (min/max) filtra como antes. Com <strong>Adicionar faixa</strong>: v\u00e1rias faixas em uni\u00e3o (carta em qualquer uma).", en: "With no saved ranges: one min/max filters as usual. With <strong>Add range</strong>: multiple ranges in union (card in any)." },
         "filter.price_label": { pt: "Faixa de Pre\u00e7o (USD)", en: "Price range (USD)" },
-        "filter.price_max_ph": { pt: "Max $", en: "Max $" },
-        "filter.price_min_ph": { pt: "Min $", en: "Min $" },
+        "filter.price_max_ph": { pt: "Valor M\u00e1ximo", en: "Maximum value" },
+        "filter.price_min_ph": { pt: "Valor M\u00ednimo", en: "Minimum value" },
+        "filter.price_chip_label": { pt: "Valor M\u00ednimo {min} \u00b7 Valor M\u00e1ximo {max}", en: "Minimum {min} \u00b7 Maximum {max}" },
         "filter.race_clear": { pt: "Limpar ra\u00e7a/tipo", en: "Clear race/type" },
         "filter.race_hint": { pt: "Um ou v\u00e1rios (API: v\u00edrgula). Sugest\u00f5es mudam conforme o tipo de carta.", en: "One or more (API: comma). Suggestions depend on card type." },
         "filter.race_label": { pt: "Ra\u00e7a / tipo de magia ou armadilha", en: "Race / spell or trap type" },
@@ -3832,8 +3865,8 @@
         "filter.rarity_label": { pt: "Raridade (impress\u00e3o)", en: "Rarity (printing)" },
         "filter.rarity_ph": { pt: "Ex.: Secret Rare", en: "e.g. Secret Rare" },
         "filter.region_clear": { pt: "Limpar regi\u00e3o", en: "Clear region" },
-        "filter.region_hint": { pt: "Lan\u00e7amento TCG ou OCG. Uma op\u00e7\u00e3o por vez.", en: "TCG or OCG release. One option at a time." },
-        "filter.region_label": { pt: "Basear busca em", en: "Base search on" },
+        "filter.region_hint": { pt: "Adicione <strong>TCG</strong> ou <strong>OCG</strong> para filtrar por lan\u00e7amento; o per\u00edodo (de/at\u00e9) aparece abaixo. Com era acima, as datas preenchem-se ao escolher a regi\u00e3o.", en: "Add <strong>TCG</strong> or <strong>OCG</strong> to filter by release; the date range appears below. With an era above, dates fill in once you pick a region." },
+        "filter.region_label": { pt: "Filtrar por data de lan\u00e7amento", en: "Filter by release date" },
         "filter.region_ph": { pt: "Ex.: TCG \u2014 lan\u00e7amento ocidental", en: "e.g. TCG \u2014 western release" },
         "filter.set_clear": { pt: "Limpar expans\u00f5es", en: "Clear sets" },
         "filter.set_hint": { pt: "Lista oficial YGOPRODeck (nomes de produtos em ingl\u00eas, como no cat\u00e1logo). Digite para filtrar sugest\u00f5es; Enter ou \u201cAdicionar\u201d inclui o set. Nenhum, um ou v\u00e1rios: a busca mostra cartas que aparecem em <strong>qualquer</strong> set selecionado.", en: "Official YGOPRODeck list (product names in English). Type to filter suggestions; Enter or Add includes the set. None, one, or many: search shows cards that appear in <strong>any</strong> selected set." },
@@ -3938,9 +3971,17 @@
         "opt.theme.yugi": { pt: "Yugi (DM)", en: "Yugi (DM)" },
         "queue.remove_copies": { pt: "Remover todas as c\u00f3pias", en: "Remove all copies" },
         "results.loading": { pt: "Carregando\u2026", en: "Loading\u2026" },
+        "results.loading_title": { pt: "A buscar cartas\u2026", en: "Searching for cards\u2026" },
+        "results.loading_hint": { pt: "O servidor pode demorar com muitos filtros ou v\u00e1rias p\u00e1ginas de dados. Os resultados aparecem aqui quando a resposta terminar.", en: "The server may take a while with many filters or multiple data pages. Results appear here when the response finishes." },
+        "results.loading_count": { pt: "{n} cartas reunidas at\u00e9 agora\u2026", en: "{n} cards gathered so far\u2026" },
         "results.none": { pt: "Nenhuma carta encontrada", en: "No cards found" },
+        "results.hint.date_invalid": { pt: "Per\u00edodo: uma ou ambas as datas n\u00e3o s\u00e3o v\u00e1lidas (use o formato DD/MM/AAAA).", en: "Date range: one or both dates are invalid (use DD/MM/YYYY)." },
+        "results.hint.date_order": { pt: "Per\u00edodo: a data inicial \u00e9 posterior \u00e0 final.", en: "Date range: start date is after the end date." },
+        "results.hint.price_inverted": { pt: "Pre\u00e7o: o valor m\u00ednimo \u00e9 maior que o valor m\u00e1ximo nos campos do filtro.", en: "Price: the minimum value is greater than the maximum in the filter fields." },
+        "results.hint.price_chip_inverted": { pt: "Pre\u00e7o: pelo menos uma faixa salva tem valor m\u00ednimo maior que o valor m\u00e1ximo.", en: "Price: at least one saved range has a minimum value above the maximum." },
         "results.range": { pt: "Exibindo {a}-{b} de {t}", en: "Showing {a}-{b} of {t}" },
-        "search.combine_price_date": { pt: "Combine pre\u00e7o ou datas com nome, filtros, c\u00f3digo(s) de set ou raridade.", en: "Combine price or dates with name, filters, set code(s), or rarity." },
+        "results.range_cards": { pt: "Exibindo {a}-{b} de {e} \u2014 {c} cartas sendo {v} por artes alternativas.", en: "Showing {a}-{b} of {e} \u2014 {c} cards, {v} from alternate art." },
+        "search.combine_price_date": { pt: "Para filtrar s\u00f3 por pre\u00e7o, combine com nome, outros filtros, c\u00f3digo(s) de set ou raridade.", en: "To filter by price only, combine with name, other filters, set code(s), or rarity." },
         "search.failed": { pt: "N\u00e3o foi poss\u00edvel buscar.", en: "Could not complete search." },
         "search.no_setcode": { pt: "Nenhum resultado para o(s) c\u00f3digo(s) de set.", en: "No results for the set code(s)." },
         "search.rarity_scan": { pt: "A pesquisar por raridade no cat\u00e1logo completo (v\u00e1rios pedidos)\u2026", en: "Searching rarity across the full catalog (several requests)\u2026" },
@@ -4004,6 +4045,7 @@
         "toast.pick_saved_delete": { pt: "Escolha um deck salvo para apagar.", en: "Choose a saved deck to delete." },
         "toast.pick_saved_rename": { pt: "Escolha um deck salvo para renomear.", en: "Choose a saved deck to rename." },
         "toast.price_need": { pt: "Preencha ao menos o m\u00ednimo ou o m\u00e1ximo da faixa.", en: "Fill at least min or max for the range." },
+        "toast.price_inverted": { pt: "O valor m\u00ednimo n\u00e3o pode ser maior que o valor m\u00e1ximo nessa faixa.", en: "The minimum value cannot be greater than the maximum for that range." },
         "toast.random_pick": { pt: "Aleat\u00f3rio: {name} \u2014 clique de novo para voltar \u00e0 lista.", en: "Random: {name} \u2014 click again to restore the list." },
         "toast.rarity_dup": { pt: "Raridade j\u00e1 selecionada.", en: "Rarity already selected." },
         "toast.rarity_max": { pt: "M\u00e1ximo 12 raridades.", en: "Maximum 12 rarities." },
@@ -4102,6 +4144,7 @@
         "ui.screen_title": { pt: "Tela inteira (como F11)", en: "Fullscreen (like F11)" },
         "ui.sort_results": { pt: "Ordenar", en: "Sort" },
         "ui.theme_label": { pt: "Tema do sistema", en: "System theme" },
+        "ui.theme_label_short": { pt: "Tema", en: "Theme" },
         "ui.tooltip_aria": { pt: "Alternar tooltip", en: "Toggle tooltip" },
         "ui.tooltip_label": { pt: "Tooltip", en: "Tooltip" },
         "ui.tooltip_title_on": { pt: "Tooltip ao passar o rato: ligado (clique para desligar)", en: "Hover tooltip: on (click to turn off)" },
@@ -4158,6 +4201,7 @@
             if (typeof syncExportMenuTitle === 'function') syncExportMenuTitle();
         } catch (_) {}
         updateLangButtonsUi();
+        try { refreshViewControlsHeaderCompact(); } catch (_) {}
     }
 
     const SVG_FLAG_BR = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 14" aria-hidden="true"><rect width="20" height="14" fill="#009b3a"/><path d="M10 1.8L16.2 7 10 12.2 3.8 7z" fill="#ffdf00"/><circle cx="10" cy="7" r="2.3" fill="#002776"/></svg>';
@@ -4351,6 +4395,7 @@
         if (!layout) return;
         layout.classList.toggle('deck-col-hidden', deckColumnCycle === 0);
         layout.classList.toggle('deck-col-wide', deckColumnCycle === 2);
+        try { refreshViewControlsHeaderCompact(); } catch (_) {}
     }
 
     function updateDeckColumnCycleButtonUi() {
@@ -4602,18 +4647,46 @@
     let ygoprodeckDbVersionShort = '';
     let ygoprodeckDbVersionTitle = '';
 
+    function isCompactViewControlsContext() {
+        const layout = document.getElementById('app-layout');
+        if (!layout) return false;
+        if (layout.classList.contains('filters-col-hidden')) return false;
+        return deckColumnCycle === 2;
+    }
+
     function paintResultDbVersion() {
         const el = document.getElementById('result-db-version');
         const wrap = document.getElementById('result-db-version-wrap');
+        const label = document.getElementById('result-db-version-label');
         if (!el) return;
         const ver = ygoprodeckDbVersionShort || '';
-        el.textContent = ver;
+        const compact = isCompactViewControlsContext();
         const tip = ygoprodeckDbVersionTitle || 'Versão do banco de dados YGOPRODeck (API)';
+        if (label) {
+            if (compact && ver) {
+                label.style.display = 'none';
+            } else {
+                label.style.display = '';
+                label.textContent = T('ui.result_db_label');
+            }
+        }
+        el.textContent = compact && ver ? `V ${ver}` : ver;
         el.setAttribute('title', tip);
         if (wrap) {
             wrap.style.display = ver ? 'flex' : 'none';
             wrap.setAttribute('title', tip);
         }
+    }
+
+    function refreshThemeRowLabelCompact() {
+        const lab = document.querySelector('label[for="theme-selector"]');
+        if (!lab) return;
+        lab.textContent = isCompactViewControlsContext() ? T('ui.theme_label_short') : T('ui.theme_label');
+    }
+
+    function refreshViewControlsHeaderCompact() {
+        paintResultDbVersion();
+        refreshThemeRowLabelCompact();
     }
 
     function applyCheckDbVerJson(j) {
@@ -4642,7 +4715,7 @@
         } catch (e) {
             console.warn('checkDBVer:', e);
         }
-        paintResultDbVersion();
+        refreshViewControlsHeaderCompact();
     }
     window.selectedCardsetNames = [];
     window.selectedSetCodes = [];
@@ -4654,7 +4727,7 @@
         attribute: [],
         level: [],
         era: [],
-        dateRegion: ['tcg'],
+        dateRegion: [],
         banlist: [],
         archetype: []
     };
@@ -4722,6 +4795,30 @@
         'arc-v': { tcg: ['2014-08-01', '2017-07-31'], ocg: ['2014-03-21', '2017-03-24'] },
         vrains: { tcg: ['2017-08-01', '2020-04-30'], ocg: ['2017-03-25', '2020-04-17'] }
     };
+
+    /** Primeiro lançamento representado no banco YGOPRODeck por mercado (misc tcg_date / ocg_date). */
+    const FIRST_KNOWN_RELEASE_ISO = { ocg: '1999-02-04', tcg: '2002-03-08' };
+
+    function getDefaultDateStartForRegions(regions) {
+        const keys = [...new Set((regions || []).filter(r => r === 'tcg' || r === 'ocg'))];
+        if (!keys.length) return FIRST_KNOWN_RELEASE_ISO.ocg;
+        let min = null;
+        for (const r of keys) {
+            const s = FIRST_KNOWN_RELEASE_ISO[r];
+            if (s && (min === null || s < min)) min = s;
+        }
+        return min || FIRST_KNOWN_RELEASE_ISO.ocg;
+    }
+
+    function applyReleasePeriodDefaults() {
+        const dr = window.filterChipState.dateRegion || [];
+        if (!dr.length) return;
+        const startEl = document.getElementById('date-start');
+        const endEl = document.getElementById('date-end');
+        if (!startEl || !endEl) return;
+        startEl.value = getDefaultDateStartForRegions(dr);
+        endEl.value = new Date().toISOString().split('T')[0];
+    }
 
     const FILTER_TYPE_DL = [
         { v: 'Monster', aliases: ['monster', 'monstro'] },
@@ -4919,8 +5016,81 @@
     }
     function getDateRegionTypes() {
         const a = window.filterChipState.dateRegion || [];
-        // Garantir o comportamento legado: sem seleção => tcg
         return a.length ? a : ['tcg'];
+    }
+
+    /** Filtro por data ativo: era(s) ou pelo menos um chip TCG/OCG. */
+    function isDateFilterActive() {
+        if (getFilterEraKeys().length > 0) return true;
+        const dr = window.filterChipState.dateRegion;
+        return Array.isArray(dr) && dr.length > 0;
+    }
+
+    /** Mostra o intervalo de datas só depois de escolher região (chip TCG/OCG). */
+    function syncDatePeriodGroupVisibility() {
+        const el = document.getElementById('date-period-group');
+        if (!el) return;
+        const dr = window.filterChipState.dateRegion || [];
+        el.style.display = dr.length > 0 ? 'block' : 'none';
+    }
+
+    /** Aceita só AAAA-MM-DD com dia/mês coerentes (evita anos com dígitos a mais, etc.). */
+    function isValidCalendarIsoDate(s) {
+        if (s == null || typeof s !== 'string') return false;
+        const m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        if (!m) return false;
+        const y = +m[1], mo = +m[2], d = +m[3];
+        if (!Number.isFinite(y) || !Number.isFinite(mo) || !Number.isFinite(d)) return false;
+        if (y < 1 || y > 9999 || mo < 1 || mo > 12 || d < 1 || d > 31) return false;
+        const dt = new Date(Date.UTC(y, mo - 1, d));
+        return dt.getUTCFullYear() === y && dt.getUTCMonth() === mo - 1 && dt.getUTCDate() === d;
+    }
+
+    /**
+     * Mensagens curtas quando filtros estão inconsistentes (para complementar "Nenhuma carta encontrada").
+     * @returns {string[]}
+     */
+    function getActiveFilterValidationHints() {
+        const hints = [];
+        const push = (msg) => {
+            if (msg && !hints.includes(msg)) hints.push(msg);
+        };
+        if (isDateFilterActive()) {
+            const eraKeys = getFilterEraKeys() || [];
+            const manualPeriodMatters = eraKeys.length === 0;
+            if (manualPeriodMatters) {
+                const ds = (document.getElementById('date-start')?.value || '').trim();
+                const de = (document.getElementById('date-end')?.value || '').trim();
+                let bad = false;
+                if (ds && !isValidCalendarIsoDate(ds)) bad = true;
+                if (de && !isValidCalendarIsoDate(de)) bad = true;
+                if (bad) push(T('results.hint.date_invalid'));
+                else if (ds && de && isValidCalendarIsoDate(ds) && isValidCalendarIsoDate(de) && ds > de) {
+                    push(T('results.hint.date_order'));
+                }
+            }
+        }
+        const mtf = window.multiTextFilters || { priceRanges: [] };
+        const pMinEl = document.getElementById('filter-price-min');
+        const pMaxEl = document.getElementById('filter-price-max');
+        const pMin = (pMinEl?.value || '').trim();
+        const pMax = (pMaxEl?.value || '').trim();
+        const hasChips = (mtf.priceRanges || []).length > 0;
+        if (!hasChips && pMin && pMax) {
+            const a = parseFloat(pMin), b = parseFloat(pMax);
+            if (Number.isFinite(a) && Number.isFinite(b) && a > b) push(T('results.hint.price_inverted'));
+        }
+        let chipInverted = false;
+        for (const r of mtf.priceRanges || []) {
+            const loRaw = r.min === '' || r.min == null ? null : parseFloat(r.min);
+            const hiRaw = r.max === '' || r.max == null ? null : parseFloat(r.max);
+            if (Number.isFinite(loRaw) && Number.isFinite(hiRaw) && loRaw > hiRaw) {
+                chipInverted = true;
+                break;
+            }
+        }
+        if (chipInverted) push(T('results.hint.price_chip_inverted'));
+        return hints;
     }
     function getBanlistTypeFromState() {
         const a = window.filterChipState.banlist;
@@ -5005,6 +5175,7 @@
             });
             if (clr) clr.style.display = arr.length ? 'block' : 'none';
         });
+        syncDatePeriodGroupVisibility();
     }
 
     function removeComboFilterChip(key, val) {
@@ -5021,7 +5192,16 @@
             if (atkEl) atkEl.value = '';
             if (defEl) defEl.value = '';
         }
-        if (key === 'dateRegion' && st.dateRegion.length === 0) st.dateRegion = ['tcg'];
+        if (key === 'dateRegion' && st.dateRegion.length > 0) {
+            const ek = getFilterEraKey();
+            if (ek) applyEraToDateInputs(ek);
+            else applyReleasePeriodDefaults();
+        }
+        if (key === 'era' && (st.dateRegion || []).length > 0) {
+            const ek = getFilterEraKey();
+            if (ek) applyEraToDateInputs(ek);
+            else applyReleasePeriodDefaults();
+        }
         syncMonsterFilterGroups();
         refreshSubtypeRaceDatalists();
         paintComboFilterChips();
@@ -5303,6 +5483,7 @@
             dateRegion: { input: 'filter-date-region-input', max: 2, resolve: resolveDateRegionInput, key: 'dateRegion', after: () => {
                 const ek = getFilterEraKey();
                 if (ek) applyEraToDateInputs(ek);
+                else applyReleasePeriodDefaults();
             }},
             banlist: { input: 'filter-banlist-input', max: 3, resolve: resolveBanlistInput, key: 'banlist', after: () => { toggleBanlistCheckbox(); } },
             archetype: { input: 'filter-archetype-input', max: 99, resolve: resolveArchetypeNameFromInput, key: 'archetype', after: () => {} }
@@ -5355,7 +5536,11 @@
             const a = document.getElementById('filter-atk'); const d = document.getElementById('filter-def');
             if (a) a.value = ''; if (d) d.value = '';
         }
-        if (key === 'dateRegion') window.filterChipState.dateRegion = ['tcg'];
+        if (key === 'dateRegion') window.filterChipState.dateRegion = [];
+        if (key === 'era') {
+            const dr = window.filterChipState.dateRegion || [];
+            if (dr.length > 0) applyReleasePeriodDefaults();
+        }
         syncMonsterFilterGroups();
         refreshSubtypeRaceDatalists();
         paintComboFilterChips();
@@ -5837,7 +6022,7 @@
     const RARITY_FULL_SCAN_PAGE = 5000;
 
     /** Catálogo completo (paginação num/offset), fusão EN+PT — para filtro só por raridade. */
-    async function fetchAllCardsPaginatedMerged() {
+    async function fetchAllCardsPaginatedMerged(onProgress) {
         // Modo inglês: buscar somente EN na API (sem merge PT).
         // Inglês na API = padrão sem parâmetro `language` (YGOPRODeck: só pt/fr/de/it usam &language=).
         if (isEnglishMode()) {
@@ -5859,6 +6044,9 @@
                 const rows = res.data || [];
                 if (!rows.length) break;
                 rows.forEach(card => mergedMap.set(card.id, card));
+                if (typeof onProgress === 'function') {
+                    try { onProgress(mergedMap.size); } catch (_) {}
+                }
                 offset += num;
                 if (totalRows > 0 && offset >= totalRows) break;
                 if (offset > 250000) break;
@@ -5896,6 +6084,9 @@
                 if (existing) mergedMap.set(card.id, { ...existing, ...card });
                 else mergedMap.set(card.id, card);
             });
+            if (typeof onProgress === 'function') {
+                try { onProgress(mergedMap.size); } catch (_) {}
+            }
             offset += num;
             if (totalRows > 0 && offset >= totalRows) break;
             if (offset > 250000) break;
@@ -5903,8 +6094,70 @@
         return mergedMap;
     }
 
-    async function fetchMergedCardinfoDualLoop(p, archFilters, archLoop, fnames, descs, atks, defs, sets) {
+    async function fetchMergedCardinfoDualLoop(p, archFilters, archLoop, fnames, descs, atks, defs, sets, onProgress) {
         const mergedMap = new Map();
+        const CARDINFO_PAGE = 5000;
+        async function fetchPaginatedIntoMap(pReq) {
+            let offset = 0;
+            let totalRows = 0;
+            let first = true;
+            /** Com interface em EN, nomes/descrições em PT ainda exigem catálogo PT na API (fname só em PT, senão 400/vazio). */
+            const useDualTextMerge = !isEnglishMode() || pReq.has('fname') || pReq.has('desc');
+            for (;;) {
+                const pr = new URLSearchParams(pReq);
+                pr.set('num', String(CARDINFO_PAGE));
+                pr.set('offset', String(offset));
+                let rowCount = 0;
+                if (!useDualTextMerge) {
+                    const urlGlobal = `https://db.ygoprodeck.com/api/v7/cardinfo.php?${pr.toString()}`;
+                    const resG = await fetch(urlGlobal).then(rr => rr.ok ? rr.json() : { data: [] });
+                    if (resG.error) break;
+                    if (first && resG.meta && typeof resG.meta.total_rows === 'number') {
+                        totalRows = resG.meta.total_rows;
+                    }
+                    if (first) first = false;
+                    const rows = resG.data || [];
+                    rowCount = rows.length;
+                    if (!rowCount) break;
+                    rows.forEach(card => mergedMap.set(card.id, card));
+                    if (typeof onProgress === 'function') {
+                        try { onProgress(mergedMap.size); } catch (_) {}
+                    }
+                } else {
+                    const urlGlobal = `https://db.ygoprodeck.com/api/v7/cardinfo.php?${pr.toString()}`;
+                    const pPt = new URLSearchParams(pr);
+                    pPt.set('language', 'pt');
+                    const urlPT = `https://db.ygoprodeck.com/api/v7/cardinfo.php?${pPt.toString()}`;
+                    const [resGlobal, resPT] = await Promise.all([
+                        fetch(urlGlobal).then(rr => rr.ok ? rr.json() : { data: [] }),
+                        fetch(urlPT).then(rr => rr.ok ? rr.json() : { data: [] })
+                    ]);
+                    const rowsG = resGlobal.data || [];
+                    const rowsP = resPT.data || [];
+                    if (!rowsG.length && !rowsP.length) break;
+                    if (first) {
+                        const tG = resGlobal.meta && typeof resGlobal.meta.total_rows === 'number' ? resGlobal.meta.total_rows : 0;
+                        const tP = resPT.meta && typeof resPT.meta.total_rows === 'number' ? resPT.meta.total_rows : 0;
+                        totalRows = Math.max(tG, tP);
+                        first = false;
+                    }
+                    rowsG.forEach(card => mergedMap.set(card.id, card));
+                    rowsP.forEach(card => {
+                        const existing = mergedMap.get(card.id);
+                        if (existing) mergedMap.set(card.id, { ...existing, ...card });
+                        else mergedMap.set(card.id, card);
+                    });
+                    rowCount = Math.max(rowsG.length, rowsP.length);
+                    if (typeof onProgress === 'function') {
+                        try { onProgress(mergedMap.size); } catch (_) {}
+                    }
+                }
+                offset += CARDINFO_PAGE;
+                if (totalRows > 0 && offset >= totalRows) break;
+                if (rowCount < CARDINFO_PAGE) break;
+                if (offset > 250000) break;
+            }
+        }
         for (const arArch of archLoop) {
             for (const fn of fnames) {
                 for (const d of descs) {
@@ -5918,26 +6171,7 @@
                                 if (a != null) pReq.append('atk', a);
                                 if (df != null) pReq.append('def', df);
                                 if (sn != null) pReq.append('cardset', sn);
-                                if (isEnglishMode()) {
-                                    const urlGlobal = `https://db.ygoprodeck.com/api/v7/cardinfo.php?${pReq.toString()}`;
-                                    const resG = await fetch(urlGlobal).then(rr => rr.ok ? rr.json() : { data: [] });
-                                    (resG.data || []).forEach(card => mergedMap.set(card.id, card));
-                                } else {
-                                    const urlGlobal = `https://db.ygoprodeck.com/api/v7/cardinfo.php?${pReq.toString()}`;
-                                    const pPt = new URLSearchParams(pReq);
-                                    pPt.set('language', 'pt');
-                                    const urlPT = `https://db.ygoprodeck.com/api/v7/cardinfo.php?${pPt.toString()}`;
-                                    const [resGlobal, resPT] = await Promise.all([
-                                        fetch(urlGlobal).then(rr => rr.ok ? rr.json() : { data: [] }),
-                                        fetch(urlPT).then(rr => rr.ok ? rr.json() : { data: [] })
-                                    ]);
-                                    (resGlobal.data || []).forEach(card => mergedMap.set(card.id, card));
-                                    (resPT.data || []).forEach(card => {
-                                        const existing = mergedMap.get(card.id);
-                                        if (existing) mergedMap.set(card.id, { ...existing, ...card });
-                                        else mergedMap.set(card.id, card);
-                                    });
-                                }
+                                await fetchPaginatedIntoMap(pReq);
                             }
                         }
                     }
@@ -5947,7 +6181,7 @@
         return mergedMap;
     }
 
-    async function fetchCardsByIdsBatched(idIterable) {
+    async function fetchCardsByIdsBatched(idIterable, onProgress) {
         const idArr = [...idIterable].filter(id => id != null && !Number.isNaN(Number(id)));
         const mergedMap = new Map();
         const BATCH = 60;
@@ -5975,6 +6209,9 @@
                     if (existing) mergedMap.set(card.id, { ...existing, ...card });
                     else mergedMap.set(card.id, card);
                 });
+            }
+            if (typeof onProgress === 'function') {
+                try { onProgress(mergedMap.size); } catch (_) {}
             }
         }
         return mergedMap;
@@ -6070,7 +6307,7 @@
             box.innerHTML = (m.priceRanges || []).map(r => {
                 const minL = (r.min === '' || r.min == null) ? '—' : r.min;
                 const maxL = (r.max === '' || r.max == null) ? '—' : r.max;
-                const lab = `Min $${minL} · Max $${maxL}`;
+                const lab = T('filter.price_chip_label', { min: minL, max: maxL });
                 const idSafe = escAttr(String(r.id));
                 return `<span class="cardset-chip">${escAttr(lab)}<button type="button" class="mt-chip-x" data-mt="price" data-mt-val="" data-mt-id="${idSafe}">&times;</button></span>`;
             }).join('');
@@ -6190,6 +6427,13 @@
         if (!mn && !mx) {
             showToast(T('toast.price_need'));
             return;
+        }
+        if (mn && mx) {
+            const a = parseFloat(mn), b = parseFloat(mx);
+            if (Number.isFinite(a) && Number.isFinite(b) && a > b) {
+                showToast(T('toast.price_inverted'));
+                return;
+            }
         }
         if (!window.multiTextFilters.priceRanges) window.multiTextFilters.priceRanges = [];
         window.multiTextFilters.priceRanges.push({
@@ -6411,6 +6655,7 @@
         try {
             localStorage.setItem('ygo_proxy_filters_col_visible', hidden ? '0' : '1');
         } catch (_) {}
+        try { refreshViewControlsHeaderCompact(); } catch (_) {}
     }
 
     function initFiltersColumnToolbar() {
@@ -7144,7 +7389,10 @@
 
     window.onload = () => {
         const hoje = new Date().toISOString().split('T')[0];
-        document.getElementById('date-end').value = hoje;
+        const ds = document.getElementById('date-start');
+        const de = document.getElementById('date-end');
+        if (ds) ds.value = FIRST_KNOWN_RELEASE_ISO.ocg;
+        if (de) de.value = hoje;
 
         // Restaura preferências de UI (cookies; fallback localStorage).
         try {
@@ -7220,6 +7468,10 @@
         updateLangButtonsUi();
         applyUiLanguage();
         try {
+            const ri0 = document.getElementById('result-info');
+            if (ri0) ri0.textContent = T('results.loading');
+        } catch (_) {}
+        try {
             const bLang = document.getElementById('btn-lang-toggle');
             if (bLang) bLang.onclick = () => setUiLang(getUiLang() === 'pt' ? 'en' : 'pt');
         } catch (_) {}
@@ -7245,10 +7497,6 @@
         const cspClose = document.getElementById('card-sets-panel-close');
         if (cspBack) cspBack.addEventListener('click', closeCardSetsPanel);
         if (cspClose) cspClose.addEventListener('click', closeCardSetsPanel);
-        document.getElementById('enable-date-filter').onchange = function() {
-            document.getElementById('date-filters-container').style.display = this.checked ? 'block' : 'none';
-            triggerSearch();
-        };
         ['date-start', 'date-end'].forEach(id => {
             document.getElementById(id).addEventListener('change', triggerSearch);
         });
@@ -7422,6 +7670,31 @@
 
     function triggerSearch() { clearTimeout(window.sTimeout); window.sTimeout = setTimeout(performSearch, 500); }
 
+    function paintResultsLoadingState() {
+        const container = document.getElementById('results-view');
+        if (!container) return;
+        container.className = `results-view ${currentView}-mode`;
+        container.innerHTML = `
+            <div class="results-state-placeholder" role="status" aria-live="polite">
+                <div class="results-loading-spinner" aria-hidden="true"><i class="fas fa-circle-notch fa-spin" style="font-size: 3em; color: var(--accent); opacity: 0.88;"></i></div>
+                <b class="results-state-title">${T('results.loading_title')}</b>
+                <p class="results-state-hint">${T('results.loading_hint')}</p>
+                <p id="results-loading-count"></p>
+            </div>`;
+        const ri = document.getElementById('result-info');
+        if (ri) ri.textContent = T('results.loading');
+        try { refreshViewControlsHeaderCompact(); } catch (_) {}
+    }
+
+    function updateResultsLoadingProgress(n) {
+        if (n == null || n < 1) return;
+        const line = T('results.loading_count', { n });
+        const ri = document.getElementById('result-info');
+        if (ri) ri.textContent = line;
+        const el = document.getElementById('results-loading-count');
+        if (el) el.textContent = line;
+    }
+
     /**
      * Busca cartas com os filtros atuais (EN+PT); devolve lista sem expandir artes.
      * kind: 'skip' (OCR aberto), 'clear' (sem critério), 'toast' (validação), 'data', 'error'
@@ -7440,12 +7713,15 @@
         const levels = getFilterLevels();
         const lv = getFilterLevel(); // compat
         const race = getFilterRaceParam();
-        const dateEnabled = document.getElementById('enable-date-filter').checked;
+        const dateEnabled = isDateFilterActive();
         const dateRegions = getDateRegionTypes();
         const dateRegion = getDateRegionType(); // compat
         const eraKeys = getFilterEraKeys();
         const dateStart = document.getElementById('date-start').value;
         const dateEnd = document.getElementById('date-end').value;
+        /** Datas via API (startdate/enddate/dateregion); eras continuam no cliente com misc_info. */
+        const useApiDateFilter = dateEnabled && !(eraKeys && eraKeys.length);
+        const dateRegionApiLoop = useApiDateFilter ? dateRegions : [null];
         const banlistTypes = getBanlistTypesFromState();
         const banlistType = getBanlistTypeFromState(); // compat (primeiro)
         const banlistOnly = document.getElementById('enable-banlist-only').checked;
@@ -7487,7 +7763,7 @@
             return { kind: 'clear' };
         }
 
-        if (!narrowing && !hasSetcodeFilter && !hasRarityFilter && (hasPriceFilter || dateEnabled)) {
+        if (!narrowing && !hasSetcodeFilter && !hasRarityFilter && hasPriceFilter) {
             return {
                 kind: 'toast',
                 msg: T('search.combine_price_date')
@@ -7520,7 +7796,7 @@
         const defs = defList.length ? defList : [null];
         const sets = setNames.length ? setNames : [null];
         const archLoop = archFilters.length > 1 ? archFilters : [null];
-        const comboCount = fnames.length * descs.length * atks.length * defs.length * sets.length * archLoop.length;
+        const comboCount = fnames.length * descs.length * atks.length * defs.length * sets.length * archLoop.length * dateRegionApiLoop.length;
         const setcodesOnlyPath = hasSetcodeFilter && !narrowing;
 
         if (!setcodesOnlyPath && !rarityOnlyPath && comboCount > MULTI_SEARCH_MAX_COMBO) {
@@ -7531,17 +7807,18 @@
         }
 
         try {
+            paintResultsLoadingState();
             let finalData;
             if (setcodesOnlyPath) {
                 const idUnion = await unionIdsFromSetcodesList(setcodes);
                 if (idUnion.size === 0) {
                     return { kind: 'toast', msg: T('search.no_setcode') };
                 }
-                const mergedById = await fetchCardsByIdsBatched(idUnion);
+                const mergedById = await fetchCardsByIdsBatched(idUnion, updateResultsLoadingProgress);
                 finalData = Array.from(mergedById.values());
             } else if (rarityOnlyPath) {
                 showToast(T('search.rarity_scan'));
-                const bigMap = await fetchAllCardsPaginatedMerged();
+                const bigMap = await fetchAllCardsPaginatedMerged(updateResultsLoadingProgress);
                 finalData = Array.from(bigMap.values()).filter(card => cardMatchesRarityFilters(card, rarities));
             } else {
                 // Se houver múltiplos tipos selecionados (Monstro/Magia/Armadilha),
@@ -7586,18 +7863,30 @@
                                     else if (type !== 'Monster') pReq.append('type', type);
                                 }
 
-                                const m = await fetchMergedCardinfoDualLoop(pReq, archFilters, archLoop, fnames, descs, atks, defs, sets);
-                                let list = Array.from(m.values());
+                                for (const dr of dateRegionApiLoop) {
+                                    const pReqDr = new URLSearchParams(pReq);
+                                    if (dr != null) {
+                                        pReqDr.set('startdate', dateStart || '1900-01-01');
+                                        pReqDr.set('enddate', dateEnd || '9999-12-31');
+                                        pReqDr.set('dateregion', dr);
+                                    }
+                                    const baselineIds = mergedById.size;
+                                    const m = await fetchMergedCardinfoDualLoop(
+                                        pReqDr, archFilters, archLoop, fnames, descs, atks, defs, sets,
+                                        (n) => updateResultsLoadingProgress(baselineIds + n)
+                                    );
+                                    let list = Array.from(m.values());
 
-                                // Se Monster sem subtipo, garantir que a categoria Monster esteja aplicada
-                                const wantMonster = multiTypeMode ? (cat === 'Monster') : (type === 'Monster');
-                                const wantSpell = multiTypeMode ? (cat === 'Spell Card') : (type === 'Spell Card');
-                                const wantTrap = multiTypeMode ? (cat === 'Trap Card') : (type === 'Trap Card');
-                                if (wantMonster) list = list.filter(c => String(c.type || '').toLowerCase().includes('monster'));
-                                else if (wantSpell) list = list.filter(c => String(c.type || '').toLowerCase().includes('spell'));
-                                else if (wantTrap) list = list.filter(c => String(c.type || '').toLowerCase().includes('trap'));
+                                    // Se Monster sem subtipo, garantir que a categoria Monster esteja aplicada
+                                    const wantMonster = multiTypeMode ? (cat === 'Monster') : (type === 'Monster');
+                                    const wantSpell = multiTypeMode ? (cat === 'Spell Card') : (type === 'Spell Card');
+                                    const wantTrap = multiTypeMode ? (cat === 'Trap Card') : (type === 'Trap Card');
+                                    if (wantMonster) list = list.filter(c => String(c.type || '').toLowerCase().includes('monster'));
+                                    else if (wantSpell) list = list.filter(c => String(c.type || '').toLowerCase().includes('spell'));
+                                    else if (wantTrap) list = list.filter(c => String(c.type || '').toLowerCase().includes('trap'));
 
-                                list.forEach(card => mergedById.set(card.id, card));
+                                    list.forEach(card => mergedById.set(card.id, card));
+                                }
                             }
                         }
                     }
@@ -7633,7 +7922,7 @@
                     return price >= minP && price <= maxP;
                 });
             }
-            if (dateEnabled) {
+            if (dateEnabled && (!useApiDateFilter || setcodesOnlyPath)) {
                 const start = dateStart || "1900-01-01";
                 const end = dateEnd || "9999-12-31";
                 finalData = finalData.filter(card => {
@@ -7768,24 +8057,39 @@
             if (currentPage > maxPage) currentPage = maxPage;
         }
         if (searchResults.length === 0) {
+            const filterHints = getActiveFilterValidationHints();
+            const hintBlock = filterHints.length
+                ? `<p class="results-state-hint" style="margin-top:14px;max-width:36em;margin-left:auto;margin-right:auto;line-height:1.45;">${filterHints.map(h => escapeHtml(h)).join(' ')}</p>`
+                : '';
             document.getElementById('result-info').innerText = T('results.none');
             document.getElementById('page-total').innerText = "/ 1";
             document.getElementById('page-jump').value = 1;
-            paintResultDbVersion();
+            refreshViewControlsHeaderCompact();
             container.innerHTML = `<div style="grid-column: 1/-1; padding: 60px 20px; text-align: center; opacity: 0.6;">
                 <div style="font-size: 3em; margin-bottom: 15px;">🔍</div>
-                <b style="font-size: 1.2em; color: var(--accent);">${T('results.none')}</b>
+                <b style="font-size: 1.2em; color: var(--accent);">${escapeHtml(T('results.none'))}</b>
+                ${hintBlock}
             </div>`;
             return;
         }
         const start = (currentPage - 1) * items;
         const pageItems = searchResults.slice(start, start + items);
-        document.getElementById('result-info').innerText = T('results.range', {
-            a: start + 1,
-            b: Math.min(start + items, searchResults.length),
-            t: searchResults.length
+        const entryTotal = searchResults.length;
+        const sliceEnd = Math.min(start + items, entryTotal);
+        const uniqueIds = new Set();
+        searchResults.forEach((r) => {
+            if (r && r.id != null && String(r.id) !== '') uniqueIds.add(String(r.id));
         });
-        paintResultDbVersion();
+        const uniqueCards = uniqueIds.size;
+        const variantExtra = entryTotal - uniqueCards;
+        const compactHeader = isCompactViewControlsContext();
+        const infoText = compactHeader
+            ? T('results.range', { a: start + 1, b: sliceEnd, t: entryTotal })
+            : ((uniqueCards > 0 && uniqueCards < entryTotal)
+                ? T('results.range_cards', { a: start + 1, b: sliceEnd, e: entryTotal, c: uniqueCards, v: variantExtra })
+                : T('results.range', { a: start + 1, b: sliceEnd, t: entryTotal }));
+        document.getElementById('result-info').innerText = infoText;
+        refreshViewControlsHeaderCompact();
         document.getElementById('page-total').innerText = `/ ${Math.ceil(searchResults.length / items) || 1}`;
         document.getElementById('page-jump').value = currentPage;
 
@@ -9634,13 +9938,11 @@
         document.getElementById('filter-atk').value = "";
         document.getElementById('filter-def').value = "";
         const hoje = new Date().toISOString().split('T')[0];
-        document.getElementById('enable-date-filter').checked = false;
-        document.getElementById('date-filters-container').style.display = 'none';
-        document.getElementById('date-start').value = "1999-01-01";
+        document.getElementById('date-start').value = FIRST_KNOWN_RELEASE_ISO.ocg;
         document.getElementById('date-end').value = hoje;
         window.filterChipState = {
             typeCategory: [], subtype: [], race: [], attribute: [], level: [], era: [],
-            dateRegion: ['tcg'], banlist: [], archetype: []
+            dateRegion: [], banlist: [], archetype: []
         };
         window.multiTextFilters = { fname: [], desc: [], atk: [], def: [], priceRanges: [] };
         ['filter-type-input', 'filter-subtype-input', 'filter-race-input', 'filter-attribute-input', 'filter-level-input',
