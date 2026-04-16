@@ -521,37 +521,127 @@
         }
 
         .sidebar-content { padding: 15px; overflow-y: auto; flex-grow: 1; }
-        .filter-group { margin-bottom: 12px; display: flex; flex-direction: column; gap: 4px; }
+        .filter-group { margin-bottom: 12px; display: flex; flex-direction: column; gap: 4px; align-items: stretch; }
+        .filter-group > .cardset-hint { text-align: left; }
+        /* Mesmo espaçamento rótulo→campo que .theme-select-stack (5px) */
+        .view-controls .filter-group.view-controls-sort-tight { gap: 5px; }
+        .view-controls-toolbar-row .sort-controls {
+            align-items: center;
+        }
+        /* Alinhamento vertical consistente na toolbar (Tema/Ordenar/Idioma/Tool etc.) */
+        .view-controls-toolbar-row {
+            --vc-label-h: 12px;
+            --vc-gap: 5px;
+            --vc-control-h: 35px;
+            align-items: center !important; /* centraliza verticalmente (referência: Tema do sistema) */
+        }
+        .view-controls-toolbar-row .filter-theme-random-wrap {
+            align-items: center;
+        }
+        .view-controls-toolbar-row .filter-group,
+        .view-controls-toolbar-row .icon-btn-row,
+        .view-controls-toolbar-row .sort-controls {
+            align-items: center;
+        }
+        .view-controls-toolbar-row .filter-group {
+            margin-bottom: 0; /* evita altura extra (desalinha o “Ordenar/Ordem” vs botões da direita) */
+            align-items: center;
+        }
+        /* "Ordenar + Ordem": evita o stack do botão aumentar a altura do bloco.
+           O label "ORDEM" é posicionado na mesma linha do label "ORDENAR". */
+        .view-controls-toolbar-row .filter-group.view-controls-sort-tight {
+            gap: var(--vc-gap);
+        }
+        /* Centraliza "ORDENAR" em relação ao select (não ao conjunto select+botão) */
+        .view-controls-toolbar-row .filter-group.view-controls-sort-tight > .sort-label {
+            width: 100%;
+            /* compensa o botão "Ordem" (35px) + o gap entre select e botão */
+            padding-right: calc(var(--vc-control-h) + var(--vc-gap));
+            box-sizing: border-box;
+        }
+        .view-controls-toolbar-row .filter-group.view-controls-sort-tight .sort-controls {
+            align-items: flex-end;
+        }
+        .view-controls-toolbar-row .filter-group.view-controls-sort-tight .sort-controls > .icon-btn-stack {
+            position: relative;
+            height: var(--vc-control-h);
+            gap: 0;
+            justify-content: center;
+        }
+        .view-controls-toolbar-row .filter-group.view-controls-sort-tight .sort-controls > .icon-btn-stack > .theme-row-label {
+            position: absolute;
+            top: calc(-1 * (var(--vc-label-h) + var(--vc-gap)));
+            left: 50%;
+            transform: translateX(-50%);
+            height: var(--vc-label-h);
+            line-height: 1;
+            margin: 0;
+            white-space: nowrap;
+            pointer-events: none;
+        }
+        .view-controls-toolbar-row .theme-row-label,
+        .view-controls-toolbar-row .sort-label {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: var(--vc-label-h); /* mesma “linha” de base para todos os rótulos */
+            margin: 0;
+            line-height: 1;
+        }
+        .view-controls-toolbar-row select,
+        .view-controls-toolbar-row button {
+            height: var(--vc-control-h);
+            min-height: var(--vc-control-h);
+            box-sizing: border-box;
+        }
+        .view-controls-toolbar-row > * {
+            align-self: center;
+        }
         @media (min-width: 901px) {
             .filter-pdf-scale { margin-top: 20px; }
         }
-        .deck-export-footer {
-            padding: 10px;
-            background: #111;
-        }
-        .deck-export-footer-inner {
+        .queue-toolbar-extras {
             display: flex;
             flex-direction: row;
             align-items: flex-end;
             flex-wrap: wrap;
-            gap: 12px;
-        }
-        .deck-export-footer-inner .filter-group.filter-pdf-scale {
-            margin-top: 0;
-            margin-bottom: 0;
-            flex: 1 1 160px;
+            gap: 8px 10px;
+            flex: 1 1 auto;
+            justify-content: flex-end;
             min-width: 0;
         }
-        .deck-export-footer-inner #btn-open-export-menu {
-            flex: 1 1 200px;
+        .queue-toolbar-extras .filter-group.filter-pdf-scale {
+            margin-top: 0;
+            margin-bottom: 0;
+            flex: 0 0 auto;
+            width: fit-content;
+            max-width: 100%;
+            align-items: center;
         }
-        .filter-group label { font-size: 10px; color: var(--label-text); text-transform: uppercase; font-weight: 800; letter-spacing: 0.02em; }
+        .queue-toolbar-extras .icon-btn-stack--export {
+            flex: 0 0 auto;
+            width: fit-content;
+            min-width: 0;
+            max-width: 100%;
+            align-items: stretch;
+        }
+        .queue-toolbar-extras .icon-btn-stack--export .btn-accent {
+            min-height: 35px;
+            height: 35px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0;
+            width: 100%;
+        }
+        .queue-toolbar-extras .icon-btn-stack--export .btn-accent i { font-size: 18px; }
+        .filter-group label { font-size: 10px; color: var(--label-text); text-transform: uppercase; font-weight: 800; letter-spacing: 0.02em; text-align: center; width: 100%; }
 
         /* Tema + aleatório: coluna [rótulo + dados] à esquerda, coluna [rótulo + select] à direita */
         .filter-theme-random-wrap {
             display: flex;
             flex-direction: row;
-            align-items: flex-end;
+            align-items: flex-start;
             gap: 14px;
             width: 100%;
             min-width: 0;
@@ -591,9 +681,10 @@
             align-self: stretch;
         }
         .filter-theme-random-wrap .theme-select-stack .theme-row-label {
-            width: auto;
+            width: 100%;
             max-width: none;
             margin: 0;
+            text-align: center;
         }
         .filter-theme-random-wrap .theme-select-stack select {
             width: 100%;
@@ -638,6 +729,254 @@
             justify-content: center;
         }
         .icon-btn-stack .theme-row-label[for] { cursor: pointer; }
+
+        /* Filtros / ações: rótulo acima, só ícone no botão */
+        .filter-action-row {
+            display: flex;
+            gap: 8px;
+            align-items: flex-end;
+        }
+        /* Largura da pilha = largura do rótulo; botão estica até essa largura (sem barra larga demais) */
+        .filter-action-row .icon-btn-stack--tool {
+            align-items: stretch;
+            width: fit-content;
+            max-width: 100%;
+        }
+        .filter-action-row .icon-btn-stack--tool .theme-row-label {
+            align-self: center;
+            white-space: nowrap;
+        }
+        .filter-action-row .icon-btn-stack--tool .btn-icon-tool {
+            width: 100%;
+            min-width: 38px;
+            box-sizing: border-box;
+        }
+        .filter-action-row > input[style*="flex"] { min-width: 0; }
+        .filter-clear-stack {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            margin-top: 6px;
+        }
+        .filter-clear-stack .theme-row-label {
+            text-align: center;
+            max-width: 100%;
+        }
+        .filter-clear-stack--tight { margin-top: 4px; }
+        .filter-full-add-stack {
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            gap: 5px;
+            margin-top: 6px;
+        }
+        .filter-full-add-stack .theme-row-label { text-align: center; }
+        .btn-icon-tool {
+            min-width: 38px;
+            height: 35px;
+            padding: 0 10px;
+            box-sizing: border-box;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .btn-icon-tool--block { width: 100%; min-width: 0; }
+        .icon-btn-stack--tool .theme-row-label {
+            font-size: 9px;
+            max-width: none;
+            text-align: center;
+            white-space: normal;
+            line-height: 1.2;
+        }
+        /* Pilha: largura = rótulo (fit-content); controle não fica mais largo que o texto do rótulo */
+        .label-width-stack {
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            width: fit-content;
+            max-width: 100%;
+            gap: 5px;
+        }
+        .search-area .label-width-stack,
+        .queue-toolbar-extras .label-width-stack {
+            align-self: flex-end;
+        }
+        .label-width-stack > .theme-row-label,
+        .label-width-stack > label.theme-row-label {
+            align-self: center;
+            white-space: nowrap;
+            text-align: center;
+            font-size: 9px;
+        }
+        .label-width-stack .btn-icon-tool,
+        .label-width-stack .btn-accent,
+        .label-width-stack label.btn-secondary {
+            width: 100%;
+            min-width: 38px;
+            box-sizing: border-box;
+        }
+        .label-width-stack .stepper {
+            width: 100%;
+            min-width: 0;
+            box-sizing: border-box;
+        }
+        .label-width-stack .stepper input[type="number"] {
+            flex: 1 1 0;
+            min-width: 0 !important;
+            width: 0 !important;
+        }
+        .queue-toolbar-extras .label-width-stack .stepper input[type="number"] {
+            flex: 1 1 auto;
+            min-width: 3.25rem !important;
+            width: auto !important;
+        }
+        /* Scanner / quantidade (barra de busca) */
+        .icon-btn-stack--tool-wide {
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            width: fit-content;
+            max-width: 100%;
+            align-self: flex-end;
+            gap: 5px;
+        }
+        .icon-btn-stack--tool-wide .theme-row-label {
+            align-self: center;
+            white-space: nowrap;
+            max-width: none;
+            text-align: center;
+            font-size: 9px;
+        }
+        .icon-btn-stack--tool-wide .btn-icon-tool {
+            width: 100%;
+            min-width: 38px;
+            box-sizing: border-box;
+        }
+        .icon-btn-stack--tool-wide .stepper {
+            width: 100%;
+            min-width: 0;
+            box-sizing: border-box;
+        }
+        .icon-btn-stack--tool-wide .stepper input[type="number"] {
+            flex: 1 1 0;
+            min-width: 0 !important;
+            width: 0 !important;
+        }
+        /* Quantidade (busca): botões ± mais estreitos e campo numérico sempre legível */
+        .search-qty-stack {
+            min-width: 8.25rem;
+        }
+        .search-qty-stack .stepper input[type="number"] {
+            flex: 1 1 auto;
+            min-width: 2.5rem !important;
+            width: auto !important;
+        }
+        .stepper--compact button {
+            width: 26px;
+            min-width: 26px;
+            flex: 0 0 26px;
+            padding: 0 2px;
+            font-size: 14px;
+        }
+        .queue-toolbar-select-stack {
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            gap: 4px;
+            width: fit-content;
+            max-width: 100%;
+        }
+        .queue-toolbar-select-stack .theme-row-label {
+            font-size: 9px;
+            text-align: center;
+            white-space: nowrap;
+        }
+        .queue-toolbar-select-stack .saved-decks-select,
+        .queue-toolbar-select-stack .deck-validate-select {
+            width: 100%;
+            min-width: 9.5rem;
+            max-width: 14rem;
+            height: 35px;
+            box-sizing: border-box;
+        }
+        /* Header da coluna de filtros: título centralizado, reset à direita */
+        .col-header-filters-toolbar {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            align-items: center;
+        }
+        .col-header-filters-toolbar .col-header-filters-title {
+            grid-column: 2;
+            justify-self: center;
+            align-self: center;
+            min-width: 0;
+            text-align: center;
+        }
+        .col-header-filters-toolbar > .icon-btn-stack {
+            grid-column: 3;
+            justify-self: end;
+            align-self: center;
+        }
+        .pagination-bar { align-items: flex-end; }
+        .pagination-page-wrap {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 3px;
+        }
+        .pagination-page-wrap .theme-row-label { font-size: 9px; }
+        .deck-name-modal-actions {
+            align-items: flex-end;
+        }
+        .deck-name-modal-actions .btn-view.btn-icon-tool {
+            min-width: 40px;
+            width: 40px;
+            height: 38px;
+            padding: 0;
+        }
+        .export-menu-back-wrap {
+            visibility: hidden;
+            flex: 0 0 auto;
+        }
+        .export-menu-back-wrap.is-visible { visibility: visible; }
+        .export-menu-header-side {
+            flex: 0 0 auto;
+            min-width: 52px;
+        }
+        .export-menu-option {
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            gap: 5px;
+            width: 100%;
+        }
+        .export-menu-option .theme-row-label {
+            font-size: 9px;
+            text-align: center;
+            line-height: 1.2;
+        }
+        .export-menu-option .btn-secondary {
+            min-height: 40px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .export-menu-option .btn-secondary i { font-size: 18px; }
+        .export-menu-header .icon-btn-stack .theme-row-label { font-size: 9px; }
+        .export-menu-header .btn-icon-tool {
+            min-width: 40px;
+            height: 36px;
+            padding: 0 8px;
+        }
+        .filter-full-add-stack label.btn-secondary.btn-icon-tool {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .queue-col-controls { align-items: flex-end; }
+        .queue-saved-decks { align-items: flex-end; }
+        .deck-validate-controls { align-items: flex-end; }
 
         .cardset-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
         .cardset-chip {
@@ -999,7 +1338,7 @@
         body.theme-white .tooltip-details-modal-dialog { background: #fff; }
         .tooltip-details-modal-header {
             display: flex;
-            align-items: center;
+            align-items: flex-end;
             justify-content: space-between;
             gap: 12px;
             padding: 12px 14px;
@@ -1275,7 +1614,7 @@
         }
 
         .stepper { display: flex; border: 1px solid #444; border-radius: 4px; overflow: hidden; height: 35px; background: #111; }
-        .stepper button { background: #333; color: white; border: none; width: 35px; cursor: pointer; font-size: 18px; font-weight: bold; }
+        .stepper button { background: #333; color: white; border: none; width: 35px; min-width: 35px; flex: 0 0 35px; cursor: pointer; font-size: 18px; font-weight: bold; }
         .stepper input { border: none !important; text-align: center; width: 100%; background: transparent; }
 
         .search-area { background: #111; padding: 15px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
@@ -1349,6 +1688,10 @@
             font-weight: 800;
             color: var(--label-text);
             white-space: nowrap;
+            text-align: center;
+            width: 100%;
+            margin: 0;
+            line-height: 1.2;
         }
 
         .sort-controls {
@@ -1752,7 +2095,7 @@
             flex-wrap: wrap;
         }
         .deck-validate-select {
-            height: 32px;
+            height: 35px;
             font-size: 11px;
             padding: 0 8px;
             border-radius: 8px;
@@ -1760,6 +2103,7 @@
             background: var(--panel-bg);
             color: var(--text);
             max-width: 220px;
+            box-sizing: border-box;
         }
         body.theme-white .deck-validate-select {
             background: #fff;
@@ -1769,18 +2113,64 @@
             flex-shrink: 0;
             display: flex;
             flex-wrap: wrap;
-            align-items: center;
+            align-items: flex-end;
             gap: 8px 10px;
             padding: 8px 10px;
             background: #121212;
             border-bottom: 1px solid var(--border);
         }
+        .deck-sort-bar-field {
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            gap: 5px;
+            flex: 1;
+            min-width: 140px;
+        }
         body.theme-white .deck-sort-bar {
             background: #eceef2;
         }
-        .deck-sort-bar .sort-controls {
-            flex: 1;
-            min-width: 140px;
+        .deck-sort-bar-field .sort-controls {
+            width: 100%;
+            min-width: 0;
+            align-items: flex-end;
+        }
+        .deck-sort-bar-field .sort-controls .queue-toolbar-select-stack {
+            gap: 5px;
+        }
+        .deck-sort-bar-field .sort-controls .queue-toolbar-select-stack .theme-row-label {
+            font-size: 10px;
+        }
+        .deck-sort-bar .theme-row-label {
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            height: 12px;
+            margin: 0;
+            line-height: 1;
+        }
+        .deck-sort-bar select,
+        .deck-sort-bar button {
+            height: 35px;
+            min-height: 35px;
+            box-sizing: border-box;
+        }
+        .deck-sort-bar-field .sort-controls .queue-toolbar-select-stack select {
+            width: 100%;
+            min-width: 0;
+            height: 35px !important;
+            min-height: 35px;
+            box-sizing: border-box;
+            padding-top: 0;
+            padding-bottom: 0;
+            line-height: 33px;
+        }
+        .deck-sort-bar #btn-deck-order {
+            padding: 0; /* evita que .btn-view aumente a altura total */
+            box-sizing: border-box;
+            height: 35px;
+            min-height: 35px;
+            line-height: 35px;
         }
 
         .deck-section-head {
@@ -1891,11 +2281,26 @@
         .queue-col-toolbar {
             display: flex;
             flex-wrap: wrap;
-            align-items: center;
+            align-items: flex-end;
             justify-content: flex-end;
             gap: 8px 10px;
             flex: 1 1 auto;
             min-width: 0;
+        }
+        .queue-col-toolbar .theme-row-label {
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            height: 12px;
+            margin: 0;
+            line-height: 1;
+        }
+        .queue-col-toolbar select,
+        .queue-col-toolbar button,
+        .queue-col-toolbar .lang-switch {
+            height: 35px;
+            min-height: 35px;
+            box-sizing: border-box;
         }
         .queue-saved-decks {
             display: flex;
@@ -1907,11 +2312,13 @@
             max-width: 132px;
             min-width: 0;
             font-size: 10px;
-            padding: 4px 6px;
+            height: 35px;
+            padding: 0 6px;
             border-radius: 4px;
             background: #111;
             border: 1px solid #444;
             color: var(--accent);
+            box-sizing: border-box;
         }
         body.theme-white .saved-decks-select {
             background: #fff;
@@ -2250,7 +2657,7 @@
         }
         .export-menu-header {
             display: flex;
-            align-items: center;
+            align-items: flex-end;
             justify-content: space-between;
             gap: 8px;
             padding: 12px 14px;
@@ -2259,15 +2666,14 @@
         .export-menu-title { font-weight: bold; color: var(--accent); font-size: 14px; flex: 1; text-align: center; }
         .export-menu-back {
             background: transparent;
-            border: none;
-            color: #aaa;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            color: var(--text);
             cursor: pointer;
             font-size: 12px;
             padding: 6px 8px;
             white-space: nowrap;
-            visibility: hidden;
         }
-        .export-menu-back.is-visible { visibility: visible; }
         .export-menu-close {
             background: transparent;
             border: none;
@@ -2635,7 +3041,7 @@
             .view-controls label {
                 font-size: 10px !important;
             }
-            .btn-view {
+            .view-controls .btn-view {
                 display: flex !important;
                 align-items: center !important;
                 justify-content: center !important;
@@ -2688,8 +3094,14 @@
         <h3 id="deck-name-modal-title" data-i18n="ui.modal_deck_name">Nome do deck</h3>
         <input type="text" id="deck-name-modal-input" maxlength="64" autocomplete="off" />
         <div class="deck-name-modal-actions">
-            <button type="button" class="btn-view" id="deck-name-modal-cancel"><span data-i18n="ui.cancel">Cancelar</span></button>
-            <button type="button" class="btn-view active" id="deck-name-modal-ok"><span data-i18n="ui.ok">OK</span></button>
+            <div class="icon-btn-stack">
+                <label class="theme-row-label" for="deck-name-modal-cancel" data-i18n="ui.cancel">Cancelar</label>
+                <button type="button" class="btn-view btn-icon-tool" id="deck-name-modal-cancel" data-i18n-title="ui.cancel" data-i18n-aria="ui.cancel" title="" aria-label=""><i class="fas fa-times" aria-hidden="true"></i></button>
+            </div>
+            <div class="icon-btn-stack">
+                <label class="theme-row-label" for="deck-name-modal-ok" data-i18n="ui.ok">OK</label>
+                <button type="button" class="btn-view active btn-icon-tool" id="deck-name-modal-ok" data-i18n-title="ui.ok" data-i18n-aria="ui.ok" title="" aria-label=""><i class="fas fa-check" aria-hidden="true"></i></button>
+            </div>
         </div>
     </div>
 </div>
@@ -2700,7 +3112,10 @@
         <h3 id="deck-swap-modal-title">Trocar carta</h3>
         <div id="deck-swap-modal-list" class="deck-swap-modal-list"></div>
         <div class="deck-name-modal-actions">
-            <button type="button" class="btn-view" id="deck-swap-modal-cancel"><span data-i18n="ui.cancel">Cancelar</span></button>
+            <div class="icon-btn-stack">
+                <label class="theme-row-label" for="deck-swap-modal-cancel" data-i18n="ui.cancel">Cancelar</label>
+                <button type="button" class="btn-view btn-icon-tool" id="deck-swap-modal-cancel" data-i18n-title="ui.cancel" data-i18n-aria="ui.cancel" title="" aria-label=""><i class="fas fa-times" aria-hidden="true"></i></button>
+            </div>
         </div>
     </div>
 </div>
@@ -2710,9 +3125,12 @@
     <div class="tooltip-details-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="tooltip-details-modal-title">
         <div class="tooltip-details-modal-header">
             <h3 class="tooltip-details-modal-title" id="tooltip-details-modal-title" data-i18n="ui.details_title">Detalhes da carta</h3>
-            <button type="button" class="tooltip-details-modal-close" id="tooltip-details-modal-close" data-i18n-aria="ui.close_details_aria" aria-label="Fechar detalhes da carta">
-                <i class="fas fa-times"></i>
-            </button>
+            <div class="icon-btn-stack">
+                <span class="theme-row-label" data-i18n="ui.export_close_label">Fechar</span>
+                <button type="button" class="tooltip-details-modal-close btn-icon-tool" id="tooltip-details-modal-close" data-i18n-title="ui.close_details_aria" data-i18n-aria="ui.close_details_aria" title="" aria-label="">
+                    <i class="fas fa-times" aria-hidden="true"></i>
+                </button>
+            </div>
         </div>
         <div class="tooltip-details-modal-body" id="tooltip-details-modal-body"></div>
     </div>
@@ -2720,118 +3138,217 @@
 
 <div class="app-container empty-queue deck-col-hidden" id="app-layout">
     <div class="col" id="col-filters">
-        <div class="col-header"><span data-i18n="ui.filters_title">Filtros</span><button class="btn-view" onclick="resetFilters()"><span data-i18n="ui.filters_reset">Resetar</span></button></div>
+        <div class="col-header col-header-filters-toolbar">
+            <span class="col-header-filters-title" data-i18n="ui.filters_title">Filtros</span>
+            <div class="icon-btn-stack">
+                <label class="theme-row-label" for="btn-reset-filters" data-i18n="ui.filters_reset">Resetar</label>
+                <button type="button" id="btn-reset-filters" class="btn-view btn-icon-tool" onclick="resetFilters()" data-i18n-title="ui.filters_reset" data-i18n-aria="ui.filters_reset" title="" aria-label=""><i class="fas fa-rotate-left" aria-hidden="true"></i></button>
+            </div>
+        </div>
         <div class="sidebar-content">
             <div class="filter-group"><label data-i18n="filter.type_label">Tipo de carta</label>
                 <p class="cardset-hint" data-i18n-html="filter.type_hint">Monstro, Magia ou Armadilha. Um por vez; Enter ou Adicionar.</p>
-                <div style="display: flex; gap: 6px; align-items: stretch;">
+                <div class="filter-action-row">
                     <input type="text" id="filter-type-input" list="datalist-filter-type" data-i18n-placeholder="filter.type_ph" placeholder="Ex.: Monstro…" autocomplete="off" style="flex: 1;">
-                    <button type="button" id="filter-type-add" class="btn-secondary" style="width: auto; padding: 8px 10px; white-space: nowrap;" data-i18n="filter.add">Adicionar</button>
+                    <div class="icon-btn-stack icon-btn-stack--tool">
+
+                        <span class="theme-row-label" data-i18n="filter.add">Adicionar</span>
+
+                        <button type="button" id="filter-type-add" class="btn-secondary btn-icon-tool" data-i18n-title="filter.add" data-i18n-aria="filter.add" title="" aria-label=""><i class="fas fa-plus" aria-hidden="true"></i></button>
+
+                    </div>
                 </div>
                 <datalist id="datalist-filter-type"></datalist>
                 <div id="filter-type-chips" class="cardset-chips"></div>
-                <button type="button" id="filter-type-clear" class="btn-secondary" style="margin-top: 6px; display: none;" data-i18n="filter.type_clear">Limpar tipo</button>
+                <div class="filter-clear-stack">
+                    <span class="theme-row-label" data-i18n="filter.type_clear"></span>
+                    <button type="button" id="filter-type-clear" class="btn-secondary btn-icon-tool" data-i18n-title="filter.type_clear" data-i18n-aria="filter.type_clear" title="" aria-label=""><i class="fas fa-eraser" aria-hidden="true"></i></button>
+                </div>
             </div>
             <div class="filter-group">
                 <label data-i18n="filter.desc_label">Descrição/Efeito</label>
                 <p class="cardset-hint" data-i18n-html="filter.desc_hint">Enquanto digita (≥3 letras), busca fuzzy automática. <strong>Adicionar</strong> guarda termos extras — resultados = união (qualquer termo). Enter também adiciona.</p>
-                <div style="display: flex; gap: 6px; align-items: stretch;">
+                <div class="filter-action-row">
                     <input type="text" id="filter-desc" data-i18n-placeholder="filter.desc_ph" placeholder="Ex: 'banir', 'cemitério'..." autocomplete="off" style="flex: 1;">
-                    <button type="button" id="filter-desc-add-chip" class="btn-secondary" style="width: auto; padding: 8px 10px; white-space: nowrap;" data-i18n="filter.add">Adicionar</button>
+                    <div class="icon-btn-stack icon-btn-stack--tool">
+
+                        <span class="theme-row-label" data-i18n="filter.add">Adicionar</span>
+
+                        <button type="button" id="filter-desc-add-chip" class="btn-secondary btn-icon-tool" data-i18n-title="filter.add" data-i18n-aria="filter.add" title="" aria-label=""><i class="fas fa-plus" aria-hidden="true"></i></button>
+
+                    </div>
                 </div>
                 <div id="filter-desc-chips" class="cardset-chips"></div>
-                <button type="button" id="filter-desc-clear-chips" class="btn-secondary" style="margin-top: 6px; display: none;" data-i18n="filter.desc_clear">Limpar descrições</button>
+                <div class="filter-clear-stack">
+                    <span class="theme-row-label" data-i18n="filter.desc_clear"></span>
+                    <button type="button" id="filter-desc-clear-chips" class="btn-secondary btn-icon-tool" data-i18n-title="filter.desc_clear" data-i18n-aria="filter.desc_clear" title="" aria-label=""><i class="fas fa-eraser" aria-hidden="true"></i></button>
+                </div>
             </div>
             <div class="filter-group">
                 <label data-i18n="filter.arch_label">Arquétipo</label>
                 <p class="cardset-hint" data-i18n-html="filter.arch_hint">Nomes oficiais (inglês), lista YGOPRODeck. Um ou vários chips: união (carta em <strong>qualquer</strong> arquétipo). No tooltip, todas as entradas conhecidas da carta.</p>
-                <div style="display: flex; gap: 6px; align-items: stretch;">
+                <div class="filter-action-row">
                     <input type="text" id="filter-archetype-input" list="datalist-filter-archetype" data-i18n-placeholder="filter.arch_ph" placeholder="Ex.: Branded, Blue-Eyes…" autocomplete="off" style="flex: 1;">
-                    <button type="button" id="filter-archetype-add" class="btn-secondary" style="width: auto; padding: 8px 10px; white-space: nowrap;" data-i18n="filter.add">Adicionar</button>
+                    <div class="icon-btn-stack icon-btn-stack--tool">
+
+                        <span class="theme-row-label" data-i18n="filter.add">Adicionar</span>
+
+                        <button type="button" id="filter-archetype-add" class="btn-secondary btn-icon-tool" data-i18n-title="filter.add" data-i18n-aria="filter.add" title="" aria-label=""><i class="fas fa-plus" aria-hidden="true"></i></button>
+
+                    </div>
                 </div>
                 <datalist id="datalist-filter-archetype"></datalist>
                 <div id="filter-archetype-chips" class="cardset-chips"></div>
-                <button type="button" id="filter-archetype-clear" class="btn-secondary" style="margin-top: 6px; display: none;" data-i18n="filter.arch_clear">Limpar arquétipos</button>
+                <div class="filter-clear-stack">
+                    <span class="theme-row-label" data-i18n="filter.arch_clear"></span>
+                    <button type="button" id="filter-archetype-clear" class="btn-secondary btn-icon-tool" data-i18n-title="filter.arch_clear" data-i18n-aria="filter.arch_clear" title="" aria-label=""><i class="fas fa-eraser" aria-hidden="true"></i></button>
+                </div>
             </div>
             <div id="group-subtype" class="filter-group" style="display:none">
                 <label data-i18n="filter.subtype_label">Categoria (subtipo)</label>
                 <p class="cardset-hint" data-i18n-html="filter.subtype_hint">Apenas com “Monstro” selecionado. Um subtipo por vez.</p>
-                <div style="display: flex; gap: 6px; align-items: stretch;">
+                <div class="filter-action-row">
                     <input type="text" id="filter-subtype-input" list="datalist-filter-subtype" data-i18n-placeholder="filter.subtype_ph" placeholder="Ex.: Monstro Pêndulo de efeito…" autocomplete="off" style="flex: 1;">
-                    <button type="button" id="filter-subtype-add" class="btn-secondary" style="width: auto; padding: 8px 10px; white-space: nowrap;" data-i18n="filter.add">Adicionar</button>
+                    <div class="icon-btn-stack icon-btn-stack--tool">
+
+                        <span class="theme-row-label" data-i18n="filter.add">Adicionar</span>
+
+                        <button type="button" id="filter-subtype-add" class="btn-secondary btn-icon-tool" data-i18n-title="filter.add" data-i18n-aria="filter.add" title="" aria-label=""><i class="fas fa-plus" aria-hidden="true"></i></button>
+
+                    </div>
                 </div>
                 <datalist id="datalist-filter-subtype"></datalist>
                 <div id="filter-subtype-chips" class="cardset-chips"></div>
-                <button type="button" id="filter-subtype-clear" class="btn-secondary" style="margin-top: 6px; display: none;" data-i18n="filter.subtype_clear">Limpar categoria</button>
+                <div class="filter-clear-stack">
+                    <span class="theme-row-label" data-i18n="filter.subtype_clear"></span>
+                    <button type="button" id="filter-subtype-clear" class="btn-secondary btn-icon-tool" data-i18n-title="filter.subtype_clear" data-i18n-aria="filter.subtype_clear" title="" aria-label=""><i class="fas fa-eraser" aria-hidden="true"></i></button>
+                </div>
             </div>
             <div id="group-race" class="filter-group" style="display:none">
                 <label data-i18n="filter.race_label">Raça / tipo de magia ou armadilha</label>
                 <p class="cardset-hint" data-i18n-html="filter.race_hint">Um ou vários (API: vírgula). Sugestões mudam conforme o tipo de carta.</p>
-                <div style="display: flex; gap: 6px; align-items: stretch;">
+                <div class="filter-action-row">
                     <input type="text" id="filter-race-input" list="datalist-filter-race" data-i18n-placeholder="filter.race_ph" placeholder="Ex.: Dragão…" autocomplete="off" style="flex: 1;">
-                    <button type="button" id="filter-race-add" class="btn-secondary" style="width: auto; padding: 8px 10px; white-space: nowrap;" data-i18n="filter.add">Adicionar</button>
+                    <div class="icon-btn-stack icon-btn-stack--tool">
+
+                        <span class="theme-row-label" data-i18n="filter.add">Adicionar</span>
+
+                        <button type="button" id="filter-race-add" class="btn-secondary btn-icon-tool" data-i18n-title="filter.add" data-i18n-aria="filter.add" title="" aria-label=""><i class="fas fa-plus" aria-hidden="true"></i></button>
+
+                    </div>
                 </div>
                 <datalist id="datalist-filter-race"></datalist>
                 <div id="filter-race-chips" class="cardset-chips"></div>
-                <button type="button" id="filter-race-clear" class="btn-secondary" style="margin-top: 6px; display: none;" data-i18n="filter.race_clear">Limpar raça/tipo</button>
+                <div class="filter-clear-stack">
+                    <span class="theme-row-label" data-i18n="filter.race_clear"></span>
+                    <button type="button" id="filter-race-clear" class="btn-secondary btn-icon-tool" data-i18n-title="filter.race_clear" data-i18n-aria="filter.race_clear" title="" aria-label=""><i class="fas fa-eraser" aria-hidden="true"></i></button>
+                </div>
             </div>
             <div id="monster-extras" style="display:none">
                 <div class="filter-group"><label data-i18n="filter.attr_label">Atributo</label>
                     <p class="cardset-hint" data-i18n-html="filter.attr_hint">Um ou vários (Trevas, Luz…). Valores da API em inglês.</p>
-                    <div style="display: flex; gap: 6px; align-items: stretch;">
+                    <div class="filter-action-row">
                         <input type="text" id="filter-attribute-input" list="datalist-filter-attribute" data-i18n-placeholder="filter.attr_ph" placeholder="Ex.: Trevas" autocomplete="off" style="flex: 1;">
-                        <button type="button" id="filter-attribute-add" class="btn-secondary" style="width: auto; padding: 8px 10px; white-space: nowrap;" data-i18n="filter.add">Adicionar</button>
+                        <div class="icon-btn-stack icon-btn-stack--tool">
+
+                            <span class="theme-row-label" data-i18n="filter.add">Adicionar</span>
+
+                            <button type="button" id="filter-attribute-add" class="btn-secondary btn-icon-tool" data-i18n-title="filter.add" data-i18n-aria="filter.add" title="" aria-label=""><i class="fas fa-plus" aria-hidden="true"></i></button>
+
+                        </div>
                     </div>
                     <datalist id="datalist-filter-attribute"></datalist>
                     <div id="filter-attribute-chips" class="cardset-chips"></div>
-                    <button type="button" id="filter-attribute-clear" class="btn-secondary" style="margin-top: 6px; display: none;" data-i18n="filter.attr_clear">Limpar atributos</button>
+                    <div class="filter-clear-stack">
+                    <span class="theme-row-label" data-i18n="filter.attr_clear"></span>
+                    <button type="button" id="filter-attribute-clear" class="btn-secondary btn-icon-tool" data-i18n-title="filter.attr_clear" data-i18n-aria="filter.attr_clear" title="" aria-label=""><i class="fas fa-eraser" aria-hidden="true"></i></button>
+                </div>
                 </div>
                 <div class="filter-group"><label data-i18n="filter.level_label">Nível</label>
                     <p class="cardset-hint" data-i18n-html="filter.level_hint">0 a 13. Um nível por vez.</p>
-                    <div style="display: flex; gap: 6px; align-items: stretch;">
+                    <div class="filter-action-row">
                         <input type="text" id="filter-level-input" list="datalist-filter-level" data-i18n-placeholder="filter.level_ph" placeholder="Ex.: 4" autocomplete="off" style="flex: 1;">
-                        <button type="button" id="filter-level-add" class="btn-secondary" style="width: auto; padding: 8px 10px; white-space: nowrap;" data-i18n="filter.add">Adicionar</button>
+                        <div class="icon-btn-stack icon-btn-stack--tool">
+
+                            <span class="theme-row-label" data-i18n="filter.add">Adicionar</span>
+
+                            <button type="button" id="filter-level-add" class="btn-secondary btn-icon-tool" data-i18n-title="filter.add" data-i18n-aria="filter.add" title="" aria-label=""><i class="fas fa-plus" aria-hidden="true"></i></button>
+
+                        </div>
                     </div>
                     <datalist id="datalist-filter-level"></datalist>
                     <div id="filter-level-chips" class="cardset-chips"></div>
-                    <button type="button" id="filter-level-clear" class="btn-secondary" style="margin-top: 6px; display: none;" data-i18n="filter.level_clear">Limpar nível</button>
+                    <div class="filter-clear-stack">
+                    <span class="theme-row-label" data-i18n="filter.level_clear"></span>
+                    <button type="button" id="filter-level-clear" class="btn-secondary btn-icon-tool" data-i18n-title="filter.level_clear" data-i18n-aria="filter.level_clear" title="" aria-label=""><i class="fas fa-eraser" aria-hidden="true"></i></button>
+                </div>
                 </div>
                 <div class="filter-group"><label>ATK</label>
                     <p class="cardset-hint" data-i18n-html="filter.atk_hint">Valor atual + Adicionar = mais buscas em união. O campo continua filtrando em tempo real.</p>
-                    <div class="stepper"><button onclick="adjustVal('filter-atk', -50)">-</button><input type="number" id="filter-atk" placeholder="---"><button onclick="adjustVal('filter-atk', 50)">+</button></div>
-                    <button type="button" id="filter-atk-add-chip" class="btn-secondary" style="width: 100%; margin-top: 6px;" data-i18n="filter.atk_add">Adicionar ATK à busca</button>
+                    <div class="stepper"><button type="button" onclick="adjustVal('filter-atk', -50)" aria-label="−50"><i class="fas fa-minus" aria-hidden="true"></i></button><input type="number" id="filter-atk" placeholder="---"><button type="button" onclick="adjustVal('filter-atk', 50)" aria-label="+50"><i class="fas fa-plus" aria-hidden="true"></i></button></div>
+                    <div class="filter-full-add-stack">
+                        <span class="theme-row-label" data-i18n="filter.atk_add">Adicionar ATK à busca</span>
+                        <button type="button" id="filter-atk-add-chip" class="btn-secondary btn-icon-tool btn-icon-tool--block" data-i18n-title="filter.atk_add" data-i18n-aria="filter.atk_add" title="" aria-label=""><i class="fas fa-plus" aria-hidden="true"></i></button>
+                    </div>
                     <div id="filter-atk-chips" class="cardset-chips"></div>
-                    <button type="button" id="filter-atk-clear-chips" class="btn-secondary" style="margin-top: 6px; display: none;" data-i18n="filter.atk_clear">Limpar ATKs</button>
+                    <div class="filter-clear-stack">
+                    <span class="theme-row-label" data-i18n="filter.atk_clear"></span>
+                    <button type="button" id="filter-atk-clear-chips" class="btn-secondary btn-icon-tool" data-i18n-title="filter.atk_clear" data-i18n-aria="filter.atk_clear" title="" aria-label=""><i class="fas fa-eraser" aria-hidden="true"></i></button>
+                </div>
                 </div>
                 <div class="filter-group"><label>DEF</label>
                     <p class="cardset-hint" data-i18n-html="filter.def_hint">Igual ao ATK: chips em união com o valor do campo.</p>
-                    <div class="stepper"><button onclick="adjustVal('filter-def', -50)">-</button><input type="number" id="filter-def" placeholder="---"><button onclick="adjustVal('filter-def', 50)">+</button></div>
-                    <button type="button" id="filter-def-add-chip" class="btn-secondary" style="width: 100%; margin-top: 6px;" data-i18n="filter.def_add">Adicionar DEF à busca</button>
+                    <div class="stepper"><button type="button" onclick="adjustVal('filter-def', -50)" aria-label="−50"><i class="fas fa-minus" aria-hidden="true"></i></button><input type="number" id="filter-def" placeholder="---"><button type="button" onclick="adjustVal('filter-def', 50)" aria-label="+50"><i class="fas fa-plus" aria-hidden="true"></i></button></div>
+                    <div class="filter-full-add-stack">
+                        <span class="theme-row-label" data-i18n="filter.def_add">Adicionar DEF à busca</span>
+                        <button type="button" id="filter-def-add-chip" class="btn-secondary btn-icon-tool btn-icon-tool--block" data-i18n-title="filter.def_add" data-i18n-aria="filter.def_add" title="" aria-label=""><i class="fas fa-plus" aria-hidden="true"></i></button>
+                    </div>
                     <div id="filter-def-chips" class="cardset-chips"></div>
-                    <button type="button" id="filter-def-clear-chips" class="btn-secondary" style="margin-top: 6px; display: none;" data-i18n="filter.def_clear">Limpar DEFs</button>
+                    <div class="filter-clear-stack">
+                    <span class="theme-row-label" data-i18n="filter.def_clear"></span>
+                    <button type="button" id="filter-def-clear-chips" class="btn-secondary btn-icon-tool" data-i18n-title="filter.def_clear" data-i18n-aria="filter.def_clear" title="" aria-label=""><i class="fas fa-eraser" aria-hidden="true"></i></button>
+                </div>
                 </div>
             </div>
             <div class="filter-group">
                 <label data-i18n="filter.era_label">Era Yu-Gi-Oh!</label>
                 <p class="cardset-hint" data-i18n-html="filter.era_hint">Preenche o intervalo de datas. Uma era por vez; limpar deixa só o período manual.</p>
-                <div style="display: flex; gap: 6px; align-items: stretch;">
+                <div class="filter-action-row">
                     <input type="text" id="filter-era-input" list="datalist-filter-era" data-i18n-placeholder="filter.era_ph" placeholder="Ex.: GX, Zexal…" autocomplete="off" style="flex: 1;">
-                    <button type="button" id="filter-era-add" class="btn-secondary" style="width: auto; padding: 8px 10px; white-space: nowrap;" data-i18n="filter.add">Adicionar</button>
+                    <div class="icon-btn-stack icon-btn-stack--tool">
+
+                        <span class="theme-row-label" data-i18n="filter.add">Adicionar</span>
+
+                        <button type="button" id="filter-era-add" class="btn-secondary btn-icon-tool" data-i18n-title="filter.add" data-i18n-aria="filter.add" title="" aria-label=""><i class="fas fa-plus" aria-hidden="true"></i></button>
+
+                    </div>
                 </div>
                 <datalist id="datalist-filter-era"></datalist>
                 <div id="filter-era-chips" class="cardset-chips"></div>
-                <button type="button" id="filter-era-clear" class="btn-secondary" style="margin-top: 6px; display: none;" data-i18n="filter.era_clear">Limpar era</button>
+                <div class="filter-clear-stack">
+                    <span class="theme-row-label" data-i18n="filter.era_clear"></span>
+                    <button type="button" id="filter-era-clear" class="btn-secondary btn-icon-tool" data-i18n-title="filter.era_clear" data-i18n-aria="filter.era_clear" title="" aria-label=""><i class="fas fa-eraser" aria-hidden="true"></i></button>
+                </div>
             </div>
             <div class="filter-group">
                 <label data-i18n="filter.region_label">Filtrar por data de lançamento</label>
                 <p class="cardset-hint" data-i18n-html="filter.region_hint">Adicione <strong>TCG</strong> ou <strong>OCG</strong> para filtrar por lançamento; o período aparece abaixo.</p>
-                <div style="display: flex; gap: 6px; align-items: stretch;">
+                <div class="filter-action-row">
                     <input type="text" id="filter-date-region-input" list="datalist-date-region" data-i18n-placeholder="filter.region_ph" placeholder="Ex.: TCG — lançamento ocidental" autocomplete="off" style="flex: 1;">
-                    <button type="button" id="filter-date-region-add" class="btn-secondary" style="width: auto; padding: 8px 10px; white-space: nowrap;" data-i18n="filter.add">Adicionar</button>
+                    <div class="icon-btn-stack icon-btn-stack--tool">
+
+                        <span class="theme-row-label" data-i18n="filter.add">Adicionar</span>
+
+                        <button type="button" id="filter-date-region-add" class="btn-secondary btn-icon-tool" data-i18n-title="filter.add" data-i18n-aria="filter.add" title="" aria-label=""><i class="fas fa-plus" aria-hidden="true"></i></button>
+
+                    </div>
                 </div>
                 <datalist id="datalist-date-region"></datalist>
                 <div id="filter-date-region-chips" class="cardset-chips"></div>
-                <button type="button" id="filter-date-region-clear" class="btn-secondary" style="margin-top: 6px; display: none;" data-i18n="filter.region_clear">Limpar região</button>
+                <div class="filter-clear-stack">
+                    <span class="theme-row-label" data-i18n="filter.region_clear"></span>
+                    <button type="button" id="filter-date-region-clear" class="btn-secondary btn-icon-tool" data-i18n-title="filter.region_clear" data-i18n-aria="filter.region_clear" title="" aria-label=""><i class="fas fa-eraser" aria-hidden="true"></i></button>
+                </div>
             </div>
             <div id="date-period-group" class="filter-group" style="display: none;">
                 <label data-i18n="filter.period_label">Período (De -> Até)</label>
@@ -2843,13 +3360,22 @@
             <div class="filter-group">
                 <label data-i18n="filter.ban_label">Formato / Banlist</label>
                 <p class="cardset-hint" data-i18n-html="filter.ban_hint">Sugestões em português. Para remover o formato, use o botão <strong>Limpar formato</strong> abaixo. Uma opção por vez.</p>
-                <div style="display: flex; gap: 6px; align-items: stretch;">
+                <div class="filter-action-row">
                     <input type="text" id="filter-banlist-input" list="datalist-filter-banlist" data-i18n-placeholder="filter.ban_ph" placeholder="Ex.: Formato TCG (principal)" autocomplete="off" style="flex: 1;">
-                    <button type="button" id="filter-banlist-add" class="btn-secondary" style="width: auto; padding: 8px 10px; white-space: nowrap;" data-i18n="filter.add">Adicionar</button>
+                    <div class="icon-btn-stack icon-btn-stack--tool">
+
+                        <span class="theme-row-label" data-i18n="filter.add">Adicionar</span>
+
+                        <button type="button" id="filter-banlist-add" class="btn-secondary btn-icon-tool" data-i18n-title="filter.add" data-i18n-aria="filter.add" title="" aria-label=""><i class="fas fa-plus" aria-hidden="true"></i></button>
+
+                    </div>
                 </div>
                 <datalist id="datalist-filter-banlist"></datalist>
                 <div id="filter-banlist-chips" class="cardset-chips"></div>
-                <button type="button" id="filter-banlist-clear" class="btn-secondary" style="margin-top: 6px; display: none;" data-i18n="filter.ban_clear">Limpar formato</button>
+                <div class="filter-clear-stack">
+                    <span class="theme-row-label" data-i18n="filter.ban_clear"></span>
+                    <button type="button" id="filter-banlist-clear" class="btn-secondary btn-icon-tool" data-i18n-title="filter.ban_clear" data-i18n-aria="filter.ban_clear" title="" aria-label=""><i class="fas fa-eraser" aria-hidden="true"></i></button>
+                </div>
             </div>
             <div id="banlist-only-container" class="filter-group">
                 <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 11px; color: var(--accent);">
@@ -2863,65 +3389,113 @@
                     <input type="number" id="filter-price-min" data-i18n-placeholder="filter.price_min_ph" placeholder="Valor Mínimo" step="0.1" style="width: 50%;">
                     <input type="number" id="filter-price-max" data-i18n-placeholder="filter.price_max_ph" placeholder="Valor Máximo" step="0.1" style="width: 50%;">
                 </div>
-                <button type="button" id="filter-price-add-chip" class="btn-secondary" style="width: 100%; margin-top: 6px;" data-i18n="filter.price_add">Adicionar faixa</button>
+                <div class="filter-full-add-stack">
+                    <span class="theme-row-label" data-i18n="filter.price_add">Adicionar faixa</span>
+                    <button type="button" id="filter-price-add-chip" class="btn-secondary btn-icon-tool btn-icon-tool--block" data-i18n-title="filter.price_add" data-i18n-aria="filter.price_add" title="" aria-label=""><i class="fas fa-plus" aria-hidden="true"></i></button>
+                </div>
                 <div id="filter-price-chips" class="cardset-chips"></div>
-                <button type="button" id="filter-price-clear-chips" class="btn-secondary" style="margin-top: 6px; display: none;" data-i18n="filter.price_clear">Limpar faixas salvas</button>
+                <div class="filter-clear-stack">
+                    <span class="theme-row-label" data-i18n="filter.price_clear"></span>
+                    <button type="button" id="filter-price-clear-chips" class="btn-secondary btn-icon-tool" data-i18n-title="filter.price_clear" data-i18n-aria="filter.price_clear" title="" aria-label=""><i class="fas fa-eraser" aria-hidden="true"></i></button>
+                </div>
             </div>
             <div class="filter-group">
                 <label data-i18n="filter.set_label">Expansão (set)</label>
                 <p class="cardset-hint" data-i18n-html="filter.set_hint">Lista oficial YGOPRODeck (nomes de produtos em inglês, como no catálogo). Digite para filtrar sugestões; Enter ou “Adicionar” inclui o set. Nenhum, um ou vários: a busca mostra cartas que aparecem em <strong>qualquer</strong> set selecionado.</p>
-                <div style="display: flex; gap: 6px; align-items: stretch;">
+                <div class="filter-action-row">
                     <input type="text" id="filter-cardset-input" list="cardsets-datalist" data-i18n-placeholder="filter.set_ph" placeholder="Ex.: Metal Raiders…" autocomplete="off" style="flex: 1;">
-                    <button type="button" id="filter-cardset-add" class="btn-secondary" style="width: auto; padding: 8px 10px; white-space: nowrap;" data-i18n="filter.add">Adicionar</button>
+                    <div class="icon-btn-stack icon-btn-stack--tool">
+
+                        <span class="theme-row-label" data-i18n="filter.add">Adicionar</span>
+
+                        <button type="button" id="filter-cardset-add" class="btn-secondary btn-icon-tool" data-i18n-title="filter.add" data-i18n-aria="filter.add" title="" aria-label=""><i class="fas fa-plus" aria-hidden="true"></i></button>
+
+                    </div>
                 </div>
                 <datalist id="cardsets-datalist"></datalist>
                 <div id="filter-cardset-chips" class="cardset-chips" aria-live="polite"></div>
-                <button type="button" id="filter-cardset-clear" class="btn-secondary" style="margin-top: 6px; display: none;" data-i18n="filter.set_clear">Limpar expansões</button>
+                <div class="filter-clear-stack">
+                    <span class="theme-row-label" data-i18n="filter.set_clear"></span>
+                    <button type="button" id="filter-cardset-clear" class="btn-secondary btn-icon-tool" data-i18n-title="filter.set_clear" data-i18n-aria="filter.set_clear" title="" aria-label=""><i class="fas fa-eraser" aria-hidden="true"></i></button>
+                </div>
             </div>
             <div class="filter-group">
                 <label data-i18n="filter.setcode_label">Código do set (setcode)</label>
                 <p class="cardset-hint" data-i18n-html="filter.setcode_hint">Código da impressão (ex.: <strong>LOB-EN001</strong>). Sugestões vêm do catálogo <code>cardinfo</code> (todos os <code>set_code</code> conhecidos; carrega em segundo plano). Se escrever <strong>LOB-001</strong>, tentamos também <strong>LOB-EN001</strong>. Vários chips = união.</p>
-                <div style="display: flex; gap: 6px; align-items: stretch;">
+                <div class="filter-action-row">
                     <input type="text" id="filter-setcode-input" list="datalist-setcodes" data-i18n-placeholder="filter.setcode_ph" placeholder="Ex.: LOB-EN001 ou LOB" autocomplete="off" style="flex: 1;">
-                    <button type="button" id="filter-setcode-add" class="btn-secondary" style="width: auto; padding: 8px 10px; white-space: nowrap;" data-i18n="filter.add">Adicionar</button>
+                    <div class="icon-btn-stack icon-btn-stack--tool">
+
+                        <span class="theme-row-label" data-i18n="filter.add">Adicionar</span>
+
+                        <button type="button" id="filter-setcode-add" class="btn-secondary btn-icon-tool" data-i18n-title="filter.add" data-i18n-aria="filter.add" title="" aria-label=""><i class="fas fa-plus" aria-hidden="true"></i></button>
+
+                    </div>
                 </div>
                 <datalist id="datalist-setcodes"></datalist>
                 <div id="filter-setcode-chips" class="cardset-chips" aria-live="polite"></div>
-                <button type="button" id="filter-setcode-clear" class="btn-secondary" style="margin-top: 6px; display: none;" data-i18n="filter.setcode_clear">Limpar códigos</button>
+                <div class="filter-clear-stack">
+                    <span class="theme-row-label" data-i18n="filter.setcode_clear"></span>
+                    <button type="button" id="filter-setcode-clear" class="btn-secondary btn-icon-tool" data-i18n-title="filter.setcode_clear" data-i18n-aria="filter.setcode_clear" title="" aria-label=""><i class="fas fa-eraser" aria-hidden="true"></i></button>
+                </div>
             </div>
             <div class="filter-group">
                 <label data-i18n="filter.rarity_label">Raridade (impressão)</label>
                 <p class="cardset-hint" data-i18n-html="filter.rarity_hint">Nome em inglês como no banco (ex.: Ultra Rare). Sugestões vêm do mesmo scan de <code>cardinfo</code> que set codes / tipos / raças (pode demorar na 1ª carga). Só raridade: percorre o catálogo completo. Com outros filtros, aplica-se só ao resultado já carregado.</p>
-                <div style="display: flex; gap: 6px; align-items: stretch;">
+                <div class="filter-action-row">
                     <input type="text" id="filter-rarity-input" list="datalist-rarities" data-i18n-placeholder="filter.rarity_ph" placeholder="Ex.: Secret Rare" autocomplete="off" style="flex: 1;">
-                    <button type="button" id="filter-rarity-add" class="btn-secondary" style="width: auto; padding: 8px 10px; white-space: nowrap;" data-i18n="filter.add">Adicionar</button>
+                    <div class="icon-btn-stack icon-btn-stack--tool">
+
+                        <span class="theme-row-label" data-i18n="filter.add">Adicionar</span>
+
+                        <button type="button" id="filter-rarity-add" class="btn-secondary btn-icon-tool" data-i18n-title="filter.add" data-i18n-aria="filter.add" title="" aria-label=""><i class="fas fa-plus" aria-hidden="true"></i></button>
+
+                    </div>
                 </div>
                 <datalist id="datalist-rarities"></datalist>
                 <div id="filter-rarity-chips" class="cardset-chips" aria-live="polite"></div>
-                <button type="button" id="filter-rarity-clear" class="btn-secondary" style="margin-top: 6px; display: none;" data-i18n="filter.rarity_clear">Limpar raridades</button>
+                <div class="filter-clear-stack">
+                    <span class="theme-row-label" data-i18n="filter.rarity_clear"></span>
+                    <button type="button" id="filter-rarity-clear" class="btn-secondary btn-icon-tool" data-i18n-title="filter.rarity_clear" data-i18n-aria="filter.rarity_clear" title="" aria-label=""><i class="fas fa-eraser" aria-hidden="true"></i></button>
+                </div>
             </div>
         </div>
     </div>
 
     <div class="col" id="col-results">
         <div class="search-area">
-            <div style="display: flex; gap: 10px; align-items: stretch;">
-                <button id="btn-open-scanner" class="btn-secondary" style="width: auto; padding: 8px 10px; white-space: nowrap; display: flex; align-items: center; justify-content: center; gap: 8px;">
-                    <i class="fa-solid fa-camera" aria-hidden="true"></i> <span data-i18n="ui.scan_card_ocr">Escanear Carta (OCR)</span>
-                </button>
-                <div style="flex: 1; display: flex; gap: 6px; min-width: 0;">
-                    <input type="text" id="search-input" data-i18n-placeholder="ui.search_placeholder" placeholder="Buscar pelo nome..." autocomplete="off" style="flex: 1;">
-                    <button type="button" id="filter-fname-add-chip" class="btn-secondary" style="width: auto; padding: 8px 10px; white-space: nowrap;" data-i18n="filter.add">Adicionar</button>
+            <div style="display: flex; gap: 10px; align-items: flex-end;">
+                <div class="icon-btn-stack icon-btn-stack--tool icon-btn-stack--tool-wide">
+                    <span class="theme-row-label" data-i18n="ui.scan_card_ocr">Escanear Carta (OCR)</span>
+                    <button type="button" id="btn-open-scanner" class="btn-secondary btn-icon-tool" data-i18n-title="ui.scan_card_ocr" data-i18n-aria="ui.scan_card_ocr" title="" aria-label="">
+                        <i class="fa-solid fa-camera" aria-hidden="true"></i>
+                    </button>
                 </div>
-                <div class="stepper" style="width: 100px;">
-                    <button onclick="document.getElementById('search-qty').stepDown()">-</button>
-                    <input type="number" id="search-qty" value="1" min="1" readonly>
-                    <button onclick="document.getElementById('search-qty').stepUp()">+</button>
+                <div style="flex: 1; display: flex; gap: 8px; min-width: 0; align-items: flex-end;">
+                    <div class="label-width-stack" style="flex: 1; min-width: 0;">
+                        <label class="theme-row-label" for="search-input" data-i18n="ui.search_name_label">Nome</label>
+                        <input type="text" id="search-input" data-i18n-placeholder="ui.search_placeholder" placeholder="Buscar pelo nome..." autocomplete="off" style="width: 100%;">
+                    </div>
+                    <div class="icon-btn-stack icon-btn-stack--tool">
+                        <span class="theme-row-label" data-i18n="filter.add">Adicionar</span>
+                        <button type="button" id="filter-fname-add-chip" class="btn-secondary btn-icon-tool" data-i18n-title="filter.add" data-i18n-aria="filter.add" title="" aria-label=""><i class="fas fa-plus" aria-hidden="true"></i></button>
+                    </div>
+                </div>
+                <div class="icon-btn-stack icon-btn-stack--tool icon-btn-stack--tool-wide search-qty-stack">
+                    <span class="theme-row-label" data-i18n="ui.search_qty_label">Quantidade</span>
+                    <div class="stepper stepper--compact">
+                        <button type="button" onclick="document.getElementById('search-qty').stepDown()" aria-label="−"><i class="fas fa-minus" aria-hidden="true"></i></button>
+                        <input type="number" id="search-qty" value="1" min="1" readonly>
+                        <button type="button" onclick="document.getElementById('search-qty').stepUp()" aria-label="+"><i class="fas fa-plus" aria-hidden="true"></i></button>
+                    </div>
                 </div>
             </div>
             <p class="cardset-hint" style="margin: 4px 0 0 0; font-size: 10px;" data-i18n-html="ui.search_fname_hint">≥3 letras: busca enquanto digita. Use <strong>Adicionar</strong> para guardar termos extras (união OR com o que ainda estiver no campo).</p>
             <div id="filter-fname-chips" class="cardset-chips" style="margin-top: 4px;"></div>
-            <button type="button" id="filter-fname-clear-chips" class="btn-secondary" style="margin-top: 4px; display: none;" data-i18n="ui.search_fname_clear">Limpar nomes</button>
+            <div class="filter-clear-stack filter-clear-stack--tight">
+                    <span class="theme-row-label" data-i18n="ui.search_fname_clear"></span>
+                    <button type="button" id="filter-fname-clear-chips" class="btn-secondary btn-icon-tool" data-i18n-title="ui.search_fname_clear" data-i18n-aria="ui.search_fname_clear" title="" aria-label=""><i class="fas fa-eraser" aria-hidden="true"></i></button>
+                </div>
         </div>
         <div class="view-controls">
             <div class="result-info-row" id="result-info-row">
@@ -2931,7 +3505,7 @@
                     <span id="result-db-version" class="result-db-version" title="" aria-live="polite"></span>
                 </div>
             </div>
-            <div style="display: flex; gap: 15px; align-items: center;">
+            <div class="view-controls-toolbar-row" style="display: flex; gap: 15px; align-items: flex-start;">
                 <div class="filter-group filter-theme-random-wrap">
                     <div class="theme-select-stack">
                         <label class="theme-row-label" for="theme-selector" data-i18n="ui.theme_label">Tema do sistema</label>
@@ -2953,9 +3527,9 @@
                         </select>
                     </div>
                 </div>
-                <div class="filter-group">
+                <div class="filter-group view-controls-sort-tight">
                     <label for="sort-by" class="sort-label" data-i18n="ui.sort_results">Ordenar</label>
-                    <div class="sort-controls" style="display: flex; gap: 5px; align-items: center;">
+                    <div class="sort-controls" style="display: flex; gap: 5px; width: 100%;">
                         <select id="sort-by" onchange="sortAndRender()" style="flex: 1;">
                             <option data-i18n-opt="opt.sort.name" value="name">Nome</option>
                             <option data-i18n-opt="opt.sort.atk" value="atk">Ataque</option>
@@ -2967,10 +3541,12 @@
                             <option data-i18n-opt="opt.sort.banlist" value="banlist">Banlist</option>
                             <option data-i18n-opt="opt.sort.random" value="random">Aleatório</option>
                         </select>
-                        
-                        <button id="btn-order" class="btn-view" onclick="toggleOrder()" style="height: 35px; min-width: 35px; display: flex; align-items: center; justify-content: center;">
-                            <span id="order-icon">↓</span>
-                        </button>
+                        <div class="icon-btn-stack">
+                            <label class="theme-row-label" for="btn-order" data-i18n="ui.sort_order_label">Ordem</label>
+                            <button type="button" id="btn-order" class="btn-view" onclick="toggleOrder()" data-i18n-title="ui.results_order_title" title="" style="height: 35px; min-width: 35px; display: flex; align-items: center; justify-content: center;">
+                                <i id="order-icon" class="fas fa-arrow-down" aria-hidden="true"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
                 <div class="icon-btn-row">
@@ -3033,12 +3609,21 @@
         </div>
         <div id="results-view" class="results-view list-mode"></div>
         <div class="pagination-bar">
-            <button class="btn-view" onclick="changePage(-1)">◄</button>
-            <div style="display: flex; align-items: center; gap: 5px;">
-                <input type="number" id="page-jump" class="page-input" value="1" min="1" onchange="jumpToPage(this.value)">
-                <span id="page-total" style="font-size: 11px; color: #888;">/ 1</span>
+            <div class="icon-btn-stack">
+                <span class="theme-row-label" data-i18n="ui.pagination_prev">Anterior</span>
+                <button type="button" class="btn-view btn-icon-tool" onclick="changePage(-1)" data-i18n-title="ui.pagination_prev" data-i18n-aria="ui.pagination_prev" title="" aria-label=""><i class="fas fa-chevron-left" aria-hidden="true"></i></button>
             </div>
-            <button class="btn-view" onclick="changePage(1)">►</button>
+            <div class="pagination-page-wrap">
+                <span class="theme-row-label" data-i18n="ui.pagination_page_label">Página</span>
+                <div style="display: flex; align-items: center; gap: 5px;">
+                    <input type="number" id="page-jump" class="page-input" value="1" min="1" onchange="jumpToPage(this.value)">
+                    <span id="page-total" style="font-size: 11px; color: #888;">/ 1</span>
+                </div>
+            </div>
+            <div class="icon-btn-stack">
+                <span class="theme-row-label" data-i18n="ui.pagination_next">Próximo</span>
+                <button type="button" class="btn-view btn-icon-tool" onclick="changePage(1)" data-i18n-title="ui.pagination_next" data-i18n-aria="ui.pagination_next" title="" aria-label=""><i class="fas fa-chevron-right" aria-hidden="true"></i></button>
+            </div>
         </div>
     </div>
 
@@ -3047,43 +3632,89 @@
             <span class="queue-col-title" data-i18n="ui.deck_header">Deck</span>
             <div class="queue-col-toolbar">
                 <div class="queue-saved-decks">
-                    <select id="saved-decks-select" class="saved-decks-select" data-i18n-title="ui.saved_deck_title" title="Novo deck (rascunho) ou deck salvo" data-i18n-aria="ui.saved_deck_aria" aria-label="Decks salvos">
-                        <option value="" data-i18n-opt="ui.saved_deck_new">Novo Deck</option>
-                    </select>
-                    <button type="button" id="btn-deck-save" class="btn-view" style="font-size: 9px;" data-i18n-title="ui.save_deck_title" title="Salvar deck atual neste navegador (localStorage)"><span data-i18n="ui.save_deck">Salvar</span></button>
-                    <button type="button" id="btn-deck-rename" class="btn-view" style="font-size: 11px;" data-i18n-title="ui.rename_deck_title" title="Renomear deck salvo selecionado" data-i18n-aria="ui.rename_deck_aria" aria-label="Renomear deck salvo">
-                        <i class="fas fa-pen"></i>
-                    </button>
-                    <button type="button" id="btn-deck-delete-saved" class="btn-view" style="font-size: 11px;" data-i18n-title="ui.delete_deck_title" title="Apagar deck salvo selecionado" data-i18n-aria="ui.delete_deck_aria" aria-label="Apagar deck salvo">
-                        <i class="fas fa-trash-alt"></i>
-                    </button>
+                    <div class="queue-toolbar-select-stack">
+                        <label class="theme-row-label" for="saved-decks-select" data-i18n="ui.saved_deck_select_label">Deck salvo</label>
+                        <select id="saved-decks-select" class="saved-decks-select" data-i18n-title="ui.saved_deck_title" title="Novo deck (rascunho) ou deck salvo" data-i18n-aria="ui.saved_deck_aria" aria-label="Decks salvos">
+                            <option value="" data-i18n-opt="ui.saved_deck_new">Novo Deck</option>
+                        </select>
+                    </div>
+                    <div class="icon-btn-stack icon-btn-stack--tool">
+                        <label class="theme-row-label" for="btn-deck-save" data-i18n="ui.save_deck">Salvar</label>
+                        <button type="button" id="btn-deck-save" class="btn-view btn-icon-tool" data-i18n-title="ui.save_deck_title" data-i18n-aria="ui.save_deck" title="" aria-label=""><i class="fas fa-floppy-disk" aria-hidden="true"></i></button>
+                    </div>
+                    <div class="icon-btn-stack icon-btn-stack--tool">
+                        <label class="theme-row-label" for="btn-deck-rename" data-i18n="ui.rename_deck_label">Renomear</label>
+                        <button type="button" id="btn-deck-rename" class="btn-view btn-icon-tool" data-i18n-title="ui.rename_deck_title" data-i18n-aria="ui.rename_deck_aria" title="" aria-label="">
+                            <i class="fas fa-pen" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                    <div class="icon-btn-stack icon-btn-stack--tool">
+                        <label class="theme-row-label" for="btn-deck-delete-saved" data-i18n="ui.delete_deck_label">Apagar</label>
+                        <button type="button" id="btn-deck-delete-saved" class="btn-view btn-icon-tool" data-i18n-title="ui.delete_deck_title" data-i18n-aria="ui.delete_deck_aria" title="" aria-label="">
+                            <i class="fas fa-trash-alt" aria-hidden="true"></i>
+                        </button>
+                    </div>
                 </div>
                 <div class="deck-validate-controls" aria-label="Validação do deck">
-                    <select id="deck-banlist-select" class="deck-validate-select" title="Banlist para validar o deck">
-                        <option value="">Sem banlist (regras padrão)</option>
-                    </select>
-                    <button type="button" id="btn-deck-validate-toggle" class="btn-view" title="Validação do deck: ligada">
-                        <span id="btn-deck-validate-toggle-text">Validar</span>
-                    </button>
+                    <div class="queue-toolbar-select-stack">
+                        <label class="theme-row-label" for="deck-banlist-select" data-i18n="ui.deck_banlist_select_label">Banlist</label>
+                        <select id="deck-banlist-select" class="deck-validate-select" title="Banlist para validar o deck">
+                            <option value="">Sem banlist (regras padrão)</option>
+                        </select>
+                    </div>
+                    <div class="icon-btn-stack icon-btn-stack--tool">
+                        <span class="theme-row-label" id="btn-deck-validate-toggle-label">Validar</span>
+                        <button type="button" id="btn-deck-validate-toggle" class="btn-view btn-icon-tool" data-i18n-title="ui.deck_validate_label_on" title="">
+                            <i class="fas fa-clipboard-check" id="btn-deck-validate-toggle-icon" aria-hidden="true"></i>
+                        </button>
+                    </div>
                 </div>
                 <div class="queue-col-controls">
-                    <button type="button" id="btn-toggle-pdf-preview" class="btn-view active" data-i18n-title="ui.pdf_preview_title_on" title="Ocultar pré-visualização do PDF" style="font-size: 14px;">
-                        <i class="fas fa-file-pdf" id="icon-pdf-preview"></i>
-                    </button>
-                    <button type="button" id="btn-queue-list" class="btn-view active" data-i18n-title="ui.queue_list_title" title="Deck em lista" onclick="changeQueueView('list')" style="font-size: 16px;">
-                        <i class="fas fa-list"></i>
-                    </button>
-                    <button type="button" id="btn-queue-grid" class="btn-view" data-i18n-title="ui.queue_grid_title" title="Deck em grade" onclick="changeQueueView('grid')" style="font-size: 16px;">
-                        <i class="fas fa-th-large"></i>
-                    </button>
-                    <button type="button" class="btn-view" onclick="clearQueue()" style="font-size: 9px;"><span data-i18n="ui.clear_queue">Limpar</span></button>
+                    <div class="icon-btn-stack icon-btn-stack--tool">
+                        <span class="theme-row-label" data-i18n="ui.deck_pdf_label">PDF</span>
+                        <button type="button" id="btn-toggle-pdf-preview" class="btn-view btn-icon-tool active" data-i18n-title="ui.pdf_preview_title_on" title="Ocultar pré-visualização do PDF">
+                            <i class="fas fa-file-pdf" id="icon-pdf-preview" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                    <div class="icon-btn-stack icon-btn-stack--tool">
+                        <span class="theme-row-label" data-i18n="ui.deck_queue_list_label">Lista</span>
+                        <button type="button" id="btn-queue-list" class="btn-view btn-icon-tool active" data-i18n-title="ui.queue_list_title" title="Deck em lista" onclick="changeQueueView('list')">
+                            <i class="fas fa-list" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                    <div class="icon-btn-stack icon-btn-stack--tool">
+                        <span class="theme-row-label" data-i18n="ui.deck_queue_grid_label">Grade</span>
+                        <button type="button" id="btn-queue-grid" class="btn-view btn-icon-tool" data-i18n-title="ui.queue_grid_title" title="Deck em grade" onclick="changeQueueView('grid')">
+                            <i class="fas fa-th-large" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                    <div class="icon-btn-stack icon-btn-stack--tool">
+                        <span class="theme-row-label" data-i18n="ui.clear_queue">Limpar</span>
+                        <button type="button" class="btn-view btn-icon-tool" onclick="clearQueue()" data-i18n-title="ui.clear_queue" data-i18n-aria="ui.clear_queue" title="" aria-label=""><i class="fas fa-broom" aria-hidden="true"></i></button>
+                    </div>
+                </div>
+                <div class="queue-toolbar-extras">
+                    <div class="label-width-stack" style="margin-top: 0;">
+                        <span class="theme-row-label" data-i18n="ui.import_deck">Importar DECK</span>
+                        <label class="btn-secondary btn-icon-tool" style="cursor: pointer; margin: 0;">
+                            <i class="fas fa-file-import" aria-hidden="true"></i>
+                            <input type="file" id="file-deck-import" accept=".ydk,.csv,.pdf,.zip,.png,.jpg,.jpeg,application/pdf,application/zip,image/png,image/jpeg" style="display:none" onchange="importDeckFile(this)">
+                        </label>
+                    </div>
+                    <div class="filter-group filter-pdf-scale label-width-stack">
+                        <label class="theme-row-label" data-i18n="ui.pdf_scale">Escala do PDF (%)</label>
+                        <div class="stepper">
+                            <button type="button" onclick="adjustScale(-0.1)" data-i18n-title="ui.pdf_scale" title=""><i class="fas fa-minus" aria-hidden="true"></i></button>
+                            <input type="number" id="print-scale" value="100.0" readonly>
+                            <button type="button" onclick="adjustScale(0.1)" data-i18n-title="ui.pdf_scale" title=""><i class="fas fa-plus" aria-hidden="true"></i></button>
+                        </div>
+                    </div>
+                    <div class="icon-btn-stack icon-btn-stack--export label-width-stack">
+                        <span class="theme-row-label" data-i18n="ui.export_action_label">Exportar</span>
+                        <button type="button" class="btn-accent" id="btn-open-export-menu" data-i18n-title="ui.export_btn" data-i18n-aria="ui.export_btn" title="" aria-label=""><i class="fas fa-file-export" aria-hidden="true"></i></button>
+                    </div>
                 </div>
             </div>
-        </div>
-        <div style="padding: 10px 10px 0 10px;">
-            <label class="btn-secondary" style="width: 100%; display: block; text-align: center;"><span data-i18n="ui.import_deck">Importar DECK</span>
-                <input type="file" id="file-deck-import" accept=".ydk,.csv,.pdf,.zip,.png,.jpg,.jpeg,application/pdf,application/zip,image/png,image/jpeg" style="display:none" onchange="importDeckFile(this)">
-            </label>
         </div>
         <div id="deck-stats-bar" class="deck-stats-bar" role="region" data-i18n-aria="ui.deck_stats_aria" aria-label="Totais do deck">
             <div class="deck-stats-bar-inner">
@@ -3108,23 +3739,30 @@
             </div>
         </div>
         <div class="deck-sort-bar" role="group" data-i18n-aria="ui.deck_sort_bar_aria" aria-label="Ordenação do deck">
-            <label for="deck-sort-by" class="sort-label" data-i18n="ui.deck_sort_label">Ordenar deck</label>
-            <div class="sort-controls" style="display: flex; gap: 5px; align-items: center;">
-                <select id="deck-sort-by" onchange="void deckSortAndRefresh()" style="flex: 1;">
-                    <option data-i18n-opt="opt.sort.custom" value="custom" selected>Personalizado</option>
-                    <option data-i18n-opt="opt.sort.name" value="name">Nome</option>
-                    <option data-i18n-opt="opt.sort.atk" value="atk">Ataque</option>
-                    <option data-i18n-opt="opt.sort.def" value="def">Defesa</option>
-                    <option data-i18n-opt="opt.sort.level" value="level">Level/Rank</option>
-                    <option data-i18n-opt="opt.sort.tcg" value="tcg_date">Data TCG</option>
-                    <option data-i18n-opt="opt.sort.ocg" value="ocg_date">Data OCG</option>
-                    <option data-i18n-opt="opt.sort.price" value="price">Preço</option>
-                    <option data-i18n-opt="opt.sort.banlist" value="banlist">Banlist</option>
-                    <option data-i18n-opt="opt.sort.random" value="random">Aleatório</option>
-                </select>
-                <button type="button" id="btn-deck-order" class="btn-view" onclick="void toggleDeckOrder()" data-i18n-title="ui.deck_order_title" title="Inverter ordem" style="height: 35px; min-width: 35px; display: flex; align-items: center; justify-content: center;">
-                    <span id="deck-order-icon">↑</span>
-                </button>
+            <div class="deck-sort-bar-field">
+            <div class="sort-controls">
+                <div class="queue-toolbar-select-stack" style="flex: 1; min-width: 0;">
+                    <label for="deck-sort-by" class="theme-row-label" data-i18n="ui.deck_sort_label">Ordenar deck</label>
+                    <select id="deck-sort-by" onchange="void deckSortAndRefresh()" style="flex: 1;">
+                        <option data-i18n-opt="opt.sort.custom" value="custom" selected>Personalizado</option>
+                        <option data-i18n-opt="opt.sort.name" value="name">Nome</option>
+                        <option data-i18n-opt="opt.sort.atk" value="atk">Ataque</option>
+                        <option data-i18n-opt="opt.sort.def" value="def">Defesa</option>
+                        <option data-i18n-opt="opt.sort.level" value="level">Level/Rank</option>
+                        <option data-i18n-opt="opt.sort.tcg" value="tcg_date">Data TCG</option>
+                        <option data-i18n-opt="opt.sort.ocg" value="ocg_date">Data OCG</option>
+                        <option data-i18n-opt="opt.sort.price" value="price">Preço</option>
+                        <option data-i18n-opt="opt.sort.banlist" value="banlist">Banlist</option>
+                        <option data-i18n-opt="opt.sort.random" value="random">Aleatório</option>
+                    </select>
+                </div>
+                <div class="icon-btn-stack">
+                    <label class="theme-row-label" for="btn-deck-order" data-i18n="ui.deck_sort_order_label">Ordem</label>
+                    <button type="button" id="btn-deck-order" class="btn-view" onclick="void toggleDeckOrder()" data-i18n-title="ui.deck_order_title" title="Inverter ordem" style="height: 35px; min-width: 35px; display: flex; align-items: center; justify-content: center;">
+                        <i id="deck-order-icon" class="fas fa-arrow-up" aria-hidden="true"></i>
+                    </button>
+                </div>
+            </div>
             </div>
         </div>
         <div id="deck-queue-pane" class="deck-queue-pane">
@@ -3141,42 +3779,67 @@
             <div id="import-overlay" style="position: absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); display:none; flex-direction:column; justify-content:center; align-items:center; z-index:10;"><span id="import-overlay-label" style="color:var(--accent); font-size:11px;" data-i18n="ui.generating_pdf">GERANDO PDF...</span><div style="width:80%; height:4px; background:#333; margin-top:10px;"><div id="progress-bar" style="width:0; height:100%; background:var(--accent);"></div></div></div>
             <iframe id="preview-frame"></iframe>
         </div>
-        <div class="deck-export-footer">
-            <div class="deck-export-footer-inner">
-                <div class="filter-group filter-pdf-scale">
-                    <label data-i18n="ui.pdf_scale">Escala do PDF (%)</label>
-                    <div class="stepper">
-                        <button type="button" onclick="adjustScale(-0.1)">-</button>
-                        <input type="number" id="print-scale" value="100.0" readonly>
-                        <button type="button" onclick="adjustScale(0.1)">+</button>
-                    </div>
-                </div>
-                <button type="button" class="btn-accent" id="btn-open-export-menu"><span data-i18n="ui.export_btn">EXPORTAR PARA…</span></button>
-            </div>
-        </div>
     </div>
 </div>
 
 <div id="export-menu-overlay" class="export-menu-overlay" role="dialog" aria-modal="true" aria-labelledby="export-menu-title-text">
     <div class="export-menu-panel" id="export-menu-panel">
         <div class="export-menu-header">
-            <button type="button" class="export-menu-back" id="export-menu-back" data-i18n-aria="ui.export_back" aria-label="Voltar"><span data-i18n="ui.export_back">← Voltar</span></button>
+            <div class="export-menu-back-wrap export-menu-header-side" id="export-menu-back-wrap">
+                <div class="icon-btn-stack">
+                    <span class="theme-row-label" data-i18n="ui.export_back_label">Voltar</span>
+                    <button type="button" class="export-menu-back btn-view btn-icon-tool" id="export-menu-back" data-i18n-title="ui.export_back" data-i18n-aria="ui.export_back" title="" aria-label=""><i class="fas fa-arrow-left" aria-hidden="true"></i></button>
+                </div>
+            </div>
             <span id="export-menu-title-text" class="export-menu-title" data-i18n="ui.export_title">Exportar para…</span>
-            <button type="button" class="export-menu-close" id="export-menu-close" data-i18n-title="ui.export_close_title" title="Fechar" data-i18n-aria="ui.export_close_aria" aria-label="Fechar">×</button>
+            <div class="icon-btn-stack export-menu-header-side">
+                <span class="theme-row-label" data-i18n="ui.export_close_label">Fechar</span>
+                <button type="button" class="export-menu-close" id="export-menu-close" data-i18n-title="ui.export_close_title" data-i18n-aria="ui.export_close_aria" title="" aria-label=""><i class="fas fa-times" aria-hidden="true"></i></button>
+            </div>
         </div>
         <div class="export-menu-body" id="export-menu-step-root">
-            <button type="button" class="btn-secondary export-scope-btn" data-scope="current"><span data-i18n="ui.export_scope_current">Este deck</span></button>
-            <button type="button" class="btn-secondary export-scope-btn" data-scope="all"><span data-i18n="ui.export_scope_all">Todos os Decks</span></button>
+            <div class="export-menu-option">
+                <span class="theme-row-label" data-i18n="ui.export_scope_current">Este deck</span>
+                <button type="button" class="btn-secondary export-scope-btn" data-scope="current" data-i18n-title="ui.export_scope_current" data-i18n-aria="ui.export_scope_current" title="" aria-label=""><i class="fas fa-id-card" aria-hidden="true"></i></button>
+            </div>
+            <div class="export-menu-option">
+                <span class="theme-row-label" data-i18n="ui.export_scope_all">Todos os Decks</span>
+                <button type="button" class="btn-secondary export-scope-btn" data-scope="all" data-i18n-title="ui.export_scope_all" data-i18n-aria="ui.export_scope_all" title="" aria-label=""><i class="fas fa-layer-group" aria-hidden="true"></i></button>
+            </div>
         </div>
         <div class="export-menu-body" id="export-menu-step-formats" style="display: none;">
-            <button type="button" class="btn-secondary export-format-btn" data-format="pdf" data-i18n="ui.export_fmt_pdf">PDF Proxies Cards</button>
-            <button type="button" class="btn-secondary export-format-btn" data-format="ydk" data-i18n="ui.export_fmt_ydk">YDK</button>
-            <button type="button" class="btn-secondary export-format-btn" data-format="ydk-clip" data-i18n="ui.export_fmt_ydk_clip">YDK → Área de transferência</button>
-            <button type="button" class="btn-secondary export-format-btn" data-format="csv" data-i18n="ui.export_fmt_csv">CSV</button>
-            <button type="button" class="btn-secondary export-format-btn" data-format="png" data-i18n="ui.export_fmt_png">PNG</button>
-            <button type="button" class="btn-secondary export-format-btn" data-format="jpg" data-i18n="ui.export_fmt_jpg">JPG</button>
-            <button type="button" class="btn-secondary export-format-btn" data-format="png-clip" data-i18n="ui.export_fmt_png_clip">PNG → Área de transferência</button>
-            <button type="button" class="btn-secondary export-format-btn" data-format="jpg-clip" data-i18n="ui.export_fmt_jpg_clip">JPG → Área de transferência</button>
+            <div class="export-menu-option">
+                <span class="theme-row-label" data-i18n="ui.export_fmt_pdf">PDF Proxies Cards</span>
+                <button type="button" class="btn-secondary export-format-btn" data-format="pdf" data-i18n-title="ui.export_fmt_pdf" data-i18n-aria="ui.export_fmt_pdf" title="" aria-label=""><i class="fas fa-file-pdf" aria-hidden="true"></i></button>
+            </div>
+            <div class="export-menu-option">
+                <span class="theme-row-label" data-i18n="ui.export_fmt_ydk">YDK</span>
+                <button type="button" class="btn-secondary export-format-btn" data-format="ydk" data-i18n-title="ui.export_fmt_ydk" data-i18n-aria="ui.export_fmt_ydk" title="" aria-label=""><i class="fas fa-file-code" aria-hidden="true"></i></button>
+            </div>
+            <div class="export-menu-option">
+                <span class="theme-row-label" data-i18n="ui.export_fmt_ydk_clip">YDK → Área de transferência</span>
+                <button type="button" class="btn-secondary export-format-btn" data-format="ydk-clip" data-i18n-title="ui.export_fmt_ydk_clip" data-i18n-aria="ui.export_fmt_ydk_clip" title="" aria-label=""><i class="fas fa-copy" aria-hidden="true"></i></button>
+            </div>
+            <div class="export-menu-option">
+                <span class="theme-row-label" data-i18n="ui.export_fmt_csv">CSV</span>
+                <button type="button" class="btn-secondary export-format-btn" data-format="csv" data-i18n-title="ui.export_fmt_csv" data-i18n-aria="ui.export_fmt_csv" title="" aria-label=""><i class="fas fa-file-csv" aria-hidden="true"></i></button>
+            </div>
+            <div class="export-menu-option">
+                <span class="theme-row-label" data-i18n="ui.export_fmt_png">PNG</span>
+                <button type="button" class="btn-secondary export-format-btn" data-format="png" data-i18n-title="ui.export_fmt_png" data-i18n-aria="ui.export_fmt_png" title="" aria-label=""><i class="fas fa-file-image" aria-hidden="true"></i></button>
+            </div>
+            <div class="export-menu-option">
+                <span class="theme-row-label" data-i18n="ui.export_fmt_jpg">JPG</span>
+                <button type="button" class="btn-secondary export-format-btn" data-format="jpg" data-i18n-title="ui.export_fmt_jpg" data-i18n-aria="ui.export_fmt_jpg" title="" aria-label=""><i class="fas fa-file-image" aria-hidden="true"></i></button>
+            </div>
+            <div class="export-menu-option">
+                <span class="theme-row-label" data-i18n="ui.export_fmt_png_clip">PNG → Área de transferência</span>
+                <button type="button" class="btn-secondary export-format-btn" data-format="png-clip" data-i18n-title="ui.export_fmt_png_clip" data-i18n-aria="ui.export_fmt_png_clip" title="" aria-label=""><i class="fas fa-paste" aria-hidden="true"></i></button>
+            </div>
+            <div class="export-menu-option">
+                <span class="theme-row-label" data-i18n="ui.export_fmt_jpg_clip">JPG → Área de transferência</span>
+                <button type="button" class="btn-secondary export-format-btn" data-format="jpg-clip" data-i18n-title="ui.export_fmt_jpg_clip" data-i18n-aria="ui.export_fmt_jpg_clip" title="" aria-label=""><i class="fas fa-paste" aria-hidden="true"></i></button>
+            </div>
         </div>
         <p class="export-menu-foot" data-i18n-html="ui.export_foot"></p>
     </div>
@@ -3299,18 +3962,23 @@
 
     function updateDeckValidationToggleUi() {
         const btn = document.getElementById('btn-deck-validate-toggle');
-        const lab = document.getElementById('btn-deck-validate-toggle-text');
+        const lab = document.getElementById('btn-deck-validate-toggle-label');
+        const icn = document.getElementById('btn-deck-validate-toggle-icon');
         const sel = document.getElementById('deck-banlist-select');
         if (!btn || !lab) return;
         if (isDeckValidationDisabled()) {
-            lab.textContent = 'Não validar';
-            btn.title = 'Validação do deck: desligada (sem limites de cópias/tamanho)';
+            lab.textContent = T('ui.deck_validate_label_off');
+            btn.title = T('ui.deck_validate_label_off');
+            btn.setAttribute('aria-label', T('ui.deck_validate_label_off'));
             btn.classList.add('active');
+            if (icn) icn.className = 'fas fa-ban';
             if (sel) sel.disabled = true;
         } else {
-            lab.textContent = 'Validar';
-            btn.title = 'Validação do deck: ligada';
+            lab.textContent = T('ui.deck_validate_label_on');
+            btn.title = T('ui.deck_validate_label_on');
+            btn.setAttribute('aria-label', T('ui.deck_validate_label_on'));
             btn.classList.remove('active');
+            if (icn) icn.className = 'fas fa-clipboard-check';
             if (sel) sel.disabled = false;
         }
         paintDeckValidityFlag();
@@ -4197,7 +4865,7 @@
 
     function updateDeckSortOrderIcon() {
         const icon = document.getElementById('deck-order-icon');
-        if (icon) icon.textContent = deckSortDirection === 1 ? '↑' : '↓';
+        if (icon) icon.className = 'fas ' + (deckSortDirection === 1 ? 'fa-arrow-up' : 'fa-arrow-down');
     }
 
     function shuffleArrayInPlace(arr) {
@@ -4682,6 +5350,7 @@
         "ui.scan_card_ocr": { pt: "Escanear Carta (OCR)", en: "Scan card (OCR)" },
         "ui.search_fname_clear": { pt: "Limpar nomes", en: "Clear names" },
         "ui.search_fname_hint": { pt: "\u22653 letras: busca enquanto digita. Use <strong>Adicionar</strong> para guardar termos extras (uni\u00e3o OR com o que ainda estiver no campo).", en: "\u22653 letters: search while typing. Use <strong>Add</strong> to save extra terms (OR union with whatever remains in the field)." },
+        "ui.search_name_label": { pt: "Nome", en: "Name" },
         "ui.search_placeholder": { pt: "Buscar pelo nome\u2026", en: "Search by name\u2026" },
         "ui.sets_partial": { pt: "{max} de {total}", en: "{max} of {total}" },
         "ui.spell_attr": { pt: "MAGIA", en: "SPELL" },
@@ -4845,6 +5514,8 @@
         "ui.swap_pick_extra": { pt: "Deck extra cheio (15). Escolha qual carta do extra substituir.", en: "Extra deck is full (15). Choose which extra-deck card to replace." },
         "ui.swap_pick_side": { pt: "Deck side cheio (15). Escolha qual carta do side substituir.", en: "Side deck is full (15). Choose which side-deck card to replace." },
         "ui.deck_stats_aria": { pt: "Totais do deck", en: "Deck totals" },
+        "ui.rename_deck_label": { pt: "Renomear", en: "Rename" },
+        "ui.delete_deck_label": { pt: "Apagar", en: "Delete" },
         "ui.delete_deck_aria": { pt: "Apagar deck salvo", en: "Delete saved deck" },
         "ui.delete_deck_title": { pt: "Apagar deck salvo selecionado", en: "Delete selected saved deck" },
         "ui.details_title": { pt: "Detalhes da carta", en: "Card details" },
@@ -4880,6 +5551,7 @@
         "ui.modal_deck_name": { pt: "Nome do deck", en: "Deck name" },
         "ui.ok": { pt: "OK", en: "OK" },
         "ui.pdf_preview_title_on": { pt: "Ocultar pr\u00e9-visualiza\u00e7\u00e3o do PDF", en: "Hide PDF preview" },
+        "ui.pdf_preview_title_off": { pt: "Mostrar pr\u00e9-visualiza\u00e7\u00e3o do PDF", en: "Show PDF preview" },
         "ui.pdf_scale": { pt: "Escala do PDF (%)", en: "PDF scale (%)" },
         "ui.queue_grid_title": { pt: "Deck em grade", en: "Deck as grid" },
         "ui.queue_list_title": { pt: "Deck em lista", en: "Deck as list" },
@@ -4894,6 +5566,8 @@
         "ui.saved_deck_aria": { pt: "Decks salvos", en: "Saved decks" },
         "ui.saved_deck_new": { pt: "Novo Deck", en: "New deck" },
         "ui.saved_deck_title": { pt: "Novo deck (rascunho) ou deck salvo", en: "New draft or saved deck" },
+        "ui.saved_deck_select_label": { pt: "Deck salvo", en: "Saved deck" },
+        "ui.deck_banlist_select_label": { pt: "Banlist", en: "Banlist" },
         "ui.screen_aria": { pt: "Entrar em tela inteira", en: "Enter fullscreen" },
         "ui.screen_label": { pt: "Tela", en: "Screen" },
         "ui.screen_title": { pt: "Tela inteira (como F11)", en: "Fullscreen (like F11)" },
@@ -4903,6 +5577,21 @@
         "ui.tooltip_aria": { pt: "Alternar tooltip", en: "Toggle tooltip" },
         "ui.tooltip_label": { pt: "Tooltip", en: "Tooltip" },
         "ui.tooltip_title_on": { pt: "Tooltip ao passar o rato: ligado (clique para desligar)", en: "Hover tooltip: on (click to turn off)" },
+        "ui.sort_order_label": { pt: "Ordem", en: "Order" },
+        "ui.results_order_title": { pt: "Inverter ordem de ordena\u00e7\u00e3o (crescente/decrescente)", en: "Reverse sort direction (ascending/descending)" },
+        "ui.deck_sort_order_label": { pt: "Ordem", en: "Order" },
+        "ui.pagination_prev": { pt: "Anterior", en: "Previous" },
+        "ui.pagination_next": { pt: "Pr\u00f3ximo", en: "Next" },
+        "ui.pagination_page_label": { pt: "P\u00e1gina", en: "Page" },
+        "ui.search_qty_label": { pt: "Quantidade", en: "Quantity" },
+        "ui.deck_validate_label_on": { pt: "Validar", en: "Validate" },
+        "ui.deck_validate_label_off": { pt: "N\u00e3o validar", en: "Skip check" },
+        "ui.deck_pdf_label": { pt: "PDF", en: "PDF" },
+        "ui.deck_queue_list_label": { pt: "Lista", en: "List" },
+        "ui.deck_queue_grid_label": { pt: "Grade", en: "Grid" },
+        "ui.export_action_label": { pt: "Exportar", en: "Export" },
+        "ui.export_back_label": { pt: "Voltar", en: "Back" },
+        "ui.export_close_label": { pt: "Fechar", en: "Close" },
     };
 
     function T(key, vars) {
@@ -4977,6 +5666,7 @@
         uiLang = lang;
         setUiPref(UI_PREF_KEYS.lang, uiLang);
         applyUiLanguage();
+        try { updateDeckValidationToggleUi(); } catch (_) {}
 
         clearLanguageSensitiveApiCaches();
         currentPage = 1;
@@ -5208,7 +5898,10 @@
         if (col) col.classList.toggle('pdf-preview-hidden', !!hidden);
         if (btn) {
             btn.classList.toggle('active', !hidden);
-            btn.title = hidden ? 'Mostrar pré-visualização do PDF' : 'Ocultar pré-visualização do PDF';
+            const tKey = hidden ? 'ui.pdf_preview_title_off' : 'ui.pdf_preview_title_on';
+            btn.title = T(tKey);
+            btn.setAttribute('aria-label', T(tKey));
+            btn.setAttribute('data-i18n-title', tKey);
         }
         if (icon) icon.className = hidden ? 'fas fa-eye-slash' : 'fas fa-file-pdf';
         try {
@@ -5925,6 +6618,14 @@
         return val;
     }
 
+    function setChipClearRowVisible(buttonId, visible) {
+        const btn = document.getElementById(buttonId);
+        if (!btn) return;
+        const wrap = btn.closest('.filter-clear-stack');
+        if (wrap) wrap.style.display = visible ? 'flex' : 'none';
+        else btn.style.display = visible ? 'block' : 'none';
+    }
+
     function paintComboFilterChips() {
         const rows = [
             ['typeCategory', 'filter-type-chips', 'filter-type-clear'],
@@ -5951,7 +6652,7 @@
             box.querySelectorAll('.chip-remove-btn').forEach(btn => {
                 btn.onclick = () => removeComboFilterChip(btn.getAttribute('data-fc-key'), btn.getAttribute('data-fc-val'));
             });
-            if (clr) clr.style.display = arr.length ? 'block' : 'none';
+            if (clr) setChipClearRowVisible(clrId, arr.length > 0);
         });
         syncDatePeriodGroupVisibility();
     }
@@ -6675,7 +7376,7 @@
                 performSearch(true);
             };
         });
-        if (clearBtn) clearBtn.style.display = names.length ? 'block' : 'none';
+        if (clearBtn) setChipClearRowVisible('filter-cardset-clear', names.length > 0);
     }
 
     function tryAddCardsetFromInput() {
@@ -6722,7 +7423,7 @@
                 performSearch(true);
             };
         });
-        if (clearBtn) clearBtn.style.display = codes.length ? 'block' : 'none';
+        if (clearBtn) setChipClearRowVisible('filter-setcode-clear', codes.length > 0);
     }
 
     function tryAddSetcodeFromInput() {
@@ -6768,7 +7469,7 @@
                 performSearch(true);
             };
         });
-        if (clearBtn) clearBtn.style.display = rs.length ? 'block' : 'none';
+        if (clearBtn) setChipClearRowVisible('filter-rarity-clear', rs.length > 0);
     }
 
     function tryAddRarityFromInput() {
@@ -7095,7 +7796,7 @@
                 return `<span class="cardset-chip">${safe}<button type="button" class="mt-chip-x" data-mt="fname" data-mt-val="${safe}" title="${escAttr(T('chip.remove'))}">&times;</button></span>`;
             }).join('');
             wireMultiTextChipButtons(box);
-            if (clr) clr.style.display = (m.fname || []).length ? 'block' : 'none';
+            if (clr) setChipClearRowVisible('filter-fname-clear-chips', (m.fname || []).length > 0);
             return;
         }
         if (kind === 'desc') {
@@ -7107,7 +7808,7 @@
                 return `<span class="cardset-chip">${safe}<button type="button" class="mt-chip-x" data-mt="desc" data-mt-val="${safe}" title="${escAttr(T('chip.remove'))}">&times;</button></span>`;
             }).join('');
             wireMultiTextChipButtons(box);
-            if (clr) clr.style.display = (m.desc || []).length ? 'block' : 'none';
+            if (clr) setChipClearRowVisible('filter-desc-clear-chips', (m.desc || []).length > 0);
             return;
         }
         if (kind === 'atk') {
@@ -7119,7 +7820,7 @@
                 return `<span class="cardset-chip">ATK ${safe}<button type="button" class="mt-chip-x" data-mt="atk" data-mt-val="${safe}">&times;</button></span>`;
             }).join('');
             wireMultiTextChipButtons(box);
-            if (clr) clr.style.display = (m.atk || []).length ? 'block' : 'none';
+            if (clr) setChipClearRowVisible('filter-atk-clear-chips', (m.atk || []).length > 0);
             return;
         }
         if (kind === 'def') {
@@ -7131,7 +7832,7 @@
                 return `<span class="cardset-chip">DEF ${safe}<button type="button" class="mt-chip-x" data-mt="def" data-mt-val="${safe}">&times;</button></span>`;
             }).join('');
             wireMultiTextChipButtons(box);
-            if (clr) clr.style.display = (m.def || []).length ? 'block' : 'none';
+            if (clr) setChipClearRowVisible('filter-def-clear-chips', (m.def || []).length > 0);
             return;
         }
         if (kind === 'price') {
@@ -7146,7 +7847,7 @@
                 return `<span class="cardset-chip">${escAttr(lab)}<button type="button" class="mt-chip-x" data-mt="price" data-mt-val="" data-mt-id="${idSafe}">&times;</button></span>`;
             }).join('');
             wireMultiTextChipButtons(box);
-            if (clr) clr.style.display = (m.priceRanges || []).length ? 'block' : 'none';
+            if (clr) setChipClearRowVisible('filter-price-clear-chips', (m.priceRanges || []).length > 0);
         }
     }
 
@@ -7309,7 +8010,7 @@
         }
         sortDirection *= -1;
         const icon = document.getElementById('order-icon');
-        if (icon) icon.innerText = sortDirection === 1 ? '↑' : '↓';
+        if (icon) icon.className = 'fas ' + (sortDirection === 1 ? 'fa-arrow-up' : 'fa-arrow-down');
         setUiPref(UI_PREF_KEYS.resultsSortDir, String(sortDirection));
         sortAndRender();
     }
@@ -8273,7 +8974,7 @@
             if (dirPref === 1 || dirPref === -1) {
                 sortDirection = dirPref;
                 const icon = document.getElementById('order-icon');
-                if (icon) icon.innerText = sortDirection === 1 ? '↑' : '↓';
+                if (icon) icon.className = 'fas ' + (sortDirection === 1 ? 'fa-arrow-up' : 'fa-arrow-down');
             }
         } catch (_) {}
         try {
@@ -10726,10 +11427,12 @@
         const root = document.getElementById('export-menu-step-root');
         const fmt = document.getElementById('export-menu-step-formats');
         const back = document.getElementById('export-menu-back');
+        const backWrap = document.getElementById('export-menu-back-wrap');
         const title = document.getElementById('export-menu-title-text');
         if (root) root.style.display = '';
         if (fmt) fmt.style.display = 'none';
-        if (back) back.classList.remove('is-visible');
+        if (backWrap) backWrap.classList.remove('is-visible');
+        else if (back) back.classList.remove('is-visible');
         if (title) title.textContent = T('ui.export_title');
         __exportMenuScope = null;
     }
@@ -10738,10 +11441,12 @@
         const root = document.getElementById('export-menu-step-root');
         const fmt = document.getElementById('export-menu-step-formats');
         const back = document.getElementById('export-menu-back');
+        const backWrap = document.getElementById('export-menu-back-wrap');
         const title = document.getElementById('export-menu-title-text');
         if (root) root.style.display = 'none';
         if (fmt) fmt.style.display = '';
-        if (back) back.classList.add('is-visible');
+        if (backWrap) backWrap.classList.add('is-visible');
+        else if (back) back.classList.add('is-visible');
         if (title) title.textContent = scopeLabel;
     }
 
