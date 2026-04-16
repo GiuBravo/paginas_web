@@ -925,6 +925,45 @@
             padding: 0 16px;
             font-size: 11px;
         }
+        .deck-swap-modal-list {
+            max-height: min(52vh, 420px);
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+        .deck-swap-pick-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+            padding: 8px 10px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.2);
+            cursor: pointer;
+            text-align: left;
+            font: inherit;
+            color: inherit;
+        }
+        .deck-swap-pick-row:hover {
+            border-color: var(--accent);
+        }
+        .deck-swap-pick-row img {
+            width: 36px;
+            height: auto;
+            border-radius: 4px;
+            flex-shrink: 0;
+        }
+        .deck-swap-pick-row span {
+            font-size: 12px;
+            font-weight: 600;
+            line-height: 1.25;
+        }
+        body.theme-white .deck-swap-pick-row {
+            background: #f3f4f6;
+        }
 
         /* Modal de detalhes (conteúdo do tooltip) */
         .tooltip-details-modal {
@@ -1532,7 +1571,8 @@
             padding: 0 !important;
         }
 
-        .results-view.grid-mode .suggestion-item img {
+        .results-view.grid-mode .suggestion-item img,
+        .results-view.grid-mode .suggestion-item-grid-artwrap img {
             width: 100% !important;
             height: auto !important;
             max-width: 100%;
@@ -1540,6 +1580,32 @@
             margin: 0 auto;
             box-shadow: 0 4px 12px rgba(0,0,0,0.5); 
             transition: transform 0.2s;
+        }
+
+        .suggestion-item-grid-artwrap {
+            position: relative;
+            width: 100%;
+            display: block;
+            line-height: 0;
+        }
+        .card-grid-ban-badge {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            z-index: 4;
+            line-height: 0;
+            pointer-events: none;
+        }
+        .queue-item-thumb-wrap .card-grid-ban-badge--deck-thumb {
+            top: 4px;
+            right: 30px;
+            z-index: 3;
+        }
+        .card-grid-ban-badge svg {
+            width: 22px;
+            height: 22px;
+            margin: 0;
+            display: block;
         }
 
         .deck-stats-bar {
@@ -1643,6 +1709,60 @@
             color: #2ecc71;
             font-size: 12px;
             font-variant-numeric: tabular-nums;
+        }
+
+        .deck-validity-flag {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 3px 8px;
+            border-radius: 999px;
+            font-weight: 800;
+            letter-spacing: 0.02em;
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            user-select: none;
+            cursor: default;
+            white-space: nowrap;
+        }
+        .deck-validity-flag i { font-size: 11px; }
+        .deck-validity-flag.is-valid {
+            background: rgba(39, 174, 96, 0.18);
+            color: #7dffb0;
+            border-color: rgba(39, 174, 96, 0.35);
+        }
+        .deck-validity-flag.is-invalid {
+            background: rgba(231, 76, 60, 0.18);
+            color: #ffb3ab;
+            border-color: rgba(231, 76, 60, 0.35);
+        }
+        .deck-validity-flag.is-off {
+            background: rgba(149, 165, 166, 0.12);
+            color: rgba(255, 255, 255, 0.75);
+            border-color: rgba(149, 165, 166, 0.25);
+        }
+        body.theme-white .deck-validity-flag { border-color: var(--border); }
+        body.theme-white .deck-validity-flag.is-off { color: #334155; }
+        body.theme-white .deck-validity-flag.is-valid { color: #065f46; }
+        body.theme-white .deck-validity-flag.is-invalid { color: #7f1d1d; }
+
+        .deck-validate-controls {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .deck-validate-select {
+            height: 32px;
+            font-size: 11px;
+            padding: 0 8px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--panel-bg);
+            color: var(--text);
+            max-width: 220px;
+        }
+        body.theme-white .deck-validate-select {
+            background: #fff;
         }
 
         .deck-sort-bar {
@@ -2260,7 +2380,8 @@
             .grid-mode { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 15px; padding: 15px; }
             .grid-mode .card-info-box { display: none; }
             .grid-mode .suggestion-item { display: block; text-align: center; border-bottom: none; position: relative; }
-            .grid-mode .suggestion-item img { width: 100%; height: auto; }
+            .grid-mode .suggestion-item img,
+            .grid-mode .suggestion-item-grid-artwrap img { width: 100%; height: auto; }
             #card-tooltip {
                 display: none;
                 position: fixed;
@@ -2346,7 +2467,16 @@
                 min-height: 0 !important;
                 height: 100%;
             }
-            .results-view.grid-mode .suggestion-item img {
+            .results-view.grid-mode .suggestion-item-grid-artwrap {
+                min-height: 0;
+                max-height: 100%;
+                width: 100%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            .results-view.grid-mode .suggestion-item img,
+            .results-view.grid-mode .suggestion-item-grid-artwrap img {
                 width: auto !important;
                 max-width: 100% !important;
                 height: auto !important;
@@ -2374,7 +2504,8 @@
                 padding: 10px !important; 
             }
             .grid-mode .suggestion-item { display: block !important; text-align: center; padding: 5px; border-bottom: none; position: relative !important; }
-            .grid-mode .suggestion-item img { width: 100%; height: auto; }
+            .grid-mode .suggestion-item img,
+            .grid-mode .suggestion-item-grid-artwrap img { width: 100%; height: auto; }
             .grid-mode .card-info-box { display: none !important; }
             #col-preview.pdf-preview-hidden .pdf-preview-container {
                 display: none !important;
@@ -2559,6 +2690,17 @@
         <div class="deck-name-modal-actions">
             <button type="button" class="btn-view" id="deck-name-modal-cancel"><span data-i18n="ui.cancel">Cancelar</span></button>
             <button type="button" class="btn-view active" id="deck-name-modal-ok"><span data-i18n="ui.ok">OK</span></button>
+        </div>
+    </div>
+</div>
+
+<div id="deck-swap-modal" class="deck-name-modal" aria-hidden="true">
+    <div class="deck-name-modal-backdrop" id="deck-swap-modal-backdrop"></div>
+    <div class="deck-name-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="deck-swap-modal-title">
+        <h3 id="deck-swap-modal-title">Trocar carta</h3>
+        <div id="deck-swap-modal-list" class="deck-swap-modal-list"></div>
+        <div class="deck-name-modal-actions">
+            <button type="button" class="btn-view" id="deck-swap-modal-cancel"><span data-i18n="ui.cancel">Cancelar</span></button>
         </div>
     </div>
 </div>
@@ -2916,6 +3058,14 @@
                         <i class="fas fa-trash-alt"></i>
                     </button>
                 </div>
+                <div class="deck-validate-controls" aria-label="Validação do deck">
+                    <select id="deck-banlist-select" class="deck-validate-select" title="Banlist para validar o deck">
+                        <option value="">Sem banlist (regras padrão)</option>
+                    </select>
+                    <button type="button" id="btn-deck-validate-toggle" class="btn-view" title="Validação do deck: ligada">
+                        <span id="btn-deck-validate-toggle-text">Validar</span>
+                    </button>
+                </div>
                 <div class="queue-col-controls">
                     <button type="button" id="btn-toggle-pdf-preview" class="btn-view active" data-i18n-title="ui.pdf_preview_title_on" title="Ocultar pré-visualização do PDF" style="font-size: 14px;">
                         <i class="fas fa-file-pdf" id="icon-pdf-preview"></i>
@@ -2950,6 +3100,10 @@
                 <span class="deck-stat-price-wrap" data-i18n-title="ui.deck_stat_price_title" title="Soma TCGPlayer (USD) por cópia no deck">
                     <span class="deck-stat-price-label" data-i18n="ui.deck_stat_total_usd">Total</span>
                     <span id="deck-stat-price" class="deck-stat-price-val">—</span>
+                </span>
+                <span id="deck-validity-flag" class="deck-validity-flag is-off" title="Validação do deck: desligada">
+                    <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
+                    <span id="deck-validity-text">Validação OFF</span>
                 </span>
             </div>
         </div>
@@ -3040,7 +3194,11 @@
 <script>
     const { jsPDF } = window.jspdf;
     const starIcon = "https://ygoprodeck.com/wp-content/uploads/2017/01/level.png";
-    let cardQueue = [], searchResults = [], currentPage = 1, currentView = 'list';
+    let cardQueue = [],
+        cardQueueSide = [],
+        searchResults = [],
+        currentPage = 1,
+        currentView = 'list';
     /** Cópia do deck antes de carregar um deck salvo pelo combo; usada em “Novo Deck” e no 1.º Limpar. */
     let deckDraftBeforeSavedLoad = null;
     /** Vista do deck de impressão (independente da lista de sugestões). */
@@ -3054,6 +3212,136 @@
 
     const YGO_DND_SUGGESTION = 'application/x-ygo-suggestion';
     const YGO_DND_QUEUE = 'application/x-ygo-queue';
+
+    const DECK_LIMIT_MAIN = 60;
+    const DECK_LIMIT_EXTRA = 15;
+    const DECK_LIMIT_SIDE = 15;
+
+    let deckValidationDisabled = false;
+
+    function isDeckValidationDisabled() {
+        return !!deckValidationDisabled;
+    }
+
+    function getDeckBanlistTypeForValidation() {
+        if (isDeckValidationDisabled()) return '';
+        const sel = document.getElementById('deck-banlist-select');
+        if (!sel) return '';
+        return String(sel.value || '').trim();
+    }
+
+    function banlistMaxCopiesForCard(card, banlistType) {
+        if (!banlistType || !card || !card.banlist_info) return 3;
+        const status = card.banlist_info[`ban_${banlistType}`];
+        if (status === 'Banned' || status === 'Forbidden') return 0;
+        if (status === 'Limited') return 1;
+        if (status === 'Semi-Limited') return 2;
+        return 3;
+    }
+
+    function validateCurrentDeck() {
+        if (isDeckValidationDisabled()) {
+            return { ok: true, issues: [], banlistType: getDeckBanlistTypeForValidation(), disabled: true };
+        }
+        const banType = getDeckBanlistTypeForValidation();
+        const mainCount = countMainBuildEntries();
+        const extraCount = countExtraBuildEntries();
+        const sideCount = cardQueueSide.length;
+        const issues = [];
+
+        if (mainCount < 40) issues.push(`Deck principal tem ${mainCount} (mínimo 40).`);
+        else if (mainCount > DECK_LIMIT_MAIN) issues.push(`Deck principal tem ${mainCount} (máximo ${DECK_LIMIT_MAIN}).`);
+
+        if (extraCount > DECK_LIMIT_EXTRA) issues.push(`Deck extra tem ${extraCount} (máximo ${DECK_LIMIT_EXTRA}).`);
+        if (sideCount > DECK_LIMIT_SIDE) issues.push(`Deck side tem ${sideCount} (máximo ${DECK_LIMIT_SIDE}).`);
+
+        const counts = new Map();
+        for (const e of [...cardQueue, ...cardQueueSide]) {
+            const id = String(e.id);
+            counts.set(id, (counts.get(id) || 0) + 1);
+        }
+        for (const [id, n] of counts.entries()) {
+            const full = cardCache[id];
+            const max = banType ? banlistMaxCopiesForCard(full, banType) : 3;
+            if (n > max) {
+                const name = (full && (full.name_pt || full.name || full.name_en)) || id;
+                issues.push(`${name}: ${n} cópias (máximo ${max}).`);
+            }
+        }
+
+        return { ok: issues.length === 0, issues, banlistType: banType, disabled: false };
+    }
+
+    function paintDeckValidityFlag() {
+        const el = document.getElementById('deck-validity-flag');
+        const tx = document.getElementById('deck-validity-text');
+        if (!el || !tx) return;
+
+        if (isDeckValidationDisabled()) {
+            el.classList.remove('is-valid', 'is-invalid');
+            el.classList.add('is-off');
+            tx.textContent = 'Validação OFF';
+            el.title = 'Validação do deck: desligada';
+            return;
+        }
+
+        const v = validateCurrentDeck();
+        el.classList.remove('is-off', 'is-valid', 'is-invalid');
+        el.classList.add(v.ok ? 'is-valid' : 'is-invalid');
+        const suffix = v.banlistType ? ` (${v.banlistType.toUpperCase()})` : ' (padrão)';
+        tx.textContent = v.ok ? `Válido${suffix}` : `Inválido${suffix}`;
+        el.title = v.ok
+            ? 'Deck válido.'
+            : (`Deck inválido:\n- ` +
+                  v.issues.slice(0, 10).join('\n- ') +
+                  (v.issues.length > 10 ? '\n- …' : ''));
+    }
+
+    function updateDeckValidationToggleUi() {
+        const btn = document.getElementById('btn-deck-validate-toggle');
+        const lab = document.getElementById('btn-deck-validate-toggle-text');
+        const sel = document.getElementById('deck-banlist-select');
+        if (!btn || !lab) return;
+        if (isDeckValidationDisabled()) {
+            lab.textContent = 'Não validar';
+            btn.title = 'Validação do deck: desligada (sem limites de cópias/tamanho)';
+            btn.classList.add('active');
+            if (sel) sel.disabled = true;
+        } else {
+            lab.textContent = 'Validar';
+            btn.title = 'Validação do deck: ligada';
+            btn.classList.remove('active');
+            if (sel) sel.disabled = false;
+        }
+        paintDeckValidityFlag();
+    }
+
+    function initDeckValidationControls() {
+        const sel = document.getElementById('deck-banlist-select');
+        const btn = document.getElementById('btn-deck-validate-toggle');
+        if (sel && !sel.dataset.init) {
+            sel.dataset.init = '1';
+            for (const b of FILTER_BANLIST_LABELS || []) {
+                const opt = document.createElement('option');
+                opt.value = String(b.v || '');
+                opt.textContent = String(b.label || b.v || '');
+                sel.appendChild(opt);
+            }
+            sel.addEventListener('change', () => {
+                paintDeckValidityFlag();
+                updateUI();
+            });
+        }
+        if (btn && !btn.dataset.init) {
+            btn.dataset.init = '1';
+            btn.addEventListener('click', () => {
+                deckValidationDisabled = !deckValidationDisabled;
+                updateDeckValidationToggleUi();
+                updateUI();
+            });
+        }
+        updateDeckValidationToggleUi();
+    }
 
     function dndTransferHasType(dt, mime) {
         if (!dt || !dt.types) return false;
@@ -3149,6 +3437,301 @@
         cardQueue.splice(insertAt, 0, ...entries);
     }
 
+    function insertSideEntriesAtStackBoundary(entries, refImgId, insertBefore) {
+        if (!entries.length) return;
+        if (!refImgId) {
+            cardQueueSide.push(...entries);
+            return;
+        }
+        const refId = String(refImgId);
+        let refFirst = cardQueueSide.findIndex((c) => String(c.imgId) === refId);
+        if (refFirst < 0) {
+            cardQueueSide.push(...entries);
+            return;
+        }
+        let refLast = refFirst;
+        for (let i = 0; i < cardQueueSide.length; i++) {
+            if (String(cardQueueSide[i].imgId) === refId) refLast = i;
+        }
+        const insertAt = insertBefore ? refFirst : refLast + 1;
+        cardQueueSide.splice(insertAt, 0, ...entries);
+    }
+
+    function moveStackInQueue(queue, dragImgId, refImgId, insertBefore) {
+        if (dragImgId === refImgId) return;
+        const dragEntries = queue.filter((c) => String(c.imgId) === dragImgId);
+        if (!dragEntries.length) return;
+        const rest = queue.filter((c) => String(c.imgId) !== dragImgId);
+        let refFirst = rest.findIndex((c) => String(c.imgId) === refImgId);
+        if (refFirst < 0) {
+            rest.push(...dragEntries);
+            queue.length = 0;
+            queue.push(...rest);
+            return;
+        }
+        let refLast = refFirst;
+        for (let i = 0; i < rest.length; i++) {
+            if (String(rest[i].imgId) === refImgId) refLast = i;
+        }
+        const insertAt = insertBefore ? refFirst : refLast + 1;
+        rest.splice(insertAt, 0, ...dragEntries);
+        queue.length = 0;
+        queue.push(...rest);
+    }
+
+    function removeOneCopyFromQueueByImgId(queue, imgId) {
+        const idStr = String(imgId);
+        for (let i = queue.length - 1; i >= 0; i--) {
+            if (String(queue[i].imgId) === idStr) return queue.splice(i, 1)[0];
+        }
+        return null;
+    }
+
+    function cloneQueueEntry(e) {
+        return { id: e.id, name: e.name, imgId: e.imgId };
+    }
+
+    function countMainBuildEntries() {
+        let n = 0;
+        for (const e of cardQueue) {
+            const full = cardCache[e.id];
+            if (getQueueCardSection(full) !== 'extra') n++;
+        }
+        return n;
+    }
+
+    function countExtraBuildEntries() {
+        let n = 0;
+        for (const e of cardQueue) {
+            const full = cardCache[e.id];
+            if (getQueueCardSection(full) === 'extra') n++;
+        }
+        return n;
+    }
+
+    function tryAddEntryToBuild(entry) {
+        if (isDeckValidationDisabled()) {
+            cardQueue.push(cloneQueueEntry(entry));
+            return true;
+        }
+        const full = cardCache[entry.id];
+        const sec = getQueueCardSection(full);
+        if (sec === 'extra') {
+            if (countExtraBuildEntries() < DECK_LIMIT_EXTRA) {
+                cardQueue.push(cloneQueueEntry(entry));
+                return true;
+            }
+            return false;
+        }
+        if (countMainBuildEntries() < DECK_LIMIT_MAIN) {
+            cardQueue.push(cloneQueueEntry(entry));
+            return true;
+        }
+        return false;
+    }
+
+    function stacksInZoneForReplace(zone) {
+        if (zone === 'side') {
+            const ordered = [];
+            const seen = new Set();
+            for (const q of cardQueueSide) {
+                const k = String(q.imgId);
+                if (seen.has(k)) continue;
+                seen.add(k);
+                const c0 = cardQueueSide.find((x) => String(x.imgId) === k);
+                ordered.push({ imgId: k, name: (c0 && c0.name) || '', id: c0 && c0.id });
+            }
+            return ordered;
+        }
+        const ordered = [];
+        const seen = new Set();
+        for (const q of cardQueue) {
+            const k = String(q.imgId);
+            if (seen.has(k)) continue;
+            seen.add(k);
+            const c0 = cardQueue.find((x) => String(x.imgId) === k);
+            const full = c0 ? cardCache[c0.id] : null;
+            const isExtra = getQueueCardSection(full) === 'extra';
+            if (zone === 'extra' && !isExtra) continue;
+            if (zone === 'main' && isExtra) continue;
+            ordered.push({ imgId: k, name: (c0 && c0.name) || '', id: c0 && c0.id });
+        }
+        return ordered;
+    }
+
+    let deckSwapModalKeyHandler = null;
+
+    /** Devolve o `imgId` da pilha escolhida ou null se cancelar. */
+    function openDeckSwapPickModal(opts) {
+        return new Promise((resolve) => {
+            const modal = document.getElementById('deck-swap-modal');
+            const titleEl = document.getElementById('deck-swap-modal-title');
+            const listEl = document.getElementById('deck-swap-modal-list');
+            const cancelBtn = document.getElementById('deck-swap-modal-cancel');
+            const backdrop = document.getElementById('deck-swap-modal-backdrop');
+            if (!modal || !titleEl || !listEl || !cancelBtn || !backdrop) {
+                resolve(null);
+                return;
+            }
+            const zone = opts.zone || 'main';
+            const stacks = stacksInZoneForReplace(zone);
+            if (!stacks.length) {
+                resolve(null);
+                return;
+            }
+
+            if (deckSwapModalKeyHandler) {
+                document.removeEventListener('keydown', deckSwapModalKeyHandler);
+                deckSwapModalKeyHandler = null;
+            }
+
+            titleEl.textContent = opts.title || T('ui.swap_pick_title');
+            listEl.innerHTML = '';
+
+            function cleanup() {
+                modal.classList.remove('is-open');
+                modal.setAttribute('aria-hidden', 'true');
+                listEl.innerHTML = '';
+                cancelBtn.removeEventListener('click', onClose);
+                backdrop.removeEventListener('click', onClose);
+                if (deckSwapModalKeyHandler) {
+                    document.removeEventListener('keydown', deckSwapModalKeyHandler);
+                    deckSwapModalKeyHandler = null;
+                }
+            }
+
+            function onClose() {
+                cleanup();
+                resolve(null);
+            }
+
+            for (const s of stacks) {
+                const thumb = `https://images.ygoprodeck.com/images/cards_small/${s.imgId}.jpg`;
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'deck-swap-pick-row';
+                btn.innerHTML = `<img src="${thumb}" alt="" loading="lazy" onerror="this.src='https://images.ygoprodeck.com/images/cards/back_high.jpg'"><span>${escapeHtml(s.name || s.imgId)}</span>`;
+                btn.addEventListener('click', () => {
+                    cleanup();
+                    resolve(String(s.imgId));
+                });
+                listEl.appendChild(btn);
+            }
+
+            deckSwapModalKeyHandler = (e) => {
+                if (!modal.classList.contains('is-open')) return;
+                if (e.key === 'Escape') {
+                    e.preventDefault();
+                    onClose();
+                }
+            };
+
+            cancelBtn.addEventListener('click', onClose);
+            backdrop.addEventListener('click', onClose);
+            document.addEventListener('keydown', deckSwapModalKeyHandler);
+
+            modal.classList.add('is-open');
+            modal.setAttribute('aria-hidden', 'false');
+        });
+    }
+
+    async function forceAddToSide(entry, depth = 0) {
+        if (isDeckValidationDisabled()) {
+            cardQueueSide.push(cloneQueueEntry(entry));
+            return true;
+        }
+        if (depth > 10) return false;
+        if (cardQueueSide.length < DECK_LIMIT_SIDE) {
+            cardQueueSide.push(cloneQueueEntry(entry));
+            return true;
+        }
+        const pick = await openDeckSwapPickModal({
+            title: T('ui.swap_pick_side'),
+            zone: 'side'
+        });
+        if (!pick) return false;
+        const out = removeOneCopyFromQueueByImgId(cardQueueSide, pick);
+        if (!out) return false;
+        cardQueueSide.push(cloneQueueEntry(entry));
+        return await forceAddToBuild(out, depth + 1);
+    }
+
+    async function forceAddToBuild(entry, depth = 0) {
+        if (isDeckValidationDisabled()) {
+            cardQueue.push(cloneQueueEntry(entry));
+            return true;
+        }
+        if (depth > 10) return false;
+        if (tryAddEntryToBuild(entry)) return true;
+        const full = cardCache[entry.id];
+        const isEx = getQueueCardSection(full) === 'extra';
+        const pick = await openDeckSwapPickModal({
+            title: isEx ? T('ui.swap_pick_extra') : T('ui.swap_pick_main'),
+            zone: isEx ? 'extra' : 'main'
+        });
+        if (!pick) return false;
+        const out = removeOneCopyFromQueueByImgId(cardQueue, pick);
+        if (!out) return false;
+        cardQueue.push(cloneQueueEntry(entry));
+        return await forceAddToSide(out, depth + 1);
+    }
+
+    async function moveOneCopyBuildToSide(imgId) {
+        const removed = removeOneCopyFromQueueByImgId(cardQueue, imgId);
+        if (!removed) return;
+        if (!(await forceAddToSide(removed))) cardQueue.push(removed);
+        updateUI();
+    }
+
+    async function moveOneCopySideToBuild(imgId) {
+        const removed = removeOneCopyFromQueueByImgId(cardQueueSide, imgId);
+        if (!removed) return;
+        if (!(await forceAddToBuild(removed))) cardQueueSide.push(removed);
+        updateUI();
+    }
+
+    async function moveStackBuildToSide(imgId) {
+        const moving = [];
+        for (let i = cardQueue.length - 1; i >= 0; i--) {
+            if (String(cardQueue[i].imgId) === String(imgId)) moving.unshift(cardQueue.splice(i, 1)[0]);
+        }
+        if (!moving.length) return;
+        const failed = [];
+        for (const e of moving) {
+            if (!(await forceAddToSide(cloneQueueEntry(e)))) failed.push(e);
+        }
+        if (failed.length) cardQueue.push(...failed);
+        updateUI();
+    }
+
+    async function moveStackSideToBuild(imgId) {
+        const moving = [];
+        for (let i = cardQueueSide.length - 1; i >= 0; i--) {
+            if (String(cardQueueSide[i].imgId) === String(imgId)) moving.unshift(cardQueueSide.splice(i, 1)[0]);
+        }
+        if (!moving.length) return;
+        const failed = [];
+        for (const e of moving) {
+            if (!(await forceAddToBuild(cloneQueueEntry(e)))) failed.push(e);
+        }
+        if (failed.length) cardQueueSide.push(...failed);
+        updateUI();
+    }
+
+    function getDropDeckSectionFromPoint(deckEl, clientX, clientY) {
+        let el = null;
+        try {
+            el = document.elementFromPoint(clientX, clientY);
+        } catch {
+            el = null;
+        }
+        while (el && el !== deckEl) {
+            if (el.dataset && el.dataset.deckSection) return el.dataset.deckSection;
+            el = el.parentElement;
+        }
+        return 'principal';
+    }
+
     function bindSuggestionItemDnD(div, { id, imgId, name }) {
         div.draggable = true;
         div.classList.add('suggestion-item--draggable');
@@ -3215,7 +3798,9 @@
      * senão mistura línguas com o que está visível.
      */
     function deckStackDisplaySortName(imgId) {
-        const c0 = cardQueue.find((x) => String(x.imgId) === String(imgId));
+        const c0 =
+            cardQueue.find((x) => String(x.imgId) === String(imgId)) ||
+            cardQueueSide.find((x) => String(x.imgId) === String(imgId));
         if (!c0) return '';
         const qn = String(c0.name || '').trim();
         if (qn) return qn;
@@ -3345,11 +3930,11 @@
                 if (isDeckSortCustom()) updateDeckDropPlaceholder(deck, e);
                 return;
             }
-            if (isDeckSortCustom() && dndTransferHasType(e.dataTransfer, YGO_DND_QUEUE)) {
+            if (dndTransferHasType(e.dataTransfer, YGO_DND_QUEUE)) {
                 e.preventDefault();
                 e.dataTransfer.dropEffect = 'move';
                 deck.classList.add('deck-drop-target');
-                updateDeckDropPlaceholder(deck, e);
+                if (isDeckSortCustom()) updateDeckDropPlaceholder(deck, e);
                 return;
             }
             clearDeckDropPlaceholder(deck);
@@ -3359,10 +3944,18 @@
             deck.classList.remove('deck-drop-target');
             clearDeckDropPlaceholder(deck);
         });
-        deck.addEventListener('drop', (e) => {
+        deck.addEventListener('drop', async (e) => {
             e.preventDefault();
             deck.classList.remove('deck-drop-target');
             const phIns = getDeckInsertionFromPlaceholder(deck);
+            const dropSec = getDropDeckSectionFromPoint(deck, e.clientX, e.clientY);
+            const phEl = deck.querySelector('.deck-drop-placeholder');
+            const placeholderSection =
+                phEl && phEl.parentElement && phEl.parentElement.dataset
+                    ? phEl.parentElement.dataset.deckSection
+                    : null;
+            const effectiveDropForSuggest = placeholderSection || dropSec;
+
             const payloadSugg = parseDndJson(e.dataTransfer, YGO_DND_SUGGESTION);
             if (payloadSugg && payloadSugg.id != null && payloadSugg.imgId != null) {
                 let qty = parseInt(payloadSugg.qty, 10);
@@ -3374,6 +3967,24 @@
                 for (let i = 0; i < qty; i++) {
                     toAdd.push({ id: String(payloadSugg.id), name: nm, imgId: String(payloadSugg.imgId) });
                 }
+                if (effectiveDropForSuggest === 'side') {
+                    revealDeckColumnIfHidden();
+                    if (isDeckSortCustom()) {
+                        if (phIns && phIns.refId) {
+                            insertSideEntriesAtStackBoundary(toAdd, phIns.refId, !!phIns.insertBefore);
+                        } else {
+                            const row = e.target.closest('.queue-item');
+                            insertSideEntriesAtDropTarget(toAdd, row, e.clientY);
+                        }
+                    } else {
+                        for (const ent of toAdd) {
+                            if (!(await forceAddToSide(ent))) break;
+                        }
+                    }
+                    updateUI();
+                    clearDeckDropPlaceholder(deck);
+                    return;
+                }
                 if (isDeckSortCustom()) {
                     if (phIns && phIns.refId) insertDeckEntriesAtStackBoundary(toAdd, phIns.refId, !!phIns.insertBefore);
                     else {
@@ -3381,26 +3992,53 @@
                         insertDeckEntriesAtDropTarget(toAdd, row, e.clientY);
                     }
                 } else {
-                    cardQueue.push(...toAdd);
+                    for (const ent of toAdd) {
+                        if (!tryAddEntryToBuild(ent)) await forceAddToBuild(ent);
+                    }
                 }
                 revealDeckColumnIfHidden();
                 updateUI();
                 clearDeckDropPlaceholder(deck);
                 return;
             }
-            if (isDeckSortCustom() && dndTransferHasType(e.dataTransfer, YGO_DND_QUEUE)) {
+            if (dndTransferHasType(e.dataTransfer, YGO_DND_QUEUE)) {
                 const payloadQ = parseDndJson(e.dataTransfer, YGO_DND_QUEUE);
-                if (payloadQ && payloadQ.imgId != null && (phIns || e.target.closest('.queue-item'))) {
+                if (!payloadQ || payloadQ.imgId == null) {
+                    clearDeckDropPlaceholder(deck);
+                    return;
+                }
+                const dragId = String(payloadQ.imgId);
+                const dragPool = payloadQ.pool === 'side' ? 'side' : 'build';
+
+                if (dragPool === 'build' && dropSec === 'side') {
+                    await moveStackBuildToSide(dragId);
+                    clearDeckDropPlaceholder(deck);
+                    updateUI();
+                    return;
+                }
+                if (dragPool === 'side' && (dropSec === 'principal' || dropSec === 'extra')) {
+                    await moveStackSideToBuild(dragId);
+                    clearDeckDropPlaceholder(deck);
+                    updateUI();
+                    return;
+                }
+
+                if (isDeckSortCustom() && (phIns || e.target.closest('.queue-item'))) {
                     const row = e.target.closest('.queue-item');
                     const refId = (phIns && phIns.refId) || (row && row.dataset.stackImgId ? String(row.dataset.stackImgId) : '');
-                    const dragId = String(payloadQ.imgId);
                     if (refId && dragId !== refId) {
-                        const insertBefore = phIns ? !!phIns.insertBefore : (() => {
-                            if (!row) return true;
-                            const rect = row.getBoundingClientRect();
-                            return e.clientY < rect.top + rect.height / 2;
-                        })();
-                        moveDeckStackInQueue(dragId, refId, insertBefore);
+                        const insertBefore = phIns
+                            ? !!phIns.insertBefore
+                            : (() => {
+                                  if (!row) return true;
+                                  const rect = row.getBoundingClientRect();
+                                  return e.clientY < rect.top + rect.height / 2;
+                              })();
+                        if (dragPool === 'side' && dropSec === 'side') {
+                            moveSideStackInQueue(dragId, refId, insertBefore);
+                        } else if (dragPool === 'build' && (dropSec === 'principal' || dropSec === 'extra')) {
+                            moveDeckStackInQueue(dragId, refId, insertBefore);
+                        }
                         updateUI();
                     }
                 }
@@ -3433,7 +4071,8 @@
                 resultsCol.classList.remove('suggestions-drop-target');
                 const payload = parseDndJson(e.dataTransfer, YGO_DND_QUEUE);
                 if (payload && payload.imgId != null) {
-                    removeOneDeckCopy(payload.imgId);
+                    if (payload.pool === 'side') removeOneSideDeckCopy(payload.imgId);
+                    else removeOneDeckCopy(payload.imgId);
                 }
             });
         }
@@ -3470,7 +4109,16 @@
     }
 
     function computeDeckAggregates() {
-        const out = { total: cardQueue.length, monsters: 0, spells: 0, traps: 0, extra: 0, unknown: 0, price: 0 };
+        const out = {
+            total: cardQueue.length + cardQueueSide.length,
+            monsters: 0,
+            spells: 0,
+            traps: 0,
+            extra: 0,
+            unknown: 0,
+            side: cardQueueSide.length,
+            price: 0
+        };
         for (const entry of cardQueue) {
             const full = cardCache[entry.id];
             const sec = getQueueCardSection(full);
@@ -3479,6 +4127,11 @@
             else if (sec === 'extra') out.extra++;
             else if (sec === 'monsters') out.monsters++;
             else out.unknown++;
+            const p = parseFloat(full?.card_prices?.[0]?.tcgplayer_price);
+            if (Number.isFinite(p)) out.price += p;
+        }
+        for (const entry of cardQueueSide) {
+            const full = cardCache[entry.id];
             const p = parseFloat(full?.card_prices?.[0]?.tcgplayer_price);
             if (Number.isFinite(p)) out.price += p;
         }
@@ -3498,37 +4151,46 @@
         set('deck-stat-extra', a.extra);
         const pe = document.getElementById('deck-stat-price');
         if (pe) pe.textContent = a.total === 0 ? '—' : `$${a.price.toFixed(2)}`;
+        paintDeckValidityFlag();
     }
 
     function buildDeckSectionPlans(counts) {
-        const orderedIds = [];
-        const seen = new Set();
+        const orderedBuildIds = [];
+        const seenB = new Set();
         for (const q of cardQueue) {
             const k = String(q.imgId);
-            if (seen.has(k)) continue;
-            seen.add(k);
-            orderedIds.push(k);
+            if (seenB.has(k)) continue;
+            seenB.add(k);
+            orderedBuildIds.push(k);
         }
-        const buckets = { monsters: [], spells: [], traps: [], extra: [], unknown: [] };
-        for (const imgId of orderedIds) {
+        const mainIds = [];
+        const extraIds = [];
+        for (const imgId of orderedBuildIds) {
             const c0 = cardQueue.find((x) => String(x.imgId) === String(imgId));
             const full = c0 ? cardCache[c0.id] : null;
             const sec = getQueueCardSection(full);
-            buckets[sec].push(imgId);
+            if (sec === 'extra') extraIds.push(imgId);
+            else mainIds.push(imgId);
+        }
+        const orderedSideIds = [];
+        const seenS = new Set();
+        for (const q of cardQueueSide) {
+            const k = String(q.imgId);
+            if (seenS.has(k)) continue;
+            seenS.add(k);
+            orderedSideIds.push(k);
         }
         const defs = [
-            { key: 'monsters', label: 'Monstros' },
-            { key: 'spells', label: 'Magias' },
-            { key: 'traps', label: 'Armadilhas' },
-            { key: 'extra', label: 'Deck adicional' },
-            { key: 'unknown', label: 'Outros' }
+            { key: 'principal', label: 'Deck Principal', ids: mainIds },
+            { key: 'extra', label: 'Deck Extra', ids: extraIds },
+            { key: 'side', label: 'Deck Side', ids: orderedSideIds }
         ];
         return defs
             .map((d) => ({
                 key: d.key,
                 label: d.label,
-                ids: buckets[d.key],
-                copies: buckets[d.key].reduce((s, id) => s + (counts[id] || 0), 0)
+                ids: d.ids,
+                copies: d.ids.reduce((s, id) => s + (counts[id] || 0), 0)
             }))
             .filter((s) => s.ids.length > 0);
     }
@@ -3547,25 +4209,11 @@
 
     /** Reordena todas as cópias de uma pilha (imgId) na fila do deck; só usado em modo «Personalizado». */
     function moveDeckStackInQueue(dragImgId, refImgId, insertBefore) {
-        if (dragImgId === refImgId) return;
-        const dragEntries = cardQueue.filter((c) => String(c.imgId) === dragImgId);
-        if (!dragEntries.length) return;
-        const rest = cardQueue.filter((c) => String(c.imgId) !== dragImgId);
-        let refFirst = rest.findIndex((c) => String(c.imgId) === refImgId);
-        if (refFirst < 0) {
-            rest.push(...dragEntries);
-            cardQueue.length = 0;
-            cardQueue.push(...rest);
-            return;
-        }
-        let refLast = refFirst;
-        for (let i = 0; i < rest.length; i++) {
-            if (String(rest[i].imgId) === refImgId) refLast = i;
-        }
-        const insertAt = insertBefore ? refFirst : refLast + 1;
-        rest.splice(insertAt, 0, ...dragEntries);
-        cardQueue.length = 0;
-        cardQueue.push(...rest);
+        moveStackInQueue(cardQueue, dragImgId, refImgId, insertBefore);
+    }
+
+    function moveSideStackInQueue(dragImgId, refImgId, insertBefore) {
+        moveStackInQueue(cardQueueSide, dragImgId, refImgId, insertBefore);
     }
 
     /**
@@ -3584,9 +4232,24 @@
         insertDeckEntriesAtStackBoundary(entries, refId, insertBefore);
     }
 
+    function insertSideEntriesAtDropTarget(entries, refRow, clientY) {
+        if (!entries.length) return;
+        if (!refRow || !refRow.dataset.stackImgId) {
+            cardQueueSide.push(...entries);
+            return;
+        }
+        const refId = String(refRow.dataset.stackImgId);
+        const rect = refRow.getBoundingClientRect();
+        const insertBefore = clientY < rect.top + rect.height / 2;
+        insertSideEntriesAtStackBoundary(entries, refId, insertBefore);
+    }
+
     /** Baralha a ordem das pilhas dentro de cada secção (Monstros, Magias, …), mantendo cópias juntas. */
     function shuffleDeckQueueRandomWithinBuckets() {
-        if (!cardQueue.length) return;
+        if (!cardQueue.length) {
+            shuffleSideQueueRandomWithinStacks();
+            return;
+        }
         const counts = {};
         for (const c of cardQueue) {
             const k = String(c.imgId);
@@ -3621,13 +4284,100 @@
         }
         cardQueue.length = 0;
         cardQueue.push(...newQueue);
+        shuffleSideQueueRandomWithinStacks();
     }
 
-    function applyDeckSortToQueue() {
-        if (!cardQueue.length) return;
+    function shuffleSideQueueRandomWithinStacks() {
+        if (!cardQueueSide.length) return;
+        const counts = {};
+        for (const c of cardQueueSide) {
+            const k = String(c.imgId);
+            counts[k] = (counts[k] || 0) + 1;
+        }
+        const orderedUnique = [];
+        const seen = new Set();
+        for (const q of cardQueueSide) {
+            const k = String(q.imgId);
+            if (seen.has(k)) continue;
+            seen.add(k);
+            orderedUnique.push(k);
+        }
+        shuffleArrayInPlace(orderedUnique);
+        const newQueue = [];
+        for (const imgId of orderedUnique) {
+            const c0 = cardQueueSide.find((x) => String(x.imgId) === String(imgId));
+            if (!c0) continue;
+            const n = counts[String(imgId)] || 0;
+            for (let i = 0; i < n; i++) newQueue.push({ id: c0.id, name: c0.name, imgId: c0.imgId });
+        }
+        cardQueueSide.length = 0;
+        cardQueueSide.push(...newQueue);
+    }
+
+    function reorderSideQueueBySortCriterion() {
+        if (!cardQueueSide.length) return;
         const criterion = getDeckSortCriterion();
         if (criterion === 'custom' || criterion === 'random') return;
         if (!DECK_SORT_ORDERABLE.has(criterion)) return;
+        const banlistType = getBanlistTypeFromState();
+        const counts = {};
+        for (const c of cardQueueSide) {
+            const k = String(c.imgId);
+            counts[k] = (counts[k] || 0) + 1;
+        }
+        const orderedUnique = [];
+        const seen = new Set();
+        for (const q of cardQueueSide) {
+            const k = String(q.imgId);
+            if (seen.has(k)) continue;
+            seen.add(k);
+            orderedUnique.push(k);
+        }
+        const stackSortKey = (imgId) => {
+            const c0 = cardQueueSide.find((x) => String(x.imgId) === String(imgId));
+            const full = c0 ? cardCache[c0.id] : null;
+            if (full) {
+                const sortName = deckStackDisplaySortName(imgId);
+                return { ...full, name: sortName };
+            }
+            return { name: deckStackDisplaySortName(imgId), type: '' };
+        };
+        const sortBucketIds = (ids) => {
+            if (criterion === 'name') {
+                const dir = deckSortDirection;
+                return [...ids].sort((idA, idB) => {
+                    const na = deckStackDisplaySortName(idA);
+                    const nb = deckStackDisplaySortName(idB);
+                    let cmp = na.localeCompare(nb, undefined, { sensitivity: 'base', numeric: true });
+                    if (cmp === 0) cmp = String(idA).localeCompare(String(idB), undefined, { numeric: true });
+                    return dir === 1 ? cmp : -cmp;
+                });
+            }
+            return [...ids].sort((idA, idB) =>
+                compareCardsBySortCriterion(stackSortKey(idA), stackSortKey(idB), criterion, deckSortDirection, banlistType)
+            );
+        };
+        const sortedIds = sortBucketIds(orderedUnique);
+        const newQ = [];
+        for (const imgId of sortedIds) {
+            const c0 = cardQueueSide.find((x) => String(x.imgId) === String(imgId));
+            if (!c0) continue;
+            const n = counts[String(imgId)] || 0;
+            for (let i = 0; i < n; i++) newQ.push({ id: c0.id, name: c0.name, imgId: c0.imgId });
+        }
+        cardQueueSide.length = 0;
+        cardQueueSide.push(...newQ);
+    }
+
+    function applyDeckSortToQueue() {
+        if (!cardQueue.length && !cardQueueSide.length) return;
+        const criterion = getDeckSortCriterion();
+        if (criterion === 'custom' || criterion === 'random') return;
+        if (!DECK_SORT_ORDERABLE.has(criterion)) return;
+        if (!cardQueue.length) {
+            reorderSideQueueBySortCriterion();
+            return;
+        }
         const banlistType = getBanlistTypeFromState();
         const counts = {};
         for (const c of cardQueue) {
@@ -3686,6 +4436,7 @@
         }
         cardQueue.length = 0;
         cardQueue.push(...newQueue);
+        reorderSideQueueBySortCriterion();
     }
 
     async function deckSortAndRefresh() {
@@ -4089,6 +4840,10 @@
         "ui.deck_stat_total_title": { pt: "Total de cartas (c\u00f3pias)", en: "Total cards (copies)" },
         "ui.deck_stat_total_usd": { pt: "Total", en: "Total" },
         "ui.deck_stat_traps": { pt: "Armadilhas", en: "Traps" },
+        "ui.swap_pick_title": { pt: "Escolha a carta a trocar", en: "Choose a card to swap" },
+        "ui.swap_pick_main": { pt: "Deck principal cheio (60). Escolha qual carta do principal substituir.", en: "Main deck is full (60). Choose which main-deck card to replace." },
+        "ui.swap_pick_extra": { pt: "Deck extra cheio (15). Escolha qual carta do extra substituir.", en: "Extra deck is full (15). Choose which extra-deck card to replace." },
+        "ui.swap_pick_side": { pt: "Deck side cheio (15). Escolha qual carta do side substituir.", en: "Side deck is full (15). Choose which side-deck card to replace." },
         "ui.deck_stats_aria": { pt: "Totais do deck", en: "Deck totals" },
         "ui.delete_deck_aria": { pt: "Apagar deck salvo", en: "Delete saved deck" },
         "ui.delete_deck_title": { pt: "Apagar deck salvo selecionado", en: "Delete selected saved deck" },
@@ -4229,14 +4984,16 @@
     }
 
     function removeOneDeckCopy(imgId) {
-        const idStr = String(imgId);
-        for (let i = cardQueue.length - 1; i >= 0; i--) {
-            if (String(cardQueue[i].imgId) === idStr) {
-                cardQueue.splice(i, 1);
-                updateUI();
-                hideTooltip();
-                return;
-            }
+        if (removeOneCopyFromQueueByImgId(cardQueue, imgId)) {
+            updateUI();
+            hideTooltip();
+        }
+    }
+
+    function removeOneSideDeckCopy(imgId) {
+        if (removeOneCopyFromQueueByImgId(cardQueueSide, imgId)) {
+            updateUI();
+            hideTooltip();
         }
     }
 
@@ -4311,13 +5068,23 @@
         } catch (_) {}
     }
 
-    function cloneCardQueueSnapshot() {
-        return cardQueue.map((c) => ({ id: c.id, name: c.name, imgId: c.imgId }));
+    function cloneDeckStateSnapshot() {
+        return {
+            build: cardQueue.map((c) => ({ id: c.id, name: c.name, imgId: c.imgId })),
+            side: cardQueueSide.map((c) => ({ id: c.id, name: c.name, imgId: c.imgId }))
+        };
     }
 
-    function restoreCardQueueFromSnapshot(snap) {
-        if (!snap || !Array.isArray(snap)) return;
-        cardQueue = snap.map((c) => ({ id: c.id, name: c.name, imgId: c.imgId }));
+    /** Legado: array só com build; novo formato: `{ build, side }`. */
+    function restoreDeckStateSnapshot(snap) {
+        if (!snap) return;
+        if (Array.isArray(snap)) {
+            cardQueue = snap.map((c) => ({ id: c.id, name: c.name, imgId: c.imgId }));
+            cardQueueSide = [];
+            return;
+        }
+        cardQueue = (snap.build || []).map((c) => ({ id: c.id, name: c.name, imgId: c.imgId }));
+        cardQueueSide = (snap.side || []).map((c) => ({ id: c.id, name: c.name, imgId: c.imgId }));
     }
 
     function setSavedDecksSelectValue(val) {
@@ -4342,6 +5109,10 @@
 
     function serializeCurrentDeckStacks() {
         return serializeStacksFromQueue(cardQueue);
+    }
+
+    function serializeSideStacks() {
+        return serializeStacksFromQueue(cardQueueSide);
     }
 
     function expandStacksToQueue(stacks) {
@@ -4472,7 +5243,7 @@
 
         if (btnSave) {
             btnSave.onclick = () => {
-                if (!cardQueue.length) {
+                if (!cardQueue.length && !cardQueueSide.length) {
                     showToast(T('toast.deck_empty_save'));
                     return;
                 }
@@ -4493,11 +5264,13 @@
                             return false;
                         }
                         const stacks = serializeCurrentDeckStacks();
+                        const sideStacks = serializeSideStacks();
                         const entry = {
                             id: 'd_' + Date.now(),
                             name: t,
                             ts: Date.now(),
-                            stacks
+                            stacks,
+                            sideStacks
                         };
                         const next = [entry, ...decks];
                         try {
@@ -4586,7 +5359,7 @@
             const id = sel.value;
             if (!id) {
                 if (deckDraftBeforeSavedLoad != null) {
-                    restoreCardQueueFromSnapshot(deckDraftBeforeSavedLoad);
+                    restoreDeckStateSnapshot(deckDraftBeforeSavedLoad);
                     deckDraftBeforeSavedLoad = null;
                     setSavedDecksSelectValue('');
                     updateUI();
@@ -4601,17 +5374,19 @@
                 setSavedDecksSelectValue('');
                 return;
             }
-            if (cardQueue.length > 0) {
+            if (cardQueue.length > 0 || cardQueueSide.length > 0) {
                 if (!confirm(T('confirm.replace_deck'))) {
                     setSavedDecksSelectValue('');
                     return;
                 }
             }
-            deckDraftBeforeSavedLoad = cardQueue.length ? cloneCardQueueSnapshot() : null;
+            deckDraftBeforeSavedLoad =
+                cardQueue.length || cardQueueSide.length ? cloneDeckStateSnapshot() : null;
             cardQueue = expandStacksToQueue(deck.stacks);
+            cardQueueSide = expandStacksToQueue(deck.sideStacks || []);
             await ensureCardCacheForQueue();
             updateUI();
-            if (!cardQueue.length) {
+            if (!cardQueue.length && !cardQueueSide.length) {
                 deckDraftBeforeSavedLoad = null;
                 showToast(T('toast.deck_no_valid'));
             } else {
@@ -4640,7 +5415,10 @@
             btn.title = 'Sorteia uma carta aleatória da lista atual; clique de novo para desfazer';
         }
     }
+    /** Exportações explícitas (ZIP, PDF do menu, etc.) — bloqueia outras exportações em cadeia. */
     let isGenerating = false;
+    /** Só geração da pré-visualização do PDF no iframe; separado para não bloquear exportações enquanto o PDF refresca. */
+    let pdfPreviewBusy = false;
     let cardCache = {};
     let allCardsetsCatalog = [];
     let allArchetypesCatalog = [];
@@ -5590,12 +6368,22 @@
         });
     }
 
-    function getBanIcon(card) {
-        const banType = getBanlistTypeFromState();
+    /** Banlist ativa para exibir badges (ícones) nas cartas/tooltip. Deck selecionado tem prioridade. */
+    function getBanlistTypeForCardBadges() {
+        const deckType = getDeckBanlistTypeForValidation();
+        if (deckType) return deckType;
+        return getBanlistTypeFromState();
+    }
+
+    function getBanIcon(card, variant = 'inline') {
+        const banType = getBanlistTypeForCardBadges();
         if (!banType || !card.banlist_info) return '';
         const banKey = `ban_${banType}`;
         const status = card.banlist_info[banKey];
-        const svgStyle = "width: 20px; height: 20px; vertical-align: middle; margin-left: 5px; filter: drop-shadow(1px 1px 1px rgba(0,0,0,0.8));";
+        const svgStyle =
+            variant === 'grid'
+                ? 'width:22px;height:22px;display:block;margin:0;vertical-align:top;filter:drop-shadow(1px 1px 2px rgba(0,0,0,0.9));'
+                : 'width: 20px; height: 20px; vertical-align: middle; margin-left: 5px; filter: drop-shadow(1px 1px 1px rgba(0,0,0,0.8));';
         const redColor = "#ff0000";
         const bgCircle = `<circle cx="50" cy="50" r="44" fill="black" stroke="${redColor}" stroke-width="12" />`;
         if (status === "Banned" || status === "Forbidden") {
@@ -5617,6 +6405,52 @@
                     </svg>`;
         }
         return '';
+    }
+
+    /** Mesma regra que getBanIcon, para desenhar no canvas (lista exportada PNG/JPG). */
+    function getBanlistBadgeKindForDeckExport(fullCard) {
+        const banType = getBanlistTypeForCardBadges();
+        if (!banType || !fullCard || !fullCard.banlist_info) return null;
+        const status = fullCard.banlist_info[`ban_${banType}`];
+        if (status === 'Banned' || status === 'Forbidden') return 'forbidden';
+        if (status === 'Limited') return 'limited';
+        if (status === 'Semi-Limited') return 'semi';
+        return null;
+    }
+
+    function drawDeckListBanBadgeOnCtx(ctx, cx, cy, cw, ch, fullCard) {
+        const kind = getBanlistBadgeKindForDeckExport(fullCard);
+        if (!kind) return;
+        const s = Math.max(11, Math.min(26, Math.round(Math.min(cw, ch) * 0.24)));
+        const padPx = 3;
+        const bx = cx + cw - s - padPx;
+        const by = cy + padPx;
+        ctx.save();
+        ctx.translate(bx, by);
+        ctx.scale(s / 100, s / 100);
+        ctx.beginPath();
+        ctx.arc(50, 50, 44, 0, Math.PI * 2);
+        ctx.fillStyle = '#000';
+        ctx.fill();
+        ctx.strokeStyle = '#ff0000';
+        ctx.lineWidth = 12;
+        ctx.stroke();
+        ctx.fillStyle = '#ff0000';
+        ctx.strokeStyle = '#ff0000';
+        if (kind === 'forbidden') {
+            ctx.lineWidth = 10;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(32, 32);
+            ctx.lineTo(68, 68);
+            ctx.stroke();
+        } else {
+            ctx.font = 'bold 60px Arial Black, Arial, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'alphabetic';
+            ctx.fillText(kind === 'limited' ? '1' : '2', 50, 72);
+        }
+        ctx.restore();
     }
 
     function getBanIconHtml(card, type) {
@@ -7022,7 +7856,7 @@
                 archRowEl.style.display = 'none';
             }
         }
-        const banlistType = getBanlistTypeFromState();
+        const banlistType = getBanlistTypeForCardBadges();
         const status = card.banlist_info ? card.banlist_info[`ban_${banlistType}`] : null;
         const oldBadge = document.querySelector('.tt-ban-container');
         if (oldBadge) oldBadge.remove();
@@ -8120,8 +8954,12 @@
             const displayName = (isEnglishMode() ? (card.name || card.name_en || '') : (card.name_pt || card.name)) + variantSuffix;
             if (currentView === 'grid') {
                 div.style.padding = "0";
-                div.style.backgroundColor = "transparent"; 
-                div.innerHTML = `<img src="${imageObj.image_url}" style="width: 100%; height: 100%; object-fit: contain; display: block;" loading="lazy" onerror="this.src='https://images.ygoprodeck.com/images/cards/back_high.jpg'" alt="${card.name}">`;
+                div.style.backgroundColor = "transparent";
+                const banSvgGrid = getBanIcon(card, 'grid');
+                const banOverlayGrid = banSvgGrid
+                    ? `<span class="card-grid-ban-badge" aria-hidden="true">${banSvgGrid}</span>`
+                    : '';
+                div.innerHTML = `<div class="suggestion-item-grid-artwrap"><img src="${imageObj.image_url}" style="width: 100%; height: 100%; object-fit: contain; display: block;" loading="lazy" onerror="this.src='https://images.ygoprodeck.com/images/cards/back_high.jpg'" alt="${card.name}">${banOverlayGrid}</div>`;
                 if (card.card_sets && card.card_sets.length) {
                     const fab = document.createElement('button');
                     fab.type = 'button';
@@ -8210,6 +9048,16 @@
                 clearTimeout(pressTimer);
                 if (isLongPress && e.cancelable) e.preventDefault();
             };
+            div.addEventListener('contextmenu', (e) => {
+                if (e.target.closest('button')) return;
+                e.preventDefault();
+                const entry = { id: card.id, name: displayName, imgId: imageObj.id };
+                void (async () => {
+                    revealDeckColumnIfHidden();
+                    if (!(await forceAddToSide(entry))) return;
+                    updateUI();
+                })();
+            });
             div.onclick = (e) => {
                 if (e.target.closest('.btn-open-card-sets')) {
                     e.stopPropagation();
@@ -8227,10 +9075,17 @@
                     return;
                 }
                 const qty = parseInt(document.getElementById('search-qty').value) || 1;
-                for(let i=0; i<qty; i++) cardQueue.push({ id: card.id, name: displayName, imgId: imageObj.id });
-                revealDeckColumnIfHidden();
-                updateUI();
-                if (isMobile) showToast(T('toast.added_qty_m', { qty, name: displayName }));
+                void (async () => {
+                    revealDeckColumnIfHidden();
+                    for (let i = 0; i < qty; i++) {
+                        const entry = { id: card.id, name: displayName, imgId: imageObj.id };
+                        if (!tryAddEntryToBuild(entry)) {
+                            if (!(await forceAddToBuild(entry))) break;
+                        }
+                    }
+                    updateUI();
+                    if (isMobile) showToast(T('toast.added_qty_m', { qty, name: displayName }));
+                })();
             };
             bindSuggestionItemDnD(div, { id: card.id, imgId: imageObj.id, name: displayName });
             container.appendChild(div);
@@ -8306,7 +9161,7 @@
         applyDeckSortToQueue();
         const list = document.getElementById('deck-items');
         const layout = document.getElementById('app-layout');
-        if (cardQueue.length === 0) layout.classList.add('empty-queue');
+        if (cardQueue.length === 0 && cardQueueSide.length === 0) layout.classList.add('empty-queue');
         else layout.classList.remove('empty-queue');
         applyDeckColumnCycleClasses();
         updateDeckColumnCycleButtonUi();
@@ -8332,15 +9187,21 @@
         cardQueue.forEach((c) => {
             counts[c.imgId] = (counts[c.imgId] || 0) + 1;
         });
+        cardQueueSide.forEach((c) => {
+            counts[c.imgId] = (counts[c.imgId] || 0) + 1;
+        });
 
-        if (cardQueue.length === 0) return;
+        if (cardQueue.length === 0 && cardQueueSide.length === 0) return;
 
         const rowHint = isDeckSortCustom()
-            ? 'Clique: +1 · meio: −1 · arraste para a pesquisa: remove 1 · solte carta da lista nesta linha: inserir antes/depois (metade de cima/baixo) · solte pilha do deck noutra linha: reordenar'
-            : 'Clique: +1 cópia · botão do meio: −1 cópia · arraste para a busca: remove 1 cópia da pilha';
+            ? 'Principal/Extra: clique +1 · direito: enviar 1 ao Side · meio: −1 · arrastar na secção Side: move pilha · arrastar entre linhas: reordenar. Side: clique ou direito → principal/extra · meio: −1.'
+            : 'Principal/Extra: clique +1 · direito: enviar 1 ao Side · meio: −1 · arraste para a busca remove 1. Side: clique ou direito → construção · meio: −1.';
 
-        function appendStackRow(mountEl, stackImgId) {
-            const c = cardQueue.find((x) => String(x.imgId) === String(stackImgId));
+        function appendStackRow(mountEl, stackImgId, pool) {
+            const c =
+                pool === 'side'
+                    ? cardQueueSide.find((x) => String(x.imgId) === String(stackImgId))
+                    : cardQueue.find((x) => String(x.imgId) === String(stackImgId));
             if (!c) return;
             const fullCardData = cardCache[c.id];
             const qty = counts[stackImgId];
@@ -8383,10 +9244,15 @@
                 const setsFab = hasSets
                     ? `<button type="button" class="card-sets-fab" data-deck-opens-sets="${fullCardData.id}" title="Ver impressões e expansões" aria-label="Ver impressões e expansões"><i class="fa-solid fa-layer-group"></i></button>`
                     : '';
+                const banDeckSvg = fullCardData ? getBanIcon(fullCardData, 'grid') : '';
+                const banDeckHtml = banDeckSvg
+                    ? `<span class="card-grid-ban-badge card-grid-ban-badge--deck-thumb" aria-hidden="true">${banDeckSvg}</span>`
+                    : '';
                 row.innerHTML = `
                     <div class="queue-item-thumb-wrap">
                         <span class="queue-item-qty-badge">${qty}×</span>
                         <img src="${thumbUrl}" loading="lazy" alt="" onerror="this.src='https://images.ygoprodeck.com/images/cards/back_high.jpg'">
+                        ${banDeckHtml}
                         ${setsFab}
                     </div>
                     <button type="button" class="queue-item-remove" data-i18n-title="queue.remove_copies" title="Remover todas as cópias" data-i18n-aria="queue.remove_copies" aria-label="Remover todas as cópias" data-queue-remove="${escapeHtml(stackImgId)}">✖</button>`;
@@ -8402,7 +9268,14 @@
             row.querySelectorAll('[data-queue-remove]').forEach((btn) => {
                 btn.onclick = (ev) => {
                     ev.stopPropagation();
-                    window.removeItem(btn.getAttribute('data-queue-remove'));
+                    const rid = btn.getAttribute('data-queue-remove');
+                    if (pool === 'side') {
+                        cardQueueSide = cardQueueSide.filter((x) => String(x.imgId) !== String(rid));
+                    } else {
+                        cardQueue = cardQueue.filter((x) => String(x.imgId) !== String(rid));
+                    }
+                    updateUI();
+                    hideTooltip();
                 };
             });
 
@@ -8414,7 +9287,7 @@
                     return;
                 }
                 rowDragActive = true;
-                ev.dataTransfer.setData(YGO_DND_QUEUE, JSON.stringify({ imgId: stackImgId }));
+                ev.dataTransfer.setData(YGO_DND_QUEUE, JSON.stringify({ imgId: stackImgId, pool }));
                 ev.dataTransfer.setData('text/plain', c.name || '');
                 ev.dataTransfer.effectAllowed = 'move';
             });
@@ -8429,11 +9302,18 @@
             row.addEventListener('mousedown', (ev) => {
                 if (ev.button === 1) ev.preventDefault();
             });
+            row.addEventListener('contextmenu', (ev) => {
+                if (ev.target.closest('button')) return;
+                ev.preventDefault();
+                if (pool === 'side') void moveOneCopySideToBuild(stackImgId);
+                else void moveOneCopyBuildToSide(stackImgId);
+            });
             row.addEventListener('auxclick', (ev) => {
                 if (ev.button !== 1) return;
                 if (ev.target.closest('button')) return;
                 ev.preventDefault();
-                removeOneDeckCopy(stackImgId);
+                if (pool === 'side') removeOneSideDeckCopy(stackImgId);
+                else removeOneDeckCopy(stackImgId);
             });
             row.addEventListener('click', (ev) => {
                 if (ev.button !== 0 || ev.ctrlKey || ev.metaKey || ev.shiftKey || ev.altKey) return;
@@ -8448,8 +9328,15 @@
                 if (ev.target.closest('button')) return;
                 if (rowDragActive) return;
                 ev.preventDefault();
-                cardQueue.push({ id: c.id, name: c.name, imgId: c.imgId });
-                updateUI();
+                if (pool === 'side') {
+                    void moveOneCopySideToBuild(stackImgId);
+                    return;
+                }
+                const entry = { id: c.id, name: c.name, imgId: c.imgId };
+                void (async () => {
+                    if (!tryAddEntryToBuild(entry)) await forceAddToBuild(entry);
+                    updateUI();
+                })();
             });
             if (fullCardData) {
                 row.onmouseenter = (e) => showTooltip(fullCardData, e);
@@ -8465,15 +9352,18 @@
             head.className = 'deck-section-head';
             head.innerHTML = `<span>${sec.label}</span><span class="deck-section-count">${sec.copies}</span>`;
             list.appendChild(head);
+            const pool = sec.key === 'side' ? 'side' : 'build';
             if (queueView === 'grid') {
                 const body = document.createElement('div');
                 body.className = 'deck-section-body deck-section-body--grid';
-                sec.ids.forEach((id) => appendStackRow(body, id));
+                body.dataset.deckSection = sec.key;
+                sec.ids.forEach((id) => appendStackRow(body, id, pool));
                 list.appendChild(body);
             } else {
                 const body = document.createElement('div');
                 body.className = 'deck-section-body deck-section-body--list';
-                sec.ids.forEach((id) => appendStackRow(body, id));
+                body.dataset.deckSection = sec.key;
+                sec.ids.forEach((id) => appendStackRow(body, id, pool));
                 list.appendChild(body);
             }
         }
@@ -8485,7 +9375,10 @@
         triggerPDFUpdate();
     }
 
-    function triggerPDFUpdate() { if(isGenerating || cardQueue.length === 0) return; generatePDF(); }
+    function triggerPDFUpdate() {
+        if (isGenerating || pdfPreviewBusy || (cardQueue.length === 0 && cardQueueSide.length === 0)) return;
+        generatePDF();
+    }
 
     /** URL de arte em tamanho completo (API: card_images[].image_url). Evita proxy weserv que reduz nitidez. */
     function getCardImageUrlForExport(entry) {
@@ -8648,9 +9541,18 @@
 
     /** @param {boolean} [forUserExport] — se true, overlay a ecrã inteiro; se false, só pré-visualização na coluna. */
     async function generatePDF(forUserExport) {
-        if (isGenerating) return;
-        if (!cardQueue.length) return;
-        isGenerating = true;
+        if (!cardQueue.length && !cardQueueSide.length) return;
+        if (forUserExport) {
+            if (isGenerating) return;
+            const tDeadline = Date.now() + 120000;
+            while (pdfPreviewBusy && Date.now() < tDeadline) {
+                await new Promise((r) => setTimeout(r, 50));
+            }
+            isGenerating = true;
+        } else {
+            if (pdfPreviewBusy || isGenerating) return;
+            pdfPreviewBusy = true;
+        }
         const useGlobal = !!forUserExport;
         const bar = document.getElementById('progress-bar');
         if (useGlobal) {
@@ -8662,7 +9564,7 @@
             if (ov) ov.style.display = 'flex';
         }
         try {
-            const blob = await generatePdfBlobFromQueue(cardQueue, (cur, tot) => {
+            const blob = await generatePdfBlobFromQueue([...cardQueue, ...cardQueueSide], (cur, tot) => {
                 if (useGlobal) updateGlobalExportProgress(cur, tot);
                 else if (bar) bar.style.width = Math.round((cur / tot) * 100) + '%';
             });
@@ -8678,11 +9580,18 @@
                 const io = document.getElementById('import-overlay');
                 if (io) io.style.display = 'none';
             }
-            isGenerating = false;
+            if (forUserExport) isGenerating = false;
+            else pdfPreviewBusy = false;
         }
     }
 
-    window.removeItem = (imgId) => { cardQueue = cardQueue.filter(c => String(c.imgId) !== String(imgId)); updateUI(); hideTooltip(); };
+    window.removeItem = (imgId) => {
+        const idStr = String(imgId);
+        cardQueue = cardQueue.filter((c) => String(c.imgId) !== idStr);
+        cardQueueSide = cardQueueSide.filter((c) => String(c.imgId) !== idStr);
+        updateUI();
+        hideTooltip();
+    };
     window.removeOneDeckCopy = removeOneDeckCopy;
     window.changeQueueView = changeQueueView;
     if (document.readyState === 'loading') {
@@ -8691,6 +9600,7 @@
             initSavedDecksAndPdfToolbar();
             initFiltersColumnToolbar();
             initExportMenu();
+            initDeckValidationControls();
             try {
                 getDeckSortCriterion();
             } catch (_) {}
@@ -8700,13 +9610,14 @@
         initSavedDecksAndPdfToolbar();
         initFiltersColumnToolbar();
         initExportMenu();
+        initDeckValidationControls();
         try {
             getDeckSortCriterion();
         } catch (_) {}
     }
     window.clearQueue = () => {
         if (deckDraftBeforeSavedLoad != null) {
-            restoreCardQueueFromSnapshot(deckDraftBeforeSavedLoad);
+            restoreDeckStateSnapshot(deckDraftBeforeSavedLoad);
             deckDraftBeforeSavedLoad = null;
             setSavedDecksSelectValue('');
             updateUI();
@@ -8716,6 +9627,7 @@
         }
         if (!confirm(T('confirm.clear_deck'))) return;
         cardQueue = [];
+        cardQueueSide = [];
         deckDraftBeforeSavedLoad = null;
         updateUI();
         hideTooltip();
@@ -8735,6 +9647,157 @@
             downloadBlob(window.currentPdf, `Cartas_Proxies_Yu-Gi-Oh!_${dataF}.pdf`);
         }
     };
+
+    /**
+     * JPG lista: patamar estável (1600×2, ~4,5Mpx). Valores superiores testados (ex. 1760 / ~5,25Mpx) voltaram a JPEG preto.
+     * Para máxima nitidez use export PNG da mesma lista (1920×DPR 3).
+     */
+    const DECK_LIST_JPEG_SOURCE_OPTS = { listExportDpr: 2, listExportLogicalWidth: 1600 };
+    const DECK_LIST_JPEG_ENCODE_MAX = { w: 3840, h: 6000, pixels: Math.floor(4.5 * 1024 * 1024) };
+
+    function dataUrlToBlob(dataUrl) {
+        const comma = String(dataUrl || '').indexOf(',');
+        if (comma < 0) return null;
+        const header = dataUrl.slice(0, comma);
+        const base64 = dataUrl.slice(comma + 1);
+        const mimeMatch = header.match(/data:(.*?);/);
+        const mime = mimeMatch ? mimeMatch[1] : 'application/octet-stream';
+        try {
+            const bin = atob(base64);
+            const arr = new Uint8Array(bin.length);
+            for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+            return new Blob([arr], { type: mime });
+        } catch (e) {
+            return null;
+        }
+    }
+
+    /**
+     * JPEG direto do canvas: achatar, limitar área/lado (evita codificadores que devolvem preto),
+     * toBlob + fallback toDataURL.
+     * @param {{ maxDim?: number, maxArea?: number }} [robustOpts]
+     */
+    function canvasToJpegBlobRobust(sourceCanvas, quality, robustOpts) {
+        return new Promise((resolve) => {
+            const q = typeof quality === 'number' && quality > 0 && quality <= 1 ? quality : 0.88;
+            const maxDim = robustOpts && robustOpts.maxDim != null ? robustOpts.maxDim : 1920;
+            const maxArea = robustOpts && robustOpts.maxArea != null ? robustOpts.maxArea : 4e6;
+            let w = sourceCanvas.width;
+            let h = sourceCanvas.height;
+            if (!w || !h) {
+                resolve(null);
+                return;
+            }
+            if (w * h > maxArea) {
+                const s = Math.sqrt(maxArea / (w * h));
+                w = Math.max(2, Math.floor(w * s));
+                h = Math.max(2, Math.floor(h * s));
+            }
+            if (w > maxDim || h > maxDim) {
+                const s = maxDim / Math.max(w, h);
+                w = Math.max(2, Math.floor(w * s));
+                h = Math.max(2, Math.floor(h * s));
+            }
+            w -= w % 2;
+            h -= h % 2;
+            if (w < 2 || h < 2) {
+                resolve(null);
+                return;
+            }
+            const flat = document.createElement('canvas');
+            flat.width = w;
+            flat.height = h;
+            const fctx = flat.getContext('2d', { alpha: false, willReadFrequently: true });
+            if (!fctx) {
+                sourceCanvas.toBlob((b) => resolve(b && b.size > 400 ? b : null), 'image/jpeg', q);
+                return;
+            }
+            fctx.fillStyle = '#060810';
+            fctx.fillRect(0, 0, w, h);
+            try {
+                fctx.imageSmoothingEnabled = true;
+                if ('imageSmoothingQuality' in fctx) fctx.imageSmoothingQuality = 'high';
+                fctx.drawImage(sourceCanvas, 0, 0, w, h);
+            } catch (e) {
+                resolve(null);
+                return;
+            }
+            const tryDataUrl = () => {
+                try {
+                    const dataUrl = flat.toDataURL('image/jpeg', q);
+                    if (dataUrl && dataUrl.startsWith('data:')) {
+                        const b = dataUrlToBlob(dataUrl);
+                        return b && b.size > 400 ? b : null;
+                    }
+                } catch (e2) {}
+                return null;
+            };
+            flat.toBlob((b) => {
+                if (b && b.size > 400) {
+                    resolve(b);
+                    return;
+                }
+                resolve(tryDataUrl());
+            }, 'image/jpeg', q);
+        });
+    }
+
+    /**
+     * Lista do deck → JPEG: 1º PNG do canvas, 2º redimensiona (teto DECK_LIST_JPEG_ENCODE_MAX) e codifica JPEG.
+     * Evita falhas de toBlob('image/jpeg') em canvas muito grandes (imagem preta).
+     */
+    async function deckListCanvasToJpegBlob(sourceCanvas, quality) {
+        const q = typeof quality === 'number' && quality > 0 && quality <= 1 ? quality : 0.92;
+        const pngBlob = await new Promise((resolve) => {
+            try {
+                sourceCanvas.toBlob((b) => resolve(b), 'image/png');
+            } catch (e) {
+                resolve(null);
+            }
+        });
+        if (pngBlob && pngBlob.size > 400) {
+            try {
+                const bmp = await createImageBitmap(pngBlob);
+                const maxW = DECK_LIST_JPEG_ENCODE_MAX.w;
+                const maxH = DECK_LIST_JPEG_ENCODE_MAX.h;
+                const maxPx = DECK_LIST_JPEG_ENCODE_MAX.pixels;
+                let w = bmp.width;
+                let h = bmp.height;
+                const sc = Math.min(1, maxW / w, maxH / h, Math.sqrt(maxPx / (w * h)));
+                w = Math.max(2, Math.floor(w * sc));
+                h = Math.max(2, Math.floor(h * sc));
+                w -= w % 2;
+                h -= h % 2;
+                const c = document.createElement('canvas');
+                c.width = w;
+                c.height = h;
+                const x = c.getContext('2d', { alpha: false, willReadFrequently: true });
+                if (x) {
+                    x.fillStyle = '#060810';
+                    x.fillRect(0, 0, w, h);
+                    x.imageSmoothingEnabled = true;
+                    if ('imageSmoothingQuality' in x) x.imageSmoothingQuality = 'high';
+                    x.drawImage(bmp, 0, 0, w, h);
+                    bmp.close();
+                    const jb = await new Promise((resolve) => {
+                        c.toBlob((b) => resolve(b && b.size > 400 ? b : null), 'image/jpeg', q);
+                    });
+                    if (jb) return jb;
+                    try {
+                        const du = c.toDataURL('image/jpeg', q);
+                        const bb = dataUrlToBlob(du);
+                        if (bb && bb.size > 400) return bb;
+                    } catch (e3) {}
+                } else {
+                    bmp.close();
+                }
+            } catch (e) {}
+        }
+        return canvasToJpegBlobRobust(sourceCanvas, q, {
+            maxDim: 3200,
+            maxArea: Math.floor(4.5 * 1024 * 1024)
+        });
+    }
 
     function downloadBlob(blob, filename) {
         if (!blob) return;
@@ -8809,7 +9872,11 @@
     }
 
     async function ensureCardCacheForQueue() {
-        const ids = [...new Set(cardQueue.map((c) => c.id).filter((x) => x != null))];
+        const ids = [
+            ...new Set(
+                [...cardQueue.map((c) => c.id), ...cardQueueSide.map((c) => c.id)].filter((x) => x != null)
+            )
+        ];
         await ensureCardCacheForIds(ids);
     }
 
@@ -8832,7 +9899,8 @@
             .join('\r\n');
     }
 
-    function csvRowsForQueue(q, deckNomeCol) {
+    function csvRowsForQueue(q, deckNomeCol, opts) {
+        const forceSection = opts && opts.forceSection;
         const header =
             deckNomeCol != null
                 ? ['deck_nome', 'secao', 'passcode', 'nome', 'tipo', 'qtd']
@@ -8841,7 +9909,7 @@
         for (const entry of q || []) {
             const full = cardCache[entry.id];
             const sec = getQueueCardSection(full);
-            const deckPart = sec === 'extra' ? 'extra' : 'main';
+            const deckPart = forceSection ? forceSection : sec === 'extra' ? 'extra' : 'main';
             const key = `${deckPart}|${entry.id}`;
             if (!agg.has(key)) {
                 agg.set(key, {
@@ -8863,7 +9931,10 @@
     }
 
     function buildDeckCsvContent() {
-        return formatCsvRows(csvRowsForQueue(cardQueue, null));
+        const mainRows = csvRowsForQueue(cardQueue, null);
+        const sideRows = csvRowsForQueue(cardQueueSide, null, { forceSection: 'side' });
+        if (sideRows.length <= 1) return formatCsvRows(mainRows);
+        return formatCsvRows([mainRows[0], ...mainRows.slice(1), ...sideRows.slice(1)]);
     }
 
     function buildAllSavedDecksCsvContent(decks) {
@@ -8871,20 +9942,25 @@
         const rows = [header];
         for (const d of decks) {
             const q = expandStacksToQueue(d.stacks);
-            if (!q.length) continue;
+            const qs = expandStacksToQueue(d.sideStacks || []);
+            if (!q.length && !qs.length) continue;
             const deckNome = String(d.name || 'Sem nome').trim() || 'Sem nome';
             for (const r of csvRowsForQueue(q, deckNome).slice(1)) {
+                rows.push(r);
+            }
+            for (const r of csvRowsForQueue(qs, deckNome, { forceSection: 'side' }).slice(1)) {
                 rows.push(r);
             }
         }
         return formatCsvRows(rows);
     }
 
-    /** YDK: #main / #extra por tipo; !side vazio. */
-    function buildYdkFileContentForQueue(q) {
+    /** YDK: #main / #extra por tipo; !side com IDs do side deck. */
+    function buildYdkFileContentForQueue(q, sideQ) {
         const lines = ['#created by YGO Proxy Deckbuilder'];
         const main = [];
         const extra = [];
+        const sideList = sideQ != null ? sideQ : cardQueueSide;
         for (const entry of q || []) {
             const full = cardCache[entry.id];
             const sec = getQueueCardSection(full);
@@ -8897,22 +9973,27 @@
         lines.push('#extra');
         lines.push(...extra);
         lines.push('!side');
-        lines.push('');
+        for (const entry of sideList || []) {
+            lines.push(String(entry.id));
+        }
         return lines.join('\n');
     }
 
     function buildYdkFileContent() {
-        return buildYdkFileContentForQueue(cardQueue);
+        return buildYdkFileContentForQueue(cardQueue, cardQueueSide);
     }
 
     function exportProxyBlobFromCanvas(canvas, mime, jpegQuality) {
-        return new Promise((resolve) => {
-            const quality = mime === 'image/jpeg' ? (jpegQuality != null ? jpegQuality : 0.96) : undefined;
-            canvas.toBlob((b) => resolve(b), mime, quality);
-        });
+        if (mime !== 'image/jpeg') {
+            return new Promise((resolve) => {
+                canvas.toBlob((b) => resolve(b), mime);
+            });
+        }
+        const quality = jpegQuality != null ? jpegQuality : 0.92;
+        return deckListCanvasToJpegBlob(canvas, quality);
     }
 
-    function splitQueueMainExtraSide(q) {
+    function splitQueueMainExtraSide(q, sideQ) {
         const main = [];
         const extra = [];
         for (const e of q || []) {
@@ -8920,7 +10001,12 @@
             if (getQueueCardSection(full) === 'extra') extra.push(e);
             else main.push(e);
         }
-        return { main, extra, side: [] };
+        const side = [];
+        const sq = sideQ != null ? sideQ : [];
+        for (const e of sq) {
+            side.push(e);
+        }
+        return { main, extra, side };
     }
 
     function sumTcgPriceForEntries(entries) {
@@ -9021,13 +10107,18 @@
     };
 
     /**
-     * Imagem estilo “lista de deck” (Principal / Adicional / Side), alinhada a vistas tipo MDPro3.
-     * Side: não existe na fila única desta app — mostra mensagem informativa.
+     * Imagem estilo “lista de deck” (Principal / Extra / Side), alinhada a vistas tipo MDPro3.
      */
-    async function exportDeckListImageCanvas(q, deckTitle, onProgress) {
+    async function exportDeckListImageCanvas(q, deckTitle, onProgress, qSide, opts) {
         /** Supersampling: canvas físico = layout lógico × DPR; cartas com decode ao px exato. */
-        const EXPORT_DECK_LIST_DPR = 3;
-        const W = 1920;
+        const listExportDpr =
+            opts && typeof opts.listExportDpr === 'number' && opts.listExportDpr >= 1 && opts.listExportDpr <= 3
+                ? opts.listExportDpr
+                : 3;
+        const W =
+            opts && typeof opts.listExportLogicalWidth === 'number'
+                ? Math.max(800, Math.min(1920, Math.round(opts.listExportLogicalWidth)))
+                : 1920;
         const pad = 20;
         const innerW = W - pad * 2;
         const titleH = 54;
@@ -9045,8 +10136,8 @@
         const usedGridW = GRID_COLS * cardCellW + (GRID_COLS - 1) * cardGap;
         const gridPadX = pad + Math.max(0, Math.floor((innerW - usedGridW) / 2));
 
-        const { main, extra, side } = splitQueueMainExtraSide(q);
-        const totalSteps = Math.max(1, main.length + extra.length);
+        const { main, extra, side } = splitQueueMainExtraSide(q, qSide);
+        const totalSteps = Math.max(1, main.length + extra.length + side.length);
         let step = 0;
         const bump = () => {
             step++;
@@ -9064,7 +10155,7 @@
 
         const layM = measureSection(main);
         const layE = measureSection(extra);
-        const layS = { gridH: 50, empty: true };
+        const layS = measureSection(side);
 
         const H =
             pad +
@@ -9078,11 +10169,11 @@
             pad;
 
         const canvas = document.createElement('canvas');
-        canvas.width = Math.max(1, Math.round(W * EXPORT_DECK_LIST_DPR));
-        canvas.height = Math.max(1, Math.round(H * EXPORT_DECK_LIST_DPR));
+        canvas.width = Math.max(1, Math.round(W * listExportDpr));
+        canvas.height = Math.max(1, Math.round(H * listExportDpr));
         const ctx = canvas.getContext('2d');
         if (!ctx) return canvas;
-        ctx.setTransform(EXPORT_DECK_LIST_DPR, 0, 0, EXPORT_DECK_LIST_DPR, 0, 0);
+        ctx.setTransform(listExportDpr, 0, 0, listExportDpr, 0, 0);
         if ('imageSmoothingQuality' in ctx) ctx.imageSmoothingQuality = 'high';
         ctx.imageSmoothingEnabled = true;
 
@@ -9168,10 +10259,7 @@
                 ctx.fillStyle = '#95a5a6';
                 ctx.font = '12px Segoe UI, system-ui, sans-serif';
                 ctx.textAlign = 'left';
-                const msg =
-                    mode === 'side'
-                        ? 'Side não está disponível aqui — exporte YDK e edite no MDPro3 / EDOPro.'
-                        : 'Sem cartas nesta secção.';
+                const msg = mode === 'side' ? 'Sem cartas no deck side.' : 'Sem cartas nesta secção.';
                 ctx.fillText(msg, pad + 14, gridTop + 24);
             } else {
                 const cw = cardCellW;
@@ -9185,10 +10273,11 @@
                     bump();
                     try {
                         const imgUrl = getCardImageUrlForExport(entries[i]);
-                        const resp = await fetch(imgUrl);
+                        const resp = await fetch(imgUrl, { mode: 'cors', credentials: 'omit' });
+                        if (!resp.ok) throw new Error('img_http');
                         const blob = await resp.blob();
-                        const tw = Math.max(2, Math.round(cw * EXPORT_DECK_LIST_DPR));
-                        const th = Math.max(2, Math.round(ch * EXPORT_DECK_LIST_DPR));
+                        const tw = Math.max(2, Math.round(cw * listExportDpr));
+                        const th = Math.max(2, Math.round(ch * listExportDpr));
                         let bmp;
                         let bmpNeedsSmooth = false;
                         try {
@@ -9215,6 +10304,7 @@
                         ctx.beginPath();
                         canvasRoundRectPath(ctx, cx + 0.5, cy + 0.5, cw - 1, ch - 1, 4);
                         ctx.stroke();
+                        drawDeckListBanBadgeOnCtx(ctx, cx, cy, cw, ch, cardCache[entries[i].id]);
                         bmp.close();
                     } catch (e) {}
                     col++;
@@ -9228,8 +10318,8 @@
         }
 
         await drawOneSection('Deck Principal', main, layM, 'main');
-        await drawOneSection('Deck Adicional', extra, layE, 'extra');
-        await drawOneSection('Side Deck', side, layS, 'side');
+        await drawOneSection('Deck Extra', extra, layE, 'extra');
+        await drawOneSection('Deck Side', side, layS, 'side');
 
         return canvas;
     }
@@ -9248,16 +10338,24 @@
         }
     }
 
-    async function mergeAllDeckProxiesCanvas(decks) {
+    async function mergeAllDeckProxiesCanvas(decks, mergeOpts) {
         const stripH = 40;
         const items = [];
         let tw = 0;
         let th = 0;
         for (const d of decks) {
             const q = expandStacksToQueue(d.stacks);
-            if (!q.length) continue;
+            const qs = expandStacksToQueue(d.sideStacks || []);
+            if (!q.length && !qs.length) continue;
             await ensureCardCacheForQueueArray(q);
-            const cv = await exportDeckListImageCanvas(q, String(d.name || 'Deck').slice(0, 100), () => {});
+            await ensureCardCacheForQueueArray(qs);
+            const cv = await exportDeckListImageCanvas(
+                q,
+                String(d.name || 'Deck').slice(0, 100),
+                () => {},
+                qs,
+                mergeOpts || undefined
+            );
             tw = Math.max(tw, cv.width);
             items.push({ label: String(d.name || 'Deck').slice(0, 100), cv, stripH });
             th += stripH + cv.height;
@@ -9307,7 +10405,7 @@
             showToast(T('toast.no_saved_decks'));
             return;
         }
-        if (!allDecks && !cardQueue.length) {
+        if (!allDecks && !cardQueue.length && !cardQueueSide.length) {
             showToast(T('toast.deck_empty'));
             return;
         }
@@ -9366,7 +10464,7 @@
                             await ensureCardCacheForQueue();
                             downloadTextBlob(
                                 sanitizeExportFilename(getCurrentDeckExportBasename()) + '.ydk',
-                                buildYdkFileContentForQueue(cardQueue),
+                                buildYdkFileContentForQueue(cardQueue, cardQueueSide),
                                 'text/plain;charset=utf-8'
                             );
                         },
@@ -9383,9 +10481,11 @@
                     const zip = new JSZip();
                     for (const d of decks) {
                         const q = expandStacksToQueue(d.stacks);
-                        if (!q.length) continue;
+                        const qs = expandStacksToQueue(d.sideStacks || []);
+                        if (!q.length && !qs.length) continue;
                         await ensureCardCacheForQueueArray(q);
-                        zip.file(sanitizeExportFilename(d.name || 'deck') + '.ydk', buildYdkFileContentForQueue(q));
+                        await ensureCardCacheForQueueArray(qs);
+                        zip.file(sanitizeExportFilename(d.name || 'deck') + '.ydk', buildYdkFileContentForQueue(q, qs));
                     }
                     const fc = Object.keys(zip.files).filter((k) => !zip.files[k].dir).length;
                     if (!fc) {
@@ -9403,7 +10503,7 @@
                 if (!allDecks) {
                     await runQuickExportWithFeedback(T('export.quick_ydk_clip'), async () => {
                         await ensureCardCacheForQueue();
-                        await navigator.clipboard.writeText(buildYdkFileContentForQueue(cardQueue));
+                        await navigator.clipboard.writeText(buildYdkFileContentForQueue(cardQueue, cardQueueSide));
                     });
                     showToast(T('toast.ydk_copied'));
                     return;
@@ -9416,10 +10516,12 @@
                         di++;
                         setGlobalExportSubtext(T('export.sub_process_deck', { cur: di, total: decks.length }));
                         const q = expandStacksToQueue(d.stacks);
-                        if (!q.length) continue;
+                        const qs = expandStacksToQueue(d.sideStacks || []);
+                        if (!q.length && !qs.length) continue;
                         await ensureCardCacheForQueueArray(q);
+                        await ensureCardCacheForQueueArray(qs);
                         const title = String(d.name || 'Deck').replace(/\r?\n/g, ' ');
-                        parts.push(`# --- Deck: ${title} ---\n${buildYdkFileContentForQueue(q)}`);
+                        parts.push(`# --- Deck: ${title} ---\n${buildYdkFileContentForQueue(q, qs)}`);
                     }
                     if (!parts.length) {
                         showToast(T('toast.all_decks_empty'));
@@ -9481,12 +10583,14 @@
                         const cv = await exportDeckListImageCanvas(
                             cardQueue,
                             getCurrentDeckExportBasename(),
-                            setProg
+                            setProg,
+                            cardQueueSide,
+                            format === 'jpg' ? DECK_LIST_JPEG_SOURCE_OPTS : undefined
                         );
                         const blob = await exportProxyBlobFromCanvas(
                             cv,
                             mime,
-                            mime === 'image/jpeg' ? 0.98 : undefined
+                            mime === 'image/jpeg' ? 0.92 : undefined
                         );
                         if (blob) {
                             downloadBlob(blob, sanitizeExportFilename(getCurrentDeckExportBasename()) + `_lista_deck.${ext}`);
@@ -9503,22 +10607,35 @@
                 await withExportOverlay(T('export.overlay_img_zip', { ext: ext.toUpperCase() }), async (setProg) => {
                     let done = 0;
                     let total = 0;
-                    for (const d of decks) total += expandStacksToQueue(d.stacks).length || 1;
+                    for (const d of decks) {
+                        total += Math.max(
+                            1,
+                            expandStacksToQueue(d.stacks).length + expandStacksToQueue(d.sideStacks || []).length
+                        );
+                    }
                     const zip = new JSZip();
                     let deckIdx = 0;
                     for (const d of decks) {
                         const q = expandStacksToQueue(d.stacks);
-                        if (!q.length) continue;
+                        const qs = expandStacksToQueue(d.sideStacks || []);
+                        if (!q.length && !qs.length) continue;
                         deckIdx++;
                         setGlobalExportSubtext(T('export.sub_deck_progress', { i: deckIdx, name: String(d.name || T('export.unnamed')).slice(0, 42) }));
                         await ensureCardCacheForQueueArray(q);
+                        await ensureCardCacheForQueueArray(qs);
                         const nm = String(d.name || 'deck').slice(0, 100);
-                        const cv = await exportDeckListImageCanvas(q, nm, (c, t) => setProg(done + c, total));
-                        done += q.length;
+                        const cv = await exportDeckListImageCanvas(
+                            q,
+                            nm,
+                            (c, t) => setProg(done + c, total),
+                            qs,
+                            ext === 'jpg' ? DECK_LIST_JPEG_SOURCE_OPTS : undefined
+                        );
+                        done += q.length + qs.length;
                         const blob = await exportProxyBlobFromCanvas(
                             cv,
                             mime,
-                            mime === 'image/jpeg' ? 0.98 : undefined
+                            mime === 'image/jpeg' ? 0.92 : undefined
                         );
                         if (blob) zip.file(sanitizeExportFilename(d.name || 'deck') + `_lista_deck.${ext}`, blob);
                     }
@@ -9543,12 +10660,14 @@
                         const cv = await exportDeckListImageCanvas(
                             cardQueue,
                             getCurrentDeckExportBasename(),
-                            setProg
+                            setProg,
+                            cardQueueSide,
+                            format === 'jpg-clip' ? DECK_LIST_JPEG_SOURCE_OPTS : undefined
                         );
                         const blob = await exportProxyBlobFromCanvas(
                             cv,
                             mime,
-                            mime === 'image/jpeg' ? 0.98 : undefined
+                            mime === 'image/jpeg' ? 0.92 : undefined
                         );
                         if (blob) await copyRasterBlobToClipboard(blob, mime);
                         else showToast(T('toast.img_fail'));
@@ -9563,7 +10682,10 @@
                         }
                     }
                     await ensureCardCacheForIds(allIds);
-                    const merged = await mergeAllDeckProxiesCanvas(decks);
+                    const merged = await mergeAllDeckProxiesCanvas(
+                        decks,
+                        format === 'jpg-clip' ? DECK_LIST_JPEG_SOURCE_OPTS : undefined
+                    );
                     if (!merged) {
                         showToast(T('toast.nothing_copy'));
                         return;
@@ -9571,7 +10693,7 @@
                     const blob = await exportProxyBlobFromCanvas(
                         merged,
                         mime,
-                        mime === 'image/jpeg' ? 0.98 : undefined
+                        mime === 'image/jpeg' ? 0.92 : undefined
                     );
                     if (blob) await copyRasterBlobToClipboard(blob, mime);
                     else showToast(T('toast.img_fail'));
@@ -9651,7 +10773,7 @@
             btn.addEventListener('click', () => {
                 const scope = btn.getAttribute('data-scope');
                 if (scope !== 'all') {
-                    if (!cardQueue.length) {
+                    if (!cardQueue.length && !cardQueueSide.length) {
                         showToast(T('toast.export_need_cards'));
                         return;
                     }
@@ -9707,12 +10829,41 @@
     }
 
     async function ydkTextToCardQueue(text) {
-        const ids = String(text || '')
-            .split(/\n/)
-            .map((l) => l.trim())
-            .filter((l) => /^\d+$/.test(l));
-        if (!ids.length) throw new Error('YDK sem IDs numéricos.');
-        const uniq = [...new Set(ids)];
+        const raw = String(text || '');
+        const hasSections = /^\s*#main\b/im.test(raw);
+        let mainIds = [];
+        let extraIds = [];
+        let sideIds = [];
+        if (hasSections) {
+            let section = 'main';
+            for (const line of raw.split(/\r?\n/)) {
+                const t = line.trim();
+                if (t === '#main') {
+                    section = 'main';
+                    continue;
+                }
+                if (t === '#extra') {
+                    section = 'extra';
+                    continue;
+                }
+                if (t === '!side') {
+                    section = 'side';
+                    continue;
+                }
+                if (!/^\d+$/.test(t)) continue;
+                if (section === 'main') mainIds.push(t);
+                else if (section === 'extra') extraIds.push(t);
+                else if (section === 'side') sideIds.push(t);
+            }
+        } else {
+            mainIds = raw
+                .split(/\n/)
+                .map((l) => l.trim())
+                .filter((l) => /^\d+$/.test(l));
+        }
+        const orderedBuild = [...mainIds, ...extraIds];
+        if (!orderedBuild.length && !sideIds.length) throw new Error('YDK sem IDs numéricos.');
+        const uniq = [...new Set([...orderedBuild, ...sideIds])];
         const res = await fetch(`https://db.ygoprodeck.com/api/v7/cardinfo.php?id=${uniq.join(',')}&misc=yes`);
         const data = await res.json();
         if (!data.data) throw new Error('API não devolveu dados para estes IDs.');
@@ -9722,13 +10873,19 @@
             cardCache[card.id] = card;
         }
         const q = [];
-        for (const idStr of ids) {
+        for (const idStr of orderedBuild) {
             const card = cardById[idStr];
             if (!card || !card.card_images || !card.card_images[0]) continue;
             q.push({ id: card.id, name: card.name, imgId: card.card_images[0].id });
         }
-        if (!q.length) throw new Error('Nenhum ID do YDK corresponde a cartas na API.');
-        return q;
+        const qs = [];
+        for (const idStr of sideIds) {
+            const card = cardById[idStr];
+            if (!card || !card.card_images || !card.card_images[0]) continue;
+            qs.push({ id: card.id, name: card.name, imgId: card.card_images[0].id });
+        }
+        if (!q.length && !qs.length) throw new Error('Nenhum ID do YDK corresponde a cartas na API.');
+        return { build: q, side: qs };
     }
 
     async function csvTextToCardQueue(text) {
@@ -9749,20 +10906,24 @@
             const firstName = String(dataRows[0][iDeck] || '').trim();
             if (firstName) dataRows = dataRows.filter((r) => String(r[iDeck] || '').trim() === firstName);
         }
-        const orderedIds = [];
-        const pushSec = (secName) => {
+        const orderedMainExtra = [];
+        const orderedSideCsv = [];
+        const pushSec = (secName, bucket) => {
             for (const r of dataRows) {
                 const sec = String(r[iSec] || '').trim().toLowerCase();
                 if (sec !== secName) continue;
                 const idStr = String(r[iPass] || '').trim();
                 if (!/^\d+$/.test(idStr)) continue;
                 const n = Math.max(0, parseInt(String(r[iQtd] || '1').trim(), 10) || 1);
-                for (let i = 0; i < n; i++) orderedIds.push(idStr);
+                for (let i = 0; i < n; i++) bucket.push(idStr);
             }
         };
-        pushSec('main');
-        pushSec('extra');
-        if (!orderedIds.length) throw new Error('Nenhuma linha main/extra com passcodes válidos.');
+        pushSec('main', orderedMainExtra);
+        pushSec('extra', orderedMainExtra);
+        pushSec('side', orderedSideCsv);
+        if (!orderedMainExtra.length && !orderedSideCsv.length) {
+            throw new Error('Nenhuma linha main/extra/side com passcodes válidos.');
+        }
         const csvNameByPass = new Map();
         if (iNome >= 0) {
             for (const r of dataRows) {
@@ -9772,7 +10933,7 @@
                 if (nm && !csvNameByPass.has(idStr)) csvNameByPass.set(idStr, nm);
             }
         }
-        const uniq = [...new Set(orderedIds)];
+        const uniq = [...new Set([...orderedMainExtra, ...orderedSideCsv])];
         const res = await fetch(`https://db.ygoprodeck.com/api/v7/cardinfo.php?id=${uniq.join(',')}&misc=yes`);
         const data = await res.json();
         if (!data.data) throw new Error('API não devolveu dados para estes passcodes.');
@@ -9782,21 +10943,38 @@
             cardCache[card.id] = card;
         }
         const q = [];
-        for (const idStr of orderedIds) {
+        for (const idStr of orderedMainExtra) {
             const card = cardById[idStr];
             if (!card || !card.card_images || !card.card_images[0]) continue;
             const label = (csvNameByPass.get(idStr) || card.name || '').trim() || card.name;
             q.push({ id: card.id, name: label, imgId: card.card_images[0].id });
         }
-        if (!q.length) throw new Error('Nenhum passcode válido no CSV.');
-        return q;
+        const qs = [];
+        for (const idStr of orderedSideCsv) {
+            const card = cardById[idStr];
+            if (!card || !card.card_images || !card.card_images[0]) continue;
+            const label = (csvNameByPass.get(idStr) || card.name || '').trim() || card.name;
+            qs.push({ id: card.id, name: label, imgId: card.card_images[0].id });
+        }
+        if (!q.length && !qs.length) throw new Error('Nenhum passcode válido no CSV.');
+        return { build: q, side: qs };
     }
 
-    async function applyImportedQueueToEditor(q) {
+    function normalizeImportedDeckPayload(payload) {
+        if (payload && Array.isArray(payload.build)) {
+            return { build: payload.build, side: Array.isArray(payload.side) ? payload.side : [] };
+        }
+        if (Array.isArray(payload)) return { build: payload, side: [] };
+        return { build: [], side: [] };
+    }
+
+    async function applyImportedQueueToEditor(payload) {
         setDeckImportBusySubtext(T('busy.sync_cards'));
         deckDraftBeforeSavedLoad = null;
         setSavedDecksSelectValue('');
-        cardQueue = q;
+        const { build, side } = normalizeImportedDeckPayload(payload);
+        cardQueue = build;
+        cardQueueSide = side;
         await ensureCardCacheForQueue();
         updateUI();
         showToast(T('toast.import_ok'));
@@ -9826,13 +11004,15 @@
             setDeckImportBusyBar(10 + Math.round((fi / Math.max(1, nList)) * 70));
             try {
                 const txt = await entry.async('string');
-                const q = path.toLowerCase().endsWith('.ydk') ? await ydkTextToCardQueue(txt) : await csvTextToCardQueue(txt);
-                if (!q.length) {
+                const q =
+                    path.toLowerCase().endsWith('.ydk') ? await ydkTextToCardQueue(txt) : await csvTextToCardQueue(txt);
+                const norm = normalizeImportedDeckPayload(q);
+                if (!norm.build.length && !norm.side.length) {
                     errs.push(`${path}: ${T('import.file_empty')}`);
                     continue;
                 }
                 const shortName = path.split('/').pop().replace(/\.(ydk|csv)$/i, '') || 'Importado';
-                parsed.push({ name: sanitizeExportFilename(shortName) || 'Importado', q });
+                parsed.push({ name: sanitizeExportFilename(shortName) || 'Importado', q: norm });
             } catch (e) {
                 errs.push(`${path}: ${e && e.message ? e.message : e}`);
             }
@@ -9854,12 +11034,15 @@
         let i = 0;
         for (const p of parsed) {
             const uniqueName = suggestUniqueDeckName(p.name, decks);
-            const stacks = serializeStacksFromQueue(p.q);
+            const pq = normalizeImportedDeckPayload(p.q);
+            const stacks = serializeStacksFromQueue(pq.build);
+            const sideStacks = serializeStacksFromQueue(pq.side);
             const entry = {
                 id: 'd_imp_' + Date.now() + '_' + i++,
                 name: uniqueName,
                 ts: Date.now(),
-                stacks
+                stacks,
+                sideStacks
             };
             decks = [entry, ...decks];
             addedNames.push(uniqueName);
