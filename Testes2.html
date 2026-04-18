@@ -2779,6 +2779,214 @@
         
         @keyframes slideUp { from { transform: translateY(100px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
         @keyframes fadeOut { to { opacity: 0; } }
+        /* Transições de cartas por “família” de interação (classe em .card-surface-enter--*) */
+        @keyframes csPop {
+            0% { opacity: 0; transform: translateY(12px) scale(0.88); }
+            70% { opacity: 1; transform: translateY(-3px) scale(1.02); }
+            100% { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @keyframes csSink {
+            0% { opacity: 0; transform: translateX(-14px) scale(0.92); filter: brightness(1.2); }
+            100% { opacity: 1; transform: translateX(0) scale(1); filter: brightness(1); }
+        }
+        @keyframes csShuffle {
+            0% { opacity: 0; transform: rotate(-2deg) translateY(6px); }
+            40% { opacity: 1; transform: rotate(1.5deg) translateY(-2px); }
+            100% { opacity: 1; transform: rotate(0) translateY(0); }
+        }
+        @keyframes csSift {
+            0% { opacity: 0; transform: scale(0.94); filter: blur(3px); }
+            100% { opacity: 1; transform: scale(1); filter: blur(0); }
+        }
+        @keyframes csSlide {
+            0% { opacity: 0; transform: translateX(18px); }
+            100% { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes csTilt {
+            0% { opacity: 0; transform: skewX(-4deg) translateY(8px); }
+            100% { opacity: 1; transform: skewX(0) translateY(0); }
+        }
+        @keyframes csAura {
+            0% { opacity: 0; transform: scale(0.96); box-shadow: 0 0 0 0 rgba(168, 85, 247, 0); }
+            45% { opacity: 1; box-shadow: 0 0 0 4px rgba(168, 85, 247, 0.25); }
+            100% { opacity: 1; transform: scale(1); box-shadow: 0 0 0 0 rgba(168, 85, 247, 0); }
+        }
+        @keyframes csLayout {
+            0% { opacity: 0; transform: perspective(420px) rotateX(8deg) translateY(6px); }
+            100% { opacity: 1; transform: perspective(420px) rotateX(0) translateY(0); }
+        }
+        @keyframes csAlert {
+            0% { opacity: 0; transform: scale(0.9); }
+            30% { opacity: 1; transform: scale(1.03); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+        @keyframes csSpin {
+            0% { opacity: 0; transform: rotate(-6deg) scale(0.92); }
+            60% { opacity: 1; transform: rotate(3deg) scale(1.01); }
+            100% { opacity: 1; transform: rotate(0) scale(1); }
+        }
+        @keyframes csGeneric {
+            from { opacity: 0; transform: translateY(8px) scale(0.97); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @keyframes csRail {
+            0% { opacity: 0.88; transform: translateX(-14px) scale(0.99); }
+            100% { opacity: 1; transform: translateX(0) scale(1); }
+        }
+        @keyframes csDock {
+            0% { opacity: 0.88; transform: translateX(14px) scale(0.99); }
+            100% { opacity: 1; transform: translateX(0) scale(1); }
+        }
+        @keyframes layoutSfcPulseFilters {
+            0% { box-shadow: inset 0 0 0 0 rgba(56, 189, 248, 0); }
+            45% { box-shadow: inset 6px 0 26px -2px rgba(56, 189, 248, 0.32); }
+            100% { box-shadow: inset 0 0 0 0 rgba(56, 189, 248, 0); }
+        }
+        @keyframes layoutSfcPulseDeck {
+            0% { box-shadow: inset 0 0 0 0 rgba(52, 211, 153, 0); }
+            45% { box-shadow: inset -6px 0 26px -2px rgba(52, 211, 153, 0.34); }
+            100% { box-shadow: inset 0 0 0 0 rgba(52, 211, 153, 0); }
+        }
+        #app-layout.layout-sfc-pulse-filters {
+            animation: layoutSfcPulseFilters 0.55s ease-out;
+        }
+        #app-layout.layout-sfc-pulse-deck {
+            animation: layoutSfcPulseDeck 0.55s ease-out;
+        }
+        @keyframes layoutSfcPulseFullscreen {
+            0% { transform: scale(0.992); filter: brightness(0.94); }
+            50% { transform: scale(1.006); filter: brightness(1.06); }
+            100% { transform: scale(1); filter: brightness(1); }
+        }
+        #app-layout.layout-sfc-pulse-fullscreen {
+            animation: layoutSfcPulseFullscreen 0.58s ease-out;
+            transform-origin: center center;
+        }
+        @keyframes layoutSfcPulsePdf {
+            0% { box-shadow: inset 0 0 0 0 rgba(251, 191, 36, 0); }
+            45% { box-shadow: inset 0 -4px 22px 0 rgba(251, 191, 36, 0.28); }
+            100% { box-shadow: inset 0 0 0 0 rgba(251, 191, 36, 0); }
+        }
+        #col-preview.layout-sfc-pulse-pdf {
+            animation: layoutSfcPulsePdf 0.52s ease-out;
+        }
+        .suggestion-item.card-surface-enter,
+        .queue-item.card-surface-enter { animation-duration: 0.44s; animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1); animation-fill-mode: both; }
+        .suggestion-item.card-surface-enter--pop,
+        .queue-item.card-surface-enter--pop { animation-name: csPop; }
+        .suggestion-item.card-surface-enter--sink,
+        .queue-item.card-surface-enter--sink { animation-name: csSink; }
+        .suggestion-item.card-surface-enter--shuffle,
+        .queue-item.card-surface-enter--shuffle { animation-name: csShuffle; }
+        .suggestion-item.card-surface-enter--sift,
+        .queue-item.card-surface-enter--sift { animation-name: csSift; }
+        .suggestion-item.card-surface-enter--slide,
+        .queue-item.card-surface-enter--slide { animation-name: csSlide; }
+        .suggestion-item.card-surface-enter--tilt,
+        .queue-item.card-surface-enter--tilt { animation-name: csTilt; }
+        .suggestion-item.card-surface-enter--aura,
+        .queue-item.card-surface-enter--aura { animation-name: csAura; }
+        .suggestion-item.card-surface-enter--layout,
+        .queue-item.card-surface-enter--layout { animation-name: csLayout; }
+        .suggestion-item.card-surface-enter--alert,
+        .queue-item.card-surface-enter--alert { animation-name: csAlert; }
+        .suggestion-item.card-surface-enter--spin,
+        .queue-item.card-surface-enter--spin { animation-name: csSpin; }
+        .suggestion-item.card-surface-enter--generic,
+        .queue-item.card-surface-enter--generic { animation-name: csGeneric; }
+        .suggestion-item.card-surface-enter--rail,
+        .queue-item.card-surface-enter--rail { animation-name: csRail; }
+        .suggestion-item.card-surface-enter--dock,
+        .queue-item.card-surface-enter--dock { animation-name: csDock; }
+        .toast.toast-surface {
+            white-space: normal;
+            max-width: min(92vw, 420px);
+            text-align: center;
+            line-height: 1.25;
+            border-width: 1px;
+            border-style: solid;
+        }
+        .toast.toast-surface .toast-surface-ic { flex-shrink: 0; opacity: 0.92; }
+        .toast.toast-surface.toast-sfc-pop {
+            background: linear-gradient(135deg, rgba(16, 90, 52, 0.96), rgba(5, 60, 38, 0.98));
+            border-color: rgba(110, 231, 183, 0.45);
+            color: #ecfdf5;
+        }
+        .toast.toast-surface.toast-sfc-sink {
+            background: linear-gradient(135deg, rgba(110, 35, 45, 0.96), rgba(55, 15, 22, 0.98));
+            border-color: rgba(251, 165, 165, 0.4);
+            color: #fff1f2;
+        }
+        .toast.toast-surface.toast-sfc-shuffle {
+            background: linear-gradient(135deg, rgba(70, 55, 30, 0.96), rgba(35, 28, 14, 0.98));
+            border-color: rgba(253, 224, 138, 0.45);
+            color: #fffbeb;
+        }
+        .toast.toast-surface.toast-sfc-sift {
+            background: linear-gradient(135deg, rgba(30, 58, 95, 0.96), rgba(15, 35, 65, 0.98));
+            border-color: rgba(147, 197, 253, 0.45);
+            color: #eff6ff;
+        }
+        .toast.toast-surface.toast-sfc-slide {
+            background: linear-gradient(135deg, rgba(30, 64, 110, 0.96), rgba(12, 45, 85, 0.98));
+            border-color: rgba(125, 211, 252, 0.4);
+            color: #f0f9ff;
+        }
+        .toast.toast-surface.toast-sfc-tilt {
+            background: linear-gradient(135deg, rgba(55, 48, 95, 0.96), rgba(28, 22, 55, 0.98));
+            border-color: rgba(196, 181, 253, 0.45);
+            color: #f5f3ff;
+        }
+        .toast.toast-surface.toast-sfc-aura {
+            background: linear-gradient(135deg, rgba(75, 25, 110, 0.96), rgba(40, 10, 70, 0.98));
+            border-color: rgba(216, 180, 254, 0.5);
+            color: #faf5ff;
+        }
+        .toast.toast-surface.toast-sfc-layout {
+            background: linear-gradient(135deg, rgba(15, 80, 95, 0.96), rgba(8, 40, 52, 0.98));
+            border-color: rgba(165, 243, 252, 0.42);
+            color: #ecfeff;
+        }
+        .toast.toast-surface.toast-sfc-alert {
+            background: linear-gradient(135deg, rgba(110, 45, 18, 0.96), rgba(55, 22, 8, 0.98));
+            border-color: rgba(254, 215, 170, 0.45);
+            color: #fff7ed;
+        }
+        .toast.toast-surface.toast-sfc-spin {
+            background: linear-gradient(135deg, rgba(55, 30, 95, 0.96), rgba(28, 14, 55, 0.98));
+            border-color: rgba(192, 132, 252, 0.45);
+            color: #faf5ff;
+        }
+        .toast.toast-surface.toast-sfc-generic {
+            background: linear-gradient(135deg, rgba(38, 55, 72, 0.96), rgba(18, 28, 38, 0.98));
+            border-color: rgba(148, 163, 184, 0.4);
+            color: #f8fafc;
+        }
+        .toast.toast-surface.toast-sfc-rail {
+            background: linear-gradient(135deg, rgba(14, 85, 95, 0.96), rgba(6, 45, 58, 0.98));
+            border-color: rgba(103, 232, 249, 0.45);
+            color: #ecfeff;
+        }
+        .toast.toast-surface.toast-sfc-dock {
+            background: linear-gradient(135deg, rgba(22, 78, 55, 0.96), rgba(10, 42, 32, 0.98));
+            border-color: rgba(110, 231, 183, 0.42);
+            color: #ecfdf5;
+        }
+        .toast.toast-surface.toast-sfc-screen {
+            background: linear-gradient(135deg, rgba(45, 35, 85, 0.96), rgba(22, 16, 48, 0.98));
+            border-color: rgba(196, 181, 253, 0.48);
+            color: #f5f3ff;
+        }
+        .toast.toast-surface.toast-sfc-pdfui {
+            background: linear-gradient(135deg, rgba(95, 45, 18, 0.96), rgba(48, 22, 8, 0.98));
+            border-color: rgba(252, 211, 77, 0.45);
+            color: #fffbeb;
+        }
+        .toast.toast-surface.toast-sfc-tipui {
+            background: linear-gradient(135deg, rgba(28, 65, 88, 0.96), rgba(12, 38, 55, 0.98));
+            border-color: rgba(125, 211, 252, 0.42);
+            color: #f0f9ff;
+        }
 
         /* --- RESPONSIVIDADE DESKTOP --- */
         @media (min-width: 901px) {
@@ -3891,6 +4099,13 @@
     let deckDraftBeforeSavedLoad = null;
     /** Vista do deck de impressão (independente da lista de sugestões). */
     let queueView = 'list';
+    /** Feedback opcional antes de `renderResults` / `updateUI` (som, toast, vibração, animação). */
+    let cardSurfaceFeedbackReason = null;
+    let __insideUpdateUI = false;
+    /** >0: não animar entrada das cartas (ex.: add/remove/reordenar por arrastar). */
+    let __suppressCardSurfaceEnterAnimDepth = 0;
+    let __deckSnapshotForSurface = null;
+    let surfaceFilterFxTimer = null;
     /** Ordenação do deck: critério no DOM (#deck-sort-by); «Personalizado» = ordem da fila + arrastar; «Aleatório» só baralha ao mudar o critério ou ao botão de ordem. */
     let deckSortDirection = 1;
     /** Ultimo criterio lido do select (fallback se getElementById('deck-sort-by') falhar). */
@@ -4031,6 +4246,7 @@
                     setUiPref(UI_PREF_KEYS.deckBanlist, sel.value || '');
                 } catch (_) {}
                 paintDeckValidityFlag();
+                requestCardSurfaceFeedback('banlist_deck');
                 updateUI();
             });
         }
@@ -4042,6 +4258,7 @@
                     setUiPref(UI_PREF_KEYS.deckValidateOff, deckValidationDisabled ? '1' : '0');
                 } catch (_) {}
                 updateDeckValidationToggleUi();
+                requestCardSurfaceFeedback('banlist_deck');
                 updateUI();
             });
         }
@@ -4686,7 +4903,12 @@
                             if (!(await forceAddToSide(ent))) break;
                         }
                     }
-                    updateUI();
+                    pushSuppressCardSurfaceEnterAnimation();
+                    try {
+                        updateUI();
+                    } finally {
+                        popSuppressCardSurfaceEnterAnimation();
+                    }
                     clearDeckDropPlaceholder(deck);
                     return;
                 }
@@ -4702,7 +4924,12 @@
                     }
                 }
                 revealDeckColumnIfHidden();
-                updateUI();
+                pushSuppressCardSurfaceEnterAnimation();
+                try {
+                    updateUI();
+                } finally {
+                    popSuppressCardSurfaceEnterAnimation();
+                }
                 clearDeckDropPlaceholder(deck);
                 return;
             }
@@ -4718,13 +4945,23 @@
                 if (dragPool === 'build' && dropSec === 'side') {
                     await moveStackBuildToSide(dragId);
                     clearDeckDropPlaceholder(deck);
-                    updateUI();
+                    pushSuppressCardSurfaceEnterAnimation();
+                    try {
+                        updateUI();
+                    } finally {
+                        popSuppressCardSurfaceEnterAnimation();
+                    }
                     return;
                 }
                 if (dragPool === 'side' && (dropSec === 'principal' || dropSec === 'extra')) {
                     await moveStackSideToBuild(dragId);
                     clearDeckDropPlaceholder(deck);
-                    updateUI();
+                    pushSuppressCardSurfaceEnterAnimation();
+                    try {
+                        updateUI();
+                    } finally {
+                        popSuppressCardSurfaceEnterAnimation();
+                    }
                     return;
                 }
 
@@ -4744,7 +4981,12 @@
                         } else if (dragPool === 'build' && (dropSec === 'principal' || dropSec === 'extra')) {
                             moveDeckStackInQueue(dragId, refId, insertBefore);
                         }
-                        updateUI();
+                        pushSuppressCardSurfaceEnterAnimation();
+                        try {
+                            updateUI();
+                        } finally {
+                            popSuppressCardSurfaceEnterAnimation();
+                        }
                     }
                 }
             }
@@ -4776,8 +5018,13 @@
                 resultsCol.classList.remove('suggestions-drop-target');
                 const payload = parseDndJson(e.dataTransfer, YGO_DND_QUEUE);
                 if (payload && payload.imgId != null) {
-                    if (payload.pool === 'side') removeOneSideDeckCopy(payload.imgId);
-                    else removeOneDeckCopy(payload.imgId);
+                    pushSuppressCardSurfaceEnterAnimation();
+                    try {
+                        if (payload.pool === 'side') removeOneSideDeckCopy(payload.imgId);
+                        else removeOneDeckCopy(payload.imgId);
+                    } finally {
+                        popSuppressCardSurfaceEnterAnimation();
+                    }
                 }
             });
         }
@@ -4813,6 +5060,21 @@
         return 'unknown';
     }
 
+    /** YGOPRODeck devolve `card_prices` como objeto; formato legado pode usar array de um elemento. */
+    function getCardPricesFirst(card) {
+        const cp = card?.card_prices;
+        if (cp == null) return null;
+        return Array.isArray(cp) ? (cp[0] || null) : cp;
+    }
+
+    /** TCGPlayer USD numérico para filtros, ordenação e totais (0 se ausente ou inválido). */
+    function getTcgplayerPriceUsd(card) {
+        const row = getCardPricesFirst(card);
+        if (!row || row.tcgplayer_price == null) return 0;
+        const v = parseFloat(row.tcgplayer_price);
+        return Number.isFinite(v) ? v : 0;
+    }
+
     function computeDeckAggregates() {
         const out = {
             total: cardQueue.length + cardQueueSide.length,
@@ -4832,12 +5094,12 @@
             else if (sec === 'extra') out.extra++;
             else if (sec === 'monsters') out.monsters++;
             else out.unknown++;
-            const p = parseFloat(full?.card_prices?.[0]?.tcgplayer_price);
+            const p = getTcgplayerPriceUsd(full);
             if (Number.isFinite(p)) out.price += p;
         }
         for (const entry of cardQueueSide) {
             const full = cardCache[entry.id];
-            const p = parseFloat(full?.card_prices?.[0]?.tcgplayer_price);
+            const p = getTcgplayerPriceUsd(full);
             if (Number.isFinite(p)) out.price += p;
         }
         return out;
@@ -5145,11 +5407,16 @@
     }
 
     async function deckSortAndRefresh() {
+        requestCardSurfaceFeedback('deck_sort');
         getDeckSortCriterion();
         setUiPref(UI_PREF_KEYS.deckSort, String(getDeckSortCriterion() || 'custom'));
         await ensureCardCacheForQueue();
         if (getDeckSortCriterion() === 'random') shuffleDeckQueueRandomWithinBuckets();
         renderDeckQueue();
+        if (!__insideUpdateUI) {
+            const r = consumeCardSurfaceFeedback();
+            applyCardSurfaceFeedback(r);
+        }
         triggerPDFUpdate();
     }
 
@@ -5157,15 +5424,25 @@
         getDeckSortCriterion();
         await ensureCardCacheForQueue();
         if (getDeckSortCriterion() === 'random') {
+            requestCardSurfaceFeedback('deck_sort');
             shuffleDeckQueueRandomWithinBuckets();
             renderDeckQueue();
+            if (!__insideUpdateUI) {
+                const r = consumeCardSurfaceFeedback();
+                applyCardSurfaceFeedback(r);
+            }
             triggerPDFUpdate();
             return;
         }
+        requestCardSurfaceFeedback('deck_sort');
         deckSortDirection *= -1;
         setUiPref(UI_PREF_KEYS.deckSortDir, String(deckSortDirection));
         updateDeckSortOrderIcon();
         renderDeckQueue();
+        if (!__insideUpdateUI) {
+            const r = consumeCardSurfaceFeedback();
+            applyCardSurfaceFeedback(r);
+        }
         triggerPDFUpdate();
     }
 
@@ -5452,6 +5729,7 @@
         "search.failed": { pt: "N\u00e3o foi poss\u00edvel buscar.", en: "Could not complete search." },
         "search.no_setcode": { pt: "Nenhum resultado para o(s) c\u00f3digo(s) de set.", en: "No results for the set code(s)." },
         "search.rarity_scan": { pt: "A pesquisar por raridade no cat\u00e1logo completo (v\u00e1rios pedidos)\u2026", en: "Searching rarity across the full catalog (several requests)\u2026" },
+        "search.price_full_scan": { pt: "A filtrar por pre\u00e7o no cat\u00e1logo completo (v\u00e1rios pedidos)\u2026", en: "Filtering by price across the full catalog (several requests)\u2026" },
         "search.too_many": { pt: "Muitas combina\u00e7\u00f5es ({count}). Limite {max}. Reduza chips de nome, descri\u00e7\u00e3o, ATK, DEF, expans\u00f5es ou arqu\u00e9tipos.", en: "Too many combinations ({count}). Limit {max}. Reduce name, description, ATK, DEF, set, or archetype chips." },
         "toast.added_qty": { pt: "{qty}x {name} adicionado!", en: "{qty}x {name} added!" },
         "toast.added_qty_m": { pt: "{qty}x {name} adicionado(a)!", en: "{qty}x {name} added!" },
@@ -5535,6 +5813,28 @@
         "toast.zip_img_saved": { pt: "ZIP com imagens {ext} (lista) salvo.", en: "ZIP with {ext} list images saved." },
         "toast.zip_pdf_saved": { pt: "ZIP com PDFs salvo.", en: "ZIP with PDFs saved." },
         "toast.zip_ydk_saved": { pt: "ZIP com YDKs salvo.", en: "ZIP with YDKs saved." },
+        "toast.surface.page": { pt: "Sugest\u00f5es: p\u00e1gina {n}", en: "Suggestions: page {n}" },
+        "toast.surface.theme": { pt: "Tema atualizado", en: "Theme updated" },
+        "toast.surface.suggestions_view": { pt: "Modo de visualiza\u00e7\u00e3o das sugest\u00f5es alterado", en: "Suggestion view mode changed" },
+        "toast.surface.deck_view": { pt: "Visualiza\u00e7\u00e3o do deck alterada", en: "Deck view mode changed" },
+        "toast.surface.sort": { pt: "Ordena\u00e7\u00e3o da lista atualizada", en: "Result sort updated" },
+        "toast.surface.filter": { pt: "Lista de sugest\u00f5es atualizada (filtros)", en: "Suggestions updated (filters)" },
+        "toast.surface.banlist_deck": { pt: "Banlist de valida\u00e7\u00e3o do deck alterada", en: "Deck validation banlist changed" },
+        "toast.surface.deck_add": { pt: "Carta adicionada ao deck", en: "Card added to deck" },
+        "toast.surface.deck_remove": { pt: "Carta removida do deck", en: "Card removed from deck" },
+        "toast.surface.deck_change": { pt: "Deck atualizado", en: "Deck updated" },
+        "toast.surface.deck_sort": { pt: "Ordena\u00e7\u00e3o do deck atualizada", en: "Deck sort updated" },
+        "toast.surface.filters_column_show": { pt: "Coluna de filtros vis\u00edvel", en: "Filters column shown" },
+        "toast.surface.filters_column_hide": { pt: "Coluna de filtros oculta", en: "Filters column hidden" },
+        "toast.surface.deck_col_hidden": { pt: "Coluna do deck oculta", en: "Deck column hidden" },
+        "toast.surface.deck_col_normal": { pt: "Coluna do deck: largura normal", en: "Deck column: normal width" },
+        "toast.surface.deck_col_wide": { pt: "Coluna do deck ampliada", en: "Deck column expanded" },
+        "toast.surface.fullscreen_enter": { pt: "Tela inteira ativada", en: "Fullscreen on" },
+        "toast.surface.fullscreen_exit": { pt: "Tela inteira desativada", en: "Fullscreen off" },
+        "toast.surface.pdf_preview_show": { pt: "Pr\u00e9-visualiza\u00e7\u00e3o do PDF vis\u00edvel", en: "PDF preview visible" },
+        "toast.surface.pdf_preview_hide": { pt: "Pr\u00e9-visualiza\u00e7\u00e3o do PDF oculta", en: "PDF preview hidden" },
+        "toast.surface.tooltip_on": { pt: "Tooltip ao passar o rato: ligado", en: "Hover tooltip: on" },
+        "toast.surface.tooltip_off": { pt: "Tooltip ao passar o rato: desligado", en: "Hover tooltip: off" },
         "variant.art": { pt: "Arte", en: "Art" },
         "ui.cancel": { pt: "Cancelar", en: "Cancel" },
         "ui.card_alt": { pt: "Carta", en: "Card" },
@@ -5930,6 +6230,9 @@
         try {
             setUiPref(UI_PREF_KEYS.deckColCycle, String(deckColumnCycle));
         } catch (_) {}
+        const deckColReason =
+            deckColumnCycle === 0 ? 'deck_column_hide' : deckColumnCycle === 1 ? 'deck_column_normal' : 'deck_column_wide';
+        requestCardSurfaceFeedback(deckColReason);
         renderResults();
     }
 
@@ -6016,6 +6319,8 @@
                 const col = document.getElementById('col-preview');
                 const currentlyHidden = col && col.classList.contains('pdf-preview-hidden');
                 applyPdfPreviewVisibility(!currentlyHidden);
+                const hiddenAfter = col && col.classList.contains('pdf-preview-hidden');
+                applyCardSurfaceFeedback(hiddenAfter ? 'pdf_preview_hide' : 'pdf_preview_show');
             };
         }
 
@@ -6343,16 +6648,19 @@
         setUiPref(UI_PREF_KEYS.theme, themeName);
         // legado (mantém compatibilidade com versões antigas que só liam localStorage)
         try { localStorage.setItem('selectedTheme', themeName); } catch (_) {}
-        renderResults(); 
+        requestCardSurfaceFeedback('theme');
+        renderResults();
     }
 
     function changePage(step) {
         const totalPages = Math.ceil(searchResults.length / getItemsPerPage());
         const newPage = currentPage + step;
         if (newPage >= 1 && newPage <= totalPages) {
+            requestCardSurfaceFeedback('page');
             currentPage = newPage;
             renderResults();
-            document.getElementById('results-view').scrollTop = 0;
+            const rv = document.getElementById('results-view');
+            if (rv) rv.scrollTop = 0;
         }
     }
 
@@ -6360,9 +6668,7 @@
         const minPrice = parseFloat(document.getElementById('filter-price-min').value) || 0;
         const maxPrice = parseFloat(document.getElementById('filter-price-max').value) || Infinity;
         return cards.filter(card => {
-            const price = card.card_prices && card.card_prices[0] 
-                        ? parseFloat(card.card_prices[0].tcgplayer_price) 
-                        : 0;
+            const price = getTcgplayerPriceUsd(card);
             return price >= minPrice && price <= maxPrice;
         });
     }
@@ -8475,6 +8781,7 @@
         if (criterion === 'random') {
             shuffleArrayInPlace(searchResults);
             currentPage = 1;
+            requestCardSurfaceFeedback('sort');
             renderResults();
             return;
         }
@@ -8534,8 +8841,8 @@
         let valA, valB;
         switch (criterion) {
             case 'price':
-                valA = parseFloat(a.card_prices?.[0]?.tcgplayer_price) || 0;
-                valB = parseFloat(b.card_prices?.[0]?.tcgplayer_price) || 0;
+                valA = getTcgplayerPriceUsd(a);
+                valB = getTcgplayerPriceUsd(b);
                 break;
             case 'banlist': {
                 const priority = { Banned: 1, Forbidden: 1, Limited: 2, 'Semi-Limited': 3 };
@@ -8581,6 +8888,7 @@
     }
 
     function sortAndRender() {
+        if (!cardSurfaceFeedbackReason) requestCardSurfaceFeedback('sort');
         const criterion = document.getElementById('sort-by').value;
         setUiPref(UI_PREF_KEYS.resultsSort, criterion);
         if (criterion === 'random') {
@@ -8629,6 +8937,464 @@
         setTimeout(() => toast.remove(), 2000);
     }
 
+    function requestCardSurfaceFeedback(reason) {
+        if (reason) cardSurfaceFeedbackReason = reason;
+    }
+
+    function consumeCardSurfaceFeedback() {
+        const r = cardSurfaceFeedbackReason;
+        cardSurfaceFeedbackReason = null;
+        return r;
+    }
+
+    function snapshotDeckForSurface() {
+        const mainSig = cardQueue.map((e) => String(e.imgId)).join('|');
+        const sideSig = cardQueueSide.map((e) => String(e.imgId)).join('|');
+        return JSON.stringify({
+            n: cardQueue.length + cardQueueSide.length,
+            main: mainSig,
+            side: sideSig
+        });
+    }
+
+    function inferDeckSurfaceReason(prevStr, nextStr) {
+        if (!prevStr || prevStr === nextStr) return null;
+        try {
+            const a = JSON.parse(prevStr);
+            const b = JSON.parse(nextStr);
+            const na = Number(a.n) || 0;
+            const nb = Number(b.n) || 0;
+            if (nb > na) return 'deck_add';
+            if (nb < na) return 'deck_remove';
+            if (a.main !== b.main || a.side !== b.side) return 'deck_change';
+            return null;
+        } catch {
+            return 'deck_change';
+        }
+    }
+
+    /** Agrupa interações para animação + cor de toast + ícone. */
+    function mapReasonToSurfaceFamily(reason) {
+        if (!reason || reason === 'silent') return 'generic';
+        const m = {
+            deck_add: 'pop',
+            deck_remove: 'sink',
+            deck_change: 'shuffle',
+            deck_sort: 'shuffle',
+            filter: 'sift',
+            filter_reset: 'sift',
+            page: 'slide',
+            sort: 'tilt',
+            theme: 'aura',
+            suggestions_view: 'layout',
+            deck_view: 'layout',
+            filters_column_show: 'rail',
+            filters_column_hide: 'rail',
+            deck_column_hide: 'dock',
+            deck_column_normal: 'dock',
+            deck_column_wide: 'dock',
+            fullscreen_enter: 'screen',
+            fullscreen_exit: 'screen',
+            pdf_preview_show: 'pdfui',
+            pdf_preview_hide: 'pdfui',
+            tooltip_on: 'tipui',
+            tooltip_off: 'tipui',
+            banlist_deck: 'alert',
+            search_toast: 'alert',
+            random_restore: 'spin',
+            random_pick: 'spin'
+        };
+        return m[reason] || 'generic';
+    }
+
+    /** Motivo pendente para pintar animação (ainda não consumido); no `updateUI` infere mudança do deck. */
+    function getCardSurfacePaintKind() {
+        if (cardSurfaceFeedbackReason) return cardSurfaceFeedbackReason;
+        if (!__insideUpdateUI) return null;
+        const next = snapshotDeckForSurface();
+        if (next === __deckSnapshotForSurface) return null;
+        if (__deckSnapshotForSurface == null) {
+            try {
+                const b = JSON.parse(next);
+                if ((Number(b.n) || 0) > 0) return 'deck_add';
+            } catch (_) {}
+            return null;
+        }
+        return inferDeckSurfaceReason(__deckSnapshotForSurface, next);
+    }
+
+    /** Só o deck mudou (clique na sugestão, +/- no deck, etc.): animar fila do deck, não a lista de sugestões. */
+    function isSurfacePaintKindDeckCompositionOnly(kind) {
+        return kind === 'deck_add' || kind === 'deck_remove' || kind === 'deck_change';
+    }
+
+    function maybePaintSuggestionSurfaceAnimations() {
+        const pk = getCardSurfacePaintKind();
+        if (isSurfacePaintKindDeckCompositionOnly(pk)) return;
+        paintCardSurfaceEnterAnimations('#results-view', '.suggestion-item');
+    }
+
+    function playCardSurfaceChime(kind) {
+        try {
+            const Ctx = window.AudioContext || window.webkitAudioContext;
+            if (!Ctx) return;
+            const ctx = new Ctx();
+            const master = ctx.createGain();
+            master.gain.value = 0.11;
+            master.connect(ctx.destination);
+            const t0 = ctx.currentTime;
+            let stopAt = 0.22;
+
+            function beep(freq, type, start, dur, peak = 0.09) {
+                const osc = ctx.createOscillator();
+                const g = ctx.createGain();
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, start);
+                g.gain.setValueAtTime(0.0001, start);
+                g.gain.exponentialRampToValueAtTime(peak, start + 0.018);
+                g.gain.exponentialRampToValueAtTime(0.0001, start + dur);
+                osc.connect(g);
+                g.connect(master);
+                osc.start(start);
+                osc.stop(start + dur + 0.025);
+            }
+
+            switch (kind) {
+                case 'deck_add':
+                    beep(523.25, 'sine', t0, 0.1, 0.1);
+                    beep(659.25, 'sine', t0 + 0.09, 0.12, 0.085);
+                    beep(783.99, 'sine', t0 + 0.2, 0.1, 0.06);
+                    stopAt = 0.38;
+                    break;
+                case 'deck_remove':
+                    beep(392, 'triangle', t0, 0.12, 0.095);
+                    beep(293.66, 'triangle', t0 + 0.1, 0.14, 0.08);
+                    stopAt = 0.32;
+                    break;
+                case 'deck_change':
+                    beep(440, 'sine', t0, 0.08, 0.07);
+                    beep(554.37, 'sine', t0 + 0.07, 0.08, 0.065);
+                    beep(440, 'sine', t0 + 0.16, 0.09, 0.055);
+                    stopAt = 0.32;
+                    break;
+                case 'deck_sort':
+                    beep(349.23, 'square', t0, 0.04, 0.045);
+                    beep(523.25, 'square', t0 + 0.05, 0.04, 0.04);
+                    beep(698.46, 'square', t0 + 0.1, 0.05, 0.035);
+                    stopAt = 0.22;
+                    break;
+                case 'filter':
+                    beep(587.33, 'sine', t0, 0.06, 0.06);
+                    beep(880, 'sine', t0 + 0.07, 0.07, 0.055);
+                    stopAt = 0.2;
+                    break;
+                case 'filter_reset':
+                    beep(659.25, 'triangle', t0, 0.07, 0.065);
+                    beep(493.88, 'triangle', t0 + 0.08, 0.1, 0.06);
+                    stopAt = 0.24;
+                    break;
+                case 'page':
+                    beep(660, 'sine', t0, 0.05, 0.07);
+                    beep(880, 'sine', t0 + 0.06, 0.06, 0.055);
+                    stopAt = 0.18;
+                    break;
+                case 'sort':
+                    beep(415.3, 'sine', t0, 0.07, 0.075);
+                    beep(554.37, 'sine', t0 + 0.08, 0.08, 0.07);
+                    beep(830.61, 'sine', t0 + 0.17, 0.09, 0.055);
+                    stopAt = 0.32;
+                    break;
+                case 'theme':
+                    beep(392, 'sine', t0, 0.1, 0.06);
+                    beep(493.88, 'sine', t0 + 0.1, 0.1, 0.065);
+                    beep(587.33, 'sine', t0 + 0.2, 0.12, 0.07);
+                    beep(698.46, 'sine', t0 + 0.32, 0.14, 0.055);
+                    stopAt = 0.52;
+                    break;
+                case 'suggestions_view':
+                    beep(523.25, 'triangle', t0, 0.08, 0.07);
+                    beep(659.25, 'triangle', t0 + 0.09, 0.09, 0.065);
+                    stopAt = 0.24;
+                    break;
+                case 'deck_view':
+                    beep(369.99, 'sine', t0, 0.09, 0.075);
+                    beep(440, 'sine', t0 + 0.1, 0.1, 0.065);
+                    stopAt = 0.24;
+                    break;
+                case 'filters_column_show':
+                    beep(523.25, 'sine', t0, 0.08, 0.08);
+                    beep(659.25, 'sine', t0 + 0.08, 0.09, 0.07);
+                    beep(783.99, 'sine', t0 + 0.17, 0.1, 0.055);
+                    stopAt = 0.32;
+                    break;
+                case 'filters_column_hide':
+                    beep(622.25, 'triangle', t0, 0.09, 0.075);
+                    beep(466.16, 'triangle', t0 + 0.1, 0.11, 0.065);
+                    stopAt = 0.26;
+                    break;
+                case 'deck_column_hide':
+                    beep(196, 'sine', t0, 0.12, 0.09);
+                    beep(164.81, 'sine', t0 + 0.11, 0.14, 0.065);
+                    stopAt = 0.3;
+                    break;
+                case 'deck_column_normal':
+                    beep(329.63, 'sine', t0, 0.09, 0.08);
+                    beep(392, 'sine', t0 + 0.1, 0.1, 0.07);
+                    stopAt = 0.24;
+                    break;
+                case 'deck_column_wide':
+                    beep(440, 'sine', t0, 0.08, 0.075);
+                    beep(554.37, 'sine', t0 + 0.09, 0.1, 0.08);
+                    beep(659.25, 'sine', t0 + 0.19, 0.12, 0.06);
+                    stopAt = 0.36;
+                    break;
+                case 'fullscreen_enter':
+                    beep(311.13, 'sine', t0, 0.07, 0.06);
+                    beep(415.3, 'sine', t0 + 0.08, 0.08, 0.075);
+                    beep(523.25, 'sine', t0 + 0.16, 0.1, 0.08);
+                    beep(659.25, 'sine', t0 + 0.26, 0.12, 0.065);
+                    stopAt = 0.42;
+                    break;
+                case 'fullscreen_exit':
+                    beep(587.33, 'triangle', t0, 0.09, 0.07);
+                    beep(440, 'triangle', t0 + 0.1, 0.11, 0.065);
+                    beep(329.63, 'triangle', t0 + 0.21, 0.13, 0.055);
+                    stopAt = 0.38;
+                    break;
+                case 'pdf_preview_show':
+                    beep(392, 'sine', t0, 0.08, 0.075);
+                    beep(523.25, 'sine', t0 + 0.09, 0.1, 0.07);
+                    stopAt = 0.24;
+                    break;
+                case 'pdf_preview_hide':
+                    beep(466.16, 'sine', t0, 0.09, 0.07);
+                    beep(349.23, 'sine', t0 + 0.1, 0.11, 0.06);
+                    stopAt = 0.24;
+                    break;
+                case 'tooltip_on':
+                    beep(880, 'sine', t0, 0.05, 0.065);
+                    beep(1174.66, 'sine', t0 + 0.06, 0.06, 0.05);
+                    stopAt = 0.16;
+                    break;
+                case 'tooltip_off':
+                    beep(523.25, 'triangle', t0, 0.08, 0.065);
+                    beep(392, 'triangle', t0 + 0.09, 0.1, 0.055);
+                    stopAt = 0.22;
+                    break;
+                case 'banlist_deck':
+                    beep(220, 'square', t0, 0.06, 0.05);
+                    beep(277.18, 'square', t0 + 0.07, 0.07, 0.055);
+                    beep(329.63, 'square', t0 + 0.15, 0.09, 0.045);
+                    stopAt = 0.3;
+                    break;
+                case 'search_toast':
+                    beep(196, 'sawtooth', t0, 0.05, 0.04);
+                    beep(185, 'sawtooth', t0 + 0.06, 0.06, 0.035);
+                    stopAt = 0.16;
+                    break;
+                case 'random_pick':
+                    beep(783.99, 'sine', t0, 0.05, 0.07);
+                    beep(987.77, 'sine', t0 + 0.06, 0.06, 0.065);
+                    beep(1174.66, 'sine', t0 + 0.13, 0.08, 0.05);
+                    stopAt = 0.26;
+                    break;
+                case 'random_restore':
+                    beep(587.33, 'sine', t0, 0.08, 0.065);
+                    beep(493.88, 'sine', t0 + 0.09, 0.09, 0.06);
+                    beep(392, 'sine', t0 + 0.19, 0.11, 0.055);
+                    stopAt = 0.34;
+                    break;
+                default:
+                    beep(440, 'sine', t0, 0.1, 0.075);
+                    stopAt = 0.14;
+            }
+
+            window.setTimeout(() => {
+                try {
+                    ctx.close();
+                } catch (_) {}
+            }, Math.ceil(stopAt * 1000) + 80);
+        } catch (_) {}
+    }
+
+    function pulseCardSurfaceHaptic(kind) {
+        if (!navigator.vibrate) return;
+        const fam = mapReasonToSurfaceFamily(kind);
+        if (fam === 'pop') navigator.vibrate([16, 36, 20]);
+        else if (fam === 'sink') navigator.vibrate([32, 28, 40]);
+        else if (fam === 'shuffle') navigator.vibrate([18, 22, 18]);
+        else if (fam === 'sift') navigator.vibrate([12, 28, 12, 28, 14]);
+        else if (fam === 'slide') navigator.vibrate([20, 30, 22]);
+        else if (fam === 'tilt') navigator.vibrate([14, 18, 14, 18, 20]);
+        else if (fam === 'aura') navigator.vibrate([10, 20, 10, 20, 10, 25]);
+        else if (fam === 'layout') navigator.vibrate([22, 35, 22]);
+        else if (fam === 'rail') navigator.vibrate([18, 28, 22, 28, 20]);
+        else if (fam === 'dock') navigator.vibrate([24, 32, 24, 38, 22]);
+        else if (fam === 'screen') navigator.vibrate([20, 45, 28, 50, 22]);
+        else if (fam === 'pdfui') navigator.vibrate([18, 26, 18, 26, 20]);
+        else if (fam === 'tipui') navigator.vibrate([12, 22, 12, 22, 16]);
+        else if (fam === 'alert') navigator.vibrate([40, 25, 40]);
+        else if (fam === 'spin') navigator.vibrate([18, 40, 22, 35, 18]);
+        else navigator.vibrate(22);
+    }
+
+    function showSurfaceToast(msg, surfaceKind) {
+        const container = document.getElementById('toast-container');
+        if (!container || !msg) return;
+        const family = mapReasonToSurfaceFamily(surfaceKind || 'generic');
+        const icons = {
+            pop: '▴',
+            sink: '▾',
+            shuffle: '⎔',
+            sift: '◎',
+            slide: '↦',
+            tilt: '↕',
+            aura: '◉',
+            layout: '▣',
+            rail: '◧',
+            dock: '▤',
+            screen: '⛶',
+            pdfui: '▤',
+            tipui: 'ⓘ',
+            alert: '⚠',
+            spin: '✧',
+            generic: '✦'
+        };
+        const toast = document.createElement('div');
+        toast.className = `toast toast-surface toast-sfc-${family}`;
+        toast.innerHTML = `<span class="toast-surface-ic" aria-hidden="true">${icons[family] || '✦'}</span> ${msg}`;
+        container.appendChild(toast);
+        setTimeout(() => toast.remove(), 2200);
+    }
+
+    function surfaceToastMessageForReason(reason) {
+        if (reason === 'filter_reset') return T('toast.filters_reset');
+        if (reason === 'page') return T('toast.surface.page', { n: currentPage });
+        if (reason === 'theme') return T('toast.surface.theme');
+        if (reason === 'suggestions_view') return T('toast.surface.suggestions_view');
+        if (reason === 'deck_view') return T('toast.surface.deck_view');
+        if (reason === 'sort') return T('toast.surface.sort');
+        if (reason === 'filter') return T('toast.surface.filter');
+        if (reason === 'banlist_deck') return T('toast.surface.banlist_deck');
+        if (reason === 'deck_add') return T('toast.surface.deck_add');
+        if (reason === 'deck_remove') return T('toast.surface.deck_remove');
+        if (reason === 'deck_change') return T('toast.surface.deck_change');
+        if (reason === 'deck_sort') return T('toast.surface.deck_sort');
+        if (reason === 'filters_column_show') return T('toast.surface.filters_column_show');
+        if (reason === 'filters_column_hide') return T('toast.surface.filters_column_hide');
+        if (reason === 'deck_column_hide') return T('toast.surface.deck_col_hidden');
+        if (reason === 'deck_column_normal') return T('toast.surface.deck_col_normal');
+        if (reason === 'deck_column_wide') return T('toast.surface.deck_col_wide');
+        if (reason === 'fullscreen_enter') return T('toast.surface.fullscreen_enter');
+        if (reason === 'fullscreen_exit') return T('toast.surface.fullscreen_exit');
+        if (reason === 'pdf_preview_show') return T('toast.surface.pdf_preview_show');
+        if (reason === 'pdf_preview_hide') return T('toast.surface.pdf_preview_hide');
+        if (reason === 'tooltip_on') return T('toast.surface.tooltip_on');
+        if (reason === 'tooltip_off') return T('toast.surface.tooltip_off');
+        return T('toast.surface.filter');
+    }
+    function pushSuppressCardSurfaceEnterAnimation() {
+        __suppressCardSurfaceEnterAnimDepth++;
+    }
+    function popSuppressCardSurfaceEnterAnimation() {
+        if (__suppressCardSurfaceEnterAnimDepth > 0) __suppressCardSurfaceEnterAnimDepth--;
+    }
+
+    const SFC_CARD_ANIM_SUFFIXES = [
+        'pop',
+        'sink',
+        'shuffle',
+        'sift',
+        'slide',
+        'tilt',
+        'aura',
+        'layout',
+        'rail',
+        'dock',
+        'alert',
+        'spin',
+        'generic'
+    ];
+
+    function flashLayoutSurfacePulse(reason) {
+        if (!reason) return;
+        const layout = document.getElementById('app-layout');
+        const colFilters = document.getElementById('col-filters');
+        const colDeck = document.getElementById('col-preview');
+        function pulseEl(el, cls) {
+            if (!el) return;
+            el.classList.remove(
+                'layout-sfc-pulse-filters',
+                'layout-sfc-pulse-deck',
+                'layout-sfc-pulse-fullscreen',
+                'layout-sfc-pulse-pdf'
+            );
+            void el.offsetWidth;
+            el.classList.add(cls);
+            window.setTimeout(() => {
+                el.classList.remove(cls);
+            }, 580);
+        }
+        if (reason === 'filters_column_show' || reason === 'filters_column_hide') {
+            pulseEl(colFilters || layout, 'layout-sfc-pulse-filters');
+        } else if (
+            reason === 'deck_column_hide' ||
+            reason === 'deck_column_normal' ||
+            reason === 'deck_column_wide'
+        ) {
+            pulseEl(colDeck || layout, 'layout-sfc-pulse-deck');
+        } else if (reason === 'fullscreen_enter' || reason === 'fullscreen_exit') {
+            pulseEl(layout, 'layout-sfc-pulse-fullscreen');
+        } else if (reason === 'pdf_preview_show' || reason === 'pdf_preview_hide') {
+            pulseEl(colDeck || layout, 'layout-sfc-pulse-pdf');
+        }
+    }
+
+    function paintCardSurfaceEnterAnimations(rootSelector, itemSelector) {
+        if (__suppressCardSurfaceEnterAnimDepth > 0) return;
+        const root = rootSelector ? document.querySelector(rootSelector) : null;
+        if (!root) return;
+        const items = root.querySelectorAll(itemSelector);
+        const paintKind = getCardSurfacePaintKind();
+        const family = mapReasonToSurfaceFamily(paintKind || 'generic');
+        items.forEach((el) => {
+            el.classList.remove('card-surface-enter');
+            for (const s of SFC_CARD_ANIM_SUFFIXES) el.classList.remove('card-surface-enter--' + s);
+            el.style.animationDelay = '';
+        });
+        requestAnimationFrame(() => {
+            items.forEach((el, i) => {
+                el.classList.add('card-surface-enter', 'card-surface-enter--' + family);
+                el.style.animationDelay = `${Math.min(i * 26, 380)}ms`;
+            });
+        });
+    }
+
+    function applyCardSurfaceFeedback(reason) {
+        if (!reason || reason === 'silent') return;
+        const skipToastFor = new Set(['random_restore', 'random_pick', 'search_toast']);
+        const debounced = reason === 'filter' || reason === 'filter_reset';
+        const run = () => {
+            flashLayoutSurfacePulse(reason);
+            let toastReason = reason;
+            if (toastReason === 'deck_add' && window.innerWidth < 900) toastReason = null;
+            if (toastReason && !skipToastFor.has(reason)) {
+                showSurfaceToast(surfaceToastMessageForReason(toastReason), toastReason);
+            }
+            playCardSurfaceChime(reason);
+            pulseCardSurfaceHaptic(reason);
+        };
+        if (debounced) {
+            clearTimeout(surfaceFilterFxTimer);
+            surfaceFilterFxTimer = setTimeout(() => {
+                surfaceFilterFxTimer = null;
+                run();
+            }, 340);
+            return;
+        }
+        run();
+    }
+
     function isTooltipEnabled() {
         const btn = document.getElementById('btn-toggle-tooltip');
         if (!btn) return true;
@@ -8659,6 +9425,7 @@
         try {
             setUiPref(UI_PREF_KEYS.tooltip, on ? '1' : '0');
         } catch (_) {}
+        applyCardSurfaceFeedback(on ? 'tooltip_on' : 'tooltip_off');
     }
 
     function applyFiltersColumnVisibility(hidden) {
@@ -8688,7 +9455,11 @@
             const layout = document.getElementById('app-layout');
             const currentlyHidden = !!(layout && layout.classList.contains('filters-col-hidden'));
             applyFiltersColumnVisibility(!currentlyHidden);
-            try { renderResults(); } catch (_) {}
+            const hiddenAfter = !!(layout && layout.classList.contains('filters-col-hidden'));
+            requestCardSurfaceFeedback(hiddenAfter ? 'filters_column_hide' : 'filters_column_show');
+            try {
+                renderResults();
+            } catch (_) {}
         });
     }
 
@@ -8743,6 +9514,9 @@
 
     /** Evita gravar o cookie de tela cheia no primeiro paint (apagaria a preferência antes de restaurar). */
     let persistFullscreenPref = false;
+    /** Estado FS para feedback (som/toast/pulso); durante o gate inicial não dispara ao restaurar tela cheia. */
+    let __uiFsWasFullscreen = false;
+    let __uiFsSurfaceGateUntil = 0;
     function persistFullscreenPrefNow() {
         if (!persistFullscreenPref) return;
         try {
@@ -8754,6 +9528,15 @@
         document.addEventListener(ev, () => {
             updateFullscreenButtonUi();
             persistFullscreenPrefNow();
+            const fs = !!getFullscreenElement();
+            if (Date.now() < __uiFsSurfaceGateUntil) {
+                __uiFsWasFullscreen = fs;
+                return;
+            }
+            if (__uiFsWasFullscreen !== fs) {
+                applyCardSurfaceFeedback(fs ? 'fullscreen_enter' : 'fullscreen_exit');
+            }
+            __uiFsWasFullscreen = fs;
         });
     });
     updateFullscreenButtonUi();
@@ -9143,7 +9926,7 @@
             tcgDate = typeof formatDateBR !== 'undefined' ? formatDateBR(card.misc_info[0].tcg_date) : card.misc_info[0].tcg_date;
             ocgDate = typeof formatDateBR !== 'undefined' ? formatDateBR(card.misc_info[0].ocg_date) : card.misc_info[0].ocg_date;
         }
-        const p = card.card_prices ? card.card_prices[0] : {};
+        const p = getCardPricesFirst(card) || {};
         const formatP = (val) => (!val || parseFloat(val) === 0) ? T('price.not_found') : `$${val}`;
         const cardIdDisplay = (card.id !== undefined && card.id !== null) ? String(card.id) : '—';
         const konamiRaw = card.misc_info && card.misc_info[0] && card.misc_info[0].konami_id != null && card.misc_info[0].konami_id !== ''
@@ -9531,6 +10314,8 @@
             }
         } catch (_) {}
         persistFullscreenPref = true;
+        __uiFsSurfaceGateUntil = Date.now() + 2200;
+        __uiFsWasFullscreen = !!getFullscreenElement();
 
         document.getElementById('results-view').addEventListener('wheel', function(e) {
             const panel = document.getElementById('card-sets-panel');
@@ -9717,6 +10502,7 @@
                     const maxPage = Math.max(1, Math.ceil(searchResults.length / items));
                     if (currentPage > maxPage) currentPage = maxPage;
                 }
+                requestCardSurfaceFeedback('silent');
                 renderResults();
             }, 150);
         });
@@ -9727,7 +10513,9 @@
         document.getElementById('btn-list').classList.toggle('active', view === 'list');
         document.getElementById('btn-grid').classList.toggle('active', view === 'grid');
         setUiPref(UI_PREF_KEYS.view, view);
-        currentPage = 1; renderResults();
+        requestCardSurfaceFeedback('suggestions_view');
+        currentPage = 1;
+        renderResults();
     }
 
     function adjustVal(id, amount) {
@@ -9842,14 +10630,9 @@
             return { kind: 'clear' };
         }
 
-        if (!narrowing && !hasSetcodeFilter && !hasRarityFilter && hasPriceFilter) {
-            return {
-                kind: 'toast',
-                msg: T('search.combine_price_date')
-            };
-        }
-
         const rarityOnlyPath = hasRarityFilter && !narrowing && !hasSetcodeFilter;
+        /** Só USD: a API não filtra por preço — varremos o catálogo (como em só raridade). */
+        const priceOnlyPath = hasPriceFilter && !narrowing && !hasSetcodeFilter && !hasRarityFilter && !dateEnabled && !banlistOnly;
 
         let p = new URLSearchParams();
         const multiTypeMode = (typeCats && typeCats.length > 1);
@@ -9878,7 +10661,7 @@
         const comboCount = fnames.length * descs.length * atks.length * defs.length * sets.length * archLoop.length * dateRegionApiLoop.length;
         const setcodesOnlyPath = hasSetcodeFilter && !narrowing;
 
-        if (!setcodesOnlyPath && !rarityOnlyPath && comboCount > MULTI_SEARCH_MAX_COMBO) {
+        if (!setcodesOnlyPath && !rarityOnlyPath && !priceOnlyPath && comboCount > MULTI_SEARCH_MAX_COMBO) {
             return {
                 kind: 'toast',
                 msg: T('search.too_many', { count: comboCount, max: MULTI_SEARCH_MAX_COMBO })
@@ -9899,6 +10682,10 @@
                 showToast(T('search.rarity_scan'));
                 const bigMap = await fetchAllCardsPaginatedMerged(updateResultsLoadingProgress);
                 finalData = Array.from(bigMap.values()).filter(card => cardMatchesRarityFilters(card, rarities));
+            } else if (priceOnlyPath) {
+                showToast(T('search.price_full_scan'));
+                const bigMap = await fetchAllCardsPaginatedMerged(updateResultsLoadingProgress);
+                finalData = Array.from(bigMap.values());
             } else {
                 // Se houver múltiplos tipos selecionados (Monstro/Magia/Armadilha),
                 // fazemos união (OR) por tipo.
@@ -9984,7 +10771,7 @@
             if (hasChipPrices) {
                 const pranges = mtf.priceRanges || [];
                 finalData = finalData.filter(card => {
-                    const price = parseFloat(card.card_prices?.[0]?.tcgplayer_price) || 0;
+                    const price = getTcgplayerPriceUsd(card);
                     return pranges.some(r => {
                         const loRaw = (r.min === '' || r.min == null) ? 0 : parseFloat(r.min);
                         const hiRaw = (r.max === '' || r.max == null) ? Infinity : parseFloat(r.max);
@@ -9997,7 +10784,7 @@
                 const minP = parseFloat(pMinInput) || 0;
                 const maxP = parseFloat(pMaxInput) || 999999;
                 finalData = finalData.filter(card => {
-                    const price = parseFloat(card.card_prices?.[0]?.tcgplayer_price) || 0;
+                    const price = getTcgplayerPriceUsd(card);
                     return price >= minP && price <= maxP;
                 });
             }
@@ -10062,12 +10849,14 @@
                 showToast(pack.msg || T('search.failed'));
                 clearRandomPickState();
                 searchResults = [];
+                requestCardSurfaceFeedback('search_toast');
                 renderResults();
                 return;
             }
             if (pack.kind === 'error') {
                 clearRandomPickState();
                 searchResults = [];
+                requestCardSurfaceFeedback('search_toast');
                 renderResults();
                 return;
             }
@@ -10088,6 +10877,7 @@
             clearRandomPickState();
             finalData.forEach(c => { cardCache[c.id] = c; });
             if (initial || pack.hasFnameQuery || pack.hasDescQuery || pack.hasOtherFilters) currentPage = 1;
+            if (!cardSurfaceFeedbackReason) requestCardSurfaceFeedback('filter');
             sortAndRender();
         } finally {
             scheduleDeckbuilderFilterUrlSync();
@@ -10102,6 +10892,7 @@
                 randomPickActive = false;
                 randomPickBaseline = null;
                 currentPage = 1;
+                requestCardSurfaceFeedback('random_restore');
                 sortAndRender();
                 showToast(T('toast.list_restored'));
             } else {
@@ -10124,6 +10915,7 @@
         searchResults = [row];
         randomPickActive = true;
         currentPage = 1;
+        requestCardSurfaceFeedback('random_pick');
         sortAndRender();
         updateRandomPickButtonUi();
         const nm = isEnglishMode() ? (row.name || row.name_en || 'Card') : (row.name_pt || row.name || 'Carta');
@@ -10153,6 +10945,11 @@
                 <b style="font-size: 1.2em; color: var(--accent);">${escapeHtml(T('results.none'))}</b>
                 ${hintBlock}
             </div>`;
+            maybePaintSuggestionSurfaceAnimations();
+            if (!__insideUpdateUI) {
+                const rr = consumeCardSurfaceFeedback();
+                applyCardSurfaceFeedback(rr);
+            }
             return;
         }
         const start = (currentPage - 1) * items;
@@ -10339,6 +11136,11 @@
             bindSuggestionItemDnD(div, { id: card.id, imgId: imageObj.id, name: displayName });
             container.appendChild(div);
         });
+        maybePaintSuggestionSurfaceAnimations();
+        if (!__insideUpdateUI) {
+            const rr = consumeCardSurfaceFeedback();
+            applyCardSurfaceFeedback(rr);
+        }
     }
 
     const RACES_TRAD_DECK = {
@@ -10403,7 +11205,12 @@
         const bG = document.getElementById('btn-queue-grid');
         if (bL) bL.classList.toggle('active', view === 'list');
         if (bG) bG.classList.toggle('active', view === 'grid');
+        requestCardSurfaceFeedback('deck_view');
         renderDeckQueue();
+        if (!__insideUpdateUI) {
+            const r = consumeCardSurfaceFeedback();
+            applyCardSurfaceFeedback(r);
+        }
         try {
             setUiPref(UI_PREF_KEYS.queueView, queueView);
         } catch (_) {}
@@ -10443,7 +11250,10 @@
             counts[c.imgId] = (counts[c.imgId] || 0) + 1;
         });
 
-        if (cardQueue.length === 0 && cardQueueSide.length === 0) return;
+        if (cardQueue.length === 0 && cardQueueSide.length === 0) {
+            paintCardSurfaceEnterAnimations('#deck-items', '.queue-item');
+            return;
+        }
 
         const rowHint = isDeckSortCustom()
             ? 'Principal/Extra: clique +1 · direito: enviar 1 ao Side · meio: −1 · arrastar na secção Side: move pilha · arrastar entre linhas: reordenar. Side: clique ou direito → principal/extra · meio: −1.'
@@ -10619,11 +11429,28 @@
                 list.appendChild(body);
             }
         }
+        paintCardSurfaceEnterAnimations('#deck-items', '.queue-item');
     }
 
     function updateUI() {
-        renderDeckQueue();
-        renderResults();
+        __insideUpdateUI = true;
+        try {
+            renderDeckQueue();
+            renderResults();
+        } finally {
+            __insideUpdateUI = false;
+        }
+        let reason = consumeCardSurfaceFeedback();
+        if (!reason) {
+            const next = snapshotDeckForSurface();
+            if (__deckSnapshotForSurface != null && next !== __deckSnapshotForSurface) {
+                reason = inferDeckSurfaceReason(__deckSnapshotForSurface, next);
+            }
+            __deckSnapshotForSurface = next;
+        } else {
+            __deckSnapshotForSurface = snapshotDeckForSurface();
+        }
+        applyCardSurfaceFeedback(reason);
         triggerPDFUpdate();
     }
 
@@ -10889,13 +11716,24 @@
         updateUI();
         hideTooltip();
     };
-    window.changePage = (dir) => { 
-        const max = Math.ceil(searchResults.length/getItemsPerPage());
-        if((currentPage + dir) > 0 && (currentPage + dir) <= max) { currentPage += dir; renderResults(); }
+    window.changePage = (dir) => {
+        const max = Math.ceil(searchResults.length / getItemsPerPage());
+        if ((currentPage + dir) > 0 && (currentPage + dir) <= max) {
+            requestCardSurfaceFeedback('page');
+            currentPage += dir;
+            renderResults();
+            const rv = document.getElementById('results-view');
+            if (rv) rv.scrollTop = 0;
+        }
     };
-    window.jumpToPage = (val) => { 
-        const max = Math.ceil(searchResults.length/getItemsPerPage());
-        currentPage = Math.max(1, Math.min(max, parseInt(val) || 1)); renderResults(); 
+    window.jumpToPage = (val) => {
+        const max = Math.ceil(searchResults.length / getItemsPerPage());
+        const n = Math.max(1, Math.min(max, parseInt(val, 10) || 1));
+        if (n !== currentPage) requestCardSurfaceFeedback('page');
+        currentPage = n;
+        renderResults();
+        const rv = document.getElementById('results-view');
+        if (rv) rv.scrollTop = 0;
     };
     window.downloadPDF = () => {
         if (window.currentPdf) {
@@ -11270,7 +12108,7 @@
         let s = 0;
         for (const entry of entries || []) {
             const full = cardCache[entry.id];
-            const p = parseFloat(full?.card_prices?.[0]?.tcgplayer_price);
+            const p = getTcgplayerPriceUsd(full);
             if (Number.isFinite(p)) s += p;
         }
         return s;
@@ -12382,6 +13220,7 @@
         }
     };
     window.resetFilters = () => {
+        requestCardSurfaceFeedback('filter_reset');
         document.getElementById('search-input').value = "";
         document.getElementById('filter-desc').value = "";
         document.getElementById('search-qty').value = "1";
@@ -12422,7 +13261,6 @@
         paintAllMultiTextChips();
         currentPage = 1;
         void performSearch(true).then(() => pushDeckbuilderFilterUrlToHistory());
-        showToast(T('toast.filters_reset'));
     };
     
     document.getElementById('filter-price-min').addEventListener('input', () => { currentPage = 1; performSearch(true); });
@@ -12906,6 +13744,8 @@ function updateScannerResultsUI() {
     }
     scannerFoundCards.forEach(card => {
         const cardName = isEnglishMode() ? card.name : (card.name_pt || card.name);
+        const usdOcr = getTcgplayerPriceUsd(card);
+        const priceOcrStr = usdOcr > 0 ? `$${usdOcr.toFixed(2)}` : 'N/A';
         const div = document.createElement('div');
         div.className = 'suggestion-item';
         div.style.borderLeft = '3px solid #2ecc71';
@@ -12915,7 +13755,7 @@ function updateScannerResultsUI() {
             <img src="${card.card_images[0].image_url_small}" style="width: 60px;">
             <div class="card-info-box">
                 <div class="card-name" style="color:#2ecc71; font-size:14px;">${cardName}</div>
-                <div class="info-row" style="font-size:11px;">💰 $${card.card_prices[0]?.tcgplayer_price || 'N/A'}</div>
+                <div class="info-row" style="font-size:11px;">💰 ${priceOcrStr}</div>
                 <button onclick="forceAddToQueue('${card.id}')" style="background:#2ecc71; color:#000; border:none; border-radius:4px; padding:4px 12px; margin-top:6px; cursor:pointer; font-weight:bold;">${T('ui.queue_add_ocr')}</button>
             </div>
         `;
