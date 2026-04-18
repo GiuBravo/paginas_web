@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>YGO Proxy Studio Pro - Workspace V4.0</title>
+    <title>DeckBuilder GiuBravo</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://unpkg.com/tesseract.js@v4.0.1/dist/tesseract.min.js"></script>
@@ -518,6 +518,9 @@
             grid-template-columns: 0px minmax(0, 1fr) minmax(0, 1fr) !important;
         }
         .col { background: var(--bg-dark); display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
+        /* Coluna do deck acima da lista de sugestões: o tooltip de validação pode ultrapassar a grelha. */
+        #col-results { position: relative; z-index: 1; }
+        #col-preview { position: relative; z-index: 2; }
         
         .col-header { 
             padding: 12px 15px; background: var(--panel-bg); border-bottom: 1px solid var(--border); 
@@ -2016,6 +2019,15 @@
             align-items: center;
             gap: 6px 10px;
         }
+        .deck-stat-chip-wrap {
+            display: inline-flex;
+            align-items: center;
+            cursor: default;
+            outline: none;
+        }
+        .deck-stat-chip-wrap:focus-visible .deck-stat-chip {
+            box-shadow: 0 0 0 2px rgba(46, 204, 113, 0.5);
+        }
         .deck-stat-chip {
             display: inline-flex;
             align-items: center;
@@ -2091,6 +2103,10 @@
             user-select: none;
             cursor: default;
             white-space: nowrap;
+            outline: none;
+        }
+        .deck-validity-flag:focus-visible {
+            box-shadow: 0 0 0 2px rgba(46, 204, 113, 0.45);
         }
         .deck-validity-flag i { font-size: 11px; }
         .deck-validity-flag.is-valid {
@@ -2112,6 +2128,430 @@
         html.theme-white .deck-validity-flag.is-off { color: #334155; }
         html.theme-white .deck-validity-flag.is-valid { color: #065f46; }
         html.theme-white .deck-validity-flag.is-invalid { color: #7f1d1d; }
+
+        .deck-validity-wrap {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            max-width: 100%;
+        }
+        /* fixed no body + z-index acima de #card-tooltip (10k / 99.999) */
+        .deck-validity-tooltip,
+        .deck-stat-tooltip {
+            position: fixed;
+            left: 0;
+            top: 0;
+            min-width: 200px;
+            max-width: min(420px, calc(100vw - 24px));
+            overflow: visible;
+            padding: 10px 12px 11px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            line-height: 1.35;
+            letter-spacing: 0.01em;
+            color: rgba(255, 255, 255, 0.95);
+            background: linear-gradient(165deg, rgba(28, 40, 36, 0.98) 0%, rgba(14, 22, 20, 0.99) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            box-shadow:
+                0 12px 32px rgba(0, 0, 0, 0.55),
+                0 0 0 1px rgba(0, 0, 0, 0.35) inset;
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            transition: opacity 0.18s ease, visibility 0.18s ease;
+            z-index: 110000;
+            white-space: normal;
+        }
+        .deck-validity-tooltip.is-visible,
+        .deck-stat-tooltip.is-visible {
+            opacity: 1;
+            visibility: visible;
+        }
+        .deck-validity-tooltip.is-visible {
+            pointer-events: none;
+        }
+        .deck-stat-tooltip.is-visible {
+            pointer-events: auto;
+        }
+        .deck-stat-tooltip {
+            max-width: min(540px, calc(100vw - 24px));
+        }
+        .deck-validity-tooltip::after,
+        .deck-stat-tooltip::after {
+            content: '';
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            border: 7px solid transparent;
+            border-top-color: rgba(22, 32, 28, 0.96);
+            filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.35));
+        }
+        .deck-validity-tooltip.deck-validity-tooltip--below::after,
+        .deck-stat-tooltip.deck-stat-tooltip--below::after {
+            top: auto;
+            bottom: 100%;
+            border-top-color: transparent;
+            border-bottom-color: rgba(22, 32, 28, 0.96);
+        }
+        html.theme-white .deck-stat-tooltip::after {
+            border-top-color: #f1f5f9;
+        }
+        html.theme-white .deck-stat-tooltip.deck-stat-tooltip--below::after {
+            border-bottom-color: #f1f5f9;
+        }
+        .deck-validity-tooltip.is-valid.deck-validity-tooltip--below::after {
+            border-bottom-color: rgba(24, 60, 42, 0.98);
+        }
+        .deck-validity-tooltip.is-invalid.deck-validity-tooltip--below::after {
+            border-bottom-color: rgba(48, 28, 24, 0.98);
+        }
+        .deck-validity-tooltip.is-off.deck-validity-tooltip--below::after {
+            border-bottom-color: rgba(32, 36, 38, 0.96);
+        }
+        html.theme-white .deck-validity-tooltip.deck-validity-tooltip--below::after {
+            border-bottom-color: #f4f6f8;
+        }
+        .deck-validity-tooltip.is-valid {
+            border-color: rgba(39, 174, 96, 0.42);
+            box-shadow:
+                0 12px 32px rgba(0, 0, 0, 0.5),
+                0 0 20px rgba(39, 174, 96, 0.12),
+                0 0 0 1px rgba(0, 0, 0, 0.25) inset;
+        }
+        .deck-validity-tooltip.is-valid::after {
+            border-top-color: rgba(24, 60, 42, 0.98);
+        }
+        .deck-validity-tooltip.is-invalid {
+            border-color: rgba(230, 126, 34, 0.5);
+            box-shadow:
+                0 12px 32px rgba(0, 0, 0, 0.55),
+                0 0 24px rgba(231, 76, 60, 0.14),
+                0 0 0 1px rgba(0, 0, 0, 0.3) inset;
+        }
+        .deck-validity-tooltip.is-invalid::after {
+            border-top-color: rgba(48, 28, 24, 0.98);
+        }
+        .deck-validity-tooltip.is-off::after {
+            border-top-color: rgba(32, 36, 38, 0.96);
+        }
+        .deck-validity-tooltip-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: 0.02em;
+            line-height: 1.3;
+        }
+        .deck-validity-tooltip-status > i {
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+        .deck-validity-tooltip-status--valid {
+            color: #6ee7b7;
+            text-shadow: 0 0 20px rgba(46, 204, 113, 0.25);
+        }
+        .deck-validity-tooltip-status--valid > i {
+            color: #34d399;
+        }
+        .deck-validity-tooltip-status--invalid {
+            color: #f87171;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-size: 10px;
+            margin-bottom: 4px;
+        }
+        .deck-validity-tooltip-status--invalid > i {
+            color: #ef4444;
+            font-size: 14px;
+        }
+        html.theme-white .deck-validity-tooltip-status--valid {
+            color: #047857;
+            text-shadow: none;
+        }
+        html.theme-white .deck-validity-tooltip-status--valid > i {
+            color: #059669;
+        }
+        html.theme-white .deck-validity-tooltip-status--invalid {
+            color: #b91c1c;
+        }
+        html.theme-white .deck-validity-tooltip-status--invalid > i {
+            color: #dc2626;
+        }
+        .deck-validity-tooltip-body-plain {
+            font-weight: 600;
+        }
+        .deck-validity-tooltip-compact-line {
+            font-size: 10px;
+            font-weight: 600;
+            line-height: 1.35;
+            color: rgba(255, 253, 245, 0.92);
+            padding: 4px 0 0;
+            border-top: 1px dashed rgba(255, 255, 255, 0.12);
+            word-break: break-word;
+        }
+        .deck-validity-tooltip-issues > .deck-validity-tooltip-compact-line:first-child {
+            border-top: none;
+            padding-top: 0;
+        }
+        html.theme-white .deck-validity-tooltip-compact-line {
+            color: #1e293b;
+            border-top-color: rgba(15, 23, 42, 0.12);
+        }
+        .deck-validity-tooltip-issues {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .deck-validity-tooltip-rule {
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.92);
+            padding: 4px 0 0;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .deck-validity-tooltip-issues > .deck-validity-tooltip-rule:first-child {
+            border-top: none;
+            padding-top: 0;
+        }
+        .deck-validity-tooltip-card-row {
+            display: flex;
+            flex-direction: row;
+            gap: 10px;
+            align-items: flex-start;
+            padding: 8px 0 0;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .deck-validity-tooltip-issues > .deck-validity-tooltip-card-row:first-child {
+            border-top: none;
+            padding-top: 0;
+        }
+        .deck-validity-tooltip-thumb-wrap {
+            flex-shrink: 0;
+            width: 52px;
+            min-height: 72px;
+            border-radius: 6px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            background: rgba(0, 0, 0, 0.35);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .deck-validity-tooltip-thumb-wrap img {
+            display: block;
+            width: 100%;
+            height: auto;
+            max-height: 96px;
+            object-fit: contain;
+        }
+        /* Miniatura + badge de banlist (validação do deck e tooltip de stats). */
+        .deck-tooltip-thumb-with-ban {
+            position: relative;
+            flex-shrink: 0;
+            align-self: flex-start;
+            line-height: 0;
+        }
+        .deck-tooltip-ban-badge {
+            position: absolute;
+            right: 1px;
+            top: 1px;
+            line-height: 0;
+            z-index: 1;
+            pointer-events: none;
+            filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.75));
+        }
+        .deck-tooltip-ban-badge svg {
+            display: block;
+        }
+        html.theme-white .deck-tooltip-ban-badge {
+            filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.35));
+        }
+        .deck-validity-tooltip-card-meta {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .deck-validity-tooltip-card-name {
+            font-size: 12px;
+            font-weight: 800;
+            color: var(--accent);
+            line-height: 1.25;
+            word-break: break-word;
+        }
+        .deck-validity-tooltip-race-type {
+            font-size: 10px;
+            font-weight: 600;
+            line-height: 1.3;
+            color: rgba(255, 255, 255, 0.7);
+        }
+        .deck-validity-tooltip-type-accent {
+            font-weight: 800;
+        }
+        .deck-validity-tooltip-card-detail {
+            font-size: 10px;
+            font-weight: 600;
+            color: rgba(255, 230, 200, 0.95);
+            line-height: 1.3;
+        }
+        html.theme-white .deck-validity-tooltip-rule {
+            color: #334155;
+            border-top-color: rgba(15, 23, 42, 0.1);
+        }
+        html.theme-white .deck-validity-tooltip-card-row {
+            border-top-color: rgba(15, 23, 42, 0.12);
+        }
+        html.theme-white .deck-validity-tooltip-thumb-wrap {
+            border-color: rgba(15, 23, 42, 0.15);
+            background: #f1f5f9;
+        }
+        html.theme-white .deck-validity-tooltip-race-type {
+            color: #475569;
+        }
+        html.theme-white .deck-validity-tooltip-card-detail {
+            color: #92400e;
+        }
+        .deck-validity-tooltip-more {
+            margin-top: 6px;
+            font-style: italic;
+            opacity: 0.75;
+            font-size: 10px;
+        }
+        .deck-stat-tooltip-header {
+            font-size: 10px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--accent);
+            margin-bottom: 8px;
+            line-height: 1.3;
+        }
+        html.theme-white .deck-stat-tooltip-header {
+            color: #047857;
+        }
+        .deck-stat-tooltip-card-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 9px 10px;
+            max-height: min(56vh, 460px);
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 2px 4px 2px 0;
+            scrollbar-gutter: stable;
+        }
+        .deck-stat-tooltip-card-grid.is-cols-3 {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+        .deck-stat-tooltip-tile {
+            --stat-tile-type: var(--accent);
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            gap: 5px;
+            min-width: 0;
+            padding: 6px 5px 7px;
+            border-radius: 8px;
+            background: linear-gradient(
+                165deg,
+                color-mix(in srgb, var(--stat-tile-type) 26%, rgba(18, 24, 22, 0.94)) 0%,
+                color-mix(in srgb, var(--stat-tile-type) 11%, rgba(8, 12, 10, 0.97)) 100%
+            );
+            border: 1px solid color-mix(in srgb, var(--stat-tile-type) 38%, rgba(255, 255, 255, 0.09));
+        }
+        html.theme-white .deck-stat-tooltip-tile {
+            background: linear-gradient(
+                165deg,
+                color-mix(in srgb, var(--stat-tile-type) 14%, #ffffff) 0%,
+                color-mix(in srgb, var(--stat-tile-type) 9%, #f1f5f9) 100%
+            );
+            border-color: color-mix(in srgb, var(--stat-tile-type) 26%, rgba(15, 23, 42, 0.11));
+        }
+        .deck-stat-tooltip-tile .deck-tooltip-thumb-with-ban {
+            width: 100%;
+            max-width: 76px;
+            margin-left: auto;
+            margin-right: auto;
+            align-self: center;
+        }
+        .deck-stat-tooltip-tile-thumb {
+            width: 100%;
+            max-width: 76px;
+            border-radius: 5px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            background: rgba(0, 0, 0, 0.35);
+        }
+        .deck-stat-tooltip-tile-thumb img {
+            display: block;
+            width: 100%;
+            height: auto;
+            max-height: 102px;
+            object-fit: contain;
+        }
+        .deck-stat-tooltip-tile-meta {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            min-width: 0;
+            text-align: center;
+        }
+        .deck-stat-tooltip-tile-name {
+            font-size: 9px;
+            font-weight: 800;
+            color: var(--text);
+            line-height: 1.2;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            word-break: break-word;
+        }
+        .deck-stat-tooltip-tile-type {
+            font-size: 8px;
+            font-weight: 600;
+            line-height: 1.25;
+            color: rgba(255, 255, 255, 0.72);
+        }
+        html.theme-white .deck-stat-tooltip-tile-type {
+            color: #475569;
+        }
+        .deck-stat-tooltip-tile-type span {
+            font-weight: 800;
+        }
+        .deck-stat-tooltip-tile-qty {
+            font-size: 9px;
+            font-weight: 700;
+            color: rgba(255, 236, 210, 0.95);
+        }
+        html.theme-white .deck-stat-tooltip-tile-qty {
+            color: #92400e;
+        }
+        .deck-stat-tooltip-tile--missing {
+            justify-content: center;
+            align-items: center;
+            min-height: 56px;
+            font-size: 10px;
+            font-weight: 700;
+            color: rgba(255, 255, 255, 0.45);
+        }
+        html.theme-white .deck-stat-tooltip-tile--missing {
+            color: #94a3b8;
+        }
+        html.theme-white .deck-validity-tooltip,
+        html.theme-white .deck-stat-tooltip {
+            background: linear-gradient(165deg, #fff 0%, #f4f6f8 100%);
+            color: #1e293b;
+            border-color: rgba(15, 23, 42, 0.12);
+            box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12);
+        }
+        html.theme-white .deck-validity-tooltip::after,
+        html.theme-white .deck-stat-tooltip::after {
+            border-top-color: #f4f6f8;
+            filter: none;
+        }
 
         .deck-validate-controls {
             display: inline-flex;
@@ -3308,6 +3748,16 @@
     </div>
 </div>
 
+<!-- Tooltip de validação do deck no body: z-index acima do #card-tooltip (fixo), para não ficar sob o preview da carta. -->
+<div class="deck-validity-tooltip is-off" id="deck-validity-tooltip" role="tooltip" aria-hidden="true">
+    <div id="deck-validity-tooltip-body"></div>
+</div>
+
+<!-- Tooltip dos totais (cartas por categoria na barra de estatísticas) -->
+<div class="deck-stat-tooltip" id="deck-stat-tooltip" role="tooltip" aria-hidden="true">
+    <div id="deck-stat-tooltip-body"></div>
+</div>
+
 <div id="card-sets-panel" class="card-sets-panel" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="card-sets-panel-title">
     <div class="csp-backdrop" id="card-sets-panel-backdrop"></div>
     <div class="csp-dialog">
@@ -3956,18 +4406,28 @@
                     <span class="deck-stat-total-label" data-i18n="ui.deck_stat_cards">cartas</span>
                 </span>
                 <span class="deck-stat-chips" aria-hidden="false">
-                    <span class="deck-stat-chip deck-stat-chip--monster" data-i18n-title="ui.deck_stat_monsters" title="Monstros (principal)"><i class="fas fa-dragon"></i><span id="deck-stat-monsters">0</span></span>
-                    <span class="deck-stat-chip deck-stat-chip--spell" data-i18n-title="ui.deck_stat_spells" title="Magias"><i class="fas fa-scroll"></i><span id="deck-stat-spells">0</span></span>
-                    <span class="deck-stat-chip deck-stat-chip--trap" data-i18n-title="ui.deck_stat_traps" title="Armadilhas"><i class="fas fa-skull"></i><span id="deck-stat-traps">0</span></span>
-                    <span class="deck-stat-chip deck-stat-chip--extra" data-i18n-title="ui.deck_stat_extra" title="Deck adicional (Fusão/Sincro/Xyz/Link)"><i class="fas fa-layer-group"></i><span id="deck-stat-extra">0</span></span>
+                    <span class="deck-stat-chip-wrap" data-deck-stat="monsters" tabindex="0" data-i18n-aria="ui.deck_stat_monsters" aria-label="">
+                        <span class="deck-stat-chip deck-stat-chip--monster"><i class="fas fa-dragon"></i><span id="deck-stat-monsters">0</span></span>
+                    </span>
+                    <span class="deck-stat-chip-wrap" data-deck-stat="spells" tabindex="0" data-i18n-aria="ui.deck_stat_spells" aria-label="">
+                        <span class="deck-stat-chip deck-stat-chip--spell"><i class="fas fa-scroll"></i><span id="deck-stat-spells">0</span></span>
+                    </span>
+                    <span class="deck-stat-chip-wrap" data-deck-stat="traps" tabindex="0" data-i18n-aria="ui.deck_stat_traps" aria-label="">
+                        <span class="deck-stat-chip deck-stat-chip--trap"><i class="fas fa-skull"></i><span id="deck-stat-traps">0</span></span>
+                    </span>
+                    <span class="deck-stat-chip-wrap" data-deck-stat="extra" tabindex="0" data-i18n-aria="ui.deck_stat_extra" aria-label="">
+                        <span class="deck-stat-chip deck-stat-chip--extra"><i class="fas fa-layer-group"></i><span id="deck-stat-extra">0</span></span>
+                    </span>
                 </span>
                 <span class="deck-stat-price-wrap" data-i18n-title="ui.deck_stat_price_title" title="Soma TCGPlayer (USD) por cópia no deck">
                     <span class="deck-stat-price-label" data-i18n="ui.deck_stat_total_usd">Total</span>
                     <span id="deck-stat-price" class="deck-stat-price-val">—</span>
                 </span>
-                <span id="deck-validity-flag" class="deck-validity-flag is-off" title="Validação do deck: desligada">
-                    <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
-                    <span id="deck-validity-text">Validação OFF</span>
+                <span class="deck-validity-wrap">
+                    <span id="deck-validity-flag" class="deck-validity-flag is-off" tabindex="0">
+                        <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
+                        <span id="deck-validity-text">Validação OFF</span>
+                    </span>
                 </span>
             </div>
         </div>
@@ -4142,6 +4602,192 @@
         return 3;
     }
 
+    const DECK_VALIDITY_TYPE_COLORS = {
+        "Normal Monster": "#d1b55a", "Effect Monster": "#a6522a", "Spell Card": "#1d7d5c",
+        "Trap Card": "#8c345d", "Fusion Monster": "#6e4a8c", "Synchro Monster": "#8a8a8a",
+        "Xyz Monster": "#c5ccd6",
+        "Link Monster": "#6ea8ff",
+        "Ritual Monster": "#3b73a3",
+        "Token": "#6e6e6e"
+    };
+
+    function deckValidityGetTypeColorKey(typeStr) {
+        if (!typeStr) return null;
+        const t = String(typeStr);
+        if (t.includes('Spell Card')) return 'Spell Card';
+        if (t.includes('Trap Card')) return 'Trap Card';
+        if (/fusion/i.test(t) && /monster/i.test(t)) return 'Fusion Monster';
+        if (/synchro/i.test(t) && /monster/i.test(t)) return 'Synchro Monster';
+        if (/xyz/i.test(t) && /monster/i.test(t)) return 'Xyz Monster';
+        if (/link/i.test(t) && /monster/i.test(t)) return 'Link Monster';
+        if (/ritual/i.test(t) && /monster/i.test(t)) return 'Ritual Monster';
+        if (/token/i.test(t)) return 'Token';
+        if (/normal/i.test(t) && /monster/i.test(t)) return 'Normal Monster';
+        if (/monster/i.test(t)) return 'Effect Monster';
+        return null;
+    }
+
+    function deckValidityTypeColorForCard(card) {
+        const key = card && deckValidityGetTypeColorKey(card.type);
+        return key ? (DECK_VALIDITY_TYPE_COLORS[key] || 'var(--accent)') : 'var(--accent)';
+    }
+
+    function deckValidityThumbSrcFromCard(card) {
+        if (!card) return 'https://images.ygoprodeck.com/images/cards/back_high.jpg';
+        const ci = card.card_images && card.card_images[0];
+        if (ci && ci.image_url_small) return ci.image_url_small;
+        const imgId = (ci && ci.id != null) ? ci.id : card.id;
+        return `https://images.ygoprodeck.com/images/cards_small/${imgId}.jpg`;
+    }
+
+    function deckValidityRaceLabelForUi(race) {
+        if (!race) return '';
+        if (isEnglishMode()) return race;
+        const m = {
+            "Aqua": "Aqua", "Beast": "Besta", "Beast-Warrior": "Besta-Guerreira", "Cyberse": "Ciberso",
+            "Dinosaur": "Dinossauro", "Dragon": "Dragão", "Fiend": "Demônio", "Fish": "Peixe",
+            "Insect": "Inseto", "Machine": "Máquina", "Plant": "Planta", "Psychic": "Psíquico",
+            "Pyro": "Piro", "Reptile": "Réptil", "Rock": "Rocha", "Sea Serpent": "Serpente Marinha",
+            "Spellcaster": "Mago", "Thunder": "Trovão", "Warrior": "Guerreiro", "Winged Beast": "Besta Alada",
+            "Wyrm": "Wyrm", "Zombie": "Zumbi", "Divine-Beast": "Besta Divina", "Normal": "Normal",
+            "Continuous": "Contínua", "Field": "Campo", "Equip": "Equipamento", "Quick-Play": "Rápida",
+            "Ritual": "Ritual", "Counter": "Resposta"
+        };
+        return m[race] || race;
+    }
+
+    /** Linha com miniatura + tipo (reutilização: validação e totais do deck). */
+    function appendDeckTooltipCardRow(container, card, detailText) {
+        const displayName = isEnglishMode()
+            ? (card.name || card.name_en || '')
+            : (card.name_pt || card.name || '');
+        const row = document.createElement('div');
+        row.className = 'deck-validity-tooltip-card-row';
+        const thumbWrap = document.createElement('div');
+        thumbWrap.className = 'deck-validity-tooltip-thumb-wrap';
+        const img = document.createElement('img');
+        img.src = deckValidityThumbSrcFromCard(card);
+        img.alt = '';
+        img.loading = 'lazy';
+        img.onerror = function () { this.src = 'https://images.ygoprodeck.com/images/cards/back_high.jpg'; };
+        thumbWrap.appendChild(img);
+        const thumbCol = document.createElement('div');
+        thumbCol.className = 'deck-tooltip-thumb-with-ban';
+        thumbCol.appendChild(thumbWrap);
+        const banHtml = getBanIcon(card, 'validity');
+        if (banHtml) {
+            const banWrap = document.createElement('div');
+            banWrap.className = 'deck-tooltip-ban-badge';
+            banWrap.setAttribute('aria-hidden', 'true');
+            banWrap.innerHTML = banHtml;
+            thumbCol.appendChild(banWrap);
+        }
+        const meta = document.createElement('div');
+        meta.className = 'deck-validity-tooltip-card-meta';
+        const nameEl = document.createElement('div');
+        nameEl.className = 'deck-validity-tooltip-card-name';
+        nameEl.textContent = displayName;
+        const raceType = document.createElement('div');
+        raceType.className = 'deck-validity-tooltip-race-type';
+        const typeStr = formatCardTypeForUi(card.type);
+        const typeCol = deckValidityTypeColorForCard(card);
+        if (card.race && typeStr) {
+            raceType.appendChild(document.createTextNode(deckValidityRaceLabelForUi(card.race) + ' / '));
+            const sp = document.createElement('span');
+            sp.className = 'deck-validity-tooltip-type-accent';
+            sp.style.color = typeCol;
+            sp.textContent = typeStr;
+            raceType.appendChild(sp);
+        } else if (typeStr) {
+            const sp = document.createElement('span');
+            sp.className = 'deck-validity-tooltip-type-accent';
+            sp.style.color = typeCol;
+            sp.textContent = typeStr;
+            raceType.appendChild(sp);
+        }
+        const det = document.createElement('div');
+        det.className = 'deck-validity-tooltip-card-detail';
+        det.textContent = detailText;
+        meta.appendChild(nameEl);
+        if (raceType.childNodes.length) meta.appendChild(raceType);
+        meta.appendChild(det);
+        row.appendChild(thumbCol);
+        row.appendChild(meta);
+        container.appendChild(row);
+    }
+
+    /** Mosaico (grelha) no tooltip de estatísticas do deck. */
+    function appendDeckStatTooltipTile(grid, card, detailText) {
+        if (!grid) return;
+        const tile = document.createElement('div');
+        tile.className = 'deck-stat-tooltip-tile';
+        if (!card) {
+            tile.classList.add('deck-stat-tooltip-tile--missing');
+            const t = document.createElement('div');
+            t.className = 'deck-stat-tooltip-tile-qty';
+            t.textContent = detailText;
+            tile.appendChild(t);
+            grid.appendChild(tile);
+            return;
+        }
+        const thumbWrap = document.createElement('div');
+        thumbWrap.className = 'deck-stat-tooltip-tile-thumb';
+        const img = document.createElement('img');
+        img.src = deckValidityThumbSrcFromCard(card);
+        img.alt = '';
+        img.loading = 'lazy';
+        img.onerror = function () { this.src = 'https://images.ygoprodeck.com/images/cards/back_high.jpg'; };
+        thumbWrap.appendChild(img);
+        const thumbCol = document.createElement('div');
+        thumbCol.className = 'deck-tooltip-thumb-with-ban';
+        thumbCol.appendChild(thumbWrap);
+        const banHtmlStat = getBanIcon(card, 'validity');
+        if (banHtmlStat) {
+            const banSt = document.createElement('div');
+            banSt.className = 'deck-tooltip-ban-badge';
+            banSt.setAttribute('aria-hidden', 'true');
+            banSt.innerHTML = banHtmlStat;
+            thumbCol.appendChild(banSt);
+        }
+        const meta = document.createElement('div');
+        meta.className = 'deck-stat-tooltip-tile-meta';
+        const nameEl = document.createElement('div');
+        nameEl.className = 'deck-stat-tooltip-tile-name';
+        nameEl.textContent = isEnglishMode()
+            ? (card.name || card.name_en || '')
+            : (card.name_pt || card.name || '');
+        const raceType = document.createElement('div');
+        raceType.className = 'deck-stat-tooltip-tile-type';
+        const typeStr = formatCardTypeForUi(card.type);
+        const typeCol = deckValidityTypeColorForCard(card);
+        tile.style.setProperty('--stat-tile-type', typeCol);
+        if (card.race && typeStr) {
+            raceType.appendChild(document.createTextNode(deckValidityRaceLabelForUi(card.race) + ' / '));
+            const sp = document.createElement('span');
+            sp.style.color = typeCol;
+            sp.textContent = typeStr;
+            raceType.appendChild(sp);
+        } else if (typeStr) {
+            const sp = document.createElement('span');
+            sp.style.color = typeCol;
+            sp.textContent = typeStr;
+            raceType.appendChild(sp);
+        }
+        const det = document.createElement('div');
+        det.className = 'deck-stat-tooltip-tile-qty';
+        det.textContent = detailText;
+        meta.appendChild(nameEl);
+        if (raceType.childNodes.length) meta.appendChild(raceType);
+        meta.appendChild(det);
+        tile.appendChild(thumbCol);
+        tile.appendChild(meta);
+        grid.appendChild(tile);
+    }
+
+    function appendDeckValidityCardIssue(container, issue, card) {
+        appendDeckTooltipCardRow(container, card, issue.message);
+    }
+
     function validateCurrentDeck() {
         if (isDeckValidationDisabled()) {
             return { ok: true, issues: [], banlistType: getDeckBanlistTypeForValidation(), disabled: true };
@@ -4152,11 +4798,11 @@
         const sideCount = cardQueueSide.length;
         const issues = [];
 
-        if (mainCount < 40) issues.push(`Deck principal tem ${mainCount} (mínimo 40).`);
-        else if (mainCount > DECK_LIMIT_MAIN) issues.push(`Deck principal tem ${mainCount} (máximo ${DECK_LIMIT_MAIN}).`);
+        if (mainCount < 40) issues.push({ kind: 'rule', message: `Deck principal tem ${mainCount} (mínimo 40).` });
+        else if (mainCount > DECK_LIMIT_MAIN) issues.push({ kind: 'rule', message: `Deck principal tem ${mainCount} (máximo ${DECK_LIMIT_MAIN}).` });
 
-        if (extraCount > DECK_LIMIT_EXTRA) issues.push(`Deck extra tem ${extraCount} (máximo ${DECK_LIMIT_EXTRA}).`);
-        if (sideCount > DECK_LIMIT_SIDE) issues.push(`Deck side tem ${sideCount} (máximo ${DECK_LIMIT_SIDE}).`);
+        if (extraCount > DECK_LIMIT_EXTRA) issues.push({ kind: 'rule', message: `Deck extra tem ${extraCount} (máximo ${DECK_LIMIT_EXTRA}).` });
+        if (sideCount > DECK_LIMIT_SIDE) issues.push({ kind: 'rule', message: `Deck side tem ${sideCount} (máximo ${DECK_LIMIT_SIDE}).` });
 
         const counts = new Map();
         for (const e of [...cardQueue, ...cardQueueSide]) {
@@ -4168,11 +4814,387 @@
             const max = banType ? banlistMaxCopiesForCard(full, banType) : 3;
             if (n > max) {
                 const name = (full && (full.name_pt || full.name || full.name_en)) || id;
-                issues.push(`${name}: ${n} cópias (máximo ${max}).`);
+                issues.push({ kind: 'copies', cardId: id, message: `${name}: ${n} cópias (máximo ${max}).` });
             }
         }
 
         return { ok: issues.length === 0, issues, banlistType: banType, disabled: false };
+    }
+
+    function buildDeckValidityAriaLabel(isOff, v, shortLabel) {
+        if (isOff) return 'Validação OFF. Validação do deck: desligada';
+        if (v.ok) return `${shortLabel}. Deck válido.`;
+        const msgs = v.issues.map((i) => i.message);
+        const head = msgs.slice(0, 14).join('; ');
+        const tail = msgs.length > 14 ? ` (+${msgs.length - 14} outros avisos)` : '';
+        return `${shortLabel}. Deck inválido: ${head}.${tail}`;
+    }
+
+    /** Máx. de blocos com imagem no tooltip; o resto entra como linha compacta (sem scroll no painel). */
+    const DECK_VALIDITY_RICH_CARD_CAP = 4;
+
+    /** Preenche o painel do tooltip visual (sem usar title nativo). */
+    function fillDeckValidityTooltip(isOff, v) {
+        const tip = document.getElementById('deck-validity-tooltip');
+        const body = document.getElementById('deck-validity-tooltip-body');
+        if (!tip || !body) return;
+        body.textContent = '';
+        tip.classList.remove('is-off', 'is-valid', 'is-invalid');
+        if (isOff) {
+            tip.classList.add('is-off');
+            const p = document.createElement('div');
+            p.className = 'deck-validity-tooltip-body-plain';
+            p.textContent = 'Validação do deck: desligada';
+            body.appendChild(p);
+            return;
+        }
+        if (v.ok) {
+            tip.classList.add('is-valid');
+            const row = document.createElement('div');
+            row.className = 'deck-validity-tooltip-status deck-validity-tooltip-status--valid';
+            const ico = document.createElement('i');
+            ico.className = 'fas fa-check';
+            ico.setAttribute('aria-hidden', 'true');
+            const span = document.createElement('span');
+            span.textContent = 'Deck válido.';
+            row.appendChild(ico);
+            row.appendChild(span);
+            body.appendChild(row);
+            return;
+        }
+        tip.classList.add('is-invalid');
+        const head = document.createElement('div');
+        head.className = 'deck-validity-tooltip-status deck-validity-tooltip-status--invalid';
+        const icoBad = document.createElement('i');
+        icoBad.className = 'fas fa-times';
+        icoBad.setAttribute('aria-hidden', 'true');
+        const headSpan = document.createElement('span');
+        headSpan.textContent = 'Deck inválido';
+        head.appendChild(icoBad);
+        head.appendChild(headSpan);
+        body.appendChild(head);
+
+        const listWrap = document.createElement('div');
+        listWrap.className = 'deck-validity-tooltip-issues';
+        let richSlots = DECK_VALIDITY_RICH_CARD_CAP;
+
+        for (const issue of v.issues) {
+            if (issue.kind === 'rule') {
+                const div = document.createElement('div');
+                div.className = 'deck-validity-tooltip-rule';
+                div.textContent = issue.message;
+                listWrap.appendChild(div);
+            } else if (issue.kind === 'copies') {
+                const full = cardCache[issue.cardId];
+                if (full && richSlots > 0) {
+                    appendDeckValidityCardIssue(listWrap, issue, full);
+                    richSlots--;
+                } else {
+                    const div = document.createElement('div');
+                    div.className = 'deck-validity-tooltip-compact-line';
+                    div.textContent = issue.message;
+                    listWrap.appendChild(div);
+                }
+            }
+        }
+        body.appendChild(listWrap);
+        const copyIssues = v.issues.filter((x) => x.kind === 'copies');
+        if (copyIssues.length > DECK_VALIDITY_RICH_CARD_CAP) {
+            const hint = document.createElement('div');
+            hint.className = 'deck-validity-tooltip-more';
+            hint.textContent = `Arte nas primeiras ${DECK_VALIDITY_RICH_CARD_CAP} cartas; as restantes só em texto.`;
+            body.appendChild(hint);
+        }
+    }
+
+    let deckValidityHideTimer = null;
+    let deckStatHideTimer = null;
+    let deckStatTooltipAnchor = null;
+    let deckStatTooltipSection = null;
+
+    function clearDeckValidityHideTimer() {
+        if (deckValidityHideTimer) {
+            clearTimeout(deckValidityHideTimer);
+            deckValidityHideTimer = null;
+        }
+    }
+
+    function scheduleHideDeckValidityTooltip() {
+        clearDeckValidityHideTimer();
+        deckValidityHideTimer = setTimeout(() => {
+            deckValidityHideTimer = null;
+            hideDeckValidityTooltipPanel();
+        }, 140);
+    }
+
+    function clearDeckStatHideTimer() {
+        if (deckStatHideTimer) {
+            clearTimeout(deckStatHideTimer);
+            deckStatHideTimer = null;
+        }
+    }
+
+    function scheduleHideDeckStatTooltip() {
+        clearDeckStatHideTimer();
+        deckStatHideTimer = setTimeout(() => {
+            deckStatHideTimer = null;
+            hideDeckStatTooltipPanel();
+        }, 140);
+    }
+
+    function aggregateQueueCardsForStatSection(section) {
+        const byId = new Map();
+        for (const entry of cardQueue) {
+            const full = cardCache[entry.id];
+            if (!full) continue;
+            if (getQueueCardSection(full) !== section) continue;
+            const id = String(entry.id);
+            if (!byId.has(id)) byId.set(id, { full, count: 0 });
+            byId.get(id).count++;
+        }
+        return [...byId.values()].sort((a, b) => {
+            const na = isEnglishMode() ? (a.full.name || '') : (a.full.name_pt || a.full.name || '');
+            const nb = isEnglishMode() ? (b.full.name || '') : (b.full.name_pt || b.full.name || '');
+            return na.localeCompare(nb, undefined, { sensitivity: 'base' });
+        });
+    }
+
+    function deckStatQtyLine(section, count) {
+        return section === 'extra'
+            ? T('ui.deck_stat_tt_qty_extra', { n: String(count) })
+            : T('ui.deck_stat_tt_qty', { n: String(count) });
+    }
+
+    function buildDeckStatTooltipAriaSummary(section) {
+        const labelKey = { monsters: 'ui.deck_stat_monsters', spells: 'ui.deck_stat_spells', traps: 'ui.deck_stat_traps', extra: 'ui.deck_stat_extra' }[section];
+        const label = labelKey ? T(labelKey) : section;
+        const items = aggregateQueueCardsForStatSection(section);
+        if (items.length === 0) return `${label}. ${T('ui.deck_stat_tt_empty')}`;
+        const parts = items.map(({ full, count }) => {
+            const nm = full
+                ? (isEnglishMode() ? (full.name || full.name_en || full.id) : (full.name_pt || full.name || full.id))
+                : '?';
+            return `${nm} ${count}×`;
+        });
+        return `${label}. ${parts.join(', ')}`;
+    }
+
+    function fillDeckStatTooltip(section) {
+        const body = document.getElementById('deck-stat-tooltip-body');
+        if (!body) return;
+        body.textContent = '';
+        const labelKey = { monsters: 'ui.deck_stat_monsters', spells: 'ui.deck_stat_spells', traps: 'ui.deck_stat_traps', extra: 'ui.deck_stat_extra' }[section];
+        const label = labelKey ? T(labelKey) : section;
+        const items = aggregateQueueCardsForStatSection(section);
+        const head = document.createElement('div');
+        head.className = 'deck-stat-tooltip-header';
+        const totalCopies = items.reduce((s, x) => s + x.count, 0);
+        head.textContent = `${label} — ${totalCopies}`;
+        body.appendChild(head);
+        if (items.length === 0) {
+            const p = document.createElement('div');
+            p.className = 'deck-validity-tooltip-body-plain';
+            p.style.opacity = '0.9';
+            p.textContent = T('ui.deck_stat_tt_empty');
+            body.appendChild(p);
+            return;
+        }
+        const grid = document.createElement('div');
+        grid.className = 'deck-stat-tooltip-card-grid';
+        if (items.length >= 12) grid.classList.add('is-cols-3');
+        for (const { full, count } of items) {
+            appendDeckStatTooltipTile(grid, full, deckStatQtyLine(section, count));
+        }
+        body.appendChild(grid);
+    }
+
+    function positionFloatingTooltip(tip, anchor, belowClassName) {
+        if (!tip || !anchor || !tip.classList.contains('is-visible')) return;
+        hideTooltip();
+        const r = anchor.getBoundingClientRect();
+        const gap = 11;
+        if (belowClassName) tip.classList.remove(belowClassName);
+        tip.style.visibility = 'hidden';
+        tip.style.left = '0';
+        tip.style.top = '0';
+        const tw = tip.offsetWidth || 280;
+        const th = tip.offsetHeight || 100;
+        let left = r.left + r.width / 2 - tw / 2;
+        left = Math.max(10, Math.min(left, window.innerWidth - tw - 10));
+        let top = r.top - th - gap;
+        let below = false;
+        if (top < 6) {
+            top = r.bottom + gap;
+            below = true;
+        }
+        if (top + th > window.innerHeight - 6) {
+            top = Math.max(6, window.innerHeight - th - 6);
+        }
+        if (belowClassName) tip.classList.toggle(belowClassName, below);
+        tip.style.left = `${Math.round(left)}px`;
+        tip.style.top = `${Math.round(top)}px`;
+        tip.style.visibility = '';
+    }
+
+    function positionDeckValidityTooltip() {
+        positionFloatingTooltip(
+            document.getElementById('deck-validity-tooltip'),
+            document.getElementById('deck-validity-flag'),
+            'deck-validity-tooltip--below'
+        );
+    }
+
+    function positionDeckStatTooltip() {
+        const tip = document.getElementById('deck-stat-tooltip');
+        if (!tip || !deckStatTooltipAnchor) return;
+        positionFloatingTooltip(tip, deckStatTooltipAnchor, 'deck-stat-tooltip--below');
+    }
+
+    function showDeckStatTooltipPanel(section, anchorWrap) {
+        clearDeckStatHideTimer();
+        hideDeckValidityTooltipPanel();
+        const tip = document.getElementById('deck-stat-tooltip');
+        if (!tip || !anchorWrap) return;
+        hideTooltip();
+        deckStatTooltipAnchor = anchorWrap;
+        deckStatTooltipSection = section;
+        fillDeckStatTooltip(section);
+        tip.classList.add('is-visible');
+        tip.setAttribute('aria-hidden', 'false');
+        tip.setAttribute('aria-label', buildDeckStatTooltipAriaSummary(section));
+        requestAnimationFrame(() => requestAnimationFrame(() => positionDeckStatTooltip()));
+    }
+
+    function hideDeckStatTooltipPanel() {
+        const tip = document.getElementById('deck-stat-tooltip');
+        if (!tip) return;
+        tip.classList.remove('is-visible', 'deck-stat-tooltip--below');
+        tip.setAttribute('aria-hidden', 'true');
+        tip.removeAttribute('aria-label');
+        tip.style.left = '';
+        tip.style.top = '';
+        deckStatTooltipAnchor = null;
+        deckStatTooltipSection = null;
+        clearDeckStatHideTimer();
+    }
+
+    function showDeckValidityTooltipPanel() {
+        clearDeckValidityHideTimer();
+        hideDeckStatTooltipPanel();
+        const tip = document.getElementById('deck-validity-tooltip');
+        const flag = document.getElementById('deck-validity-flag');
+        if (!tip || !flag) return;
+        hideTooltip();
+        tip.classList.add('is-visible');
+        tip.setAttribute('aria-hidden', 'false');
+        requestAnimationFrame(() => requestAnimationFrame(() => positionDeckValidityTooltip()));
+    }
+
+    function hideDeckValidityTooltipPanel() {
+        const tip = document.getElementById('deck-validity-tooltip');
+        if (!tip) return;
+        tip.classList.remove('is-visible', 'deck-validity-tooltip--below');
+        tip.setAttribute('aria-hidden', 'true');
+        tip.style.left = '';
+        tip.style.top = '';
+        clearDeckValidityHideTimer();
+    }
+
+    function syncDeckValidityTooltipPositionIfOpen() {
+        const tip = document.getElementById('deck-validity-tooltip');
+        if (tip && tip.classList.contains('is-visible')) {
+            requestAnimationFrame(() => positionDeckValidityTooltip());
+        }
+    }
+
+    function syncDeckStatTooltipPositionIfOpen() {
+        const tip = document.getElementById('deck-stat-tooltip');
+        if (tip && tip.classList.contains('is-visible') && deckStatTooltipAnchor) {
+            requestAnimationFrame(() => positionDeckStatTooltip());
+        }
+    }
+
+    function refreshDeckStatTooltipIfOpen() {
+        const tip = document.getElementById('deck-stat-tooltip');
+        if (!tip || !tip.classList.contains('is-visible') || deckStatTooltipSection == null) return;
+        fillDeckStatTooltip(deckStatTooltipSection);
+        tip.setAttribute('aria-label', buildDeckStatTooltipAriaSummary(deckStatTooltipSection));
+        requestAnimationFrame(() => positionDeckStatTooltip());
+    }
+
+    function onDeckValidityViewportChange() {
+        syncDeckValidityTooltipPositionIfOpen();
+        syncDeckStatTooltipPositionIfOpen();
+    }
+
+    function onDeckFloatingTooltipsEscape(ev) {
+        if (ev.key !== 'Escape') return;
+        const st = document.getElementById('deck-stat-tooltip');
+        if (st && st.classList.contains('is-visible')) {
+            hideDeckStatTooltipPanel();
+            return;
+        }
+        const vt = document.getElementById('deck-validity-tooltip');
+        if (vt && vt.classList.contains('is-visible')) hideDeckValidityTooltipPanel();
+    }
+
+    function initDeckValidityTooltipUi() {
+        const wrap = document.querySelector('.deck-validity-wrap');
+        const tip = document.getElementById('deck-validity-tooltip');
+        const flag = document.getElementById('deck-validity-flag');
+        if (!wrap || !tip || !flag || wrap.dataset.deckValidTtInit) return;
+        wrap.dataset.deckValidTtInit = '1';
+        wrap.addEventListener('mouseenter', () => {
+            clearDeckValidityHideTimer();
+            showDeckValidityTooltipPanel();
+        });
+        wrap.addEventListener('mouseleave', scheduleHideDeckValidityTooltip);
+        flag.addEventListener('focus', () => {
+            clearDeckValidityHideTimer();
+            showDeckValidityTooltipPanel();
+        });
+        flag.addEventListener('blur', (e) => {
+            if (!e.relatedTarget || !wrap.contains(e.relatedTarget)) {
+                scheduleHideDeckValidityTooltip();
+            }
+        });
+        window.addEventListener('scroll', onDeckValidityViewportChange, true);
+        window.addEventListener('resize', onDeckValidityViewportChange);
+        if (!window.__deckFloatEscInit) {
+            window.__deckFloatEscInit = '1';
+            document.addEventListener('keydown', onDeckFloatingTooltipsEscape, true);
+        }
+    }
+
+    function initDeckStatTooltipUi() {
+        if (document.body.dataset.deckStatTtInit) return;
+        document.body.dataset.deckStatTtInit = '1';
+        const tip = document.getElementById('deck-stat-tooltip');
+        if (tip && !tip.dataset.deckStatTtHoverInit) {
+            tip.dataset.deckStatTtHoverInit = '1';
+            tip.addEventListener('mouseenter', clearDeckStatHideTimer);
+            tip.addEventListener('mouseleave', scheduleHideDeckStatTooltip);
+        }
+        document.querySelectorAll('.deck-stat-chip-wrap').forEach((w) => {
+            const section = w.getAttribute('data-deck-stat');
+            if (!section) return;
+            w.addEventListener('mouseenter', () => {
+                clearDeckStatHideTimer();
+                showDeckStatTooltipPanel(section, w);
+            });
+            w.addEventListener('mouseleave', scheduleHideDeckStatTooltip);
+            w.addEventListener('focus', () => {
+                clearDeckStatHideTimer();
+                showDeckStatTooltipPanel(section, w);
+            });
+            w.addEventListener('blur', (e) => {
+                const rt = e.relatedTarget;
+                const t = document.getElementById('deck-stat-tooltip');
+                if (!rt || (!w.contains(rt) && (!t || !t.contains(rt)))) {
+                    scheduleHideDeckStatTooltip();
+                }
+            });
+        });
     }
 
     function paintDeckValidityFlag() {
@@ -4184,7 +5206,10 @@
             el.classList.remove('is-valid', 'is-invalid');
             el.classList.add('is-off');
             tx.textContent = 'Validação OFF';
-            el.title = 'Validação do deck: desligada';
+            el.removeAttribute('title');
+            fillDeckValidityTooltip(true, null);
+            el.setAttribute('aria-label', buildDeckValidityAriaLabel(true, null, tx.textContent));
+            syncDeckValidityTooltipPositionIfOpen();
             return;
         }
 
@@ -4193,11 +5218,10 @@
         el.classList.add(v.ok ? 'is-valid' : 'is-invalid');
         const suffix = v.banlistType ? ` (${v.banlistType.toUpperCase()})` : ' (padrão)';
         tx.textContent = v.ok ? `Válido${suffix}` : `Inválido${suffix}`;
-        el.title = v.ok
-            ? 'Deck válido.'
-            : (`Deck inválido:\n- ` +
-                  v.issues.slice(0, 10).join('\n- ') +
-                  (v.issues.length > 10 ? '\n- …' : ''));
+        el.removeAttribute('title');
+        fillDeckValidityTooltip(false, v);
+        el.setAttribute('aria-label', buildDeckValidityAriaLabel(false, v, tx.textContent));
+        syncDeckValidityTooltipPositionIfOpen();
     }
 
     function updateDeckValidationToggleUi() {
@@ -4263,6 +5287,8 @@
             });
         }
         updateDeckValidationToggleUi();
+        initDeckValidityTooltipUi();
+        initDeckStatTooltipUi();
     }
 
     function dndTransferHasType(dt, mime) {
@@ -5118,6 +6144,9 @@
         set('deck-stat-extra', a.extra);
         const pe = document.getElementById('deck-stat-price');
         if (pe) pe.textContent = a.total === 0 ? '—' : `$${a.price.toFixed(2)}`;
+        try {
+            refreshDeckStatTooltipIfOpen();
+        } catch (_) {}
         paintDeckValidityFlag();
     }
 
@@ -5683,7 +6712,7 @@
         "confirm.clear_deck": { pt: "Limpar todo o deck?", en: "Clear the entire deck?" },
         "confirm.delete_saved": { pt: "Apagar este deck salvo?", en: "Delete this saved deck?" },
         "confirm.replace_deck": { pt: "Substituir o deck atual pelo deck salvo?", en: "Replace the current deck with the saved deck?" },
-        "doc.title": { pt: "YGO Proxy Studio Pro - Workspace V4.0", en: "YGO Proxy Studio Pro - Workspace V4.0" },
+        "doc.title": { pt: "DeckBuilder GiuBravo", en: "DeckBuilder GiuBravo" },
         "fab.sets": { pt: "Ver impress\u00f5es e expans\u00f5es", en: "View printings and sets" },
         "lang.en_title": { pt: "English (US)", en: "English (US)" },
         "lang.label": { pt: "Idioma", en: "Language" },
@@ -5856,6 +6885,9 @@
         "ui.deck_stat_total_title": { pt: "Total de cartas (c\u00f3pias)", en: "Total cards (copies)" },
         "ui.deck_stat_total_usd": { pt: "Total", en: "Total" },
         "ui.deck_stat_traps": { pt: "Armadilhas", en: "Traps" },
+        "ui.deck_stat_tt_empty": { pt: "Nenhuma carta nesta categoria no deck.", en: "No cards in this category in the deck." },
+        "ui.deck_stat_tt_qty": { pt: "\u00d7{n} no deck", en: "\u00d7{n} in deck" },
+        "ui.deck_stat_tt_qty_extra": { pt: "\u00d7{n} no deck adicional", en: "\u00d7{n} in Extra Deck" },
         "ui.swap_pick_title": { pt: "Escolha a carta a trocar", en: "Choose a card to swap" },
         "ui.swap_pick_main": { pt: "Deck principal cheio (60). Escolha qual carta do principal substituir.", en: "Main deck is full (60). Choose which main-deck card to replace." },
         "ui.swap_pick_extra": { pt: "Deck extra cheio (15). Escolha qual carta do extra substituir.", en: "Extra deck is full (15). Choose which extra-deck card to replace." },
@@ -7499,6 +8531,8 @@
         const svgStyle =
             variant === 'grid'
                 ? 'width:22px;height:22px;display:block;margin:0;vertical-align:top;filter:drop-shadow(1px 1px 2px rgba(0,0,0,0.9));'
+                : variant === 'validity'
+                ? 'width:18px;height:18px;display:block;margin:0;vertical-align:top;'
                 : 'width: 20px; height: 20px; vertical-align: middle; margin-left: 5px; filter: drop-shadow(1px 1px 1px rgba(0,0,0,0.8));';
         const redColor = "#ff0000";
         const bgCircle = `<circle cx="50" cy="50" r="44" fill="black" stroke="${redColor}" stroke-width="12" />`;
