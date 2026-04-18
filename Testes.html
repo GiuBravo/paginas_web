@@ -597,7 +597,8 @@
             line-height: 1;
         }
         .view-controls-toolbar-row select,
-        .view-controls-toolbar-row button {
+        .view-controls-toolbar-row button,
+        .view-controls-toolbar-row .custom-select-trigger {
             height: var(--vc-control-h);
             min-height: var(--vc-control-h);
             box-sizing: border-box;
@@ -700,6 +701,14 @@
             height: 35px;
             box-sizing: border-box;
         }
+        .filter-theme-random-wrap .theme-select-stack .custom-select-ui-wrap {
+            width: 100%;
+            min-width: 0;
+        }
+        .filter-theme-random-wrap .theme-select-stack .custom-select-trigger {
+            height: 35px;
+            box-sizing: border-box;
+        }
         .theme-row-label {
             font-size: 10px;
             color: var(--label-text);
@@ -772,6 +781,94 @@
             max-width: 100%;
         }
         .filter-clear-stack--tight { margin-top: 4px; }
+        /* Sugestões customizadas (substituem datalist nativo): hover pré-visualiza a busca. */
+        .filter-combo-suggest-panel {
+            position: fixed;
+            z-index: 10001;
+            max-height: min(40vh, 320px);
+            overflow-y: auto;
+            background: var(--panel-bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+            min-width: 120px;
+            display: none;
+        }
+        .filter-combo-suggest-row {
+            padding: 8px 10px;
+            cursor: pointer;
+            font-size: 13px;
+            color: var(--text);
+            border-bottom: 1px solid var(--border);
+        }
+        .filter-combo-suggest-row:last-child { border-bottom: none; }
+        .filter-combo-suggest-row:hover {
+            background: var(--bg-dark);
+        }
+        /* Selects nativos substituídos por botão + painel (hover pré-visualiza). */
+        .custom-select-ui-wrap {
+            position: relative;
+            display: flex;
+            width: 100%;
+            min-width: 0;
+            align-items: stretch;
+        }
+        .custom-select-trigger {
+            flex: 1;
+            min-width: 0;
+            min-height: 35px;
+            padding: 6px 10px;
+            font: inherit;
+            font-size: 13px;
+            text-align: left;
+            cursor: pointer;
+            color: var(--text);
+            background: var(--panel-bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            box-sizing: border-box;
+        }
+        .custom-select-trigger:hover:not(:disabled) {
+            filter: brightness(1.06);
+        }
+        .custom-select-trigger:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+        }
+        .custom-select-native-hidden {
+            position: absolute !important;
+            width: 1px !important;
+            height: 1px !important;
+            padding: 0 !important;
+            margin: -1px !important;
+            overflow: hidden !important;
+            clip: rect(0, 0, 0, 0) !important;
+            white-space: nowrap !important;
+            border: 0 !important;
+        }
+        .ui-native-custom-select-panel {
+            position: fixed;
+            z-index: 10002;
+            max-height: min(42vh, 340px);
+            overflow-y: auto;
+            background: var(--panel-bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+            min-width: 140px;
+            display: none;
+        }
+        .ui-native-custom-select-row {
+            padding: 8px 10px;
+            cursor: pointer;
+            font-size: 13px;
+            color: var(--text);
+            border-bottom: 1px solid var(--border);
+        }
+        .ui-native-custom-select-row:last-child { border-bottom: none; }
+        .ui-native-custom-select-row:hover {
+            background: var(--bg-dark);
+        }
         .filter-full-add-stack {
             display: flex;
             flex-direction: column;
@@ -907,6 +1004,41 @@
             max-width: 14rem;
             height: 35px;
             box-sizing: border-box;
+        }
+        .queue-toolbar-select-stack .custom-select-ui-wrap {
+            width: 100%;
+            min-width: 9.5rem;
+            max-width: 14rem;
+            box-sizing: border-box;
+        }
+        .queue-toolbar-select-stack .custom-select-ui-wrap .custom-select-trigger {
+            width: 100%;
+            min-width: 0;
+            height: 35px;
+            box-sizing: border-box;
+        }
+        .custom-select-wrap--saved-decks .custom-select-trigger {
+            max-width: 132px;
+            font-size: 10px;
+            padding: 0 6px;
+            border-radius: 4px;
+            background: var(--panel-bg);
+            border: 1px solid var(--border);
+            color: var(--accent);
+        }
+        html.theme-white .custom-select-wrap--saved-decks .custom-select-trigger {
+            background: #fff;
+            color: #111;
+        }
+        .custom-select-wrap--deck-banlist .custom-select-trigger {
+            font-size: 11px;
+            padding: 0 8px;
+            border-radius: 8px;
+            max-width: 220px;
+            width: 100%;
+        }
+        html.theme-white .custom-select-wrap--deck-banlist .custom-select-trigger {
+            background: #fff;
         }
         /* Header da coluna de filtros: título centralizado, reset à direita */
         .col-header-filters-toolbar {
@@ -2615,7 +2747,8 @@
             line-height: 1;
         }
         .deck-sort-bar select,
-        .deck-sort-bar button {
+        .deck-sort-bar button,
+        .deck-sort-bar .custom-select-trigger {
             height: 35px;
             min-height: 35px;
             box-sizing: border-box;
@@ -2629,6 +2762,13 @@
             padding-top: 0;
             padding-bottom: 0;
             line-height: 33px;
+        }
+        .deck-sort-bar-field .sort-controls .queue-toolbar-select-stack .custom-select-ui-wrap {
+            width: 100%;
+            min-width: 0;
+        }
+        .deck-sort-bar-field .sort-controls .queue-toolbar-select-stack .custom-select-trigger {
+            line-height: 1.2;
         }
         .deck-sort-bar #btn-deck-order {
             padding: 0; /* evita que .btn-view aumente a altura total */
@@ -4192,7 +4332,7 @@
                 <div class="filter-group filter-theme-random-wrap">
                     <div class="theme-select-stack">
                         <label class="theme-row-label" for="theme-selector" data-i18n="ui.theme_label">Tema do sistema</label>
-                        <select id="theme-selector" onchange="changeTheme(this.value)">
+                        <select id="theme-selector">
                             <option value="" data-i18n-opt="opt.theme.default">Padrão (Dark)</option>
                             <option value="theme-white" data-i18n-opt="opt.theme.white">Todo Branco</option>
                             <option value="theme-black" data-i18n-opt="opt.theme.black">Todo Preto</option>
@@ -4213,7 +4353,7 @@
                 <div class="filter-group view-controls-sort-tight">
                     <label for="sort-by" class="sort-label" data-i18n="ui.sort_results">Ordenar</label>
                     <div class="sort-controls" style="display: flex; gap: 5px; width: 100%;">
-                        <select id="sort-by" onchange="sortAndRender()" style="flex: 1;">
+                        <select id="sort-by" style="flex: 1;">
                             <option data-i18n-opt="opt.sort.name" value="name">Nome</option>
                             <option data-i18n-opt="opt.sort.atk" value="atk">Ataque</option>
                             <option data-i18n-opt="opt.sort.def" value="def">Defesa</option>
@@ -4436,7 +4576,7 @@
             <div class="sort-controls">
                 <div class="queue-toolbar-select-stack" style="flex: 1; min-width: 0;">
                     <label for="deck-sort-by" class="theme-row-label" data-i18n="ui.deck_sort_label">Ordenar deck</label>
-                    <select id="deck-sort-by" onchange="void deckSortAndRefresh()" style="flex: 1;">
+                    <select id="deck-sort-by" style="flex: 1;">
                         <option data-i18n-opt="opt.sort.custom" value="custom" selected>Personalizado</option>
                         <option data-i18n-opt="opt.sort.name" value="name">Nome</option>
                         <option data-i18n-opt="opt.sort.atk" value="atk">Ataque</option>
@@ -5245,6 +5385,10 @@
             if (icn) icn.className = 'fas fa-clipboard-check';
             if (sel) sel.disabled = false;
         }
+        try {
+            const banTr = document.querySelector('[data-native-custom-trigger="deck-banlist-select"]');
+            if (banTr && sel) banTr.disabled = !!sel.disabled;
+        } catch (_) {}
         paintDeckValidityFlag();
     }
 
@@ -6435,10 +6579,10 @@
         reorderSideQueueBySortCriterion();
     }
 
-    async function deckSortAndRefresh() {
+    async function deckSortAndRefresh(opts) {
         requestCardSurfaceFeedback('deck_sort');
         getDeckSortCriterion();
-        setUiPref(UI_PREF_KEYS.deckSort, String(getDeckSortCriterion() || 'custom'));
+        if (!opts || !opts.preview) setUiPref(UI_PREF_KEYS.deckSort, String(getDeckSortCriterion() || 'custom'));
         await ensureCardCacheForQueue();
         if (getDeckSortCriterion() === 'random') shuffleDeckQueueRandomWithinBuckets();
         renderDeckQueue();
@@ -7022,6 +7166,7 @@
             if (typeof paintComboFilterChips === 'function') paintComboFilterChips();
             if (typeof paintSavedDecksSelect === 'function') paintSavedDecksSelect();
             if (typeof syncExportMenuTitle === 'function') syncExportMenuTitle();
+            if (typeof syncAllNativeCustomSelectTriggers === 'function') syncAllNativeCustomSelectTriggers();
         } catch (_) {}
         updateLangButtonsUi();
         try { refreshViewControlsHeaderCompact(); } catch (_) {}
@@ -7228,6 +7373,9 @@
         } finally {
             delete sel.dataset.suppressChange;
         }
+        try {
+            if (typeof syncNativeCustomSelectTrigger === 'function') syncNativeCustomSelectTrigger('saved-decks-select');
+        } catch (_) {}
     }
 
     function applyDeckColumnCycleClasses() {
@@ -7673,13 +7821,14 @@
         'theme-egyptian-gods'
     ];
 
-    function changeTheme(themeName) {
+    function changeTheme(themeName, opts) {
         const root = document.documentElement;
         UI_THEME_CLASSES.forEach((c) => root.classList.remove(c));
         if (themeName) root.classList.add(themeName);
-        setUiPref(UI_PREF_KEYS.theme, themeName);
-        // legado (mantém compatibilidade com versões antigas que só liam localStorage)
-        try { localStorage.setItem('selectedTheme', themeName); } catch (_) {}
+        if (!opts || !opts.preview) {
+            setUiPref(UI_PREF_KEYS.theme, themeName);
+            try { localStorage.setItem('selectedTheme', themeName); } catch (_) {}
+        }
         requestCardSurfaceFeedback('theme');
         renderResults();
     }
@@ -8371,7 +8520,8 @@
 
     function comboInputMatchesDatalistPick(inp) {
         if (!inp || !inp.value.trim()) return false;
-        const dl = inp.list;
+        const dlId = inp.dataset.filterComboDatalistId;
+        const dl = dlId ? document.getElementById(dlId) : inp.list;
         if (!dl || !dl.options || !dl.options.length) return false;
         const v = inp.value.trim();
         for (let i = 0; i < dl.options.length; i++) {
@@ -8379,6 +8529,698 @@
             if (ov && ov === v) return true;
         }
         return false;
+    }
+
+    function snapshotDeckbuilderFilterBaseline() {
+        return {
+            filterChipState: JSON.parse(JSON.stringify(window.filterChipState)),
+            multiTextFilters: JSON.parse(JSON.stringify(window.multiTextFilters || { fname: [], desc: [], atk: [], def: [], priceRanges: [] })),
+            selectedCardsetNames: [...(window.selectedCardsetNames || [])],
+            selectedSetCodes: [...(window.selectedSetCodes || [])],
+            selectedRarities: [...(window.selectedRarities || [])],
+            searchInput: document.getElementById('search-input')?.value ?? '',
+            filterDesc: document.getElementById('filter-desc')?.value ?? '',
+            filterAtk: document.getElementById('filter-atk')?.value ?? '',
+            filterDef: document.getElementById('filter-def')?.value ?? '',
+            dateStart: document.getElementById('date-start')?.value ?? '',
+            dateEnd: document.getElementById('date-end')?.value ?? '',
+            banlistOnly: !!document.getElementById('enable-banlist-only')?.checked,
+            filterPriceMin: document.getElementById('filter-price-min')?.value ?? '',
+            filterPriceMax: document.getElementById('filter-price-max')?.value ?? '',
+            currentPage
+        };
+    }
+
+    function restoreDeckbuilderFilterBaseline(snap, opts) {
+        if (!snap) return;
+        window.filterChipState = JSON.parse(JSON.stringify(snap.filterChipState));
+        window.multiTextFilters = JSON.parse(JSON.stringify(snap.multiTextFilters));
+        window.selectedCardsetNames = [...snap.selectedCardsetNames];
+        window.selectedSetCodes = [...snap.selectedSetCodes];
+        window.selectedRarities = [...snap.selectedRarities];
+        const si = document.getElementById('search-input');
+        if (si) si.value = snap.searchInput;
+        const fd = document.getElementById('filter-desc');
+        if (fd) fd.value = snap.filterDesc;
+        const fa = document.getElementById('filter-atk');
+        if (fa) fa.value = snap.filterAtk;
+        const fdf = document.getElementById('filter-def');
+        if (fdf) fdf.value = snap.filterDef;
+        const ds = document.getElementById('date-start');
+        if (ds) ds.value = snap.dateStart;
+        const de = document.getElementById('date-end');
+        if (de) de.value = snap.dateEnd;
+        const bo = document.getElementById('enable-banlist-only');
+        if (bo) bo.checked = snap.banlistOnly;
+        const pm = document.getElementById('filter-price-min');
+        if (pm) pm.value = snap.filterPriceMin;
+        const px = document.getElementById('filter-price-max');
+        if (px) px.value = snap.filterPriceMax;
+        currentPage = snap.currentPage;
+        syncMonsterFilterGroups();
+        refreshSubtypeRaceDatalists();
+        syncDatePeriodGroupVisibility();
+        toggleBanlistCheckbox();
+        if (!opts || !opts.keepSnapshot) filterPreviewBaselineSnapshot = null;
+    }
+
+    function applyComboFilterPreviewRow(kind, rawText) {
+        const map = {
+            type: { max: 3, resolve: resolveTypeCategoryInput, key: 'typeCategory', after: (prevVal, nextVal) => {
+                if (prevVal !== nextVal) {
+                    window.filterChipState.subtype = [];
+                    window.filterChipState.race = [];
+                    if (nextVal !== 'Monster') {
+                        window.filterChipState.attribute = [];
+                        window.filterChipState.level = [];
+                        const a = document.getElementById('filter-atk'); const d = document.getElementById('filter-def');
+                        if (a) a.value = '';
+                        if (d) d.value = '';
+                    }
+                }
+                syncMonsterFilterGroups();
+                refreshSubtypeRaceDatalists();
+            }},
+            subtype: { max: 99, resolve: resolveSubtypeInput, key: 'subtype', after: () => {} },
+            race: { max: 99, resolve: resolveRaceInput, key: 'race', after: () => {} },
+            attribute: { max: 7, resolve: resolveAttributeInput, key: 'attribute', after: () => {} },
+            level: { max: 99, resolve: resolveLevelInput, key: 'level', after: () => {} },
+            era: { max: 99, resolve: resolveEraInput, key: 'era', after: () => { applyEraToDateInputs(window.filterChipState.era[0]); } },
+            dateRegion: { max: 2, resolve: resolveDateRegionInput, key: 'dateRegion', after: () => {
+                const ek = getFilterEraKey();
+                if (ek) applyEraToDateInputs(ek);
+                else applyReleasePeriodDefaults();
+            }},
+            banlist: { max: 3, resolve: resolveBanlistInput, key: 'banlist', after: () => { toggleBanlistCheckbox(); } },
+            archetype: { max: 99, resolve: resolveArchetypeNameFromInput, key: 'archetype', after: () => {} }
+        };
+        const cfg = map[kind];
+        if (!cfg || !String(rawText || '').trim()) return false;
+        const val = cfg.resolve(String(rawText).trim());
+        if (val === null) return false;
+        const st = window.filterChipState;
+        const prevSingle = (st[cfg.key] && st[cfg.key].length ? st[cfg.key][0] : '');
+        if (cfg.max === 1) st[cfg.key] = [val];
+        else {
+            if (!st[cfg.key].includes(val)) {
+                if (st[cfg.key].length >= cfg.max) return false;
+                st[cfg.key].push(val);
+            } else return false;
+        }
+        cfg.after(prevSingle, val);
+        return true;
+    }
+
+    function applyCardsetPreviewRow(raw) {
+        const resolved = resolveCardsetNameFromInput(raw);
+        if (!resolved) return false;
+        if (!window.selectedCardsetNames) window.selectedCardsetNames = [];
+        if (window.selectedCardsetNames.includes(resolved)) return false;
+        window.selectedCardsetNames.push(resolved);
+        return true;
+    }
+
+    function applySetcodePreviewRow(raw) {
+        const code = normalizeSetCodeInput(raw);
+        if (!code || code.length < 3) return false;
+        if (!window.selectedSetCodes) window.selectedSetCodes = [];
+        if (window.selectedSetCodes.includes(code)) return false;
+        if (window.selectedSetCodes.length >= 16) return false;
+        window.selectedSetCodes.push(code);
+        return true;
+    }
+
+    function applyRarityPreviewRow(raw) {
+        const r = String(raw || '').trim();
+        if (r.length < 3) return false;
+        if (!window.selectedRarities) window.selectedRarities = [];
+        const key = r.toLowerCase();
+        if (window.selectedRarities.some(x => x.toLowerCase() === key)) return false;
+        if (window.selectedRarities.length >= 12) return false;
+        window.selectedRarities.push(r);
+        return true;
+    }
+
+    function onFilterComboSuggestRowEnter(kind, valueText) {
+        if (!filterPreviewBaselineSnapshot) filterPreviewBaselineSnapshot = snapshotDeckbuilderFilterBaseline();
+        else restoreDeckbuilderFilterBaseline(filterPreviewBaselineSnapshot, { keepSnapshot: true });
+        let ok = false;
+        if (kind === 'cardset') ok = applyCardsetPreviewRow(valueText);
+        else if (kind === 'setcode') ok = applySetcodePreviewRow(valueText);
+        else if (kind === 'rarity') ok = applyRarityPreviewRow(valueText);
+        else ok = applyComboFilterPreviewRow(kind, valueText);
+        if (!ok) return;
+        filterPreviewSearchSeq++;
+        const seq = filterPreviewSearchSeq;
+        filterUrlSyncSuspended = true;
+        void performSearch(true).finally(() => {
+            if (seq === filterPreviewSearchSeq) filterUrlSyncSuspended = false;
+        });
+    }
+
+    function ensureFilterComboSuggestPanel() {
+        let panel = document.getElementById('filter-combo-suggest-panel');
+        if (panel) return panel;
+        panel = document.createElement('div');
+        panel.id = 'filter-combo-suggest-panel';
+        panel.className = 'filter-combo-suggest-panel';
+        panel.setAttribute('role', 'listbox');
+        document.body.appendChild(panel);
+        panel.addEventListener('mouseleave', (e) => {
+            const rel = e.relatedTarget;
+            if (rel && (rel === filterComboSuggestAnchorInput || (filterComboSuggestAnchorInput && filterComboSuggestAnchorInput.contains(rel))))
+                return;
+            hideFilterComboSuggestPanel(true);
+        });
+        return panel;
+    }
+
+    function positionFilterComboSuggestPanel(anchor) {
+        const panel = document.getElementById('filter-combo-suggest-panel');
+        if (!panel || !anchor) return;
+        const r = anchor.getBoundingClientRect();
+        panel.style.left = `${Math.round(r.left)}px`;
+        panel.style.top = `${Math.round(r.bottom + 2)}px`;
+        panel.style.width = `${Math.round(Math.max(r.width, 160))}px`;
+    }
+
+    function bindFilterComboSuggestScrollReposition() {
+        if (filterComboSuggestScrollBound) return;
+        filterComboSuggestScrollBound = true;
+        const repos = () => {
+            const panel = document.getElementById('filter-combo-suggest-panel');
+            if (!panel || panel.style.display === 'none' || !filterComboSuggestAnchorInput) return;
+            positionFilterComboSuggestPanel(filterComboSuggestAnchorInput);
+        };
+        window.addEventListener('scroll', repos, true);
+        window.addEventListener('resize', repos);
+    }
+
+    function hideFilterComboSuggestPanel(revertPreview) {
+        const panel = document.getElementById('filter-combo-suggest-panel');
+        if (panel) panel.style.display = 'none';
+        filterComboSuggestAnchorInput = null;
+        filterComboSuggestKind = null;
+        if (revertPreview && filterPreviewBaselineSnapshot) {
+            const snap = filterPreviewBaselineSnapshot;
+            filterPreviewBaselineSnapshot = null;
+            restoreDeckbuilderFilterBaseline(snap);
+            filterUrlSyncSuspended = false;
+            filterPreviewSearchSeq++;
+            void performSearch(true);
+        }
+    }
+
+    function commitFilterComboPick(kind, rawText, inp) {
+        const hadRowPreview = !!filterPreviewBaselineSnapshot;
+        if (hadRowPreview) filterPreviewBaselineSnapshot = null;
+        filterUrlSyncSuspended = false;
+        filterPreviewSearchSeq++;
+        const panel = document.getElementById('filter-combo-suggest-panel');
+        if (panel) panel.style.display = 'none';
+        filterComboSuggestAnchorInput = null;
+        filterComboSuggestKind = null;
+        if (hadRowPreview) {
+            inp.value = '';
+            paintComboFilterChips();
+            renderCardsetFilterChips();
+            renderSetcodeFilterChips();
+            renderRarityFilterChips();
+            syncDatePeriodGroupVisibility();
+            currentPage = 1;
+            sortAndRender();
+            scheduleDeckbuilderFilterUrlSync();
+            return;
+        }
+        inp.value = rawText;
+        if (kind === 'cardset') tryAddCardsetFromInput();
+        else if (kind === 'setcode') tryAddSetcodeFromInput();
+        else if (kind === 'rarity') tryAddRarityFromInput();
+        else tryAddComboFilter(kind);
+    }
+
+    function collectDatalistOptionRows(datalistId, query) {
+        const dl = document.getElementById(datalistId);
+        if (!dl || !dl.options) return [];
+        const q = String(query || '').trim().toLowerCase();
+        const out = [];
+        for (let i = 0; i < dl.options.length; i++) {
+            const o = dl.options[i];
+            const v = String(o.value || '').trim();
+            if (!v) continue;
+            const label = String(o.label || v).trim();
+            if (q && !v.toLowerCase().includes(q) && !label.toLowerCase().includes(q)) continue;
+            out.push({ value: v, label });
+            if (out.length >= 80) break;
+        }
+        return out;
+    }
+
+    function refreshFilterComboSuggestPanel(inp, kind) {
+        const panel = ensureFilterComboSuggestPanel();
+        const lid = inp.dataset.filterComboDatalistId;
+        if (!lid) return;
+        if (filterPreviewBaselineSnapshot) {
+            restoreDeckbuilderFilterBaseline(filterPreviewBaselineSnapshot, { keepSnapshot: true });
+            filterUrlSyncSuspended = false;
+            filterPreviewSearchSeq++;
+            void performSearch(true);
+        }
+        const rows = collectDatalistOptionRows(lid, inp.value);
+        panel.innerHTML = '';
+        if (!rows.length) {
+            if (filterPreviewBaselineSnapshot) hideFilterComboSuggestPanel(true);
+            else panel.style.display = 'none';
+            return;
+        }
+        rows.forEach((row) => {
+            const div = document.createElement('div');
+            div.className = 'filter-combo-suggest-row';
+            div.setAttribute('role', 'option');
+            div.textContent = row.label || row.value;
+            div.addEventListener('mouseenter', () => onFilterComboSuggestRowEnter(kind, row.value));
+            div.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                commitFilterComboPick(kind, row.value, inp);
+            });
+            panel.appendChild(div);
+        });
+        positionFilterComboSuggestPanel(inp);
+        panel.style.display = 'block';
+    }
+
+    function initFilterComboSuggestBehavior() {
+        if (window.__filterComboSuggestInited) return;
+        window.__filterComboSuggestInited = true;
+        ensureFilterComboSuggestPanel();
+        bindFilterComboSuggestScrollReposition();
+        document.addEventListener('keydown', (e) => {
+            if (e.key !== 'Escape') return;
+            const panel = document.getElementById('filter-combo-suggest-panel');
+            if (!panel || panel.style.display === 'none') return;
+            e.preventDefault();
+            const revert = !!filterPreviewBaselineSnapshot;
+            const inpEsc = filterComboSuggestAnchorInput;
+            hideFilterComboSuggestPanel(revert);
+            if (inpEsc) inpEsc.blur();
+        });
+        const bindings = [
+            ['filter-type-input', 'type'],
+            ['filter-subtype-input', 'subtype'],
+            ['filter-race-input', 'race'],
+            ['filter-attribute-input', 'attribute'],
+            ['filter-level-input', 'level'],
+            ['filter-era-input', 'era'],
+            ['filter-date-region-input', 'dateRegion'],
+            ['filter-banlist-input', 'banlist'],
+            ['filter-archetype-input', 'archetype'],
+            ['filter-cardset-input', 'cardset'],
+            ['filter-setcode-input', 'setcode'],
+            ['filter-rarity-input', 'rarity']
+        ];
+        bindings.forEach(([id, kind]) => {
+            const inp = document.getElementById(id);
+            if (!inp) return;
+            const lid = inp.getAttribute('list');
+            if (lid) {
+                inp.dataset.filterComboDatalistId = lid;
+                inp.removeAttribute('list');
+            }
+            if (inp.dataset.filterComboSuggestWired) return;
+            inp.dataset.filterComboSuggestWired = '1';
+            let blurTimer = null;
+            inp.addEventListener('focus', () => {
+                clearTimeout(blurTimer);
+                filterComboSuggestAnchorInput = inp;
+                filterComboSuggestKind = kind;
+                refreshFilterComboSuggestPanel(inp, kind);
+            });
+            inp.addEventListener('input', () => {
+                if (document.activeElement !== inp) return;
+                filterComboSuggestAnchorInput = inp;
+                filterComboSuggestKind = kind;
+                refreshFilterComboSuggestPanel(inp, kind);
+            });
+            inp.addEventListener('blur', () => {
+                blurTimer = setTimeout(() => {
+                    const panel = document.getElementById('filter-combo-suggest-panel');
+                    if (panel && panel.style.display !== 'none' && filterComboSuggestAnchorInput === inp)
+                        hideFilterComboSuggestPanel(!!filterPreviewBaselineSnapshot);
+                }, 150);
+            });
+        });
+    }
+
+    function getActiveThemeClassForSnapshot() {
+        const root = document.documentElement;
+        for (const c of UI_THEME_CLASSES) {
+            if (root.classList.contains(c)) return c;
+        }
+        return '';
+    }
+
+    function cloneQueueRowsForSnapshot(q) {
+        return (q || []).map((c) => ({ id: c.id, name: c.name, imgId: c.imgId }));
+    }
+
+    function cloneSnapDeckState(obj) {
+        if (!obj) return null;
+        const row = (c) => ({ id: c.id, name: c.name, imgId: c.imgId });
+        return {
+            build: (obj.build || []).map(row),
+            side: (obj.side || []).map(row)
+        };
+    }
+
+    function snapshotNativeSelectPreview(kind) {
+        switch (kind) {
+            case 'theme':
+                return { kind, themeClass: getActiveThemeClassForSnapshot() };
+            case 'results-sort':
+                return {
+                    kind,
+                    sortBy: document.getElementById('sort-by').value,
+                    order: searchResults.slice(),
+                    page: currentPage,
+                    sortDir: sortDirection
+                };
+            case 'deck-sort':
+                return {
+                    kind,
+                    deckSort: document.getElementById('deck-sort-by').value,
+                    cq: cloneQueueRowsForSnapshot(cardQueue),
+                    cs: cloneQueueRowsForSnapshot(cardQueueSide),
+                    ddir: deckSortDirection
+                };
+            case 'deck-banlist':
+                return { kind, ban: document.getElementById('deck-banlist-select').value };
+            case 'saved-deck':
+                return {
+                    kind,
+                    val: document.getElementById('saved-decks-select').value,
+                    deck: cloneDeckStateSnapshot(),
+                    draft: deckDraftBeforeSavedLoad ? cloneSnapDeckState(deckDraftBeforeSavedLoad) : null
+                };
+            default:
+                return { kind };
+        }
+    }
+
+    async function restoreNativeSelectPreview(snap) {
+        if (!snap || !snap.kind) return;
+        switch (snap.kind) {
+            case 'theme':
+                changeTheme(snap.themeClass || '', { preview: true });
+                return;
+            case 'results-sort': {
+                const sb = document.getElementById('sort-by');
+                if (sb) sb.value = snap.sortBy;
+                searchResults = (snap.order || []).slice();
+                currentPage = snap.page;
+                sortDirection = snap.sortDir;
+                const icon = document.getElementById('order-icon');
+                if (icon) icon.className = 'fas ' + (sortDirection === 1 ? 'fa-arrow-up' : 'fa-arrow-down');
+                renderResults();
+                return;
+            }
+            case 'deck-sort': {
+                const ds = document.getElementById('deck-sort-by');
+                if (ds) ds.value = snap.deckSort;
+                deckSortCriterionPinned = snap.deckSort || 'custom';
+                cardQueue = cloneQueueRowsForSnapshot(snap.cq);
+                cardQueueSide = cloneQueueRowsForSnapshot(snap.cs);
+                deckSortDirection = snap.ddir;
+                updateDeckSortOrderIcon();
+                renderDeckQueue();
+                triggerPDFUpdate();
+                return;
+            }
+            case 'deck-banlist': {
+                const bs = document.getElementById('deck-banlist-select');
+                if (bs) bs.value = snap.ban || '';
+                paintDeckValidityFlag();
+                updateUI();
+                return;
+            }
+            case 'saved-deck': {
+                setSavedDecksSelectValue(snap.val || '');
+                restoreDeckStateSnapshot(snap.deck);
+                deckDraftBeforeSavedLoad = snap.draft ? cloneSnapDeckState(snap.draft) : null;
+                await ensureCardCacheForQueue();
+                updateUI();
+                return;
+            }
+            default:
+                return;
+        }
+    }
+
+    async function applyNativeSelectSavedDeckPreview(id, gen) {
+        const sel = document.getElementById('saved-decks-select');
+        if (!id) {
+            if (deckDraftBeforeSavedLoad != null) {
+                restoreDeckStateSnapshot(deckDraftBeforeSavedLoad);
+                deckDraftBeforeSavedLoad = null;
+            }
+            setSavedDecksSelectValue('');
+            await ensureCardCacheForQueue();
+            if (gen !== nativeSelectPreviewGen) return;
+            updateUI();
+            return;
+        }
+        const decks = loadSavedDecksFromStorage();
+        const deck = decks.find((d) => String(d.id) === String(id));
+        if (!deck || !Array.isArray(deck.stacks)) return;
+        deckDraftBeforeSavedLoad = cardQueue.length || cardQueueSide.length ? cloneDeckStateSnapshot() : null;
+        cardQueue = expandStacksToQueue(deck.stacks);
+        cardQueueSide = expandStacksToQueue(deck.sideStacks || []);
+        await ensureCardCacheForQueue();
+        if (gen !== nativeSelectPreviewGen) return;
+        updateUI();
+        setSavedDecksSelectValue(id);
+    }
+
+    function ensureNativeCustomSelectPanel() {
+        let panel = document.getElementById('ui-native-custom-select-panel');
+        if (panel) return panel;
+        panel = document.createElement('div');
+        panel.id = 'ui-native-custom-select-panel';
+        panel.className = 'ui-native-custom-select-panel';
+        panel.setAttribute('role', 'listbox');
+        document.body.appendChild(panel);
+        panel.addEventListener('mouseleave', (e) => {
+            const rel = e.relatedTarget;
+            if (rel && nativeCustomSelectCtx && (rel === nativeCustomSelectCtx.btn || (nativeCustomSelectCtx.btn && nativeCustomSelectCtx.btn.contains(rel))))
+                return;
+            void hideNativeCustomSelectPanel(!!nativeCustomSelectBaseline);
+        });
+        return panel;
+    }
+
+    function positionNativeCustomSelectPanel(anchor) {
+        const panel = document.getElementById('ui-native-custom-select-panel');
+        if (!panel || !anchor) return;
+        const r = anchor.getBoundingClientRect();
+        panel.style.left = `${Math.round(r.left)}px`;
+        panel.style.top = `${Math.round(r.bottom + 2)}px`;
+        panel.style.width = `${Math.round(Math.max(r.width, 160))}px`;
+    }
+
+    function bindNativeCustomSelectScrollReposition() {
+        if (nativeCustomSelectScrollBound) return;
+        nativeCustomSelectScrollBound = true;
+        const repos = () => {
+            const panel = document.getElementById('ui-native-custom-select-panel');
+            if (!panel || panel.style.display === 'none' || !nativeCustomSelectCtx || !nativeCustomSelectCtx.btn) return;
+            positionNativeCustomSelectPanel(nativeCustomSelectCtx.btn);
+        };
+        window.addEventListener('scroll', repos, true);
+        window.addEventListener('resize', repos);
+    }
+
+    async function hideNativeCustomSelectPanel(revertPreview) {
+        const panel = document.getElementById('ui-native-custom-select-panel');
+        if (panel) panel.style.display = 'none';
+        nativeSelectPreviewGen++;
+        if (nativeCustomSelectCtx && nativeCustomSelectCtx.btn) nativeCustomSelectCtx.btn.setAttribute('aria-expanded', 'false');
+        const snap = nativeCustomSelectBaseline;
+        nativeCustomSelectBaseline = null;
+        nativeCustomSelectCtx = null;
+        if (revertPreview && snap) await restoreNativeSelectPreview(snap);
+    }
+
+    async function onNativeCustomSelectRowEnter(kind, value) {
+        if (!nativeCustomSelectBaseline) nativeCustomSelectBaseline = snapshotNativeSelectPreview(kind);
+        else await restoreNativeSelectPreview(nativeCustomSelectBaseline);
+        nativeSelectPreviewGen++;
+        const gen = nativeSelectPreviewGen;
+        if (kind === 'saved-deck') {
+            await applyNativeSelectSavedDeckPreview(value, gen);
+            return;
+        }
+        if (kind === 'deck-sort') {
+            const ds = document.getElementById('deck-sort-by');
+            if (ds) ds.value = value;
+            await deckSortAndRefresh({ preview: true });
+            return;
+        }
+        if (kind === 'theme') changeTheme(value || '', { preview: true });
+        else if (kind === 'results-sort') {
+            document.getElementById('sort-by').value = value;
+            sortAndRender({ preview: true });
+        } else if (kind === 'deck-banlist') {
+            document.getElementById('deck-banlist-select').value = value;
+            paintDeckValidityFlag();
+            updateUI();
+        }
+    }
+
+    async function commitNativeCustomSelect(kind, value) {
+        const hadPreview = !!nativeCustomSelectBaseline;
+        nativeCustomSelectBaseline = null;
+        nativeSelectPreviewGen++;
+        const panel = document.getElementById('ui-native-custom-select-panel');
+        if (panel) panel.style.display = 'none';
+        const ctx = nativeCustomSelectCtx;
+        nativeCustomSelectCtx = null;
+        if (ctx && ctx.btn) ctx.btn.setAttribute('aria-expanded', 'false');
+        if (kind === 'saved-deck' && !hadPreview && ctx && ctx.sel) {
+            ctx.sel.value = value;
+            ctx.sel.dispatchEvent(new Event('change', { bubbles: true }));
+            if (ctx.selId) syncNativeCustomSelectTrigger(ctx.selId);
+            return;
+        }
+        if (kind === 'saved-deck' && hadPreview) {
+            setSavedDecksSelectValue(value);
+            try {
+                setUiPref(UI_PREF_KEYS.savedDeckId, value ? String(value) : '');
+            } catch (_) {}
+            deckDraftBeforeSavedLoad = null;
+            if (value) showToast(T('toast.deck_loaded'));
+            if (ctx && ctx.selId) syncNativeCustomSelectTrigger(ctx.selId);
+            return;
+        }
+        if (ctx && ctx.sel) ctx.sel.value = value;
+        if (kind === 'theme') changeTheme(value || '');
+        else if (kind === 'results-sort') sortAndRender();
+        else if (kind === 'deck-sort') void deckSortAndRefresh();
+        else if (kind === 'deck-banlist') {
+            try {
+                setUiPref(UI_PREF_KEYS.deckBanlist, value || '');
+            } catch (_) {}
+            paintDeckValidityFlag();
+            updateUI();
+        }
+        if (ctx && ctx.selId) syncNativeCustomSelectTrigger(ctx.selId);
+    }
+
+    function refreshNativeCustomSelectPanel() {
+        const panel = ensureNativeCustomSelectPanel();
+        const ctx = nativeCustomSelectCtx;
+        if (!ctx || !ctx.sel) return;
+        const sel = ctx.sel;
+        const kind = ctx.kind;
+        panel.innerHTML = '';
+        for (let i = 0; i < sel.options.length; i++) {
+            const o = sel.options[i];
+            const v = o.value;
+            const div = document.createElement('div');
+            div.className = 'ui-native-custom-select-row filter-combo-suggest-row';
+            div.setAttribute('role', 'option');
+            div.textContent = o.textContent || v || '—';
+            div.addEventListener('mouseenter', () => { void onNativeCustomSelectRowEnter(kind, v); });
+            div.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                void commitNativeCustomSelect(kind, v);
+            });
+            panel.appendChild(div);
+        }
+        positionNativeCustomSelectPanel(ctx.btn);
+        panel.style.display = 'block';
+    }
+
+    function openNativeCustomSelectPanel(ctxIn) {
+        hideFilterComboSuggestPanel(!!filterPreviewBaselineSnapshot);
+        nativeCustomSelectCtx = ctxIn;
+        nativeCustomSelectCtx.btn.setAttribute('aria-expanded', 'true');
+        refreshNativeCustomSelectPanel();
+    }
+
+    function syncNativeCustomSelectTrigger(selId) {
+        const sel = document.getElementById(selId);
+        const btn = document.querySelector(`[data-native-custom-trigger="${selId}"]`);
+        if (!sel || !btn) return;
+        const i = sel.selectedIndex;
+        const t = i >= 0 && sel.options[i] ? sel.options[i].textContent : '—';
+        btn.textContent = (t && t.trim()) ? t.trim() : '—';
+    }
+
+    function syncAllNativeCustomSelectTriggers() {
+        ['theme-selector', 'sort-by', 'saved-decks-select', 'deck-banlist-select', 'deck-sort-by'].forEach(syncNativeCustomSelectTrigger);
+    }
+
+    function initNativeSelectCustomUi() {
+        if (window.__nativeCustomSelectUiInited) return;
+        window.__nativeCustomSelectUiInited = true;
+        ensureNativeCustomSelectPanel();
+        bindNativeCustomSelectScrollReposition();
+        document.addEventListener('keydown', (e) => {
+            if (e.key !== 'Escape') return;
+            const panel = document.getElementById('ui-native-custom-select-panel');
+            if (!panel || panel.style.display === 'none') return;
+            e.preventDefault();
+            const btnEsc = nativeCustomSelectCtx && nativeCustomSelectCtx.btn;
+            void hideNativeCustomSelectPanel(!!nativeCustomSelectBaseline);
+            if (btnEsc) btnEsc.focus();
+        });
+        const configs = [
+            { selId: 'theme-selector', kind: 'theme' },
+            { selId: 'sort-by', kind: 'results-sort' },
+            { selId: 'saved-decks-select', kind: 'saved-deck' },
+            { selId: 'deck-banlist-select', kind: 'deck-banlist' },
+            { selId: 'deck-sort-by', kind: 'deck-sort' }
+        ];
+        configs.forEach(({ selId, kind }) => {
+            const sel = document.getElementById(selId);
+            if (!sel || sel.dataset.nativeCustomUi === '1') return;
+            sel.dataset.nativeCustomUi = '1';
+            const parent = sel.parentNode;
+            const wrap = document.createElement('div');
+            wrap.className = 'custom-select-ui-wrap';
+            if (selId === 'saved-decks-select') wrap.classList.add('custom-select-wrap--saved-decks');
+            else if (selId === 'deck-banlist-select') wrap.classList.add('custom-select-wrap--deck-banlist');
+            if (sel.id === 'sort-by' || sel.id === 'deck-sort-by') wrap.style.flex = '1';
+            parent.insertBefore(wrap, sel);
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'custom-select-trigger';
+            btn.setAttribute('data-native-custom-trigger', selId);
+            btn.setAttribute('aria-haspopup', 'listbox');
+            btn.setAttribute('aria-expanded', 'false');
+            btn.setAttribute('aria-label', sel.getAttribute('aria-label') || selId);
+            wrap.appendChild(btn);
+            wrap.appendChild(sel);
+            sel.classList.add('custom-select-native-hidden');
+            sel.removeAttribute('onchange');
+            syncNativeCustomSelectTrigger(selId);
+            btn.addEventListener('click', (ev) => {
+                ev.preventDefault();
+                const p = ensureNativeCustomSelectPanel();
+                if (nativeCustomSelectCtx && nativeCustomSelectCtx.btn === btn && p.style.display === 'block') {
+                    void hideNativeCustomSelectPanel(!!nativeCustomSelectBaseline);
+                    return;
+                }
+                void hideNativeCustomSelectPanel(!!nativeCustomSelectBaseline);
+                openNativeCustomSelectPanel({ kind, sel, selId: sel.id, btn });
+            });
+        });
+        const tSel = document.getElementById('theme-selector');
+        if (tSel) tSel.addEventListener('change', () => changeTheme(tSel.value));
+        const sSel = document.getElementById('sort-by');
+        if (sSel) sSel.addEventListener('change', () => sortAndRender());
+        const dSel = document.getElementById('deck-sort-by');
+        if (dSel) dSel.addEventListener('change', () => void deckSortAndRefresh());
+        syncAllNativeCustomSelectTriggers();
     }
 
     function tryAddComboFilter(kind) {
@@ -8514,6 +9356,7 @@
             const b = document.getElementById(cid);
             if (b) b.onclick = () => clearComboFilterGroup(key);
         });
+        initFilterComboSuggestBehavior();
     }
 
     /** Banlist ativa para exibir badges (ícones) nas cartas/tooltip. Deck selecionado tem prioridade. */
@@ -8629,6 +9472,15 @@
     const FILTER_URL_PREFIX = 'flt_';
     let filterUrlSyncTimer = null;
     let filterUrlSyncSuspended = false;
+    let filterPreviewBaselineSnapshot = null;
+    let filterPreviewSearchSeq = 0;
+    let filterComboSuggestAnchorInput = null;
+    let filterComboSuggestKind = null;
+    let filterComboSuggestScrollBound = false;
+    let nativeCustomSelectBaseline = null;
+    let nativeSelectPreviewGen = 0;
+    let nativeCustomSelectCtx = null;
+    let nativeCustomSelectScrollBound = false;
 
     function hasDeckbuilderFilterUrlParams(sp) {
         if (!sp) return false;
@@ -9921,10 +10773,10 @@
         return 0;
     }
 
-    function sortAndRender() {
+    function sortAndRender(opts) {
         if (!cardSurfaceFeedbackReason) requestCardSurfaceFeedback('sort');
         const criterion = document.getElementById('sort-by').value;
-        setUiPref(UI_PREF_KEYS.resultsSort, criterion);
+        if (!opts || !opts.preview) setUiPref(UI_PREF_KEYS.resultsSort, criterion);
         if (criterion === 'random') {
             shuffleArrayInPlace(searchResults);
             currentPage = 1;
@@ -12715,6 +13567,7 @@
             initFiltersColumnToolbar();
             initExportMenu();
             initDeckValidationControls();
+            initNativeSelectCustomUi();
             try {
                 getDeckSortCriterion();
             } catch (_) {}
@@ -12726,6 +13579,7 @@
         initFiltersColumnToolbar();
         initExportMenu();
         initDeckValidationControls();
+        initNativeSelectCustomUi();
         try {
             getDeckSortCriterion();
         } catch (_) {}
