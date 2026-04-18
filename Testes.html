@@ -368,6 +368,11 @@
             overflow: hidden; 
         }
 
+        /* Evita faixa/bordas com cor do :root quando o tema está só no <html>. */
+        html {
+            background-color: var(--bg-dark);
+        }
+
         #card-tooltip {
             display: none;
             position: fixed;
@@ -376,7 +381,7 @@
             width: 350px;
             height: auto;
             max-height: calc(100vh - 40px);
-            background: rgba(26, 26, 26, 0.98);
+            background: var(--panel-bg);
             border: 1px solid var(--accent);
             border-radius: 4px;
             padding: 15px;
@@ -981,7 +986,7 @@
         .cardset-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
         .cardset-chip {
             display: inline-flex; align-items: center; gap: 4px; max-width: 100%;
-            padding: 4px 8px; background: #222; border: 1px solid #444; border-radius: 999px;
+            padding: 4px 8px; background: var(--bg-dark); border: 1px solid var(--border); border-radius: 999px;
             font-size: 11px; color: var(--text); line-height: 1.3;
         }
         .cardset-chip button {
@@ -1135,7 +1140,7 @@
             align-items: baseline;
             line-height: 1.42;
         }
-        body.theme-white #tooltip-text .tt-tooltip-dates {
+        html.theme-white #tooltip-text .tt-tooltip-dates {
             border-top-color: var(--border);
             color: var(--text);
         }
@@ -1163,8 +1168,8 @@
             font-weight: 600;
             opacity: 0.9;
         }
-        body.theme-white .tt-cardsets-cell { color: #374151; }
-        body.theme-white .tt-cardsets-cell .tt-cardsets-pr { color: #047857; }
+        html.theme-white .tt-cardsets-cell { color: #374151; }
+        html.theme-white .tt-cardsets-cell .tt-cardsets-pr { color: #047857; }
 
         .card-sets-panel {
             display: none;
@@ -1199,7 +1204,7 @@
             box-shadow: 0 24px 60px rgba(0, 0, 0, 0.75);
             overflow: hidden;
         }
-        body.theme-white .csp-dialog {
+        html.theme-white .csp-dialog {
             background: #fff;
             border-color: var(--border);
             color: #1f2937;
@@ -1235,7 +1240,7 @@
             padding: 16px 18px;
             box-shadow: 0 20px 50px rgba(0, 0, 0, 0.65);
         }
-        body.theme-white .deck-name-modal-dialog {
+        html.theme-white .deck-name-modal-dialog {
             background: #fff;
         }
         .deck-name-modal-dialog h3 {
@@ -1300,7 +1305,7 @@
             font-weight: 600;
             line-height: 1.25;
         }
-        body.theme-white .deck-swap-pick-row {
+        html.theme-white .deck-swap-pick-row {
             background: #f3f4f6;
         }
 
@@ -1335,7 +1340,7 @@
             flex-direction: column;
             overflow: hidden;
         }
-        body.theme-white .tooltip-details-modal-dialog { background: #fff; }
+        html.theme-white .tooltip-details-modal-dialog { background: #fff; }
         .tooltip-details-modal-header {
             display: flex;
             align-items: flex-end;
@@ -1367,7 +1372,7 @@
             align-items: center;
             justify-content: center;
         }
-        body.theme-white .tooltip-details-modal-close { background: #f3f4f6; }
+        html.theme-white .tooltip-details-modal-close { background: #f3f4f6; }
         .tooltip-details-modal-body {
             flex: 1;
             overflow: hidden;
@@ -1475,7 +1480,7 @@
             border-bottom: 1px solid #333;
             flex-shrink: 0;
         }
-        body.theme-white .csp-header { border-bottom-color: var(--border); }
+        html.theme-white .csp-header { border-bottom-color: var(--border); }
         .csp-title {
             margin: 0;
             font-size: 15px;
@@ -1499,7 +1504,7 @@
             justify-content: center;
         }
         .csp-close:hover { background: #333; }
-        body.theme-white .csp-close {
+        html.theme-white .csp-close {
             background: #f3f4f6;
             color: #111;
         }
@@ -1513,7 +1518,7 @@
             overscroll-behavior: contain;
         }
         .csp-body .tt-set-line { color: #fff; }
-        body.theme-white .csp-body .tt-set-line { color: #374151; }
+        html.theme-white .csp-body .tt-set-line { color: #374151; }
 
         .card-sets-fab {
             position: absolute;
@@ -1544,7 +1549,7 @@
                 opacity: 0.9;
             }
         }
-        body.theme-white .card-sets-fab {
+        html.theme-white .card-sets-fab {
             background: rgba(255, 255, 255, 0.95);
             border-color: var(--border);
         }
@@ -1563,17 +1568,36 @@
             text-transform: none;
         }
         .btn-open-card-sets:hover { filter: brightness(1.15); }
-        body.theme-white .btn-open-card-sets {
+        html.theme-white .btn-open-card-sets {
             background: #f3f4f6;
             color: var(--accent);
         }
 
-        select, input { background: #111; border: 1px solid #444; color: white; padding: 8px; border-radius: 4px; font-size: 13px; width: 100%; box-sizing: border-box; }
+        select, input, textarea {
+            background: var(--panel-bg);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 8px;
+            border-radius: 4px;
+            font-size: 13px;
+            width: 100%;
+            box-sizing: border-box;
+        }
         
         .btn-secondary { 
-            display: block; background: #333; color: white; width: 100%; padding: 10px; border-radius: 4px; 
-            cursor: pointer; text-align: center; border: 1px solid #444; font-size: 11px; font-weight: bold;
-            box-sizing: border-box; text-transform: uppercase;
+            display: block;
+            background: var(--bg-dark);
+            color: var(--text);
+            width: 100%;
+            padding: 10px;
+            border-radius: 4px; 
+            cursor: pointer;
+            text-align: center;
+            border: 1px solid var(--border);
+            font-size: 11px;
+            font-weight: bold;
+            box-sizing: border-box;
+            text-transform: uppercase;
         }
 
         .lang-switch {
@@ -1609,15 +1633,15 @@
             border-radius: 2px;
             box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12);
         }
-        body.theme-white .lang-icon-btn svg {
+        html.theme-white .lang-icon-btn svg {
             box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.15);
         }
 
-        .stepper { display: flex; border: 1px solid #444; border-radius: 4px; overflow: hidden; height: 35px; background: #111; }
-        .stepper button { background: #333; color: white; border: none; width: 35px; min-width: 35px; flex: 0 0 35px; cursor: pointer; font-size: 18px; font-weight: bold; }
-        .stepper input { border: none !important; text-align: center; width: 100%; background: transparent; }
+        .stepper { display: flex; border: 1px solid var(--border); border-radius: 4px; overflow: hidden; height: 35px; background: var(--panel-bg); }
+        .stepper button { background: var(--bg-dark); color: var(--text); border: none; width: 35px; min-width: 35px; flex: 0 0 35px; cursor: pointer; font-size: 18px; font-weight: bold; }
+        .stepper input { border: none !important; text-align: center; width: 100%; background: transparent; color: var(--text); }
 
-        .search-area { background: #111; padding: 15px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+        .search-area { background: var(--panel-bg); padding: 15px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
         .view-controls {
             display: flex;
             justify-content: space-between;
@@ -1720,7 +1744,7 @@
             border-radius: 5px;
         }
        
-        .btn-view { background: #333; color: var(--muted-text); border: 1px solid #444; padding: 5px 10px; cursor: pointer; border-radius: 4px; font-size: 11px; }
+        .btn-view { background: var(--bg-dark); color: var(--muted-text); border: 1px solid var(--border); padding: 5px 10px; cursor: pointer; border-radius: 4px; font-size: 11px; }
         .btn-view:hover { border-color: var(--accent); color: var(--text); }
         .btn-view.active { background: var(--accent); color: black; border-color: var(--accent); }
 
@@ -1903,6 +1927,7 @@
             gap: 10px;
             padding: 10px;
             align-content: start;
+            background: var(--bg-dark);
         }
 
         .results-view.grid-mode .suggestion-item {
@@ -1953,12 +1978,12 @@
 
         .deck-stats-bar {
             flex-shrink: 0;
-            background: #151515;
+            background: var(--bg-dark);
             border-bottom: 1px solid var(--border);
             padding: 6px 10px;
             font-size: 10px;
         }
-        body.theme-white .deck-stats-bar {
+        html.theme-white .deck-stats-bar {
             background: #f3f4f6;
         }
         .deck-stats-bar-inner {
@@ -2001,7 +2026,7 @@
             font-variant-numeric: tabular-nums;
             border: 1px solid rgba(255, 255, 255, 0.12);
         }
-        body.theme-white .deck-stat-chip {
+        html.theme-white .deck-stat-chip {
             border-color: var(--border);
         }
         .deck-stat-chip i {
@@ -2024,16 +2049,16 @@
             background: rgba(22, 70, 135, 0.35);
             color: #c8dcff;
         }
-        body.theme-white .deck-stat-chip--monster {
+        html.theme-white .deck-stat-chip--monster {
             color: #7c2d12;
         }
-        body.theme-white .deck-stat-chip--spell {
+        html.theme-white .deck-stat-chip--spell {
             color: #14532d;
         }
-        body.theme-white .deck-stat-chip--trap {
+        html.theme-white .deck-stat-chip--trap {
             color: #831843;
         }
-        body.theme-white .deck-stat-chip--extra {
+        html.theme-white .deck-stat-chip--extra {
             color: #1e3a8a;
         }
         .deck-stat-price-wrap {
@@ -2083,10 +2108,10 @@
             color: rgba(255, 255, 255, 0.75);
             border-color: rgba(149, 165, 166, 0.25);
         }
-        body.theme-white .deck-validity-flag { border-color: var(--border); }
-        body.theme-white .deck-validity-flag.is-off { color: #334155; }
-        body.theme-white .deck-validity-flag.is-valid { color: #065f46; }
-        body.theme-white .deck-validity-flag.is-invalid { color: #7f1d1d; }
+        html.theme-white .deck-validity-flag { border-color: var(--border); }
+        html.theme-white .deck-validity-flag.is-off { color: #334155; }
+        html.theme-white .deck-validity-flag.is-valid { color: #065f46; }
+        html.theme-white .deck-validity-flag.is-invalid { color: #7f1d1d; }
 
         .deck-validate-controls {
             display: inline-flex;
@@ -2105,7 +2130,7 @@
             max-width: 220px;
             box-sizing: border-box;
         }
-        body.theme-white .deck-validate-select {
+        html.theme-white .deck-validate-select {
             background: #fff;
         }
 
@@ -2116,7 +2141,7 @@
             align-items: flex-end;
             gap: 8px 10px;
             padding: 8px 10px;
-            background: #121212;
+            background: var(--bg-dark);
             border-bottom: 1px solid var(--border);
         }
         .deck-sort-bar-field {
@@ -2127,7 +2152,7 @@
             flex: 1;
             min-width: 140px;
         }
-        body.theme-white .deck-sort-bar {
+        html.theme-white .deck-sort-bar {
             background: #eceef2;
         }
         .deck-sort-bar-field .sort-controls {
@@ -2178,7 +2203,7 @@
             align-items: center;
             justify-content: space-between;
             padding: 5px 10px;
-            background: rgba(0, 0, 0, 0.35);
+            background: var(--bg-dark);
             border-bottom: 1px solid var(--border);
             font-size: 10px;
             font-weight: 800;
@@ -2187,7 +2212,7 @@
             color: var(--accent);
             flex-shrink: 0;
         }
-        body.theme-white .deck-section-head {
+        html.theme-white .deck-section-head {
             background: #e5e7eb;
         }
         .deck-section-count {
@@ -2234,7 +2259,7 @@
             outline-offset: -3px;
             background: rgba(0, 0, 0, 0.25);
         }
-        body.theme-white .deck-list.deck-drop-target {
+        html.theme-white .deck-list.deck-drop-target {
             background: rgba(0, 0, 0, 0.04);
         }
         .deck-drop-placeholder {
@@ -2245,7 +2270,7 @@
             pointer-events: none;
             opacity: 0.95;
         }
-        body.theme-white .deck-drop-placeholder {
+        html.theme-white .deck-drop-placeholder {
             background: rgba(0, 0, 0, 0.06);
         }
         /* Placeholder no modo lista: altura semelhante a uma linha. */
@@ -2315,12 +2340,12 @@
             height: 35px;
             padding: 0 6px;
             border-radius: 4px;
-            background: #111;
-            border: 1px solid #444;
+            background: var(--panel-bg);
+            border: 1px solid var(--border);
             color: var(--accent);
             box-sizing: border-box;
         }
-        body.theme-white .saved-decks-select {
+        html.theme-white .saved-decks-select {
             background: #fff;
             color: #111;
         }
@@ -2392,7 +2417,7 @@
             max-width: 100%;
             line-height: 1.3;
         }
-        body.theme-white .deck-import-overlay-sub {
+        html.theme-white .deck-import-overlay-sub {
             color: #4b5563;
         }
         .deck-import-overlay-track {
@@ -2404,7 +2429,7 @@
             border-radius: 2px;
             overflow: hidden;
         }
-        body.theme-white .deck-import-overlay-track {
+        html.theme-white .deck-import-overlay-track {
             background: #e5e7eb;
         }
         .deck-import-overlay-bar {
@@ -2608,7 +2633,7 @@
                 opacity: 0.88;
             }
         }
-        .pdf-preview-container { flex-grow: 1; background: #222; position: relative; overflow: hidden; min-height: 300px; }
+        .pdf-preview-container { flex-grow: 1; background: var(--bg-dark); position: relative; overflow: hidden; min-height: 300px; }
         #preview-frame { width: 100%; height: 100%; border: none; }
         .btn-accent { background: var(--accent); color: black; width: 100%; padding: 12px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; text-transform: uppercase; }
 
@@ -3995,7 +4020,16 @@
                 opt.textContent = String(b.label || b.v || '');
                 sel.appendChild(opt);
             }
+            try {
+                const banPref = getUiPref(UI_PREF_KEYS.deckBanlist);
+                if ([...sel.options].some((o) => String(o.value) === String(banPref))) {
+                    sel.value = String(banPref);
+                }
+            } catch (_) {}
             sel.addEventListener('change', () => {
+                try {
+                    setUiPref(UI_PREF_KEYS.deckBanlist, sel.value || '');
+                } catch (_) {}
                 paintDeckValidityFlag();
                 updateUI();
             });
@@ -4004,6 +4038,9 @@
             btn.dataset.init = '1';
             btn.addEventListener('click', () => {
                 deckValidationDisabled = !deckValidationDisabled;
+                try {
+                    setUiPref(UI_PREF_KEYS.deckValidateOff, deckValidationDisabled ? '1' : '0');
+                } catch (_) {}
                 updateDeckValidationToggleUi();
                 updateUI();
             });
@@ -5150,16 +5187,26 @@
         document.cookie = `${name}=${encodeURIComponent(value)};expires=${exp.toUTCString()};path=/;SameSite=Lax`;
     }
 
-    // Preferências de UI (cookies + fallback localStorage).
+    // Preferências de UI (cookie + localStorage de reserva; `file://` costuma bloquear cookie).
     const UI_PREF_DAYS = 3650;
     const UI_PREF_KEYS = {
         theme: 'ygo_proxy_ui_theme',
-        view: 'ygo_proxy_ui_view', // list | grid
+        view: 'ygo_proxy_ui_view', // list | grid (sugestões)
         resultsSort: 'ygo_proxy_ui_results_sort',
         resultsSortDir: 'ygo_proxy_ui_results_sort_dir', // 1 | -1
         deckSort: 'ygo_proxy_ui_deck_sort',
         deckSortDir: 'ygo_proxy_ui_deck_sort_dir', // 1 | -1
-        lang: 'ygo_proxy_ui_lang' // pt | en
+        lang: 'ygo_proxy_ui_lang', // pt | en
+        tooltip: 'ygo_proxy_ui_tooltip', // '1' ligado · '0' desligado
+        filtersColVisible: 'ygo_proxy_filters_col_visible', // '1' visível · '0' oculta (mesma chave que o legado localStorage)
+        fullscreen: 'ygo_proxy_ui_fullscreen', // '1' em tela cheia (tentativa ao carregar)
+        deckColCycle: 'ygo_proxy_ui_deck_col', // 0 | 1 | 2
+        queueView: 'ygo_proxy_ui_queue_view', // list | grid (deck)
+        pdfPreview: 'ygo_proxy_pdf_preview_visible', // '1' prévia visível · '0' oculta
+        savedDeckId: 'ygo_proxy_ui_saved_deck_id',
+        deckBanlist: 'ygo_proxy_ui_deck_banlist',
+        deckValidateOff: 'ygo_proxy_ui_deck_validate_off', // '1' = validação desligada
+        pdfScale: 'ygo_proxy_ui_pdf_scale' // percentual, ex.: 100.0
     };
 
     function getUiPref(key) {
@@ -5880,6 +5927,9 @@
         deckColumnCycle = (deckColumnCycle + 1) % 3;
         applyDeckColumnCycleClasses();
         updateDeckColumnCycleButtonUi();
+        try {
+            setUiPref(UI_PREF_KEYS.deckColCycle, String(deckColumnCycle));
+        } catch (_) {}
         renderResults();
     }
 
@@ -5889,6 +5939,9 @@
         deckColumnCycle = 1;
         applyDeckColumnCycleClasses();
         updateDeckColumnCycleButtonUi();
+        try {
+            setUiPref(UI_PREF_KEYS.deckColCycle, String(deckColumnCycle));
+        } catch (_) {}
     }
 
     function applyPdfPreviewVisibility(hidden) {
@@ -5905,7 +5958,39 @@
         }
         if (icon) icon.className = hidden ? 'fas fa-eye-slash' : 'fas fa-file-pdf';
         try {
-            localStorage.setItem('ygo_proxy_pdf_preview_visible', hidden ? '0' : '1');
+            setUiPref(UI_PREF_KEYS.pdfPreview, hidden ? '0' : '1');
+        } catch (_) {}
+    }
+
+    /** Após restaurar o ID no `<select>`, repõe `cardQueue` / `cardQueueSide` (o cookie só guarda o id, não as cartas). */
+    async function loadPersistedSavedDeckIntoQueueOnStartup() {
+        try {
+            const id = getUiPref(UI_PREF_KEYS.savedDeckId);
+            if (!id) return;
+            const sel = document.getElementById('saved-decks-select');
+            if (!sel || ![...sel.options].some((o) => String(o.value) === String(id))) return;
+            if (cardQueue.length > 0 || cardQueueSide.length > 0) return;
+            const decks = loadSavedDecksFromStorage();
+            const deck = decks.find((d) => String(d.id) === String(id));
+            if (!deck || !Array.isArray(deck.stacks)) {
+                try {
+                    setUiPref(UI_PREF_KEYS.savedDeckId, '');
+                } catch (_) {}
+                setSavedDecksSelectValue('');
+                return;
+            }
+            deckDraftBeforeSavedLoad = null;
+            setSavedDecksSelectValue(id);
+            cardQueue = expandStacksToQueue(deck.stacks);
+            cardQueueSide = expandStacksToQueue(deck.sideStacks || []);
+            await ensureCardCacheForQueue();
+            updateUI();
+            if (!cardQueue.length && !cardQueueSide.length) {
+                try {
+                    setUiPref(UI_PREF_KEYS.savedDeckId, '');
+                } catch (_) {}
+                setSavedDecksSelectValue('');
+            }
         } catch (_) {}
     }
 
@@ -5918,13 +6003,13 @@
         if (!sel || sel.dataset.init === '1') return;
         sel.dataset.init = '1';
         paintSavedDecksSelect();
-        let vis;
         try {
-            vis = localStorage.getItem('ygo_proxy_pdf_preview_visible');
-        } catch (_) {
-            vis = null;
-        }
-        applyPdfPreviewVisibility(vis === '0');
+            const savedSel = getUiPref(UI_PREF_KEYS.savedDeckId);
+            if (savedSel && sel && [...sel.options].some((o) => String(o.value) === String(savedSel))) {
+                setSavedDecksSelectValue(savedSel);
+            }
+        } catch (_) {}
+        applyPdfPreviewVisibility(getUiPref(UI_PREF_KEYS.pdfPreview) === '0');
 
         if (btnPdf) {
             btnPdf.onclick = () => {
@@ -5973,6 +6058,9 @@
                         }
                         paintSavedDecksSelect();
                         setSavedDecksSelectValue(entry.id);
+                        try {
+                            setUiPref(UI_PREF_KEYS.savedDeckId, String(entry.id));
+                        } catch (_) {}
                         showToast(T('toast.deck_saved'));
                     }
                 });
@@ -6034,7 +6122,12 @@
                     return;
                 }
                 paintSavedDecksSelect();
-                if (String(sel.value) === String(id)) setSavedDecksSelectValue('');
+                if (String(sel.value) === String(id)) {
+                    setSavedDecksSelectValue('');
+                    try {
+                        setUiPref(UI_PREF_KEYS.savedDeckId, '');
+                    } catch (_) {}
+                }
                 showToast(T('toast.deck_removed'));
             };
         }
@@ -6051,6 +6144,9 @@
             if (sel.dataset.suppressChange === '1') return;
             const id = sel.value;
             if (!id) {
+                try {
+                    setUiPref(UI_PREF_KEYS.savedDeckId, '');
+                } catch (_) {}
                 if (deckDraftBeforeSavedLoad != null) {
                     restoreDeckStateSnapshot(deckDraftBeforeSavedLoad);
                     deckDraftBeforeSavedLoad = null;
@@ -6065,11 +6161,17 @@
             if (!deck || !Array.isArray(deck.stacks)) {
                 showToast(T('toast.deck_invalid'));
                 setSavedDecksSelectValue('');
+                try {
+                    setUiPref(UI_PREF_KEYS.savedDeckId, '');
+                } catch (_) {}
                 return;
             }
             if (cardQueue.length > 0 || cardQueueSide.length > 0) {
                 if (!confirm(T('confirm.replace_deck'))) {
                     setSavedDecksSelectValue('');
+                    try {
+                        setUiPref(UI_PREF_KEYS.savedDeckId, '');
+                    } catch (_) {}
                     return;
                 }
             }
@@ -6083,9 +6185,14 @@
                 deckDraftBeforeSavedLoad = null;
                 showToast(T('toast.deck_no_valid'));
             } else {
+                try {
+                    setUiPref(UI_PREF_KEYS.savedDeckId, String(id));
+                } catch (_) {}
                 showToast(T('toast.deck_loaded'));
             }
         };
+
+        void loadPersistedSavedDeckIntoQueueOnStartup();
     }
 
     /** Lista expandida antes de reduzir a uma carta aleatória; usado para alternar com o botão. */
@@ -6213,24 +6320,26 @@
         "masterduel": "ban_masterduel"
     };
 
+    const UI_THEME_CLASSES = [
+        'theme-white',
+        'theme-black',
+        'theme-kaiba',
+        'theme-yugi',
+        'theme-joey',
+        'theme-anzu',
+        'theme-honda',
+        'theme-mai',
+        'theme-bakura',
+        'theme-pegasus',
+        'theme-marik',
+        'theme-exodia',
+        'theme-egyptian-gods'
+    ];
+
     function changeTheme(themeName) {
-        const body = document.body;
-        body.classList.remove(
-            'theme-white',
-            'theme-black',
-            'theme-kaiba',
-            'theme-yugi',
-            'theme-joey',
-            'theme-anzu',
-            'theme-honda',
-            'theme-mai',
-            'theme-bakura',
-            'theme-pegasus',
-            'theme-marik',
-            'theme-exodia',
-            'theme-egyptian-gods'
-        );
-        if (themeName) body.classList.add(themeName);
+        const root = document.documentElement;
+        UI_THEME_CLASSES.forEach((c) => root.classList.remove(c));
+        if (themeName) root.classList.add(themeName);
         setUiPref(UI_PREF_KEYS.theme, themeName);
         // legado (mantém compatibilidade com versões antigas que só liam localStorage)
         try { localStorage.setItem('selectedTheme', themeName); } catch (_) {}
@@ -7175,6 +7284,367 @@
     }
 
     window.addEventListener('DOMContentLoaded', toggleBanlistCheckbox);
+
+    /** Filtros compartilháveis na URL (prefixo flt_; outros parâmetros da URL são preservados). */
+    const FILTER_URL_PREFIX = 'flt_';
+    let filterUrlSyncTimer = null;
+    let filterUrlSyncSuspended = false;
+
+    function hasDeckbuilderFilterUrlParams(sp) {
+        if (!sp) return false;
+        for (const k of sp.keys()) {
+            if (k.startsWith(FILTER_URL_PREFIX)) return true;
+        }
+        return false;
+    }
+
+    function stripDeckbuilderFilterUrlParams(sp) {
+        const keys = [...new Set([...sp.keys()].filter((k) => k.startsWith(FILTER_URL_PREFIX)))];
+        keys.forEach((k) => sp.delete(k));
+    }
+
+    function sanitizeUrlFilterText(s, maxLen) {
+        const t = String(s ?? '').replace(/\0/g, '').trim();
+        if (!t) return '';
+        return t.length > maxLen ? t.slice(0, maxLen) : t;
+    }
+
+    function splitCommaList(s) {
+        return String(s || '')
+            .split(',')
+            .map((x) => x.trim())
+            .filter(Boolean);
+    }
+
+    function buildDeckbuilderFilterUrlSearchParams() {
+        const out = new URLSearchParams();
+        const st = window.filterChipState || {};
+        const mtf = window.multiTextFilters || { fname: [], desc: [], atk: [], def: [], priceRanges: [] };
+        const appendMulti = (key, arr) => {
+            for (const v of arr || []) {
+                const t = String(v).trim();
+                if (t) out.append(key, t);
+            }
+        };
+        const tc = (st.typeCategory || []).filter(Boolean);
+        if (tc.length) out.set(`${FILTER_URL_PREFIX}tc`, tc.join(','));
+        const stSub = (st.subtype || []).filter(Boolean);
+        if (stSub.length) out.set(`${FILTER_URL_PREFIX}st`, stSub.join(','));
+        const rc = (st.race || []).filter(Boolean);
+        if (rc.length) out.set(`${FILTER_URL_PREFIX}rc`, rc.join(','));
+        const at = (st.attribute || []).filter(Boolean);
+        if (at.length) out.set(`${FILTER_URL_PREFIX}at`, at.join(','));
+        const lv = (st.level || []).filter(Boolean);
+        if (lv.length) out.set(`${FILTER_URL_PREFIX}lv`, lv.join(','));
+        const er = (st.era || []).filter(Boolean);
+        if (er.length) out.set(`${FILTER_URL_PREFIX}er`, er.join(','));
+        const dr = (st.dateRegion || []).filter(Boolean);
+        if (dr.length) out.set(`${FILTER_URL_PREFIX}dr`, dr.join(','));
+        const bn = (st.banlist || []).filter(Boolean);
+        if (bn.length) out.set(`${FILTER_URL_PREFIX}bn`, bn.join(','));
+        appendMulti(`${FILTER_URL_PREFIX}ar`, st.archetype || []);
+        appendMulti(`${FILTER_URL_PREFIX}cs`, window.selectedCardsetNames || []);
+        appendMulti(`${FILTER_URL_PREFIX}sc`, window.selectedSetCodes || []);
+        appendMulti(`${FILTER_URL_PREFIX}rr`, window.selectedRarities || []);
+        appendMulti(`${FILTER_URL_PREFIX}fc`, mtf.fname || []);
+        appendMulti(`${FILTER_URL_PREFIX}dc`, mtf.desc || []);
+        appendMulti(`${FILTER_URL_PREFIX}atk`, mtf.atk || []);
+        appendMulti(`${FILTER_URL_PREFIX}def`, mtf.def || []);
+        for (const pr of mtf.priceRanges || []) {
+            const lo = pr && pr.min != null ? String(pr.min).trim() : '';
+            const hi = pr && pr.max != null ? String(pr.max).trim() : '';
+            if (lo || hi) out.append(`${FILTER_URL_PREFIX}pr`, `${lo}:${hi}`);
+        }
+        const q = sanitizeUrlFilterText(document.getElementById('search-input')?.value, 280);
+        if (q) out.set(`${FILTER_URL_PREFIX}q`, q);
+        const dq = sanitizeUrlFilterText(document.getElementById('filter-desc')?.value, 600);
+        if (dq) out.set(`${FILTER_URL_PREFIX}dq`, dq);
+        const ax = sanitizeUrlFilterText(document.getElementById('filter-atk')?.value, 12);
+        if (ax) out.set(`${FILTER_URL_PREFIX}ax`, ax);
+        const dx = sanitizeUrlFilterText(document.getElementById('filter-def')?.value, 12);
+        if (dx) out.set(`${FILTER_URL_PREFIX}dx`, dx);
+        const pm = sanitizeUrlFilterText(document.getElementById('filter-price-min')?.value, 24);
+        const px = sanitizeUrlFilterText(document.getElementById('filter-price-max')?.value, 24);
+        if (pm) out.set(`${FILTER_URL_PREFIX}pm`, pm);
+        if (px) out.set(`${FILTER_URL_PREFIX}px`, px);
+        // Só persistir datas na URL quando o filtro por data está de facto ativo (era e/ou região TCG–OCG).
+        // Os inputs têm sempre valores padrão no carregamento; isso não deve virar "filtro" na URL.
+        if (isDateFilterActive()) {
+            const ds = (document.getElementById('date-start')?.value || '').trim();
+            const de = (document.getElementById('date-end')?.value || '').trim();
+            if (ds && isValidCalendarIsoDate(ds)) out.set(`${FILTER_URL_PREFIX}ds`, ds);
+            if (de && isValidCalendarIsoDate(de)) out.set(`${FILTER_URL_PREFIX}de`, de);
+        }
+        const bonly = document.getElementById('enable-banlist-only')?.checked;
+        if (bonly && (st.banlist || []).length) out.set(`${FILTER_URL_PREFIX}bo`, '1');
+        return out;
+    }
+
+    function pushDeckbuilderFilterUrlToHistory() {
+        try {
+            const url = new URL(window.location.href);
+            const merged = new URLSearchParams(url.search);
+            stripDeckbuilderFilterUrlParams(merged);
+            const next = buildDeckbuilderFilterUrlSearchParams();
+            next.forEach((v, k) => merged.append(k, v));
+            const qs = merged.toString();
+            const newUrl = `${url.pathname}${qs ? `?${qs}` : ''}${url.hash}`;
+            const cur = `${url.pathname}${url.search}${url.hash}`;
+            if (newUrl === cur) return;
+            history.replaceState(null, '', newUrl);
+        } catch (e) {
+            console.warn('URL filtros:', e);
+        }
+    }
+
+    function scheduleDeckbuilderFilterUrlSync() {
+        if (filterUrlSyncSuspended) return;
+        clearTimeout(filterUrlSyncTimer);
+        filterUrlSyncTimer = setTimeout(() => {
+            filterUrlSyncTimer = null;
+            pushDeckbuilderFilterUrlToHistory();
+        }, 450);
+    }
+
+    function parseBanlistTokensFromUrl(parts) {
+        const allowed = new Set(['tcg', 'ocg', 'goat', 'masterduel']);
+        const out = [];
+        for (const raw of parts) {
+            const t = String(raw || '').trim().toLowerCase();
+            if (allowed.has(t) && !out.includes(t)) out.push(t);
+            if (out.length >= 3) break;
+        }
+        return out;
+    }
+
+    function applyDeckbuilderFiltersFromUrl(sp) {
+        if (!sp || !hasDeckbuilderFilterUrlParams(sp)) return;
+        const allowedType = new Set(FILTER_TYPE_DL.map((r) => r.v));
+        const allowedAttr = new Set(Object.keys(FILTER_ATTR_LABEL_PT));
+        const allowedEra = new Set(Object.keys(FILTER_ERAS));
+        const allowedDr = new Set(['tcg', 'ocg']);
+
+        window.filterChipState = {
+            typeCategory: [],
+            subtype: [],
+            race: [],
+            attribute: [],
+            level: [],
+            era: [],
+            dateRegion: [],
+            banlist: [],
+            archetype: []
+        };
+        window.multiTextFilters = { fname: [], desc: [], atk: [], def: [], priceRanges: [] };
+        window.selectedCardsetNames = [];
+        window.selectedSetCodes = [];
+        window.selectedRarities = [];
+
+        const si = document.getElementById('search-input');
+        const fdesc = document.getElementById('filter-desc');
+        const fa = document.getElementById('filter-atk');
+        const fd = document.getElementById('filter-def');
+        const pmEl = document.getElementById('filter-price-min');
+        const pxEl = document.getElementById('filter-price-max');
+        if (si) si.value = '';
+        if (fdesc) fdesc.value = '';
+        if (fa) fa.value = '';
+        if (fd) fd.value = '';
+        if (pmEl) pmEl.value = '';
+        if (pxEl) pxEl.value = '';
+        ['filter-type-input', 'filter-subtype-input', 'filter-race-input', 'filter-attribute-input', 'filter-level-input',
+            'filter-archetype-input', 'filter-era-input', 'filter-date-region-input', 'filter-banlist-input',
+            'filter-cardset-input', 'filter-setcode-input', 'filter-rarity-input'].forEach((id) => {
+            const el = document.getElementById(id);
+            if (el) el.value = '';
+        });
+        const bchk = document.getElementById('enable-banlist-only');
+        if (bchk) bchk.checked = false;
+
+        const tcRaw = sp.get(`${FILTER_URL_PREFIX}tc`);
+        if (tcRaw) {
+            const next = [];
+            for (const tok of splitCommaList(tcRaw)) {
+                if (allowedType.has(tok) && !next.includes(tok)) next.push(tok);
+                if (next.length >= 3) break;
+            }
+            window.filterChipState.typeCategory = next;
+        }
+        syncMonsterFilterGroups();
+        refreshSubtypeRaceDatalists();
+
+        const subtypeOpts = new Set(getMonsterSubtypeOpts().map((o) => o.v));
+        const stRaw = sp.get(`${FILTER_URL_PREFIX}st`);
+        if (stRaw && getFilterTypeCategories().includes('Monster')) {
+            const sub = [];
+            for (const tok of splitCommaList(stRaw)) {
+                if (subtypeOpts.has(tok) && !sub.includes(tok)) sub.push(tok);
+            }
+            window.filterChipState.subtype = sub;
+        }
+
+        const rcRaw = sp.get(`${FILTER_URL_PREFIX}rc`);
+        if (rcRaw) {
+            const cat = getFilterTypeCategory();
+            const cats = getFilterTypeCategories();
+            const raceCat = cat || (cats.includes('Monster') ? 'Monster' : '');
+            const keys = raceCat ? raceApiKeysForCategory(raceCat) : [];
+            const keySet = new Set(keys);
+            const ext = window.catalogRaceKeys && raceCat ? (window.catalogRaceKeys[raceCat] || []) : [];
+            ext.forEach((k) => { if (k) keySet.add(String(k)); });
+            const outR = [];
+            for (const tok of splitCommaList(rcRaw)) {
+                if (keySet.has(tok) && !outR.includes(tok)) outR.push(tok);
+            }
+            window.filterChipState.race = outR;
+        }
+
+        const atRaw = sp.get(`${FILTER_URL_PREFIX}at`);
+        if (atRaw) {
+            const outA = [];
+            for (const tok of splitCommaList(atRaw)) {
+                const low = tok.toLowerCase();
+                if (allowedAttr.has(low) && !outA.includes(low)) outA.push(low);
+                if (outA.length >= 7) break;
+            }
+            window.filterChipState.attribute = outA;
+        }
+
+        const lvRaw = sp.get(`${FILTER_URL_PREFIX}lv`);
+        if (lvRaw) {
+            const outL = [];
+            for (const tok of splitCommaList(lvRaw)) {
+                const n = parseInt(tok, 10);
+                if (!Number.isNaN(n) && n >= 0 && n <= 13 && !outL.includes(String(n))) outL.push(String(n));
+            }
+            window.filterChipState.level = outL;
+        }
+
+        const erRaw = sp.get(`${FILTER_URL_PREFIX}er`);
+        if (erRaw) {
+            const outE = [];
+            for (const tok of splitCommaList(erRaw)) {
+                if (allowedEra.has(tok) && !outE.includes(tok)) outE.push(tok);
+            }
+            window.filterChipState.era = outE;
+        }
+
+        const drRaw = sp.get(`${FILTER_URL_PREFIX}dr`);
+        if (drRaw) {
+            const outD = [];
+            for (const tok of splitCommaList(drRaw)) {
+                const low = tok.toLowerCase();
+                if (allowedDr.has(low) && !outD.includes(low)) outD.push(low);
+                if (outD.length >= 2) break;
+            }
+            window.filterChipState.dateRegion = outD;
+        }
+
+        const bnRaw = sp.get(`${FILTER_URL_PREFIX}bn`);
+        if (bnRaw) {
+            window.filterChipState.banlist = parseBanlistTokensFromUrl(splitCommaList(bnRaw));
+        }
+
+        for (const name of sp.getAll(`${FILTER_URL_PREFIX}ar`)) {
+            const raw = sanitizeUrlFilterText(name, 120);
+            if (!raw) continue;
+            const resolved = resolveArchetypeNameFromInput(raw);
+            if (resolved && !(window.filterChipState.archetype || []).includes(resolved)) {
+                if (window.filterChipState.archetype.length >= 99) break;
+                window.filterChipState.archetype.push(resolved);
+            }
+        }
+        for (const nm of sp.getAll(`${FILTER_URL_PREFIX}cs`)) {
+            const raw = sanitizeUrlFilterText(nm, 200);
+            if (!raw) continue;
+            const resolved = resolveCardsetNameFromInput(raw);
+            if (resolved && !(window.selectedCardsetNames || []).includes(resolved)) {
+                window.selectedCardsetNames.push(resolved);
+            }
+        }
+        for (const code of sp.getAll(`${FILTER_URL_PREFIX}sc`)) {
+            const norm = normalizeSetCodeInput(code);
+            if (norm.length < 3) continue;
+            if (!(window.selectedSetCodes || []).includes(norm) && window.selectedSetCodes.length < 16) {
+                window.selectedSetCodes.push(norm);
+            }
+        }
+        for (const r of sp.getAll(`${FILTER_URL_PREFIX}rr`)) {
+            const raw = sanitizeUrlFilterText(r, 80);
+            if (raw.length < 3) continue;
+            const low = raw.toLowerCase();
+            if (!(window.selectedRarities || []).some((x) => String(x).toLowerCase() === low) && window.selectedRarities.length < 12) {
+                window.selectedRarities.push(raw);
+            }
+        }
+        for (const t of sp.getAll(`${FILTER_URL_PREFIX}fc`)) {
+            const v = sanitizeUrlFilterText(t, 280);
+            if (v && !(window.multiTextFilters.fname || []).includes(v)) window.multiTextFilters.fname.push(v);
+        }
+        for (const t of sp.getAll(`${FILTER_URL_PREFIX}dc`)) {
+            const v = sanitizeUrlFilterText(t, 600);
+            if (v && !(window.multiTextFilters.desc || []).includes(v)) window.multiTextFilters.desc.push(v);
+        }
+        for (const t of sp.getAll(`${FILTER_URL_PREFIX}atk`)) {
+            const v = sanitizeUrlFilterText(t, 12);
+            const n = parseInt(v, 10);
+            if (!Number.isNaN(n) && !(window.multiTextFilters.atk || []).includes(String(n))) window.multiTextFilters.atk.push(String(n));
+        }
+        for (const t of sp.getAll(`${FILTER_URL_PREFIX}def`)) {
+            const v = sanitizeUrlFilterText(t, 12);
+            const n = parseInt(v, 10);
+            if (!Number.isNaN(n) && !(window.multiTextFilters.def || []).includes(String(n))) window.multiTextFilters.def.push(String(n));
+        }
+        for (const seg of sp.getAll(`${FILTER_URL_PREFIX}pr`)) {
+            const s = String(seg || '');
+            const idx = s.indexOf(':');
+            const lo = idx >= 0 ? s.slice(0, idx).trim() : s.trim();
+            const hi = idx >= 0 ? s.slice(idx + 1).trim() : '';
+            if (!lo && !hi) continue;
+            window.multiTextFilters.priceRanges.push({
+                id: `url-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
+                min: lo,
+                max: hi
+            });
+        }
+
+        const qv = sanitizeUrlFilterText(sp.get(`${FILTER_URL_PREFIX}q`), 280);
+        if (si && qv) si.value = qv;
+        const dqv = sanitizeUrlFilterText(sp.get(`${FILTER_URL_PREFIX}dq`), 600);
+        if (fdesc && dqv) fdesc.value = dqv;
+        const axv = sanitizeUrlFilterText(sp.get(`${FILTER_URL_PREFIX}ax`), 12);
+        if (fa && axv !== '') fa.value = axv;
+        const dxv = sanitizeUrlFilterText(sp.get(`${FILTER_URL_PREFIX}dx`), 12);
+        if (fd && dxv !== '') fd.value = dxv;
+        const pmv = sanitizeUrlFilterText(sp.get(`${FILTER_URL_PREFIX}pm`), 24);
+        const pxv = sanitizeUrlFilterText(sp.get(`${FILTER_URL_PREFIX}px`), 24);
+        if (pmEl && pmv) pmEl.value = pmv;
+        if (pxEl && pxv) pxEl.value = pxv;
+
+        const dse = document.getElementById('date-start');
+        const dee = document.getElementById('date-end');
+        const drl = window.filterChipState.dateRegion || [];
+        if (getFilterEraKeys().length) {
+            applyEraToDateInputs(window.filterChipState.era[0]);
+        } else if (drl.length > 0) {
+            applyReleasePeriodDefaults();
+        }
+        const dsU = (sp.get(`${FILTER_URL_PREFIX}ds`) || '').trim();
+        const deU = (sp.get(`${FILTER_URL_PREFIX}de`) || '').trim();
+        if (dse && dsU && isValidCalendarIsoDate(dsU)) dse.value = dsU;
+        if (dee && deU && isValidCalendarIsoDate(deU)) dee.value = deU;
+
+        if (bchk && sp.get(`${FILTER_URL_PREFIX}bo`) === '1' && (window.filterChipState.banlist || []).length) {
+            bchk.checked = true;
+        }
+
+        paintComboFilterChips();
+        toggleBanlistCheckbox();
+        renderCardsetFilterChips();
+        renderSetcodeFilterChips();
+        renderRarityFilterChips();
+        paintAllMultiTextChips();
+    }
 
     function escAttr(str) {
         return String(str ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
@@ -8165,6 +8635,18 @@
         return btn.classList.contains('active');
     }
 
+    function applyTooltipFromPref() {
+        const btn = document.getElementById('btn-toggle-tooltip');
+        if (!btn) return;
+        const pref = getUiPref(UI_PREF_KEYS.tooltip);
+        const on = pref === '' ? true : pref === '1';
+        btn.classList.toggle('active', on);
+        btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+        btn.title = on
+            ? 'Tooltip ao passar o rato: ligado (clique para desligar)'
+            : 'Tooltip ao passar o rato: desligado (clique para ligar)';
+    }
+
     function toggleTooltipButton() {
         const btn = document.getElementById('btn-toggle-tooltip');
         if (!btn) return;
@@ -8174,6 +8656,9 @@
         btn.title = on
             ? 'Tooltip ao passar o rato: ligado (clique para desligar)'
             : 'Tooltip ao passar o rato: desligado (clique para ligar)';
+        try {
+            setUiPref(UI_PREF_KEYS.tooltip, on ? '1' : '0');
+        } catch (_) {}
     }
 
     function applyFiltersColumnVisibility(hidden) {
@@ -8188,7 +8673,7 @@
         }
         if (icon) icon.className = hidden ? 'fas fa-eye-slash' : 'fas fa-filter';
         try {
-            localStorage.setItem('ygo_proxy_filters_col_visible', hidden ? '0' : '1');
+            setUiPref(UI_PREF_KEYS.filtersColVisible, hidden ? '0' : '1');
         } catch (_) {}
         try { refreshViewControlsHeaderCompact(); } catch (_) {}
     }
@@ -8197,12 +8682,7 @@
         const btn = document.getElementById('btn-toggle-filters-column');
         if (!btn || btn.dataset.init === '1') return;
         btn.dataset.init = '1';
-        let vis;
-        try {
-            vis = localStorage.getItem('ygo_proxy_filters_col_visible');
-        } catch (_) {
-            vis = null;
-        }
+        const vis = getUiPref(UI_PREF_KEYS.filtersColVisible);
         applyFiltersColumnVisibility(vis === '0');
         btn.addEventListener('click', () => {
             const layout = document.getElementById('app-layout');
@@ -8261,8 +8741,20 @@
         if (icon) icon.className = fs ? 'fas fa-compress' : 'fas fa-expand';
     }
 
+    /** Evita gravar o cookie de tela cheia no primeiro paint (apagaria a preferência antes de restaurar). */
+    let persistFullscreenPref = false;
+    function persistFullscreenPrefNow() {
+        if (!persistFullscreenPref) return;
+        try {
+            setUiPref(UI_PREF_KEYS.fullscreen, getFullscreenElement() ? '1' : '0');
+        } catch (_) {}
+    }
+
     ['fullscreenchange', 'webkitfullscreenchange', 'mozfullscreenchange', 'MSFullscreenChange'].forEach((ev) => {
-        document.addEventListener(ev, updateFullscreenButtonUi);
+        document.addEventListener(ev, () => {
+            updateFullscreenButtonUi();
+            persistFullscreenPrefNow();
+        });
     });
     updateFullscreenButtonUi();
 
@@ -8922,6 +9414,36 @@
         return measured ?? (15 + bonus + perRow);
     }
 
+    /** Ciclo da coluna do deck, vista lista/grade da fila, validação, escala PDF e tooltip — antes dos inits que aplicam layout. */
+    function restoreCookieBackedUiStateEarly() {
+        try {
+            const dc = parseInt(getUiPref(UI_PREF_KEYS.deckColCycle), 10);
+            if (dc === 0 || dc === 1 || dc === 2) deckColumnCycle = dc;
+        } catch (_) {}
+        try {
+            const qv = getUiPref(UI_PREF_KEYS.queueView);
+            if (qv === 'list' || qv === 'grid') queueView = qv;
+        } catch (_) {}
+        try {
+            deckValidationDisabled = getUiPref(UI_PREF_KEYS.deckValidateOff) === '1';
+        } catch (_) {}
+        try {
+            const scRaw = getUiPref(UI_PREF_KEYS.pdfScale);
+            const sc = parseFloat(scRaw);
+            const el = document.getElementById('print-scale');
+            if (el && Number.isFinite(sc) && sc >= 40 && sc <= 250) el.value = sc.toFixed(1);
+        } catch (_) {}
+        try {
+            applyTooltipFromPref();
+        } catch (_) {}
+        try {
+            const bL = document.getElementById('btn-queue-list');
+            const bG = document.getElementById('btn-queue-grid');
+            if (bL) bL.classList.toggle('active', queueView === 'list');
+            if (bG) bG.classList.toggle('active', queueView === 'grid');
+        } catch (_) {}
+    }
+
     window.onload = () => {
         const hoje = new Date().toISOString().split('T')[0];
         const ds = document.getElementById('date-start');
@@ -8933,23 +9455,9 @@
         try {
             const themePref = getUiPref(UI_PREF_KEYS.theme);
             if (themePref) {
-                const body = document.body;
-                body.classList.remove(
-                    'theme-white',
-                    'theme-black',
-                    'theme-kaiba',
-                    'theme-yugi',
-                    'theme-joey',
-                    'theme-anzu',
-                    'theme-honda',
-                    'theme-mai',
-                    'theme-bakura',
-                    'theme-pegasus',
-                    'theme-marik',
-                    'theme-exodia',
-                    'theme-egyptian-gods'
-                );
-                body.classList.add(themePref);
+                const root = document.documentElement;
+                UI_THEME_CLASSES.forEach((c) => root.classList.remove(c));
+                root.classList.add(themePref);
                 const sel = document.getElementById('theme-selector');
                 if (sel) sel.value = themePref;
             }
@@ -9011,6 +9519,19 @@
             if (bLang) bLang.onclick = () => setUiLang(getUiLang() === 'pt' ? 'en' : 'pt');
         } catch (_) {}
 
+        try {
+            if (getUiPref(UI_PREF_KEYS.fullscreen) === '1') {
+                const el = document.documentElement;
+                const req =
+                    el.requestFullscreen ||
+                    el.webkitRequestFullscreen ||
+                    el.mozRequestFullScreen ||
+                    el.msRequestFullscreen;
+                if (req) req.call(el).catch(() => {});
+            }
+        } catch (_) {}
+        persistFullscreenPref = true;
+
         document.getElementById('results-view').addEventListener('wheel', function(e) {
             const panel = document.getElementById('card-sets-panel');
             if (panel && panel.classList.contains('is-open')) return;
@@ -9036,10 +9557,7 @@
             document.getElementById(id).addEventListener('change', triggerSearch);
         });
         document.addEventListener('DOMContentLoaded', () => { updateBanlistDates(); });
-        loadCardsetsCatalog();
         scheduleCardinfoCatalogBuild();
-        loadArchetypesCatalog();
-        void refreshYgoprodeckDbVersion();
         const fAdd = document.getElementById('filter-cardset-add');
         const fClr = document.getElementById('filter-cardset-clear');
         const fInp = document.getElementById('filter-cardset-input');
@@ -9167,7 +9685,29 @@
                 if (e.key === 'Enter') { e.preventDefault(); tryAddPriceRangeChip(); }
             });
         });
-        performSearch(true);
+        void (async () => {
+            try {
+                const u = new URL(window.location.href);
+                const sp = u.searchParams;
+                if (sp.has(`${FILTER_URL_PREFIX}cs`) || sp.has(`${FILTER_URL_PREFIX}ar`)) {
+                    await Promise.all([
+                        sp.has(`${FILTER_URL_PREFIX}cs`) ? loadCardsetsCatalog() : Promise.resolve(),
+                        sp.has(`${FILTER_URL_PREFIX}ar`) ? loadArchetypesCatalog() : Promise.resolve()
+                    ]);
+                } else {
+                    loadCardsetsCatalog();
+                    loadArchetypesCatalog();
+                }
+                void refreshYgoprodeckDbVersion();
+                filterUrlSyncSuspended = true;
+                applyDeckbuilderFiltersFromUrl(sp);
+            } catch (e) {
+                console.warn('Filtros na URL:', e);
+            } finally {
+                filterUrlSyncSuspended = false;
+            }
+            performSearch(true);
+        })();
         let resizeItemsPerPageTimer;
         window.addEventListener('resize', () => {
             clearTimeout(resizeItemsPerPageTimer);
@@ -9198,7 +9738,11 @@
 
     function adjustScale(amount) {
         const el = document.getElementById('print-scale');
-        el.value = (parseFloat(el.value) + amount).toFixed(1); triggerPDFUpdate();
+        el.value = (parseFloat(el.value) + amount).toFixed(1);
+        try {
+            setUiPref(UI_PREF_KEYS.pdfScale, String(parseFloat(el.value).toFixed(1)));
+        } catch (_) {}
+        triggerPDFUpdate();
     }
 
     ['search-input', 'filter-desc', 'filter-atk', 'filter-def'].forEach(id => document.getElementById(id).addEventListener('input', triggerSearch));
@@ -9506,44 +10050,48 @@
     }
 
     async function performSearch(initial = false) {
-        const pack = await computeUnexpandedSearchResults(initial);
-        if (pack.kind === 'skip') return;
-        if (pack.kind === 'clear') {
-            clearRandomPickState();
-            document.getElementById('results-view').innerHTML = '';
-            return;
-        }
-        if (pack.kind === 'toast') {
-            showToast(pack.msg || T('search.failed'));
-            clearRandomPickState();
-            searchResults = [];
-            renderResults();
-            return;
-        }
-        if (pack.kind === 'error') {
-            clearRandomPickState();
-            searchResults = [];
-            renderResults();
-            return;
-        }
+        try {
+            const pack = await computeUnexpandedSearchResults(initial);
+            if (pack.kind === 'skip') return;
+            if (pack.kind === 'clear') {
+                clearRandomPickState();
+                document.getElementById('results-view').innerHTML = '';
+                return;
+            }
+            if (pack.kind === 'toast') {
+                showToast(pack.msg || T('search.failed'));
+                clearRandomPickState();
+                searchResults = [];
+                renderResults();
+                return;
+            }
+            if (pack.kind === 'error') {
+                clearRandomPickState();
+                searchResults = [];
+                renderResults();
+                return;
+            }
 
-        const finalData = pack.finalData || [];
-        const expandedResults = [];
-        finalData.forEach(card => {
-            (card.card_images || []).forEach((img, idx) => {
-                expandedResults.push({
-                    ...card,
-                    current_image: img,
-                    variant_idx: idx,
-                    is_variant: (card.card_images || []).length > 1
+            const finalData = pack.finalData || [];
+            const expandedResults = [];
+            finalData.forEach(card => {
+                (card.card_images || []).forEach((img, idx) => {
+                    expandedResults.push({
+                        ...card,
+                        current_image: img,
+                        variant_idx: idx,
+                        is_variant: (card.card_images || []).length > 1
+                    });
                 });
             });
-        });
-        searchResults = expandedResults;
-        clearRandomPickState();
-        finalData.forEach(c => { cardCache[c.id] = c; });
-        if (initial || pack.hasFnameQuery || pack.hasDescQuery || pack.hasOtherFilters) currentPage = 1;
-        sortAndRender();
+            searchResults = expandedResults;
+            clearRandomPickState();
+            finalData.forEach(c => { cardCache[c.id] = c; });
+            if (initial || pack.hasFnameQuery || pack.hasDescQuery || pack.hasOtherFilters) currentPage = 1;
+            sortAndRender();
+        } finally {
+            scheduleDeckbuilderFilterUrlSync();
+        }
     }
 
     function pickRandomFilteredCard() {
@@ -9641,9 +10189,9 @@
             div.className = 'suggestion-item';
             const colorKey = getTypeColorKeyFromCardType(card.type);
             const cardBgColor = typeColors[colorKey] || "var(--panel-bg)";
-            const hasCustomTheme = document.body.classList.contains('theme-white') || 
-                                    document.body.classList.contains('theme-black') ||
-                                    document.body.classList.contains('theme-kaiba');
+            const hasCustomTheme = document.documentElement.classList.contains('theme-white') || 
+                                    document.documentElement.classList.contains('theme-black') ||
+                                    document.documentElement.classList.contains('theme-kaiba');
             if (!hasCustomTheme) {
                 div.style.backgroundColor = cardBgColor;
                 div.style.borderLeft = "none";
@@ -9856,6 +10404,9 @@
         if (bL) bL.classList.toggle('active', view === 'list');
         if (bG) bG.classList.toggle('active', view === 'grid');
         renderDeckQueue();
+        try {
+            setUiPref(UI_PREF_KEYS.queueView, queueView);
+        } catch (_) {}
     }
 
     function renderDeckQueue() {
@@ -9910,9 +10461,9 @@
             const safeName = escapeHtml(c.name);
             const hasSets = fullCardData && fullCardData.card_sets && fullCardData.card_sets.length;
             const hasCustomTheme =
-                document.body.classList.contains('theme-white') ||
-                document.body.classList.contains('theme-black') ||
-                document.body.classList.contains('theme-kaiba');
+                document.documentElement.classList.contains('theme-white') ||
+                document.documentElement.classList.contains('theme-black') ||
+                document.documentElement.classList.contains('theme-kaiba');
             const colorKey = fullCardData ? getTypeColorKeyFromCardType(fullCardData.type) : null;
             const cardBgColor = colorKey ? typeColors[colorKey] : 'var(--panel-bg)';
 
@@ -10297,6 +10848,7 @@
     window.changeQueueView = changeQueueView;
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', () => {
+            restoreCookieBackedUiStateEarly();
             initDeckDragDrop();
             initSavedDecksAndPdfToolbar();
             initFiltersColumnToolbar();
@@ -10307,6 +10859,7 @@
             } catch (_) {}
         });
     } else {
+        restoreCookieBackedUiStateEarly();
         initDeckDragDrop();
         initSavedDecksAndPdfToolbar();
         initFiltersColumnToolbar();
@@ -10321,6 +10874,9 @@
             restoreDeckStateSnapshot(deckDraftBeforeSavedLoad);
             deckDraftBeforeSavedLoad = null;
             setSavedDecksSelectValue('');
+            try {
+                setUiPref(UI_PREF_KEYS.savedDeckId, '');
+            } catch (_) {}
             updateUI();
             hideTooltip();
             showToast(T('toast.draft_before_saved'));
@@ -11677,6 +12233,9 @@
         setDeckImportBusySubtext(T('busy.sync_cards'));
         deckDraftBeforeSavedLoad = null;
         setSavedDecksSelectValue('');
+        try {
+            setUiPref(UI_PREF_KEYS.savedDeckId, '');
+        } catch (_) {}
         const { build, side } = normalizeImportedDeckPayload(payload);
         cardQueue = build;
         cardQueueSide = side;
@@ -11756,6 +12315,9 @@
         paintSavedDecksSelect();
         deckDraftBeforeSavedLoad = null;
         setSavedDecksSelectValue('');
+        try {
+            setUiPref(UI_PREF_KEYS.savedDeckId, '');
+        } catch (_) {}
         updateUI();
         setDeckImportBusyBar(100);
         let msg = `${parsed.length} decks adicionados aos guardados (${addedNames.slice(0, 3).join(', ')}${addedNames.length > 3 ? '…' : ''}).`;
@@ -11859,7 +12421,7 @@
         renderRarityFilterChips();
         paintAllMultiTextChips();
         currentPage = 1;
-        performSearch(true);
+        void performSearch(true).then(() => pushDeckbuilderFilterUrlToHistory());
         showToast(T('toast.filters_reset'));
     };
     
