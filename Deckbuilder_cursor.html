@@ -8,6 +8,9 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://unpkg.com/tesseract.js@v4.0.1/dist/tesseract.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bitter:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
     <style>
         :root {
             --bg-dark: #0c0c0c;
@@ -359,8 +362,39 @@
             border-bottom-color: rgba(250, 204, 21, 0.35) !important;
         }
 
+        /*
+         * Fonte das cartas (TCG em inglês): Matrix Book.
+         * Se Matrix estiver instalada (ex.: licença Adobe/Emigre), o navegador usa automaticamente.
+         * Caso contrário, Bitter (OFL via Google Fonts) aproxima o aspecto de texto impresso em carta.
+         */
+        @font-face {
+            font-family: 'Matrix Book';
+            font-style: normal;
+            font-weight: 400;
+            font-display: swap;
+            src: local('Matrix Book'),
+                 local('Matrix-Book'),
+                 local('Matrix Book OT'),
+                 local('Matrix OT Book'),
+                 local('MatrixBook'),
+                 local('Matrix II Book'),
+                 local('Matrix II OT Book');
+        }
+        @font-face {
+            font-family: 'Matrix Book';
+            font-style: normal;
+            font-weight: 700;
+            font-display: swap;
+            src: local('Matrix Bold'),
+                 local('Matrix-Bold'),
+                 local('Matrix Book Bold'),
+                 local('Matrix II Bold'),
+                 local('Matrix II OT Bold'),
+                 local('MatrixBold');
+        }
+
         body { 
-            font-family: 'Segoe UI', Tahoma, sans-serif; 
+            font-family: 'Matrix Book', Bitter, Georgia, 'Times New Roman', serif;
             background: var(--bg-dark); 
             color: var(--text); 
             margin: 0; 
@@ -644,7 +678,85 @@
             width: 100%;
         }
         .queue-toolbar-extras .icon-btn-stack--export .btn-accent i { font-size: 18px; }
-        .filter-group label { font-size: 10px; color: var(--label-text); text-transform: uppercase; font-weight: 800; letter-spacing: 0.02em; text-align: center; width: 100%; }
+        .filter-group label {
+            font-size: 10px;
+            color: var(--label-text);
+            text-transform: uppercase;
+            font-weight: 800;
+            letter-spacing: 0.02em;
+            text-align: center;
+            width: 100%;
+            margin: 0;
+            line-height: 12px;
+            min-height: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        /* Ajuda desligada: reduz espaço vertical nos filtros */
+        html:not(.help-enabled) .sidebar-content .filter-group { margin-bottom: 8px; gap: 2px; }
+
+        /* Ajuda desligada: alinha labels/controles só nos filtros "input + Adicionar". */
+        html:not(.help-enabled) .sidebar-content .filter-group.filter-group--inline-add {
+            display: grid !important; /* sobrescreve display inline (ex.: style="display:none"/"block") */
+            grid-template-columns: minmax(0, 1fr) 48px; /* 38px do botão + folga p/ o label */
+            column-gap: 8px;
+            row-gap: 2px;
+            align-items: start;
+        }
+        html:not(.help-enabled) .sidebar-content .filter-group.filter-group--inline-add > label {
+            grid-column: 1;
+            grid-row: 1;
+            padding-top: 0;
+            margin-top: 0;
+            margin-bottom: 0;
+            line-height: 1.05;
+        }
+        /* "Quebra" o wrapper e coloca input e stack diretamente no grid */
+        html:not(.help-enabled) .sidebar-content .filter-group.filter-group--inline-add .filter-action-row { display: contents; }
+        html:not(.help-enabled) .sidebar-content .filter-group.filter-group--inline-add .filter-action-row > input,
+        html:not(.help-enabled) .sidebar-content .filter-group.filter-group--inline-add .filter-action-row > select,
+        html:not(.help-enabled) .sidebar-content .filter-group.filter-group--inline-add .filter-action-row > .stepper {
+            grid-column: 1;
+            grid-row: 2;
+            min-width: 0;
+            width: 100%;
+            max-width: 100%;
+            box-sizing: border-box;
+        }
+        html:not(.help-enabled) .sidebar-content .filter-group.filter-group--inline-add .filter-action-row .icon-btn-stack--tool {
+            grid-column: 2;
+            grid-row: 1 / span 2; /* label "ADICIONAR" alinha na mesma linha do label do campo */
+            gap: 2px;
+            align-items: stretch;
+            justify-content: start;
+        }
+        /* Elementos abaixo do input devem ocupar a largura total */
+        html:not(.help-enabled) .sidebar-content .filter-group.filter-group--inline-add > .cardset-hint,
+        html:not(.help-enabled) .sidebar-content .filter-group.filter-group--inline-add > datalist,
+        html:not(.help-enabled) .sidebar-content .filter-group.filter-group--inline-add > .cardset-chips,
+        html:not(.help-enabled) .sidebar-content .filter-group.filter-group--inline-add > .filter-clear-stack,
+        html:not(.help-enabled) .sidebar-content .filter-group.filter-group--inline-add > .filter-full-add-stack {
+            grid-column: 1 / -1;
+        }
+
+        /* Faixa de preço: layout próprio (2 inputs + botão em bloco). */
+        html:not(.help-enabled) .sidebar-content .filter-group.filter-group--price {
+            display: flex !important;
+            flex-direction: column;
+            align-items: stretch;
+        }
+        /* Mantém altura consistente do rótulo "ADICIONAR" */
+        html:not(.help-enabled) .filter-action-row .icon-btn-stack--tool .theme-row-label {
+            margin: 0;
+            line-height: 12px;
+            min-height: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .filter-group--price { gap: 6px; }
+        .filter-group--price > label { gap: 6px; }
 
         /* Tema + aleatório: coluna [rótulo + dados] à esquerda, coluna [rótulo + select] à direita */
         .filter-theme-random-wrap {
@@ -716,6 +828,7 @@
             font-weight: 800;
             line-height: 1.2;
             letter-spacing: 0.02em;
+            transition: color 0.12s ease, text-shadow 0.12s ease, text-decoration-color 0.12s ease, filter 0.12s ease;
         }
         .theme-white .filter-theme-random-wrap .theme-row-label { color: var(--label-text); }
 
@@ -936,6 +1049,22 @@
             min-width: 3.25rem !important;
             width: auto !important;
         }
+
+        /* Escala do PDF: mesmo conceito do "Quantidade" (encaixe + campo compacto) */
+        .filter-pdf-scale .stepper {
+            width: fit-content;
+        }
+        .filter-pdf-scale #print-scale {
+            box-sizing: border-box;
+            flex: 0 0 auto;
+            /* exibe "100,0" / "100.0" sem cortar */
+            width: 6ch !important;
+            min-width: 6ch !important;
+            max-width: 6ch !important;
+            padding-left: 4px;
+            padding-right: 4px;
+            text-align: center;
+        }
         /* Scanner / quantidade (barra de busca) */
         .icon-btn-stack--tool-wide {
             display: flex;
@@ -970,12 +1099,51 @@
         }
         /* Quantidade (busca): botões ± mais estreitos e campo numérico sempre legível */
         .search-qty-stack {
-            min-width: 8.25rem;
+            /* não força sobra à direita do botão + */
+            min-width: 0;
+            width: fit-content;
         }
+        /* Ajuda (hints abaixo dos labels) */
+        .ui-help-hint {
+            display: none;
+            margin-top: 2px;
+            font-size: 10px;
+            line-height: 1.15;
+            color: #8c8c8c;
+            max-width: 14rem;
+            text-align: center;
+        }
+        html.help-enabled .ui-help-hint { display: block; }
+        /* Não exibir alguns hints quando a coluna do deck está visível */
+        html.help-enabled #app-layout:not(.deck-col-hidden) .help-hide-when-deck-visible {
+            display: none !important;
+        }
+        .help-controls {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+        }
+        .help-controls .btn-icon-tool {
+            min-width: 38px;
+            width: 38px;
+            height: 35px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        html:not(.help-enabled) #btn-help-mouse { display: none !important; }
         .search-qty-stack .stepper input[type="number"] {
-            flex: 1 1 auto;
-            min-width: 2.5rem !important;
-            width: auto !important;
+            /* cabe 2 dígitos (ex: 99) sem "esticar" a barra */
+            flex: 0 0 auto;
+            box-sizing: border-box;
+            width: 4ch !important;
+            min-width: 4ch !important;
+            max-width: 4ch !important;
+            padding-left: 4px;
+            padding-right: 4px;
+            text-align: center;
         }
         .stepper--compact button {
             width: 26px;
@@ -1128,7 +1296,8 @@
             background: none; border: none; color: var(--accent); cursor: pointer;
             padding: 0 2px; font-size: 16px; line-height: 1; flex-shrink: 0;
         }
-        .cardset-hint { font-size: 10px; color: #888; margin: 0 0 6px 0; line-height: 1.35; font-weight: normal; text-transform: none; }
+        .cardset-hint { display: none; font-size: 10px; color: #888; margin: 0 0 6px 0; line-height: 1.35; font-weight: normal; text-transform: none; }
+        html.help-enabled .cardset-hint { display: block; }
         .theme-white .cardset-chip { background: #f3f4f6; border-color: var(--border); color: var(--text); }
         .theme-white .cardset-hint { color: #6b7280; }
         .tt-cardsets-block {
@@ -1374,6 +1543,30 @@
             border-radius: 10px;
             padding: 16px 18px;
             box-shadow: 0 20px 50px rgba(0, 0, 0, 0.65);
+        }
+        /* Modal de ajuda: mais larga para conteúdo rico */
+        #help-mouse-modal .deck-name-modal-dialog {
+            max-width: 640px;
+        }
+        #help-mouse-modal .help-mouse-modal-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        #help-mouse-modal .help-mouse-modal-header h3 {
+            margin: 0;
+        }
+        #help-mouse-modal .help-mouse-modal-close-top {
+            width: 38px;
+            min-width: 38px;
+            height: 35px;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex: 0 0 auto;
         }
         html.theme-white .deck-name-modal-dialog {
             background: #fff;
@@ -1880,8 +2073,236 @@
         }
        
         .btn-view { background: var(--bg-dark); color: var(--muted-text); border: 1px solid var(--border); padding: 5px 10px; cursor: pointer; border-radius: 4px; font-size: 11px; }
-        .btn-view:hover { border-color: var(--accent); color: var(--text); }
         .btn-view.active { background: var(--accent); color: black; border-color: var(--accent); }
+
+        /* Hover unificado: botões + rótulos (.theme-row-label) na mesma pilha */
+        @media (hover: hover) {
+            .btn-secondary:hover:not(:disabled),
+            label.btn-secondary:hover:not(:disabled) {
+                border-color: var(--accent);
+                filter: brightness(1.14);
+            }
+            html.theme-white .btn-secondary:hover:not(:disabled),
+            html.theme-white label.btn-secondary:hover:not(:disabled) {
+                filter: none;
+                background-color: #e5e7eb !important;
+                border-color: #9ca3af !important;
+            }
+
+            .btn-accent:hover:not(:disabled),
+            button#generate-pdf:hover:not(:disabled) {
+                filter: brightness(1.12);
+            }
+            html.theme-white .btn-accent:hover:not(:disabled),
+            html.theme-white button#generate-pdf:hover:not(:disabled) {
+                filter: brightness(0.93);
+            }
+
+            .btn-view:hover:not(:disabled):not(.active) {
+                border-color: var(--accent);
+                color: var(--text);
+                filter: brightness(1.12);
+            }
+            .btn-view.active:hover:not(:disabled) {
+                filter: brightness(1.08);
+            }
+            html.theme-white .btn-view:hover:not(:disabled):not(.active) {
+                filter: none;
+                background-color: #e5e7eb !important;
+                border-color: #9ca3af !important;
+                color: #111827 !important;
+            }
+            html.theme-white .btn-view.active:hover:not(:disabled) {
+                filter: brightness(0.93);
+            }
+
+            .stepper button:hover:not(:disabled) {
+                filter: brightness(1.16);
+            }
+            html.theme-white .stepper button:hover:not(:disabled) {
+                filter: none;
+                background-color: #e5e7eb !important;
+            }
+
+            .tooltip-details-modal-close:hover:not(:disabled),
+            .icon-btn-stack:has(.theme-row-label:hover) .tooltip-details-modal-close:not(:disabled) {
+                filter: brightness(1.18);
+            }
+            html.theme-white .tooltip-details-modal-close:hover:not(:disabled),
+            html.theme-white .icon-btn-stack:has(.theme-row-label:hover) .tooltip-details-modal-close:not(:disabled) {
+                filter: none;
+                background-color: #e5e7eb !important;
+            }
+
+            .export-menu-back:hover:not(:disabled) {
+                border-color: var(--accent);
+                filter: brightness(1.1);
+            }
+            .export-menu-close:hover:not(:disabled) {
+                filter: brightness(1.15);
+                color: var(--text);
+            }
+
+            .cardset-chip button:hover:not(:disabled) {
+                filter: brightness(1.22);
+            }
+
+            /*
+             * Rótulo destaca com o botão: antes só mudávamos para --accent, quase igual a --label-text
+             * no tema padrão (amarelo ≈ amarelo) e no branco (azul ≈ azul). Aqui usamos contraste real.
+             */
+            .icon-btn-stack:has(button:not(:disabled):hover) .theme-row-label,
+            .icon-btn-stack .theme-row-label:hover,
+            .label-width-stack:has(button:not(:disabled):hover) .theme-row-label,
+            .label-width-stack:has(label.btn-secondary:hover) .theme-row-label,
+            .label-width-stack > label.theme-row-label:hover,
+            .filter-clear-stack:has(button:not(:disabled):hover) .theme-row-label,
+            .filter-clear-stack .theme-row-label:hover,
+            .filter-full-add-stack:has(button:not(:disabled):hover) .theme-row-label,
+            .filter-full-add-stack .theme-row-label:hover,
+            .export-menu-option:has(.btn-secondary:hover:not(:disabled)) .theme-row-label,
+            .theme-select-stack:hover .theme-row-label,
+            .queue-toolbar-select-stack:hover .theme-row-label,
+            .icon-btn-stack:has(.lang-icon-btn:hover) label.theme-row-label {
+                color: var(--text) !important;
+                font-weight: 900 !important;
+                letter-spacing: 0.06em !important;
+                text-decoration-line: underline !important;
+                text-decoration-style: solid !important;
+                text-decoration-color: var(--accent) !important;
+                text-decoration-thickness: 2px !important;
+                text-underline-offset: 3px !important;
+                -webkit-text-decoration-skip: ink;
+                text-decoration-skip-ink: auto;
+            }
+
+            html:not(.theme-white) .icon-btn-stack:has(button:not(:disabled):hover) .theme-row-label,
+            html:not(.theme-white) .icon-btn-stack .theme-row-label:hover,
+            html:not(.theme-white) .label-width-stack:has(button:not(:disabled):hover) .theme-row-label,
+            html:not(.theme-white) .label-width-stack:has(label.btn-secondary:hover) .theme-row-label,
+            html:not(.theme-white) .label-width-stack > label.theme-row-label:hover,
+            html:not(.theme-white) .filter-clear-stack:has(button:not(:disabled):hover) .theme-row-label,
+            html:not(.theme-white) .filter-clear-stack .theme-row-label:hover,
+            html:not(.theme-white) .filter-full-add-stack:has(button:not(:disabled):hover) .theme-row-label,
+            html:not(.theme-white) .filter-full-add-stack .theme-row-label:hover,
+            html:not(.theme-white) .export-menu-option:has(.btn-secondary:hover:not(:disabled)) .theme-row-label,
+            html:not(.theme-white) .theme-select-stack:hover .theme-row-label,
+            html:not(.theme-white) .queue-toolbar-select-stack:hover .theme-row-label,
+            html:not(.theme-white) .icon-btn-stack:has(.lang-icon-btn:hover) label.theme-row-label {
+                text-shadow:
+                    0 0 1px rgba(0, 0, 0, 0.95),
+                    0 0 10px var(--accent),
+                    0 0 22px rgba(0, 0, 0, 0.35);
+            }
+
+            html.theme-white .icon-btn-stack:has(button:not(:disabled):hover) .theme-row-label,
+            html.theme-white .icon-btn-stack .theme-row-label:hover,
+            html.theme-white .label-width-stack:has(button:not(:disabled):hover) .theme-row-label,
+            html.theme-white .label-width-stack:has(label.btn-secondary:hover) .theme-row-label,
+            html.theme-white .label-width-stack > label.theme-row-label:hover,
+            html.theme-white .filter-clear-stack:has(button:not(:disabled):hover) .theme-row-label,
+            html.theme-white .filter-clear-stack .theme-row-label:hover,
+            html.theme-white .filter-full-add-stack:has(button:not(:disabled):hover) .theme-row-label,
+            html.theme-white .filter-full-add-stack .theme-row-label:hover,
+            html.theme-white .export-menu-option:has(.btn-secondary:hover:not(:disabled)) .theme-row-label,
+            html.theme-white .theme-select-stack:hover .theme-row-label,
+            html.theme-white .queue-toolbar-select-stack:hover .theme-row-label,
+            html.theme-white .icon-btn-stack:has(.lang-icon-btn:hover) label.theme-row-label {
+                text-shadow: none;
+                outline: 2px solid var(--accent);
+                outline-offset: 2px;
+                border-radius: 4px;
+            }
+
+            /* Rótulo acima: ao passar nele, o controlo associado também destaca */
+            .icon-btn-stack:has(.theme-row-label:hover) .btn-secondary:not(:disabled):not(.lang-icon-btn),
+            .icon-btn-stack:has(label.theme-row-label:hover) .btn-secondary:not(:disabled):not(.lang-icon-btn) {
+                border-color: var(--accent);
+                filter: brightness(1.14);
+            }
+            html.theme-white .icon-btn-stack:has(.theme-row-label:hover) .btn-secondary:not(:disabled):not(.lang-icon-btn),
+            html.theme-white .icon-btn-stack:has(label.theme-row-label:hover) .btn-secondary:not(:disabled):not(.lang-icon-btn) {
+                filter: none;
+                background-color: #e5e7eb !important;
+                border-color: #9ca3af !important;
+            }
+
+            .icon-btn-stack:has(.theme-row-label:hover) .btn-view:not(:disabled):not(.active),
+            .icon-btn-stack:has(label.theme-row-label:hover) .btn-view:not(:disabled):not(.active) {
+                border-color: var(--accent);
+                color: var(--text);
+                filter: brightness(1.12);
+            }
+            html.theme-white .icon-btn-stack:has(.theme-row-label:hover) .btn-view:not(:disabled):not(.active),
+            html.theme-white .icon-btn-stack:has(label.theme-row-label:hover) .btn-view:not(:disabled):not(.active) {
+                filter: none;
+                background-color: #e5e7eb !important;
+                border-color: #9ca3af !important;
+                color: #111827 !important;
+            }
+
+            .icon-btn-stack:has(.theme-row-label:hover) .btn-view.active:not(:disabled),
+            .icon-btn-stack:has(label.theme-row-label:hover) .btn-view.active:not(:disabled) {
+                filter: brightness(1.08);
+            }
+            html.theme-white .icon-btn-stack:has(.theme-row-label:hover) .btn-view.active:not(:disabled),
+            html.theme-white .icon-btn-stack:has(label.theme-row-label:hover) .btn-view.active:not(:disabled) {
+                filter: brightness(0.93);
+            }
+
+            .icon-btn-stack:has(.theme-row-label:hover) .btn-accent:not(:disabled),
+            .icon-btn-stack:has(label.theme-row-label:hover) .btn-accent:not(:disabled) {
+                filter: brightness(1.12);
+            }
+            html.theme-white .icon-btn-stack:has(.theme-row-label:hover) .btn-accent:not(:disabled),
+            html.theme-white .icon-btn-stack:has(label.theme-row-label:hover) .btn-accent:not(:disabled) {
+                filter: brightness(0.93);
+            }
+
+            .icon-btn-stack:has(.theme-row-label:hover) .stepper button:not(:disabled),
+            .icon-btn-stack:has(label.theme-row-label:hover) .stepper button:not(:disabled) {
+                filter: brightness(1.16);
+            }
+            html.theme-white .icon-btn-stack:has(.theme-row-label:hover) .stepper button:not(:disabled),
+            html.theme-white .icon-btn-stack:has(label.theme-row-label:hover) .stepper button:not(:disabled) {
+                filter: none;
+                background-color: #e5e7eb !important;
+            }
+
+            .label-width-stack:has(.theme-row-label:hover) .stepper button:not(:disabled),
+            .label-width-stack:has(label.theme-row-label:hover) .stepper button:not(:disabled) {
+                filter: brightness(1.16);
+            }
+            html.theme-white .label-width-stack:has(.theme-row-label:hover) .stepper button:not(:disabled),
+            html.theme-white .label-width-stack:has(label.theme-row-label:hover) .stepper button:not(:disabled) {
+                filter: none;
+                background-color: #e5e7eb !important;
+            }
+
+            .label-width-stack:has(.theme-row-label:hover) label.btn-secondary:not(:disabled) {
+                border-color: var(--accent);
+                filter: brightness(1.14);
+            }
+            html.theme-white .label-width-stack:has(.theme-row-label:hover) label.btn-secondary:not(:disabled) {
+                filter: none;
+                background-color: #e5e7eb !important;
+                border-color: #9ca3af !important;
+            }
+
+            .filter-full-add-stack:has(.theme-row-label:hover) .btn-secondary:not(:disabled) {
+                border-color: var(--accent);
+                filter: brightness(1.14);
+            }
+            html.theme-white .filter-full-add-stack:has(.theme-row-label:hover) .btn-secondary:not(:disabled) {
+                filter: none;
+                background-color: #e5e7eb !important;
+                border-color: #9ca3af !important;
+            }
+
+            .icon-btn-stack:has(label.theme-row-label:hover) .lang-icon-btn {
+                opacity: 1;
+            }
+        }
 
         .results-view { flex-grow: 1; min-height: 0; overflow-y: auto; }
         @media (min-width: 901px) {
@@ -1951,11 +2372,16 @@
             object-fit: contain;
         }
 
-        /* Lista: arte maior que 80px, mas com teto de altura + padding compacto para caber ~4 linhas sem scroll. */
+        /* Lista (sugestões): altura mínima do bloco = teto da arte + padding vertical (mais linhas na viewport). */
+        .results-view.list-mode {
+            --list-suggestion-art-max-h: 118px;
+            --list-suggestion-block-vpad: 14px; /* 7px top + bottom no .suggestion-item */
+        }
         .results-view.list-mode .suggestion-item {
             align-items: center;
             padding: 7px 8px;
             gap: 10px;
+            min-height: calc(var(--list-suggestion-art-max-h) + var(--list-suggestion-block-vpad));
         }
         .results-view.list-mode .list-card-thumb,
         .deck-list.deck-queue-view.list-mode .list-card-thumb {
@@ -1968,6 +2394,9 @@
             min-width: 72px;
             max-width: 112px;
             max-height: 118px;
+        }
+        .results-view.list-mode .list-card-thumb {
+            max-height: var(--list-suggestion-art-max-h);
         }
         .results-view.list-mode .list-card-thumb img,
         .deck-list.deck-queue-view.list-mode .list-card-thumb img {
@@ -2127,6 +2556,29 @@
             align-items: center;
             justify-content: space-between;
             gap: 8px 12px;
+        }
+        .deck-stats-bar-inner .deck-stats-right {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            margin-left: auto; /* empurra validação+ordenação para a direita */
+            flex: 0 0 auto;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+        /* Deck sort dentro da barra de stats (inline, sem "segunda barra") */
+        .deck-stats-bar .deck-sort-bar {
+            background: transparent;
+            border-bottom: 0;
+            padding: 0;
+            gap: 8px;
+            align-items: flex-end;
+        }
+        .deck-stats-bar .deck-sort-bar-field {
+            min-width: 0;
+        }
+        .deck-stats-bar .deck-sort-bar-field .sort-controls {
+            align-items: flex-end;
         }
         .deck-stat-total-wrap {
             display: inline-flex;
@@ -2637,6 +3089,7 @@
             line-height: 1.2;
             display: -webkit-box;
             -webkit-line-clamp: 3;
+            line-clamp: 3;
             -webkit-box-orient: vertical;
             overflow: hidden;
             word-break: break-word;
@@ -2721,16 +3174,23 @@
             flex-direction: column;
             align-items: stretch;
             gap: 5px;
-            flex: 1;
+            /* Não estica: mantém o select perto do botão "Ordem" */
+            flex: 0 0 auto;
             min-width: 140px;
         }
         html.theme-white .deck-sort-bar {
             background: #eceef2;
         }
         .deck-sort-bar-field .sort-controls {
-            width: 100%;
+            width: auto;
             min-width: 0;
             align-items: flex-end;
+        }
+        .deck-sort-bar-field .sort-controls .queue-toolbar-select-stack {
+            /* Largura controlada para não empurrar o botão de ordem pro canto direito */
+            flex: 0 1 220px;
+            max-width: 260px;
+            min-width: 160px;
         }
         .deck-sort-bar-field .sort-controls .queue-toolbar-select-stack {
             gap: 5px;
@@ -2776,6 +3236,24 @@
             height: 35px;
             min-height: 35px;
             line-height: 35px;
+        }
+        /* "Ordem" no deck-sort-bar: mantém o rótulo alinhado ao "Ordenar deck" (não “flutua” no canto). */
+        .deck-sort-bar .deck-sort-bar-field .sort-controls > .icon-btn-stack {
+            position: relative;
+            height: 35px;
+            gap: 0;
+            justify-content: center;
+        }
+        .deck-sort-bar .deck-sort-bar-field .sort-controls > .icon-btn-stack > .theme-row-label {
+            position: absolute;
+            top: -17px; /* 12px label + 5px gap */
+            left: 50%;
+            transform: translateX(-50%);
+            height: 12px;
+            line-height: 1;
+            margin: 0;
+            white-space: nowrap;
+            pointer-events: none;
         }
 
         .deck-section-head {
@@ -3943,6 +4421,26 @@
     </div>
 </div>
 
+<div id="help-mouse-modal" class="deck-name-modal" aria-hidden="true">
+    <div class="deck-name-modal-backdrop" id="help-mouse-modal-backdrop"></div>
+    <div class="deck-name-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="help-mouse-modal-title">
+        <div class="help-mouse-modal-header">
+            <h3 id="help-mouse-modal-title" data-i18n="ui.help_mouse_title">Como interagir com as cartas</h3>
+            <button type="button" class="btn-view btn-icon-tool help-mouse-modal-close-top" id="help-mouse-modal-close" data-i18n-aria="ui.close" title="" aria-label="">
+                <i class="fas fa-times" aria-hidden="true"></i>
+            </button>
+        </div>
+        <div id="help-mouse-modal-body" style="font-size: 12px; line-height: 1.35;" data-i18n-html="ui.help_mouse_body">
+            <div style="display:flex; flex-direction:column; gap:10px;">
+                <div><strong>Esquerdo</strong>: adiciona ao Main Deck (usa Quantidade).</div>
+                <div><strong>Direito</strong>: adiciona ao Side Deck.</div>
+                <div><strong>Scroll</strong> (clique na roda): abre Detalhes da carta.</div>
+                <div><strong>Rolar a roda</strong> na lista de resultados: página <strong>anterior</strong> (para cima) / <strong>próxima</strong> (para baixo).</div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div id="tooltip-details-modal" class="tooltip-details-modal" aria-hidden="true">
     <div class="tooltip-details-modal-backdrop" id="tooltip-details-modal-backdrop"></div>
     <div class="tooltip-details-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="tooltip-details-modal-title">
@@ -4205,7 +4703,7 @@
                     <input type="checkbox" id="enable-banlist-only" style="width: auto;" onchange="performSearch()"> <span data-i18n="filter.banlist_only">Exibir somente cartas da Banlist</span>
                 </label>
             </div>
-            <div class="filter-group">
+            <div class="filter-group filter-group--price">
                 <label><i class="fa-solid fa-dollar-sign" aria-hidden="true"></i> <span data-i18n="filter.price_label">Faixa de Preço (USD)</span></label>
                 <p class="cardset-hint" data-i18n-html="filter.price_hint">Sem faixas salvas: um intervalo (min/max) filtra como antes. Com <strong>Adicionar faixa</strong>: várias faixas em união (carta em qualquer uma).</p>
                 <div style="display: flex; gap: 5px;">
@@ -4297,6 +4795,7 @@
                 <div style="flex: 1; display: flex; gap: 8px; min-width: 0; align-items: flex-end;">
                     <div class="label-width-stack" style="flex: 1; min-width: 0;">
                         <label class="theme-row-label" for="search-input" data-i18n="ui.search_name_label">Nome</label>
+                        <p class="cardset-hint help-hide-when-deck-visible" style="margin: 2px 0 4px 0; font-size: 10px;" data-i18n-html="ui.search_fname_hint">≥3 letras: busca enquanto digita. Use <strong>Adicionar</strong> para guardar termos extras (união OR com o que ainda estiver no campo).</p>
                         <input type="text" id="search-input" data-i18n-placeholder="ui.search_placeholder" placeholder="Buscar pelo nome..." autocomplete="off" style="width: 100%;">
                     </div>
                     <div class="icon-btn-stack icon-btn-stack--tool">
@@ -4306,14 +4805,37 @@
                 </div>
                 <div class="icon-btn-stack icon-btn-stack--tool icon-btn-stack--tool-wide search-qty-stack">
                     <span class="theme-row-label" data-i18n="ui.search_qty_label">Quantidade</span>
+                    <div class="ui-help-hint help-hide-when-deck-visible" data-i18n="ui.help_qty_hint">Define quantas cópias serão adicionadas ao clicar em uma carta.</div>
                     <div class="stepper stepper--compact">
                         <button type="button" onclick="document.getElementById('search-qty').stepDown()" aria-label="−"><i class="fas fa-minus" aria-hidden="true"></i></button>
                         <input type="number" id="search-qty" value="1" min="1" readonly>
                         <button type="button" onclick="document.getElementById('search-qty').stepUp()" aria-label="+"><i class="fas fa-plus" aria-hidden="true"></i></button>
                     </div>
                 </div>
+                <div class="icon-btn-stack icon-btn-stack--tool icon-btn-stack--tool-wide">
+                    <label class="theme-row-label" for="btn-help-toggle" data-i18n="ui.help_label">Ajuda</label>
+                    <div class="help-controls" role="group" data-i18n-aria="ui.help_group_aria" aria-label="Ajuda">
+                        <button type="button" id="btn-help-toggle" class="btn-secondary btn-icon-tool" data-i18n-aria="ui.help_toggle_off" title="" aria-label="" aria-pressed="false">
+                            <i class="fas fa-circle-question" aria-hidden="true"></i>
+                        </button>
+                        <button type="button" id="btn-help-mouse" class="btn-secondary btn-icon-tool" data-i18n-aria="ui.help_mouse_btn" title="" aria-label="">
+                            <i class="fas fa-mouse" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="icon-btn-stack icon-btn-stack--tool">
+                    <label class="theme-row-label" for="btn-lang-toggle" data-i18n="lang.label">Idioma</label>
+                    <div class="lang-switch" role="group" data-i18n-aria="lang.switch_aria" aria-label="Idioma das cartas (API)">
+                        <button type="button" id="btn-lang-toggle" class="lang-icon-btn" title="" aria-label=""></button>
+                    </div>
+                </div>
+                <div class="icon-btn-stack icon-btn-stack--tool">
+                    <label class="theme-row-label" for="btn-toggle-fullscreen" data-i18n="ui.screen_label">Tela</label>
+                    <button type="button" id="btn-toggle-fullscreen" class="btn-view" data-i18n-title="ui.screen_title" title="Tela inteira (como F11)" aria-pressed="false" data-i18n-aria="ui.screen_aria" aria-label="Entrar em tela inteira" onclick="togglePageFullscreen()" style="min-width: 38px; height: 35px; display: flex; align-items: center; justify-content: center;">
+                        <i class="fas fa-expand" id="icon-toggle-fullscreen" style="font-size: 14px;" aria-hidden="true"></i>
+                    </button>
+                </div>
             </div>
-            <p class="cardset-hint" style="margin: 4px 0 0 0; font-size: 10px;" data-i18n-html="ui.search_fname_hint">≥3 letras: busca enquanto digita. Use <strong>Adicionar</strong> para guardar termos extras (união OR com o que ainda estiver no campo).</p>
             <div id="filter-fname-chips" class="cardset-chips" style="margin-top: 4px;"></div>
             <div class="filter-clear-stack filter-clear-stack--tight">
                     <span class="theme-row-label" data-i18n="ui.search_fname_clear"></span>
@@ -4374,12 +4896,6 @@
                 </div>
                 <div class="icon-btn-row">
                     <div class="icon-btn-stack">
-                        <label class="theme-row-label" for="btn-lang-toggle" data-i18n="lang.label">Idioma</label>
-                        <div class="lang-switch" role="group" data-i18n-aria="lang.switch_aria" aria-label="Idioma das cartas (API)">
-                            <button type="button" id="btn-lang-toggle" class="lang-icon-btn" title="" aria-label=""></button>
-                        </div>
-                    </div>
-                    <div class="icon-btn-stack">
                         <label class="theme-row-label" for="btn-random-filter-card" data-i18n="ui.random_label">Aleatório</label>
                         <button type="button" id="btn-random-filter-card" class="btn-view" data-i18n-title="ui.random_title" title="Sorteia uma carta aleatória da lista atual; clique de novo para desfazer" style="min-width: 38px; height: 35px; display: flex; align-items: center; justify-content: center;">
                             <i class="fa-solid fa-dice" style="font-size: 16px;" aria-hidden="true"></i>
@@ -4401,23 +4917,9 @@
                     </div>
 
                     <div class="icon-btn-stack">
-                        <label class="theme-row-label" for="btn-toggle-fullscreen" data-i18n="ui.screen_label">Tela</label>
-                        <button type="button" id="btn-toggle-fullscreen" class="btn-view" data-i18n-title="ui.screen_title" title="Tela inteira (como F11)" aria-pressed="false" data-i18n-aria="ui.screen_aria" aria-label="Entrar em tela inteira" onclick="togglePageFullscreen()" style="min-width: 38px; height: 35px; display: flex; align-items: center; justify-content: center;">
-                            <i class="fas fa-expand" id="icon-toggle-fullscreen" style="font-size: 14px;" aria-hidden="true"></i>
-                        </button>
-                    </div>
-
-                    <div class="icon-btn-stack">
-                        <label class="theme-row-label" for="btn-list" data-i18n="ui.list_label">Lista</label>
-                        <button id="btn-list" class="btn-view active" data-i18n-title="ui.list_title" title="Visualização em Lista" onclick="changeView('list')" style="font-size: 18px; min-width: 38px; height: 35px; display: flex; align-items: center; justify-content: center;">
-                            <i class="fas fa-list" aria-hidden="true"></i>
-                        </button>
-                    </div>
-
-                    <div class="icon-btn-stack">
-                        <label class="theme-row-label" for="btn-grid" data-i18n="ui.grid_label">Grade</label>
-                        <button id="btn-grid" class="btn-view" data-i18n-title="ui.grid_title" title="Visualização em Grade" onclick="changeView('grid')" style="font-size: 18px; min-width: 38px; height: 35px; display: flex; align-items: center; justify-content: center;">
-                            <i class="fas fa-th-large" aria-hidden="true"></i>
+                        <label class="theme-row-label" for="btn-toggle-results-view" id="label-toggle-results-view">Grade</label>
+                        <button type="button" id="btn-toggle-results-view" class="btn-view" title="Visualização em Grade" onclick="toggleResultsView()" style="font-size: 18px; min-width: 38px; height: 35px; display: flex; align-items: center; justify-content: center;" aria-label="Visualização em Grade">
+                            <i class="fas fa-th-large" id="icon-toggle-results-view" aria-hidden="true"></i>
                         </button>
                     </div>
 
@@ -4500,15 +5002,9 @@
                         </button>
                     </div>
                     <div class="icon-btn-stack icon-btn-stack--tool">
-                        <span class="theme-row-label" data-i18n="ui.deck_queue_list_label">Lista</span>
-                        <button type="button" id="btn-queue-list" class="btn-view btn-icon-tool active" data-i18n-title="ui.queue_list_title" title="Deck em lista" onclick="changeQueueView('list')">
-                            <i class="fas fa-list" aria-hidden="true"></i>
-                        </button>
-                    </div>
-                    <div class="icon-btn-stack icon-btn-stack--tool">
-                        <span class="theme-row-label" data-i18n="ui.deck_queue_grid_label">Grade</span>
-                        <button type="button" id="btn-queue-grid" class="btn-view btn-icon-tool" data-i18n-title="ui.queue_grid_title" title="Deck em grade" onclick="changeQueueView('grid')">
-                            <i class="fas fa-th-large" aria-hidden="true"></i>
+                        <label class="theme-row-label" for="btn-toggle-queue-view" id="label-toggle-queue-view">Grade</label>
+                        <button type="button" id="btn-toggle-queue-view" class="btn-view btn-icon-tool" title="Deck em grade" onclick="toggleQueueView()" aria-label="Deck em grade">
+                            <i class="fas fa-th-large" id="icon-toggle-queue-view" aria-hidden="true"></i>
                         </button>
                     </div>
                     <div class="icon-btn-stack icon-btn-stack--tool">
@@ -4563,39 +5059,40 @@
                     <span class="deck-stat-price-label" data-i18n="ui.deck_stat_total_usd">Total</span>
                     <span id="deck-stat-price" class="deck-stat-price-val">—</span>
                 </span>
-                <span class="deck-validity-wrap">
-                    <span id="deck-validity-flag" class="deck-validity-flag is-off" tabindex="0">
-                        <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
-                        <span id="deck-validity-text">Validação OFF</span>
+                <span class="deck-stats-right">
+                    <span class="deck-validity-wrap">
+                        <span id="deck-validity-flag" class="deck-validity-flag is-off" tabindex="0">
+                            <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
+                            <span id="deck-validity-text">Validação OFF</span>
+                        </span>
                     </span>
-                </span>
-            </div>
-        </div>
-        <div class="deck-sort-bar" role="group" data-i18n-aria="ui.deck_sort_bar_aria" aria-label="Ordenação do deck">
-            <div class="deck-sort-bar-field">
-            <div class="sort-controls">
-                <div class="queue-toolbar-select-stack" style="flex: 1; min-width: 0;">
-                    <label for="deck-sort-by" class="theme-row-label" data-i18n="ui.deck_sort_label">Ordenar deck</label>
-                    <select id="deck-sort-by" style="flex: 1;">
-                        <option data-i18n-opt="opt.sort.custom" value="custom" selected>Personalizado</option>
-                        <option data-i18n-opt="opt.sort.name" value="name">Nome</option>
-                        <option data-i18n-opt="opt.sort.atk" value="atk">Ataque</option>
-                        <option data-i18n-opt="opt.sort.def" value="def">Defesa</option>
-                        <option data-i18n-opt="opt.sort.level" value="level">Level/Rank</option>
-                        <option data-i18n-opt="opt.sort.tcg" value="tcg_date">Data TCG</option>
-                        <option data-i18n-opt="opt.sort.ocg" value="ocg_date">Data OCG</option>
-                        <option data-i18n-opt="opt.sort.price" value="price">Preço</option>
-                        <option data-i18n-opt="opt.sort.banlist" value="banlist">Banlist</option>
-                        <option data-i18n-opt="opt.sort.random" value="random">Aleatório</option>
-                    </select>
-                </div>
-                <div class="icon-btn-stack">
-                    <label class="theme-row-label" for="btn-deck-order" data-i18n="ui.deck_sort_order_label">Ordem</label>
-                    <button type="button" id="btn-deck-order" class="btn-view" onclick="void toggleDeckOrder()" data-i18n-title="ui.deck_order_title" title="Inverter ordem" style="height: 35px; min-width: 35px; display: flex; align-items: center; justify-content: center;">
-                        <i id="deck-order-icon" class="fas fa-arrow-up" aria-hidden="true"></i>
-                    </button>
-                </div>
-            </div>
+                    <div class="deck-sort-bar" role="group" data-i18n-aria="ui.deck_sort_bar_aria" aria-label="Ordenação do deck">
+                        <div class="deck-sort-bar-field">
+                        <div class="sort-controls">
+                            <div class="queue-toolbar-select-stack" style="flex: 1; min-width: 0;">
+                                <label for="deck-sort-by" class="theme-row-label" data-i18n="ui.deck_sort_label">Ordenar deck</label>
+                                <select id="deck-sort-by" style="flex: 1;">
+                                    <option data-i18n-opt="opt.sort.custom" value="custom" selected>Personalizado</option>
+                                    <option data-i18n-opt="opt.sort.name" value="name">Nome</option>
+                                    <option data-i18n-opt="opt.sort.atk" value="atk">Ataque</option>
+                                    <option data-i18n-opt="opt.sort.def" value="def">Defesa</option>
+                                    <option data-i18n-opt="opt.sort.level" value="level">Level/Rank</option>
+                                    <option data-i18n-opt="opt.sort.tcg" value="tcg_date">Data TCG</option>
+                                    <option data-i18n-opt="opt.sort.ocg" value="ocg_date">Data OCG</option>
+                                    <option data-i18n-opt="opt.sort.price" value="price">Preço</option>
+                                    <option data-i18n-opt="opt.sort.banlist" value="banlist">Banlist</option>
+                                    <option data-i18n-opt="opt.sort.random" value="random">Aleatório</option>
+                                </select>
+                            </div>
+                            <div class="icon-btn-stack">
+                                <label class="theme-row-label" for="btn-deck-order" data-i18n="ui.deck_sort_order_label">Ordem</label>
+                                <button type="button" id="btn-deck-order" class="btn-view" onclick="void toggleDeckOrder()" data-i18n-title="ui.deck_order_title" title="Inverter ordem" style="height: 35px; min-width: 35px; display: flex; align-items: center; justify-content: center;">
+                                    <i id="deck-order-icon" class="fas fa-arrow-up" aria-hidden="true"></i>
+                                </button>
+                            </div>
+                        </div>
+                        </div>
+                    </div>
             </div>
         </div>
         <div id="deck-queue-pane" class="deck-queue-pane">
@@ -4695,6 +5192,10 @@
         searchResults = [],
         currentPage = 1,
         currentView = 'list';
+    /** Incrementado a cada `performSearch`; evita aplicar resultados ou progresso de buscas obsoletas. */
+    let latestSearchRequestSeq = 0;
+    /** True enquanto a lista principal está a aguardar a API (placeholders); evita `renderResults` a apagar o loading. */
+    let activeCardSearchInFlight = false;
     /** Cópia do deck antes de carregar um deck salvo pelo combo; usada em “Novo Deck” e no 1.º Limpar. */
     let deckDraftBeforeSavedLoad = null;
     /** Vista do deck de impressão (independente da lista de sugestões). */
@@ -5370,21 +5871,22 @@
         const icn = document.getElementById('btn-deck-validate-toggle-icon');
         const sel = document.getElementById('deck-banlist-select');
         if (!btn || !lab) return;
-        if (isDeckValidationDisabled()) {
-            lab.textContent = T('ui.deck_validate_label_off');
-            btn.title = T('ui.deck_validate_label_off');
-            btn.setAttribute('aria-label', T('ui.deck_validate_label_off'));
-            btn.classList.add('active');
-            if (icn) icn.className = 'fas fa-ban';
-            if (sel) sel.disabled = true;
-        } else {
-            lab.textContent = T('ui.deck_validate_label_on');
-            btn.title = T('ui.deck_validate_label_on');
-            btn.setAttribute('aria-label', T('ui.deck_validate_label_on'));
-            btn.classList.remove('active');
-            if (icn) icn.className = 'fas fa-clipboard-check';
-            if (sel) sel.disabled = false;
-        }
+        // Mostrar a ação do clique (próximo estado), não o estado atual.
+        const validationIsOff = isDeckValidationDisabled();
+        const nextKey = validationIsOff ? 'ui.deck_validate_label_on' : 'ui.deck_validate_label_off';
+        lab.textContent = T(nextKey);
+        btn.title = T(nextKey);
+        btn.setAttribute('aria-label', T(nextKey));
+        btn.setAttribute('data-i18n-title', nextKey);
+
+        // Mantém "active" refletindo o estado atual (validação ligada = active).
+        btn.classList.toggle('active', !validationIsOff);
+
+        // Ícone também representa a ação do clique.
+        if (icn) icn.className = validationIsOff ? 'fas fa-clipboard-check' : 'fas fa-ban';
+
+        // Banlist só é editável quando a validação está ligada (estado atual).
+        if (sel) sel.disabled = validationIsOff;
         try {
             const banTr = document.querySelector('[data-native-custom-trigger="deck-banlist-select"]');
             if (banTr && sel) banTr.disabled = !!sel.disabled;
@@ -6648,6 +7150,7 @@
         deckSortDir: 'ygo_proxy_ui_deck_sort_dir', // 1 | -1
         lang: 'ygo_proxy_ui_lang', // pt | en
         tooltip: 'ygo_proxy_ui_tooltip', // '1' ligado · '0' desligado
+        help: 'ygo_proxy_ui_help', // '1' ligado · '0' desligado (hints/ajuda contextual)
         filtersColVisible: 'ygo_proxy_filters_col_visible', // '1' visível · '0' oculta (mesma chave que o legado localStorage)
         fullscreen: 'ygo_proxy_ui_fullscreen', // '1' em tela cheia (tentativa ao carregar)
         deckColCycle: 'ygo_proxy_ui_deck_col', // 0 | 1 | 2
@@ -6849,6 +7352,15 @@
         "ui.search_fname_hint": { pt: "\u22653 letras: busca enquanto digita. Use <strong>Adicionar</strong> para guardar termos extras (uni\u00e3o OR com o que ainda estiver no campo).", en: "\u22653 letters: search while typing. Use <strong>Add</strong> to save extra terms (OR union with whatever remains in the field)." },
         "ui.search_name_label": { pt: "Nome", en: "Name" },
         "ui.search_placeholder": { pt: "Buscar pelo nome\u2026", en: "Search by name\u2026" },
+        "ui.help_label": { pt: "Ajuda", en: "Help" },
+        "ui.help_group_aria": { pt: "Ajuda", en: "Help" },
+        "ui.help_toggle_on": { pt: "Ajuda: ligada (clique para desligar)", en: "Help: on (click to turn off)" },
+        "ui.help_toggle_off": { pt: "Ajuda: desligada (clique para ligar)", en: "Help: off (click to turn on)" },
+        "ui.help_mouse_btn": { pt: "Como interagir (mouse)", en: "How to interact (mouse)" },
+        "ui.help_qty_hint": { pt: "Define quantas c\u00f3pias ser\u00e3o adicionadas ao clicar em uma carta.", en: "Sets how many copies are added when clicking a card." },
+        "ui.help_mouse_title": { pt: "Como interagir com as cartas", en: "How to interact with cards" },
+        "ui.help_mouse_body": { pt: "<div style=\"display:flex; flex-direction:column; gap:12px;\"><div style=\"display:flex; gap:12px; align-items:flex-start; flex-wrap:wrap;\"><svg width=\"140\" height=\"168\" viewBox=\"0 0 140 168\" role=\"img\" aria-label=\"Mouse\" style=\"flex:0 0 auto;\"><defs><filter id=\"hmShPt\" x=\"-20%\" y=\"-20%\" width=\"140%\" height=\"140%\"><feDropShadow dx=\"0\" dy=\"2\" stdDeviation=\"2\" flood-color=\"rgba(0,0,0,0.4)\"/></filter><marker id=\"hmALPt\" viewBox=\"0 0 10 10\" refX=\"9\" refY=\"5\" markerWidth=\"5\" markerHeight=\"5\" orient=\"auto\"><path d=\"M0,0 L10,5 L0,10 z\" fill=\"#93c5fd\"/></marker><marker id=\"hmARPt\" viewBox=\"0 0 10 10\" refX=\"9\" refY=\"5\" markerWidth=\"5\" markerHeight=\"5\" orient=\"auto\"><path d=\"M0,0 L10,5 L0,10 z\" fill=\"#fca5a5\"/></marker><marker id=\"hmAMPt\" viewBox=\"0 0 10 10\" refX=\"9\" refY=\"5\" markerWidth=\"5\" markerHeight=\"5\" orient=\"auto\"><path d=\"M0,0 L10,5 L0,10 z\" fill=\"#d1d5db\"/></marker></defs><rect x=\"30\" y=\"32\" width=\"80\" height=\"130\" rx=\"40\" fill=\"#1f2937\" stroke=\"#6b7280\" stroke-width=\"2\" filter=\"url(#hmShPt)\"/><path d=\"M 30 74 L 70 74 L 70 32 A 40 40 0 0 0 30 72 Z\" fill=\"#2563eb\" opacity=\"0.88\"/><path d=\"M 110 74 L 70 74 L 70 32 A 40 40 0 0 1 110 72 Z\" fill=\"#ef4444\" opacity=\"0.88\"/><line x1=\"70\" y1=\"32\" x2=\"70\" y2=\"94\" stroke=\"#6b7280\" stroke-width=\"2\"/><path d=\"M30 74 Q70 42 110 74\" fill=\"none\" stroke=\"#6b7280\" stroke-width=\"2\" opacity=\"0.7\"/><rect x=\"64\" y=\"44\" width=\"12\" height=\"26\" rx=\"6\" fill=\"#e5e7eb\" opacity=\"0.92\"/><line x1=\"50\" y1=\"56\" x2=\"28\" y2=\"26\" stroke=\"#93c5fd\" stroke-width=\"2\" marker-end=\"url(#hmALPt)\"/><line x1=\"70\" y1=\"44\" x2=\"70\" y2=\"26\" stroke=\"#d1d5db\" stroke-width=\"2\" marker-end=\"url(#hmAMPt)\"/><line x1=\"90\" y1=\"56\" x2=\"112\" y2=\"26\" stroke=\"#fca5a5\" stroke-width=\"2\" marker-end=\"url(#hmARPt)\"/><text x=\"28\" y=\"18\" fill=\"#93c5fd\" font-size=\"10\" font-family=\"ui-sans-serif,system-ui,sans-serif\" text-anchor=\"middle\">Esquerdo</text><text x=\"70\" y=\"18\" fill=\"#d1d5db\" font-size=\"10\" font-family=\"ui-sans-serif,system-ui,sans-serif\" text-anchor=\"middle\">Scroll</text><text x=\"112\" y=\"18\" fill=\"#fca5a5\" font-size=\"10\" font-family=\"ui-sans-serif,system-ui,sans-serif\" text-anchor=\"middle\">Direito</text></svg><div style=\"flex:1 1 220px; display:flex; flex-direction:column; gap:8px;\"><div><strong>Lista de resultados / sugestões</strong></div><div><strong>Esquerdo</strong>: adiciona ao <strong>Main Deck</strong> (usa a <strong>Quantidade</strong>).</div><div><strong>Direito</strong>: adiciona ao <strong>Side Deck</strong>.</div><div><strong>Scroll</strong> (clique na roda): abre <strong>Detalhes da carta</strong>.</div><div><strong>Rolar a roda</strong> na lista de resultados: <strong>página anterior</strong> (para cima) / <strong>próxima</strong> (para baixo).</div></div></div><div style=\"display:flex; flex-direction:column; gap:8px;\"><div><strong>No deck (Build / Side)</strong></div><div><strong>Esquerdo</strong>: no <strong>Build</strong>, adiciona 1 c\u00f3pia; no <strong>Side</strong>, move 1 c\u00f3pia para o Build.</div><div><strong>Direito</strong>: alterna 1 c\u00f3pia entre <strong>Build \u2194 Side</strong>.</div><div><strong>Scroll</strong> (clique na roda): remove 1 c\u00f3pia (do Build ou do Side, conforme onde clicou).</div><div><strong>Dica</strong>: clique no bot\u00e3o de <strong>Impress\u00f5es/Sets</strong> na carta para abrir as impress\u00f5es (quando dispon\u00edvel).</div></div></div>", en: "<div style=\"display:flex; flex-direction:column; gap:12px;\"><div style=\"display:flex; gap:12px; align-items:flex-start; flex-wrap:wrap;\"><svg width=\"140\" height=\"168\" viewBox=\"0 0 140 168\" role=\"img\" aria-label=\"Mouse\" style=\"flex:0 0 auto;\"><defs><filter id=\"hmShEn\" x=\"-20%\" y=\"-20%\" width=\"140%\" height=\"140%\"><feDropShadow dx=\"0\" dy=\"2\" stdDeviation=\"2\" flood-color=\"rgba(0,0,0,0.4)\"/></filter><marker id=\"hmALEn\" viewBox=\"0 0 10 10\" refX=\"9\" refY=\"5\" markerWidth=\"5\" markerHeight=\"5\" orient=\"auto\"><path d=\"M0,0 L10,5 L0,10 z\" fill=\"#93c5fd\"/></marker><marker id=\"hmAREn\" viewBox=\"0 0 10 10\" refX=\"9\" refY=\"5\" markerWidth=\"5\" markerHeight=\"5\" orient=\"auto\"><path d=\"M0,0 L10,5 L0,10 z\" fill=\"#fca5a5\"/></marker><marker id=\"hmAMEn\" viewBox=\"0 0 10 10\" refX=\"9\" refY=\"5\" markerWidth=\"5\" markerHeight=\"5\" orient=\"auto\"><path d=\"M0,0 L10,5 L0,10 z\" fill=\"#d1d5db\"/></marker></defs><rect x=\"30\" y=\"32\" width=\"80\" height=\"130\" rx=\"40\" fill=\"#1f2937\" stroke=\"#6b7280\" stroke-width=\"2\" filter=\"url(#hmShEn)\"/><path d=\"M 30 74 L 70 74 L 70 32 A 40 40 0 0 0 30 72 Z\" fill=\"#2563eb\" opacity=\"0.88\"/><path d=\"M 110 74 L 70 74 L 70 32 A 40 40 0 0 1 110 72 Z\" fill=\"#ef4444\" opacity=\"0.88\"/><line x1=\"70\" y1=\"32\" x2=\"70\" y2=\"94\" stroke=\"#6b7280\" stroke-width=\"2\"/><path d=\"M30 74 Q70 42 110 74\" fill=\"none\" stroke=\"#6b7280\" stroke-width=\"2\" opacity=\"0.7\"/><rect x=\"64\" y=\"44\" width=\"12\" height=\"26\" rx=\"6\" fill=\"#e5e7eb\" opacity=\"0.92\"/><line x1=\"50\" y1=\"56\" x2=\"28\" y2=\"26\" stroke=\"#93c5fd\" stroke-width=\"2\" marker-end=\"url(#hmALEn)\"/><line x1=\"70\" y1=\"44\" x2=\"70\" y2=\"26\" stroke=\"#d1d5db\" stroke-width=\"2\" marker-end=\"url(#hmAMEn)\"/><line x1=\"90\" y1=\"56\" x2=\"112\" y2=\"26\" stroke=\"#fca5a5\" stroke-width=\"2\" marker-end=\"url(#hmAREn)\"/><text x=\"28\" y=\"18\" fill=\"#93c5fd\" font-size=\"10\" font-family=\"ui-sans-serif,system-ui,sans-serif\" text-anchor=\"middle\">Left</text><text x=\"70\" y=\"18\" fill=\"#d1d5db\" font-size=\"10\" font-family=\"ui-sans-serif,system-ui,sans-serif\" text-anchor=\"middle\">Scroll</text><text x=\"112\" y=\"18\" fill=\"#fca5a5\" font-size=\"10\" font-family=\"ui-sans-serif,system-ui,sans-serif\" text-anchor=\"middle\">Right</text></svg><div style=\"flex:1 1 220px; display:flex; flex-direction:column; gap:8px;\"><div><strong>Results / suggestions list</strong></div><div><strong>Left</strong>: adds to the <strong>Main Deck</strong> (uses <strong>Quantity</strong>).</div><div><strong>Right</strong>: adds to the <strong>Side Deck</strong>.</div><div><strong>Scroll</strong> (wheel click): opens <strong>Card details</strong>.</div><div><strong>Scrolling</strong> the wheel on the results list: <strong>previous page</strong> (scroll up) / <strong>next page</strong> (scroll down).</div></div></div><div style=\"display:flex; flex-direction:column; gap:8px;\"><div><strong>In the deck (Build / Side)</strong></div><div><strong>Left</strong>: on <strong>Build</strong>, adds 1 copy; on <strong>Side</strong>, moves 1 copy to Build.</div><div><strong>Right</strong>: toggles 1 copy between <strong>Build \u2194 Side</strong>.</div><div><strong>Scroll</strong> (wheel click): removes 1 copy (from Build or Side, depending on where you clicked).</div><div><strong>Tip</strong>: click the <strong>Prints/Sets</strong> button on a card to open its prints (when available).</div></div></div>" },
+        "ui.close": { pt: "Fechar", en: "Close" },
         "ui.sets_partial": { pt: "{max} de {total}", en: "{max} of {total}" },
         "ui.spell_attr": { pt: "MAGIA", en: "SPELL" },
         "ui.trap_attr": { pt: "ARMADILHA", en: "TRAP" },
@@ -6896,7 +7408,7 @@
         "results.hint.date_order": { pt: "Per\u00edodo: a data inicial \u00e9 posterior \u00e0 final.", en: "Date range: start date is after the end date." },
         "results.hint.price_inverted": { pt: "Pre\u00e7o: o valor m\u00ednimo \u00e9 maior que o valor m\u00e1ximo nos campos do filtro.", en: "Price: the minimum value is greater than the maximum in the filter fields." },
         "results.hint.price_chip_inverted": { pt: "Pre\u00e7o: pelo menos uma faixa salva tem valor m\u00ednimo maior que o valor m\u00e1ximo.", en: "Price: at least one saved range has a minimum value above the maximum." },
-        "results.range": { pt: "Exibindo {a}-{b} de {t}", en: "Showing {a}-{b} of {t}" },
+        "results.range": { pt: "{a}-{b} de {t}", en: "{a}-{b} of {t}" },
         "results.range_cards": { pt: "Exibindo {a}-{b} de {e} \u2014 {c} cartas sendo {v} por artes alternativas.", en: "Showing {a}-{b} of {e} \u2014 {c} cards, {v} from alternate art." },
         "search.combine_price_date": { pt: "Para filtrar s\u00f3 por pre\u00e7o, combine com nome, outros filtros, c\u00f3digo(s) de set ou raridade.", en: "To filter by price only, combine with name, other filters, set code(s), or rarity." },
         "search.failed": { pt: "N\u00e3o foi poss\u00edvel buscar.", en: "Could not complete search." },
@@ -7169,6 +7681,7 @@
             if (typeof syncAllNativeCustomSelectTriggers === 'function') syncAllNativeCustomSelectTriggers();
         } catch (_) {}
         updateLangButtonsUi();
+        try { applyHelpUi(); } catch (_) {}
         try { refreshViewControlsHeaderCompact(); } catch (_) {}
     }
 
@@ -7181,7 +7694,6 @@
         const toEnglish = getUiLang() === 'pt';
         btn.innerHTML = toEnglish ? SVG_FLAG_US : SVG_FLAG_BR;
         const tTitle = toEnglish ? T('lang.en_title') : T('lang.pt_title');
-        btn.setAttribute('title', tTitle);
         btn.setAttribute('aria-label', tTitle);
     }
     function setUiLang(next) {
@@ -7390,16 +7902,22 @@
         const btn = document.getElementById('btn-toggle-deck-column');
         const icon = document.getElementById('icon-toggle-deck-column');
         if (!btn) return;
-        const titles = [
-            'Coluna do deck oculta — clique para tamanho normal',
-            'Coluna normal — clique para ampliar (metade da área)',
-            'Coluna ampliada — clique para ocultar'
+        // Mostrar a ação do clique (próximo estado), não o estado atual.
+        const next = (deckColumnCycle + 1) % 3;
+        const titlesNext = [
+            'Ocultar coluna do deck',
+            'Mostrar coluna do deck (tamanho normal)',
+            'Ampliar coluna do deck (metade da área)'
         ];
-        btn.title = titles[deckColumnCycle] || titles[1];
+        btn.title = titlesNext[next] || titlesNext[1];
+        btn.setAttribute('aria-label', btn.title);
+
+        // "active" continua refletindo o estado atual (coluna visível).
         btn.classList.toggle('active', deckColumnCycle !== 0);
+
         if (!icon) return;
-        if (deckColumnCycle === 0) icon.className = 'fas fa-eye-slash';
-        else if (deckColumnCycle === 1) icon.className = 'fas fa-columns';
+        if (next === 0) icon.className = 'fas fa-eye-slash';
+        else if (next === 1) icon.className = 'fas fa-columns';
         else icon.className = 'fas fa-arrows-alt-h';
     }
 
@@ -7439,7 +7957,8 @@
             btn.setAttribute('aria-label', T(tKey));
             btn.setAttribute('data-i18n-title', tKey);
         }
-        if (icon) icon.className = hidden ? 'fas fa-eye-slash' : 'fas fa-file-pdf';
+        // Ícone deve indicar a ação/estado seguinte (o que vai acontecer ao clicar).
+        if (icon) icon.className = hidden ? 'fas fa-file-pdf' : 'fas fa-eye-slash';
         try {
             setUiPref(UI_PREF_KEYS.pdfPreview, hidden ? '0' : '1');
         } catch (_) {}
@@ -7714,7 +8233,9 @@
         const layout = document.getElementById('app-layout');
         if (!layout) return false;
         if (layout.classList.contains('filters-col-hidden')) return false;
-        return deckColumnCycle === 2;
+        // Compacta texto (Exibindo.../Versão...) sempre que a coluna do deck estiver visível,
+        // não só no modo "ampliado", para evitar blocos longos em layouts normais.
+        return deckColumnCycle !== 0;
     }
 
     function paintResultDbVersion() {
@@ -7750,6 +8271,8 @@
     function refreshViewControlsHeaderCompact() {
         paintResultDbVersion();
         refreshThemeRowLabelCompact();
+        try { syncResultsViewToggleUi(); } catch (_) {}
+        try { syncQueueViewToggleUi(); } catch (_) {}
     }
 
     function applyCheckDbVerJson(j) {
@@ -11242,7 +11765,10 @@
         if (!root) return;
         const items = root.querySelectorAll(itemSelector);
         const paintKind = getCardSurfacePaintKind();
-        const family = mapReasonToSurfaceFamily(paintKind || 'generic');
+        // Sem motivo explícito: não animar (evita “piscar” em re-renders encadeados — layout/lista, refit, rAF).
+        // 'silent' suprime som/toast mas não deve forçar entrada genérica a cada passo.
+        if (!paintKind || paintKind === 'silent') return;
+        const family = mapReasonToSurfaceFamily(paintKind);
         items.forEach((el) => {
             el.classList.remove('card-surface-enter');
             for (const s of SFC_CARD_ANIM_SUFFIXES) el.classList.remove('card-surface-enter--' + s);
@@ -11324,7 +11850,8 @@
             btn.setAttribute('aria-pressed', hidden ? 'false' : 'true');
             btn.title = hidden ? 'Mostrar coluna de filtros' : 'Ocultar coluna de filtros';
         }
-        if (icon) icon.className = hidden ? 'fas fa-eye-slash' : 'fas fa-filter';
+        // Ícone deve indicar a ação/estado seguinte (o que vai acontecer ao clicar).
+        if (icon) icon.className = hidden ? 'fas fa-filter' : 'fas fa-eye-slash';
         try {
             setUiPref(UI_PREF_KEYS.filtersColVisible, hidden ? '0' : '1');
         } catch (_) {}
@@ -11347,6 +11874,15 @@
                 renderResults();
             } catch (_) {}
         });
+    }
+
+    function syncHelpDisabledInlineAddFilterLayout() {
+        try {
+            document.querySelectorAll('.sidebar-content .filter-group').forEach((g) => {
+                const isInlineAdd = !!g.querySelector('.filter-action-row .icon-btn-stack--tool');
+                g.classList.toggle('filter-group--inline-add', isInlineAdd);
+            });
+        } catch (_) {}
     }
 
     function getFullscreenElement() {
@@ -11500,6 +12036,74 @@
             input.focus();
             input.select();
         }, 0);
+    }
+
+    let helpMouseModalKeyHandler = null;
+    function openHelpMouseModal() {
+        const modal = document.getElementById('help-mouse-modal');
+        const closeBtn = document.getElementById('help-mouse-modal-close');
+        const backdrop = document.getElementById('help-mouse-modal-backdrop');
+        if (!modal || !closeBtn || !backdrop) return;
+
+        if (helpMouseModalKeyHandler) {
+            document.removeEventListener('keydown', helpMouseModalKeyHandler);
+            helpMouseModalKeyHandler = null;
+        }
+
+        function close() {
+            modal.classList.remove('is-open');
+            modal.setAttribute('aria-hidden', 'true');
+            closeBtn.removeEventListener('click', onClose);
+            backdrop.removeEventListener('click', onClose);
+            if (helpMouseModalKeyHandler) {
+                document.removeEventListener('keydown', helpMouseModalKeyHandler);
+                helpMouseModalKeyHandler = null;
+            }
+        }
+
+        function onClose() { close(); }
+
+        helpMouseModalKeyHandler = (e) => {
+            if (!modal.classList.contains('is-open')) return;
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                onClose();
+            }
+        };
+
+        closeBtn.addEventListener('click', onClose);
+        backdrop.addEventListener('click', onClose);
+        document.addEventListener('keydown', helpMouseModalKeyHandler);
+
+        modal.classList.add('is-open');
+        modal.setAttribute('aria-hidden', 'false');
+        setTimeout(() => { try { closeBtn.focus(); } catch (_) {} }, 0);
+    }
+
+    let uiHelpEnabled = false;
+    function isHelpEnabled() { return !!uiHelpEnabled; }
+    function applyHelpUi() {
+        const root = document.documentElement;
+        root.classList.toggle('help-enabled', isHelpEnabled());
+        const btn = document.getElementById('btn-help-toggle');
+        if (btn) {
+            btn.classList.toggle('active', isHelpEnabled());
+            btn.setAttribute('aria-pressed', isHelpEnabled() ? 'true' : 'false');
+            const k = isHelpEnabled() ? 'ui.help_toggle_on' : 'ui.help_toggle_off';
+            btn.setAttribute('title', '');
+            btn.setAttribute('aria-label', T(k));
+        }
+        const mouseBtn = document.getElementById('btn-help-mouse');
+        if (mouseBtn) {
+            mouseBtn.style.display = isHelpEnabled() ? '' : 'none';
+            mouseBtn.setAttribute('title', '');
+            mouseBtn.setAttribute('aria-label', T('ui.help_mouse_btn'));
+        }
+    }
+    function setHelpEnabled(next) {
+        uiHelpEnabled = !!next;
+        try { setUiPref(UI_PREF_KEYS.help, isHelpEnabled() ? '1' : '0'); } catch (_) {}
+        applyHelpUi();
     }
 
     function showTooltip(card, e) {
@@ -11984,7 +12588,125 @@
      * Itens por página nas sugestões: mais cartas com a coluna do deck oculta (0),
      * menos com coluna normal (1), ainda menos com coluna ampliada (2) — grade desktop: 10 / 7 / 5 colunas (oculto / normal / ampliado).
      */
+    let resultsListColsOverride = null;      // somente modo lista (results)
+    let resultsItemsPerPageOverride = null;  // somente modo lista (results)
+    let __fittingResultsListLayout = false;
+    let __resultsListLayoutKey = null;
+    let __resultsListRerenderQueued = false;
+    let __resultsListFullscreenFixTries = 0;
+
+    const RESULTS_LIST_MIN_COL_PX = 260; // largura mínima para manter info legível
+    const RESULTS_LIST_MAX_COLS = 6;     // trava superior de colunas no modo lista (evita micro-cards em telas largas)
+    // Sincronizado com .results-view.list-mode: --list-suggestion-art-max-h + --list-suggestion-block-vpad (+ ~1px gap da grade).
+    const RESULTS_LIST_TARGET_ITEM_H = 133;
+
+    function getResultsViewColumnCount(rv) {
+        if (!rv) return 1;
+        const rvStyle = window.getComputedStyle(rv);
+        const colsRaw = String(rvStyle.gridTemplateColumns || '').trim();
+        if (!colsRaw) return 1;
+        return Math.max(1, colsRaw.split(/\s+/).filter(Boolean).length || 1);
+    }
+
+    function applyResultsListCols(rv, cols) {
+        if (!rv) return;
+        const c = Math.max(1, Math.min(RESULTS_LIST_MAX_COLS, parseInt(String(cols), 10) || 1));
+        resultsListColsOverride = c;
+        rv.style.gridTemplateColumns = `repeat(${c}, minmax(${RESULTS_LIST_MIN_COL_PX}px, 1fr))`;
+    }
+
+    function clearResultsListOverrides(rv) {
+        resultsListColsOverride = null;
+        resultsItemsPerPageOverride = null;
+        __resultsListLayoutKey = null;
+        __resultsListFullscreenFixTries = 0;
+        if (rv) rv.style.gridTemplateColumns = '';
+    }
+
+    function getResultsListLayoutKey() {
+        const rv = document.getElementById('results-view');
+        const layout = document.getElementById('app-layout');
+        const filtersHidden = !!(layout && layout.classList.contains('filters-col-hidden'));
+        const deckHidden = !!(layout && layout.classList.contains('deck-col-hidden'));
+        const deckWide = !!(layout && layout.classList.contains('deck-col-wide'));
+        const w = rv ? Math.round(rv.clientWidth) : 0;
+        const h = rv ? Math.round(rv.clientHeight) : 0;
+        return [
+            'list',
+            filtersHidden ? 'fh1' : 'fh0',
+            deckHidden ? 'dh1' : 'dh0',
+            deckWide ? 'dw1' : 'dw0',
+            'w' + w,
+            'h' + h
+        ].join('|');
+    }
+
+    function fitResultsListLayoutAfterRender() {
+        if (__fittingResultsListLayout) return false;
+        const rv = document.getElementById('results-view');
+        if (!rv) return false;
+        if (currentView !== 'list') {
+            clearResultsListOverrides(rv);
+            return false;
+        }
+        const rvStyle = window.getComputedStyle(rv);
+        if (rvStyle.display !== 'grid') return false;
+        const sample = rv.querySelector('.suggestion-item');
+        if (!sample) return false;
+
+        const layoutKey = getResultsListLayoutKey();
+        // Se o layout mudou (resize/painéis), libera recálculo. Caso contrário, mantém estável entre páginas.
+        const layoutChanged = (__resultsListLayoutKey !== layoutKey);
+        if (layoutChanged) {
+            resultsListColsOverride = null;
+            resultsItemsPerPageOverride = null;
+            __resultsListLayoutKey = layoutKey;
+        }
+
+        // Se já temos overrides para este layout, não recalcula de novo a cada mudança de página.
+        if (!layoutChanged && resultsListColsOverride != null && resultsItemsPerPageOverride != null) return false;
+
+        __fittingResultsListLayout = true;
+        try {
+            // 1) Colunas: baseado em largura mínima por card (estável e legível).
+            const rvStyle = window.getComputedStyle(rv);
+            const colGap = parseFloat(rvStyle.columnGap || rvStyle.gap || '0') || 0;
+            const availW = rv.clientWidth;
+            let cols = Math.floor((availW + colGap) / (RESULTS_LIST_MIN_COL_PX + colGap));
+            cols = Math.max(1, Math.min(RESULTS_LIST_MAX_COLS, cols || 1));
+
+            // 2) Altura: calcula rows por altura-alvo (estável entre páginas e aproveita melhor o espaço).
+            const rowGap = parseFloat(rvStyle.rowGap || rvStyle.gap || '0') || 0;
+            const availH = rv.clientHeight;
+            // margem de segurança evita cortar a última linha (especialmente em fullscreen/zoom)
+            const safeH = Math.max(0, availH - 24);
+            let rows = Math.max(1, Math.floor((safeH + rowGap) / (RESULTS_LIST_TARGET_ITEM_H + rowGap)));
+            // Evita "1 linha" quando claramente cabe 2.
+            if (rows < 2 && safeH >= (RESULTS_LIST_TARGET_ITEM_H * 2 + rowGap)) rows = 2;
+            rows = Math.max(1, Math.min(6, rows));
+            const maxLimit = 300;
+            let perPage = Math.min(maxLimit, Math.max(cols, cols * rows));
+
+            // Caso a lista atual não tenha itens suficientes para preencher (última página), não força grow aqui.
+            const prevCols = resultsListColsOverride;
+            const prevPerPage = resultsItemsPerPageOverride;
+            applyResultsListCols(rv, cols);
+            resultsItemsPerPageOverride = perPage;
+
+            // Correção: em fullscreen, qualquer overflow corta a última linha (sem scrollbar).
+            // O ajuste final (reduzir 1 linha) é aplicado no pós-render (ver renderResults),
+            // porque aqui ainda estamos durante o mesmo ciclo de render.
+            return layoutChanged || prevCols !== cols || prevPerPage !== perPage;
+        } finally {
+            __fittingResultsListLayout = false;
+        }
+    }
+
     function getItemsPerPage() {
+        if (currentView === 'list' && resultsItemsPerPageOverride != null) {
+            const n = parseInt(String(resultsItemsPerPageOverride), 10);
+            if (Number.isFinite(n) && n >= 1) return Math.min(300, n);
+        }
         function getItemsPerRowForCurrentLayout(isMobile, d, filtersHidden, currentView) {
             if (currentView === 'list') {
                 // A "lista" aqui é uma grade de linhas; 1 linha extra em fullscreen = +colunas.
@@ -12106,10 +12828,11 @@
             applyTooltipFromPref();
         } catch (_) {}
         try {
-            const bL = document.getElementById('btn-queue-list');
-            const bG = document.getElementById('btn-queue-grid');
-            if (bL) bL.classList.toggle('active', queueView === 'list');
-            if (bG) bG.classList.toggle('active', queueView === 'grid');
+            syncQueueViewToggleUi();
+        } catch (_) {}
+        try {
+            uiHelpEnabled = getUiPref(UI_PREF_KEYS.help) === '1';
+            document.documentElement.classList.toggle('help-enabled', isHelpEnabled());
         } catch (_) {}
     }
 
@@ -12135,10 +12858,7 @@
             const viewPref = getUiPref(UI_PREF_KEYS.view);
             if (viewPref === 'list' || viewPref === 'grid') {
                 currentView = viewPref;
-                const bl = document.getElementById('btn-list');
-                const bg = document.getElementById('btn-grid');
-                if (bl) bl.classList.toggle('active', viewPref === 'list');
-                if (bg) bg.classList.toggle('active', viewPref === 'grid');
+                syncResultsViewToggleUi();
             }
         } catch (_) {}
         try {
@@ -12186,6 +12906,14 @@
         try {
             const bLang = document.getElementById('btn-lang-toggle');
             if (bLang) bLang.onclick = () => setUiLang(getUiLang() === 'pt' ? 'en' : 'pt');
+        } catch (_) {}
+
+        try {
+            const bHelp = document.getElementById('btn-help-toggle');
+            if (bHelp) bHelp.onclick = () => setHelpEnabled(!isHelpEnabled());
+            const bMouse = document.getElementById('btn-help-mouse');
+            if (bMouse) bMouse.onclick = () => openHelpMouseModal();
+            applyHelpUi();
         } catch (_) {}
 
         try {
@@ -12392,12 +13120,100 @@
                 renderResults();
             }, 150);
         });
+
+        // Quando classes do layout mudam (deck/filtros), refaz o ajuste do modo lista imediatamente.
+        try {
+            const layout = document.getElementById('app-layout');
+            let moTimer = null;
+            if (layout) {
+                const scheduleRefit = () => {
+                    if (currentView !== 'list') return;
+                    const rv = document.getElementById('results-view');
+                    clearResultsListOverrides(rv);
+                    try { requestCardSurfaceFeedback('silent'); } catch (_) {}
+                    renderResults();
+                };
+                const obs = new MutationObserver(() => {
+                    if (currentView !== 'list') return;
+                    clearTimeout(moTimer);
+                    moTimer = setTimeout(() => {
+                        // 1) imediato (para trocar cols/perPage já)
+                        scheduleRefit();
+                        // 2) após a transição de largura do grid (deck-col-wide etc.)
+                        setTimeout(() => scheduleRefit(), 360);
+                    }, 50);
+                });
+                obs.observe(layout, { attributes: true, attributeFilter: ['class'] });
+
+                // Alguns browsers não disparam mutation no timing ideal durante transições;
+                // reforça com transitionend do container.
+                layout.addEventListener(
+                    'transitionend',
+                    (ev) => {
+                        if (currentView !== 'list') return;
+                        const prop = String(ev && ev.propertyName ? ev.propertyName : '');
+                        if (prop && !/grid-template-columns|width|max-width|min-width/.test(prop)) return;
+                        scheduleRefit();
+                    },
+                    true
+                );
+            }
+        } catch (_) {}
     };
+
+    function syncResultsViewToggleUi() {
+        const btn = document.getElementById('btn-toggle-results-view');
+        const lab = document.getElementById('label-toggle-results-view');
+        const icon = document.getElementById('icon-toggle-results-view');
+        if (!btn || !lab) return;
+        const inList = currentView === 'list';
+        if (inList) {
+            lab.textContent = T('ui.grid_label');
+            const t = T('ui.grid_title');
+            btn.setAttribute('title', t);
+            btn.setAttribute('aria-label', t);
+            if (icon) icon.className = 'fas fa-th-large';
+        } else {
+            lab.textContent = T('ui.list_label');
+            const t = T('ui.list_title');
+            btn.setAttribute('title', t);
+            btn.setAttribute('aria-label', t);
+            if (icon) icon.className = 'fas fa-list';
+        }
+    }
+
+    function syncQueueViewToggleUi() {
+        const btn = document.getElementById('btn-toggle-queue-view');
+        const lab = document.getElementById('label-toggle-queue-view');
+        const icon = document.getElementById('icon-toggle-queue-view');
+        if (!btn || !lab) return;
+        const inList = queueView === 'list';
+        if (inList) {
+            lab.textContent = T('ui.deck_queue_grid_label');
+            const t = T('ui.queue_grid_title');
+            btn.setAttribute('title', t);
+            btn.setAttribute('aria-label', t);
+            if (icon) icon.className = 'fas fa-th-large';
+        } else {
+            lab.textContent = T('ui.deck_queue_list_label');
+            const t = T('ui.queue_list_title');
+            btn.setAttribute('title', t);
+            btn.setAttribute('aria-label', t);
+            if (icon) icon.className = 'fas fa-list';
+        }
+    }
+
+    function toggleResultsView() {
+        changeView(currentView === 'list' ? 'grid' : 'list');
+    }
+
+    function toggleQueueView() {
+        changeQueueView(queueView === 'list' ? 'grid' : 'list');
+    }
 
     function changeView(view) {
         currentView = view;
-        document.getElementById('btn-list').classList.toggle('active', view === 'list');
-        document.getElementById('btn-grid').classList.toggle('active', view === 'grid');
+        syncResultsViewToggleUi();
         setUiPref(UI_PREF_KEYS.view, view);
         requestCardSurfaceFeedback('suggestions_view');
         currentPage = 1;
@@ -12423,7 +13239,8 @@
 
     function triggerSearch() { clearTimeout(window.sTimeout); window.sTimeout = setTimeout(performSearch, 500); }
 
-    function paintResultsLoadingState() {
+    function paintResultsLoadingState(requestId) {
+        if (requestId != null && requestId !== latestSearchRequestSeq) return;
         const container = document.getElementById('results-view');
         if (!container) return;
         container.className = `results-view ${currentView}-mode`;
@@ -12437,9 +13254,11 @@
         const ri = document.getElementById('result-info');
         if (ri) ri.textContent = T('results.loading');
         try { refreshViewControlsHeaderCompact(); } catch (_) {}
+        activeCardSearchInFlight = true;
     }
 
-    function updateResultsLoadingProgress(n) {
+    function updateResultsLoadingProgress(n, requestId) {
+        if (requestId != null && requestId !== latestSearchRequestSeq) return;
         if (n == null || n < 1) return;
         const line = T('results.loading_count', { n });
         const ri = document.getElementById('result-info');
@@ -12451,8 +13270,9 @@
     /**
      * Busca cartas com os filtros atuais (EN+PT); devolve lista sem expandir artes.
      * kind: 'skip' (OCR aberto), 'clear' (sem critério), 'toast' (validação), 'data', 'error'
+     * @param requestId id da chamada `performSearch` (para ignorar progresso/estado obsoleto).
      */
-    async function computeUnexpandedSearchResults(initial) {
+    async function computeUnexpandedSearchResults(initial, requestId) {
         const qInput = document.getElementById('search-input');
         const q = qInput.value.trim();
         const desc = (document.getElementById('filter-desc')?.value || '').trim();
@@ -12555,22 +13375,26 @@
         }
 
         try {
-            paintResultsLoadingState();
+            if (requestId != null && requestId !== latestSearchRequestSeq) {
+                return { kind: 'skip' };
+            }
+            paintResultsLoadingState(requestId);
+            const reportProgress = (n) => updateResultsLoadingProgress(n, requestId);
             let finalData;
             if (setcodesOnlyPath) {
                 const idUnion = await unionIdsFromSetcodesList(setcodes);
                 if (idUnion.size === 0) {
                     return { kind: 'toast', msg: T('search.no_setcode') };
                 }
-                const mergedById = await fetchCardsByIdsBatched(idUnion, updateResultsLoadingProgress);
+                const mergedById = await fetchCardsByIdsBatched(idUnion, reportProgress);
                 finalData = Array.from(mergedById.values());
             } else if (rarityOnlyPath) {
                 showToast(T('search.rarity_scan'));
-                const bigMap = await fetchAllCardsPaginatedMerged(updateResultsLoadingProgress);
+                const bigMap = await fetchAllCardsPaginatedMerged(reportProgress);
                 finalData = Array.from(bigMap.values()).filter(card => cardMatchesRarityFilters(card, rarities));
             } else if (priceOnlyPath) {
                 showToast(T('search.price_full_scan'));
-                const bigMap = await fetchAllCardsPaginatedMerged(updateResultsLoadingProgress);
+                const bigMap = await fetchAllCardsPaginatedMerged(reportProgress);
                 finalData = Array.from(bigMap.values());
             } else {
                 // Se houver múltiplos tipos selecionados (Monstro/Magia/Armadilha),
@@ -12625,7 +13449,7 @@
                                     const baselineIds = mergedById.size;
                                     const m = await fetchMergedCardinfoDualLoop(
                                         pReqDr, archFilters, archLoop, fnames, descs, atks, defs, sets,
-                                        (n) => updateResultsLoadingProgress(baselineIds + n)
+                                        (n) => reportProgress(baselineIds + n)
                                     );
                                     let list = Array.from(m.values());
 
@@ -12723,10 +13547,13 @@
     }
 
     async function performSearch(initial = false) {
+        const requestId = ++latestSearchRequestSeq;
         try {
-            const pack = await computeUnexpandedSearchResults(initial);
+            const pack = await computeUnexpandedSearchResults(initial, requestId);
+            if (requestId !== latestSearchRequestSeq) return;
             if (pack.kind === 'skip') return;
             if (pack.kind === 'clear') {
+                activeCardSearchInFlight = false;
                 clearRandomPickState();
                 document.getElementById('results-view').innerHTML = '';
                 return;
@@ -12736,6 +13563,7 @@
                 clearRandomPickState();
                 searchResults = [];
                 requestCardSurfaceFeedback('search_toast');
+                activeCardSearchInFlight = false;
                 renderResults();
                 return;
             }
@@ -12743,6 +13571,7 @@
                 clearRandomPickState();
                 searchResults = [];
                 requestCardSurfaceFeedback('search_toast');
+                activeCardSearchInFlight = false;
                 renderResults();
                 return;
             }
@@ -12764,6 +13593,7 @@
             finalData.forEach(c => { cardCache[c.id] = c; });
             if (initial || pack.hasFnameQuery || pack.hasDescQuery || pack.hasOtherFilters) currentPage = 1;
             if (!cardSurfaceFeedbackReason) requestCardSurfaceFeedback('filter');
+            activeCardSearchInFlight = false;
             sortAndRender();
         } finally {
             scheduleDeckbuilderFilterUrlSync();
@@ -12818,6 +13648,16 @@
             if (currentPage > maxPage) currentPage = maxPage;
         }
         if (searchResults.length === 0) {
+            if (activeCardSearchInFlight) {
+                const rv = document.getElementById('results-view');
+                if (rv && rv.querySelector('.results-state-placeholder')) {
+                    rv.className = `results-view ${currentView}-mode`;
+                    try { refreshViewControlsHeaderCompact(); } catch (_) {}
+                    return;
+                }
+                paintResultsLoadingState(latestSearchRequestSeq);
+                return;
+            }
             const filterHints = getActiveFilterValidationHints();
             const hintBlock = filterHints.length
                 ? `<p class="results-state-hint" style="margin-top:14px;max-width:36em;margin-left:auto;margin-right:auto;line-height:1.45;">${filterHints.map(h => escapeHtml(h)).join(' ')}</p>`
@@ -13022,6 +13862,52 @@
             bindSuggestionItemDnD(div, { id: card.id, imgId: imageObj.id, name: displayName });
             container.appendChild(div);
         });
+        // Ajuste responsivo do modo lista: colunas e itens por página sem scroll.
+        // Se precisar re-render, agenda no próximo frame para evitar thrash.
+        if (currentView === 'list') {
+            const needsRerender = fitResultsListLayoutAfterRender();
+            if (needsRerender && !__resultsListRerenderQueued) {
+                __resultsListRerenderQueued = true;
+                requestAnimationFrame(() => {
+                    __resultsListRerenderQueued = false;
+                    if (currentView !== 'list') return;
+                    const items2 = getItemsPerPage();
+                    if (searchResults.length > 0) {
+                        const maxPage = Math.max(1, Math.ceil(searchResults.length / items2));
+                        if (currentPage > maxPage) currentPage = maxPage;
+                    }
+                    renderResults();
+                });
+            }
+
+            // Pós-render fullscreen: se houver corte (overflow), reduz 1 linha (−colunas) e re-renderiza.
+            // Faz no máximo algumas tentativas para evitar loop.
+            try {
+                const fs = !!getFullscreenElement();
+                if (fs) {
+                    const cols = resultsListColsOverride || getResultsViewColumnCount(container);
+                    const per = resultsItemsPerPageOverride || getItemsPerPage();
+                    if (container.scrollHeight > container.clientHeight + 1 && cols >= 1 && per > cols && __resultsListFullscreenFixTries < 6) {
+                        __resultsListFullscreenFixTries += 1;
+                        resultsItemsPerPageOverride = Math.max(cols, per - cols);
+                        if (!__resultsListRerenderQueued) {
+                            __resultsListRerenderQueued = true;
+                            requestAnimationFrame(() => {
+                                __resultsListRerenderQueued = false;
+                                if (currentView !== 'list') return;
+                                renderResults();
+                            });
+                        }
+                    } else if (!fs) {
+                        __resultsListFullscreenFixTries = 0;
+                    }
+                } else {
+                    __resultsListFullscreenFixTries = 0;
+                }
+            } catch (_) {}
+        } else {
+            clearResultsListOverrides(container);
+        }
         maybePaintSuggestionSurfaceAnimations();
         if (!__insideUpdateUI) {
             const rr = consumeCardSurfaceFeedback();
@@ -13087,10 +13973,7 @@
     function changeQueueView(view) {
         if (view !== 'list' && view !== 'grid') return;
         queueView = view;
-        const bL = document.getElementById('btn-queue-list');
-        const bG = document.getElementById('btn-queue-grid');
-        if (bL) bL.classList.toggle('active', view === 'list');
-        if (bG) bG.classList.toggle('active', view === 'grid');
+        syncQueueViewToggleUi();
         requestCardSurfaceFeedback('deck_view');
         renderDeckQueue();
         if (!__insideUpdateUI) {
@@ -13565,6 +14448,7 @@
             initDeckDragDrop();
             initSavedDecksAndPdfToolbar();
             initFiltersColumnToolbar();
+            syncHelpDisabledInlineAddFilterLayout();
             initExportMenu();
             initDeckValidationControls();
             initNativeSelectCustomUi();
@@ -13577,6 +14461,7 @@
         initDeckDragDrop();
         initSavedDecksAndPdfToolbar();
         initFiltersColumnToolbar();
+        syncHelpDisabledInlineAddFilterLayout();
         initExportMenu();
         initDeckValidationControls();
         initNativeSelectCustomUi();
