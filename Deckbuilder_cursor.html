@@ -4630,6 +4630,57 @@
                     <button type="button" id="filter-def-clear-chips" class="btn-secondary btn-icon-tool" data-i18n-title="filter.def_clear" data-i18n-aria="filter.def_clear" title="" aria-label=""><i class="fas fa-eraser" aria-hidden="true"></i></button>
                 </div>
                 </div>
+                <div class="filter-group">
+                    <label data-i18n="filter.linkval_label">Link</label>
+                    <p class="cardset-hint" data-i18n-html="filter.linkval_hint">Filtra monstros Link pelo número (API: <code>link</code>). Pode adicionar mais de um (união OR).</p>
+                    <div class="filter-action-row">
+                        <input type="text" id="filter-linkval-input" list="datalist-filter-linkval" data-i18n-placeholder="filter.linkval_ph" placeholder="Ex.: 2" autocomplete="off" style="flex: 1;">
+                        <div class="icon-btn-stack icon-btn-stack--tool">
+                            <span class="theme-row-label" data-i18n="filter.add">Adicionar</span>
+                            <button type="button" id="filter-linkval-add" class="btn-secondary btn-icon-tool" data-i18n-title="filter.add" data-i18n-aria="filter.add" title="" aria-label=""><i class="fas fa-plus" aria-hidden="true"></i></button>
+                        </div>
+                    </div>
+                    <datalist id="datalist-filter-linkval"></datalist>
+                    <div id="filter-linkval-chips" class="cardset-chips"></div>
+                    <div class="filter-clear-stack">
+                        <span class="theme-row-label" data-i18n="filter.linkval_clear">Limpar links</span>
+                        <button type="button" id="filter-linkval-clear" class="btn-secondary btn-icon-tool" data-i18n-title="filter.linkval_clear" data-i18n-aria="filter.linkval_clear" title="" aria-label=""><i class="fas fa-eraser" aria-hidden="true"></i></button>
+                    </div>
+                </div>
+                <div class="filter-group">
+                    <label data-i18n="filter.linkmarker_label">Setas (Link Markers)</label>
+                    <p class="cardset-hint" data-i18n-html="filter.linkmarker_hint">Adicionar setas (API: <code>linkmarker</code>). Vários chips = união OR.</p>
+                    <div class="filter-action-row">
+                        <input type="text" id="filter-linkmarker-input" list="datalist-filter-linkmarker" data-i18n-placeholder="filter.linkmarker_ph" placeholder="Ex.: Top, Bottom-Left…" autocomplete="off" style="flex: 1;">
+                        <div class="icon-btn-stack icon-btn-stack--tool">
+                            <span class="theme-row-label" data-i18n="filter.add">Adicionar</span>
+                            <button type="button" id="filter-linkmarker-add" class="btn-secondary btn-icon-tool" data-i18n-title="filter.add" data-i18n-aria="filter.add" title="" aria-label=""><i class="fas fa-plus" aria-hidden="true"></i></button>
+                        </div>
+                    </div>
+                    <datalist id="datalist-filter-linkmarker"></datalist>
+                    <div id="filter-linkmarker-chips" class="cardset-chips"></div>
+                    <div class="filter-clear-stack">
+                        <span class="theme-row-label" data-i18n="filter.linkmarker_clear">Limpar setas</span>
+                        <button type="button" id="filter-linkmarker-clear" class="btn-secondary btn-icon-tool" data-i18n-title="filter.linkmarker_clear" data-i18n-aria="filter.linkmarker_clear" title="" aria-label=""><i class="fas fa-eraser" aria-hidden="true"></i></button>
+                    </div>
+                </div>
+                <div class="filter-group">
+                    <label data-i18n="filter.pend_scale_label">Escala (Pêndulo)</label>
+                    <p class="cardset-hint" data-i18n-html="filter.pend_scale_hint">Filtra monstros Pêndulo pela escala (API: <code>scale</code>). Pode adicionar mais de uma (união OR).</p>
+                    <div class="filter-action-row">
+                        <input type="text" id="filter-scale-input" list="datalist-filter-scale" data-i18n-placeholder="filter.pend_scale_ph" placeholder="Ex.: 1" autocomplete="off" style="flex: 1;">
+                        <div class="icon-btn-stack icon-btn-stack--tool">
+                            <span class="theme-row-label" data-i18n="filter.add">Adicionar</span>
+                            <button type="button" id="filter-scale-add" class="btn-secondary btn-icon-tool" data-i18n-title="filter.add" data-i18n-aria="filter.add" title="" aria-label=""><i class="fas fa-plus" aria-hidden="true"></i></button>
+                        </div>
+                    </div>
+                    <datalist id="datalist-filter-scale"></datalist>
+                    <div id="filter-scale-chips" class="cardset-chips"></div>
+                    <div class="filter-clear-stack">
+                        <span class="theme-row-label" data-i18n="filter.pend_scale_clear">Limpar escalas</span>
+                        <button type="button" id="filter-scale-clear" class="btn-secondary btn-icon-tool" data-i18n-title="filter.pend_scale_clear" data-i18n-aria="filter.pend_scale_clear" title="" aria-label=""><i class="fas fa-eraser" aria-hidden="true"></i></button>
+                    </div>
+                </div>
             </div>
             <div class="filter-group">
                 <label data-i18n="filter.era_label">Era Yu-Gi-Oh!</label>
@@ -4880,6 +4931,9 @@
                             <option data-i18n-opt="opt.sort.atk" value="atk">Ataque</option>
                             <option data-i18n-opt="opt.sort.def" value="def">Defesa</option>
                             <option data-i18n-opt="opt.sort.level" value="level">Level/Rank</option>
+                            <option data-i18n-opt="opt.sort.link" value="link">Link</option>
+                            <option data-i18n-opt="opt.sort.linkmarkers" value="link_markers">Setas (Link Markers)</option>
+                            <option data-i18n-opt="opt.sort.pendscale" value="pend_scale">Escala (Pêndulo)</option>
                             <option data-i18n-opt="opt.sort.tcg" value="tcg_date">Data TCG</option>
                             <option data-i18n-opt="opt.sort.ocg" value="ocg_date">Data OCG</option>
                             <option data-i18n-opt="opt.sort.price" value="price">Preço</option>
@@ -7267,6 +7321,26 @@
         "filter.level_hint": { pt: "0 a 13. Um n\u00edvel por vez.", en: "0 to 13. One level at a time." },
         "filter.level_label": { pt: "N\u00edvel", en: "Level" },
         "filter.level_ph": { pt: "Ex.: 4", en: "e.g. 4" },
+        "filter.linkval_label": { pt: "Link", en: "Link" },
+        "filter.linkval_hint": { pt: "Filtra monstros Link pelo n\u00famero (API: <code>link</code>). Pode adicionar mais de um (uni\u00e3o OR).", en: "Filter Link monsters by rating (API: <code>link</code>). You can add multiple (OR-union)." },
+        "filter.linkval_ph": { pt: "Ex.: 2", en: "e.g. 2" },
+        "filter.linkval_clear": { pt: "Limpar links", en: "Clear links" },
+        "filter.linkmarker_label": { pt: "Setas (Link Markers)", en: "Link markers" },
+        "filter.linkmarker_hint": { pt: "Adicionar setas (API: <code>linkmarker</code>). V\u00e1rios chips = uni\u00e3o OR.", en: "Add markers (API: <code>linkmarker</code>). Multiple chips = OR-union." },
+        "filter.linkmarker_ph": { pt: "Ex.: Top, Bottom-Left\u2026", en: "e.g. Top, Bottom-Left\u2026" },
+        "filter.linkmarker_clear": { pt: "Limpar setas", en: "Clear markers" },
+        "filter.linkmarker_tl": { pt: "Sup-Esq", en: "Top-Left" },
+        "filter.linkmarker_t": { pt: "Cima", en: "Top" },
+        "filter.linkmarker_tr": { pt: "Sup-Dir", en: "Top-Right" },
+        "filter.linkmarker_l": { pt: "Esq", en: "Left" },
+        "filter.linkmarker_r": { pt: "Dir", en: "Right" },
+        "filter.linkmarker_bl": { pt: "Inf-Esq", en: "Bottom-Left" },
+        "filter.linkmarker_b": { pt: "Baixo", en: "Bottom" },
+        "filter.linkmarker_br": { pt: "Inf-Dir", en: "Bottom-Right" },
+        "filter.pend_scale_label": { pt: "Escala (P\u00eandulo)", en: "Pendulum scale" },
+        "filter.pend_scale_hint": { pt: "Filtra monstros P\u00eandulo pela escala (API: <code>scale</code>). Pode adicionar mais de uma (uni\u00e3o OR).", en: "Filter Pendulum monsters by scale (API: <code>scale</code>). You can add multiple (OR-union)." },
+        "filter.pend_scale_ph": { pt: "Ex.: 1", en: "e.g. 1" },
+        "filter.pend_scale_clear": { pt: "Limpar escalas", en: "Clear scales" },
         "filter.period_label": { pt: "Per\u00edodo (De -> At\u00e9)", en: "Period (From \u2192 To)" },
         "filter.price_add": { pt: "Adicionar faixa", en: "Add range" },
         "filter.price_clear": { pt: "Limpar faixas salvas", en: "Clear saved ranges" },
@@ -7378,10 +7452,13 @@
         "opt.sort.banlist": { pt: "Banlist", en: "Banlist" },
         "opt.sort.custom": { pt: "Personalizado", en: "Custom" },
         "opt.sort.def": { pt: "Defesa", en: "DEF" },
+        "opt.sort.link": { pt: "Link", en: "Link" },
+        "opt.sort.linkmarkers": { pt: "Setas (Link Markers)", en: "Link markers" },
         "opt.sort.level": { pt: "Level/Rank", en: "Level/Rank" },
         "opt.sort.name": { pt: "Nome", en: "Name" },
         "opt.sort.ocg": { pt: "Data OCG", en: "OCG date" },
         "opt.sort.price": { pt: "Pre\u00e7o", en: "Price" },
+        "opt.sort.pendscale": { pt: "Escala (Pêndulo)", en: "Pendulum scale" },
         "opt.sort.random": { pt: "Aleat\u00f3rio", en: "Random" },
         "opt.sort.tcg": { pt: "Data TCG", en: "TCG date" },
         "opt.theme.anzu": { pt: "Anzu/Tea (DM)", en: "Anzu/Tea (DM)" },
@@ -8312,6 +8389,9 @@
         race: [],
         attribute: [],
         level: [],
+        linkval: [],
+        linkmarker: [],
+        scale: [],
         era: [],
         dateRegion: [],
         banlist: [],
@@ -8593,6 +8673,22 @@
     function getFilterLevels() {
         return window.filterChipState.level || [];
     }
+
+    function getFilterLinkVals() {
+        return window.filterChipState.linkval || [];
+    }
+
+    function getFilterLinkMarkers() {
+        return window.filterChipState.linkmarker || [];
+    }
+
+    function getFilterLinkMarkerParam() {
+        return (window.filterChipState.linkmarker || []).join(',');
+    }
+
+    function getFilterPendulumScales() {
+        return window.filterChipState.scale || [];
+    }
     function getFilterEraKey() {
         const a = window.filterChipState.era;
         return a.length ? a[0] : '';
@@ -8712,6 +8808,21 @@
             return ({ dark: 'Trevas', light: 'Luz', earth: 'Terra', fire: 'Fogo', water: 'Água', wind: 'Vento', divine: 'Divino' }[val] || val);
         }
         if (key === 'level') return isEnglishMode() ? `Level ${val}` : `Nv. ${val}`;
+        if (key === 'linkval') return `LINK-${val}`;
+        if (key === 'scale') return isEnglishMode() ? `Scale ${val}` : `Escala ${val}`;
+        if (key === 'linkmarker') {
+            const m = {
+                'top-left': isEnglishMode() ? 'Top-Left' : 'Sup-Esq',
+                'top': isEnglishMode() ? 'Top' : 'Cima',
+                'top-right': isEnglishMode() ? 'Top-Right' : 'Sup-Dir',
+                'left': isEnglishMode() ? 'Left' : 'Esq',
+                'right': isEnglishMode() ? 'Right' : 'Dir',
+                'bottom-left': isEnglishMode() ? 'Bottom-Left' : 'Inf-Esq',
+                'bottom': isEnglishMode() ? 'Bottom' : 'Baixo',
+                'bottom-right': isEnglishMode() ? 'Bottom-Right' : 'Inf-Dir',
+            };
+            return m[val] || val;
+        }
         if (key === 'era') {
             const row = FILTER_ERA_LABELS.find(e => e.key === val);
             return row ? row.label : val;
@@ -8752,6 +8863,9 @@
             ['race', 'filter-race-chips', 'filter-race-clear'],
             ['attribute', 'filter-attribute-chips', 'filter-attribute-clear'],
             ['level', 'filter-level-chips', 'filter-level-clear'],
+            ['linkval', 'filter-linkval-chips', 'filter-linkval-clear'],
+            ['linkmarker', 'filter-linkmarker-chips', 'filter-linkmarker-clear'],
+            ['scale', 'filter-scale-chips', 'filter-scale-clear'],
             ['archetype', 'filter-archetype-chips', 'filter-archetype-clear'],
             ['era', 'filter-era-chips', 'filter-era-clear'],
             ['dateRegion', 'filter-date-region-chips', 'filter-date-region-clear'],
@@ -8785,6 +8899,9 @@
             st.race = [];
             st.attribute = [];
             st.level = [];
+            st.linkval = [];
+            st.linkmarker = [];
+            st.scale = [];
             const atkEl = document.getElementById('filter-atk');
             const defEl = document.getElementById('filter-def');
             if (atkEl) atkEl.value = '';
@@ -8906,6 +9023,87 @@
                       .join('')
                 : FILTER_BANLIST_LABELS.map((e) => `<option value="${escAttr(e.label)}"></option>`).join('');
         }
+
+        const linkDl = document.getElementById('datalist-filter-linkval');
+        if (linkDl) {
+            linkDl.innerHTML = '';
+            for (let i = 1; i <= 8; i++) linkDl.innerHTML += `<option value="${i}"></option>`;
+        }
+        const lmDl = document.getElementById('datalist-filter-linkmarker');
+        if (lmDl) {
+            const rows = isEnglishMode()
+                ? [
+                      { v: 'Top-Left', lab: '↖\u2003\u2003Top-Left' },
+                      { v: 'Top', lab: '↑\u2003\u2003Top' },
+                      { v: 'Top-Right', lab: '↗\u2003\u2003Top-Right' },
+                      { v: 'Left', lab: '←\u2003\u2003Left' },
+                      { v: 'Right', lab: '→\u2003\u2003Right' },
+                      { v: 'Bottom-Left', lab: '↙\u2003\u2003Bottom-Left' },
+                      { v: 'Bottom', lab: '↓\u2003\u2003Bottom' },
+                      { v: 'Bottom-Right', lab: '↘\u2003\u2003Bottom-Right' },
+                  ]
+                : [
+                      { v: 'Superior Esquerdo', lab: '↖\u2003\u2003Superior Esquerdo' },
+                      { v: 'Cima', lab: '↑\u2003\u2003Cima' },
+                      { v: 'Superior Direito', lab: '↗\u2003\u2003Superior Direito' },
+                      { v: 'Esquerda', lab: '←\u2003\u2003Esquerda' },
+                      { v: 'Direita', lab: '→\u2003\u2003Direita' },
+                      { v: 'Inferior Esquerdo', lab: '↙\u2003\u2003Inferior Esquerdo' },
+                      { v: 'Baixo', lab: '↓\u2003\u2003Baixo' },
+                      { v: 'Inferior Direito', lab: '↘\u2003\u2003Inferior Direito' },
+                  ];
+            lmDl.innerHTML = rows.map(r => `<option value="${escAttr(r.v)}" label="${escAttr(r.lab)}"></option>`).join('');
+        }
+        const scDl = document.getElementById('datalist-filter-scale');
+        if (scDl) {
+            scDl.innerHTML = '';
+            for (let i = 0; i <= 13; i++) scDl.innerHTML += `<option value="${i}"></option>`;
+        }
+    }
+
+    function resolveLinkValInput(raw) {
+        if (getFilterTypeCategory() !== 'Monster') return null;
+        let q = String(raw || '').trim().toLowerCase();
+        if (!q) return null;
+        q = q.replace(/^(link)\s*[-:]?\s*/i, '');
+        const n = parseInt(q, 10);
+        if (Number.isNaN(n) || n < 1 || n > 8) return null;
+        return String(n);
+    }
+
+    function resolveLinkMarkerInput(raw) {
+        if (getFilterTypeCategory() !== 'Monster') return null;
+        const q0 = String(raw || '').trim();
+        if (!q0) return null;
+        const q = q0.toLowerCase().replace(/\s+/g, ' ').trim();
+        const map = {
+            'top-left': ['top-left', 'top left', 'tl', 'sup-esq', 'sup esq', 'superior esquerdo', '↖'],
+            'top': ['top', 't', 'cima', '↑'],
+            'top-right': ['top-right', 'top right', 'tr', 'sup-dir', 'sup dir', 'superior direito', '↗'],
+            'left': ['left', 'l', 'esq', 'esquerda', '←'],
+            'right': ['right', 'r', 'dir', 'direita', '→'],
+            'bottom-left': ['bottom-left', 'bottom left', 'bl', 'inf-esq', 'inf esq', 'inferior esquerdo', '↙'],
+            'bottom': ['bottom', 'b', 'baixo', '↓'],
+            'bottom-right': ['bottom-right', 'bottom right', 'br', 'inf-dir', 'inf dir', 'inferior direito', '↘'],
+        };
+        for (const [api, aliases] of Object.entries(map)) {
+            if (api === q) return api;
+            if (aliases.some(a => a === q)) return api;
+        }
+        // aceita também formato API direto
+        const apiDirect = ['top-left','top','top-right','left','right','bottom-left','bottom','bottom-right'];
+        const hit = apiDirect.find(v => v === q.replace(/\s/g,''));
+        return hit || null;
+    }
+
+    function resolveScaleInput(raw) {
+        if (getFilterTypeCategory() !== 'Monster') return null;
+        let q = String(raw || '').trim().toLowerCase();
+        if (!q) return null;
+        q = q.replace(/^(scale|escala)\s*[-:]?\s*/i, '');
+        const n = parseInt(q, 10);
+        if (Number.isNaN(n) || n < 0 || n > 13) return null;
+        return String(n);
     }
 
     function resolveTypeCategoryInput(raw) {
@@ -9128,6 +9326,9 @@
             race: { max: 99, resolve: resolveRaceInput, key: 'race', after: () => {} },
             attribute: { max: 7, resolve: resolveAttributeInput, key: 'attribute', after: () => {} },
             level: { max: 99, resolve: resolveLevelInput, key: 'level', after: () => {} },
+            linkval: { max: 99, resolve: resolveLinkValInput, key: 'linkval', after: () => {} },
+            linkmarker: { max: 99, resolve: resolveLinkMarkerInput, key: 'linkmarker', after: () => {} },
+            scale: { max: 99, resolve: resolveScaleInput, key: 'scale', after: () => {} },
             era: { max: 99, resolve: resolveEraInput, key: 'era', after: () => { applyEraToDateInputs(window.filterChipState.era[0]); } },
             dateRegion: { max: 2, resolve: resolveDateRegionInput, key: 'dateRegion', after: () => {
                 const ek = getFilterEraKey();
@@ -9210,6 +9411,9 @@
         panel.setAttribute('role', 'listbox');
         document.body.appendChild(panel);
         panel.addEventListener('mouseleave', (e) => {
+            // Enquanto o campo de texto está focado, manter a lista aberta.
+            // (O fechamento "correto" acontece no blur/Esc.)
+            if (filterComboSuggestAnchorInput && document.activeElement === filterComboSuggestAnchorInput) return;
             const rel = e.relatedTarget;
             if (rel && (rel === filterComboSuggestAnchorInput || (filterComboSuggestAnchorInput && filterComboSuggestAnchorInput.contains(rel))))
                 return;
@@ -9273,6 +9477,13 @@
             currentPage = 1;
             sortAndRender();
             scheduleDeckbuilderFilterUrlSync();
+            // Ao "confirmar" uma sugestão nós limpamos o input via JS (não dispara 'input').
+            // Se o campo ainda estiver focado, reabra/atualize o painel de sugestões imediatamente.
+            if (document.activeElement === inp) {
+                filterComboSuggestAnchorInput = inp;
+                filterComboSuggestKind = kind;
+                refreshFilterComboSuggestPanel(inp, kind);
+            }
             return;
         }
         inp.value = rawText;
@@ -9353,6 +9564,9 @@
             ['filter-race-input', 'race'],
             ['filter-attribute-input', 'attribute'],
             ['filter-level-input', 'level'],
+            ['filter-linkval-input', 'linkval'],
+            ['filter-linkmarker-input', 'linkmarker'],
+            ['filter-scale-input', 'scale'],
             ['filter-era-input', 'era'],
             ['filter-date-region-input', 'dateRegion'],
             ['filter-banlist-input', 'banlist'],
@@ -9758,6 +9972,9 @@
                     if (nextVal !== 'Monster') {
                         window.filterChipState.attribute = [];
                         window.filterChipState.level = [];
+                        window.filterChipState.linkval = [];
+                        window.filterChipState.linkmarker = [];
+                        window.filterChipState.scale = [];
                         const a = document.getElementById('filter-atk'); const d = document.getElementById('filter-def');
                         if (a) a.value = '';
                         if (d) d.value = '';
@@ -9770,6 +9987,9 @@
             race: { input: 'filter-race-input', max: 99, resolve: resolveRaceInput, key: 'race', after: () => {} },
             attribute: { input: 'filter-attribute-input', max: 7, resolve: resolveAttributeInput, key: 'attribute', after: () => {} },
             level: { input: 'filter-level-input', max: 99, resolve: resolveLevelInput, key: 'level', after: () => {} },
+            linkval: { input: 'filter-linkval-input', max: 99, resolve: resolveLinkValInput, key: 'linkval', after: () => {} },
+            linkmarker: { input: 'filter-linkmarker-input', max: 99, resolve: resolveLinkMarkerInput, key: 'linkmarker', after: () => {} },
+            scale: { input: 'filter-scale-input', max: 99, resolve: resolveScaleInput, key: 'scale', after: () => {} },
             era: { input: 'filter-era-input', max: 99, resolve: resolveEraInput, key: 'era', after: () => { applyEraToDateInputs(window.filterChipState.era[0]); } },
             dateRegion: { input: 'filter-date-region-input', max: 2, resolve: resolveDateRegionInput, key: 'dateRegion', after: () => {
                 const ek = getFilterEraKey();
@@ -9815,6 +10035,13 @@
         paintComboFilterChips();
         currentPage = 1;
         performSearch(true);
+        // O botão "Adicionar" e algumas confirmações limpam o input via JS, sem disparar 'input'.
+        // Se o usuário continua com o cursor no campo, mantenha as sugestões visíveis.
+        if (document.activeElement === inp) {
+            filterComboSuggestAnchorInput = inp;
+            filterComboSuggestKind = kind;
+            refreshFilterComboSuggestPanel(inp, kind);
+        }
     }
 
     function clearComboFilterGroup(key) {
@@ -9824,6 +10051,9 @@
             window.filterChipState.race = [];
             window.filterChipState.attribute = [];
             window.filterChipState.level = [];
+            window.filterChipState.linkval = [];
+            window.filterChipState.linkmarker = [];
+            window.filterChipState.scale = [];
             const a = document.getElementById('filter-atk'); const d = document.getElementById('filter-def');
             if (a) a.value = ''; if (d) d.value = '';
         }
@@ -9851,6 +10081,9 @@
             ['filter-race-add', 'filter-race-input', 'race'],
             ['filter-attribute-add', 'filter-attribute-input', 'attribute'],
             ['filter-level-add', 'filter-level-input', 'level'],
+            ['filter-linkval-add', 'filter-linkval-input', 'linkval'],
+            ['filter-linkmarker-add', 'filter-linkmarker-input', 'linkmarker'],
+            ['filter-scale-add', 'filter-scale-input', 'scale'],
             ['filter-era-add', 'filter-era-input', 'era'],
             ['filter-date-region-add', 'filter-date-region-input', 'dateRegion'],
             ['filter-banlist-add', 'filter-banlist-input', 'banlist'],
@@ -9873,7 +10106,9 @@
             }
         });
         [['filter-type-clear', 'typeCategory'], ['filter-subtype-clear', 'subtype'], ['filter-race-clear', 'race'],
-            ['filter-attribute-clear', 'attribute'], ['filter-level-clear', 'level'], ['filter-archetype-clear', 'archetype'],
+            ['filter-attribute-clear', 'attribute'], ['filter-level-clear', 'level'],
+            ['filter-linkval-clear', 'linkval'], ['filter-linkmarker-clear', 'linkmarker'], ['filter-scale-clear', 'scale'],
+            ['filter-archetype-clear', 'archetype'],
             ['filter-era-clear', 'era'],
             ['filter-date-region-clear', 'dateRegion'], ['filter-banlist-clear', 'banlist']].forEach(([cid, key]) => {
             const b = document.getElementById(cid);
@@ -10051,6 +10286,12 @@
         if (at.length) out.set(`${FILTER_URL_PREFIX}at`, at.join(','));
         const lv = (st.level || []).filter(Boolean);
         if (lv.length) out.set(`${FILTER_URL_PREFIX}lv`, lv.join(','));
+        const lk = (st.linkval || []).filter(Boolean);
+        if (lk.length) out.set(`${FILTER_URL_PREFIX}lk`, lk.join(','));
+        const lm = (st.linkmarker || []).filter(Boolean);
+        if (lm.length) out.set(`${FILTER_URL_PREFIX}lm`, lm.join(','));
+        const sc = (st.scale || []).filter(Boolean);
+        if (sc.length) out.set(`${FILTER_URL_PREFIX}ps`, sc.join(','));
         const er = (st.era || []).filter(Boolean);
         if (er.length) out.set(`${FILTER_URL_PREFIX}er`, er.join(','));
         const dr = (st.dateRegion || []).filter(Boolean);
@@ -10138,6 +10379,7 @@
         const allowedAttr = new Set(Object.keys(FILTER_ATTR_LABEL_PT));
         const allowedEra = new Set(Object.keys(FILTER_ERAS));
         const allowedDr = new Set(['tcg', 'ocg']);
+        const allowedLm = new Set(['top-left','top','top-right','left','right','bottom-left','bottom','bottom-right']);
 
         window.filterChipState = {
             typeCategory: [],
@@ -10145,6 +10387,9 @@
             race: [],
             attribute: [],
             level: [],
+            linkval: [],
+            linkmarker: [],
+            scale: [],
             era: [],
             dateRegion: [],
             banlist: [],
@@ -10168,6 +10413,7 @@
         if (pmEl) pmEl.value = '';
         if (pxEl) pxEl.value = '';
         ['filter-type-input', 'filter-subtype-input', 'filter-race-input', 'filter-attribute-input', 'filter-level-input',
+            'filter-linkval-input', 'filter-linkmarker-input', 'filter-scale-input',
             'filter-archetype-input', 'filter-era-input', 'filter-date-region-input', 'filter-banlist-input',
             'filter-cardset-input', 'filter-setcode-input', 'filter-rarity-input'].forEach((id) => {
             const el = document.getElementById(id);
@@ -10233,6 +10479,36 @@
                 if (!Number.isNaN(n) && n >= 0 && n <= 13 && !outL.includes(String(n))) outL.push(String(n));
             }
             window.filterChipState.level = outL;
+        }
+
+        const lkRaw = sp.get(`${FILTER_URL_PREFIX}lk`);
+        if (lkRaw) {
+            const out = [];
+            for (const tok of splitCommaList(lkRaw)) {
+                const n = parseInt(tok, 10);
+                if (!Number.isNaN(n) && n >= 1 && n <= 8 && !out.includes(String(n))) out.push(String(n));
+            }
+            window.filterChipState.linkval = out;
+        }
+
+        const lmRaw = sp.get(`${FILTER_URL_PREFIX}lm`);
+        if (lmRaw) {
+            const out = [];
+            for (const tok of splitCommaList(lmRaw)) {
+                const t = String(tok).trim();
+                if (allowedLm.has(t) && !out.includes(t)) out.push(t);
+            }
+            window.filterChipState.linkmarker = out;
+        }
+
+        const psRaw = sp.get(`${FILTER_URL_PREFIX}ps`);
+        if (psRaw) {
+            const out = [];
+            for (const tok of splitCommaList(psRaw)) {
+                const n = parseInt(tok, 10);
+                if (!Number.isNaN(n) && n >= 0 && n <= 13 && !out.includes(String(n))) out.push(String(n));
+            }
+            window.filterChipState.scale = out;
         }
 
         const erRaw = sp.get(`${FILTER_URL_PREFIX}er`);
@@ -11253,6 +11529,49 @@
                 valA = getTcgplayerPriceUsd(a);
                 valB = getTcgplayerPriceUsd(b);
                 break;
+            case 'link': {
+                // Links primeiro (sempre), depois não-links.
+                const la = (a.linkval ?? a.link);
+                const lb = (b.linkval ?? b.link);
+                const hasA = la != null && String(la).trim() !== '';
+                const hasB = lb != null && String(lb).trim() !== '';
+                if (hasA !== hasB) return hasA ? -1 : 1;
+                valA = hasA ? Number(la) : 0;
+                valB = hasB ? Number(lb) : 0;
+                if (Number.isNaN(valA)) valA = 0;
+                if (Number.isNaN(valB)) valB = 0;
+                break;
+            }
+            case 'pend_scale': {
+                // Pêndulos primeiro (sempre), depois não-pêndulos.
+                const hasA = cardHasPendulumScale(a);
+                const hasB = cardHasPendulumScale(b);
+                if (hasA !== hasB) return hasA ? -1 : 1;
+                const sa = hasA ? Number(a.scale) : 0;
+                const sb = hasB ? Number(b.scale) : 0;
+                valA = Number.isNaN(sa) ? 0 : sa;
+                valB = Number.isNaN(sb) ? 0 : sb;
+                break;
+            }
+            case 'link_markers': {
+                const ma = Array.isArray(a.linkmarkers) ? a.linkmarkers : (Array.isArray(a.linkmarker) ? a.linkmarker : []);
+                const mb = Array.isArray(b.linkmarkers) ? b.linkmarkers : (Array.isArray(b.linkmarker) ? b.linkmarker : []);
+                const hasA = ma.length > 0;
+                const hasB = mb.length > 0;
+                // Cartas com setas primeiro (sempre), depois sem setas.
+                if (hasA !== hasB) return hasA ? -1 : 1;
+                const ca = ma.length || 0;
+                const cb = mb.length || 0;
+                if (ca !== cb) return (ca < cb ? -1 : 1) * direction;
+                const oa = sortLinkMarkers(ma).map(x => LINK_MARKER_SORT_ORDER.indexOf(x)).join(',');
+                const ob = sortLinkMarkers(mb).map(x => LINK_MARKER_SORT_ORDER.indexOf(x)).join(',');
+                const cmp = oa.localeCompare(ob, 'en', { numeric: true });
+                if (cmp !== 0) return direction === 1 ? cmp : -cmp;
+                const ncmp = (a.name || '').localeCompare(b.name || '', 'en', { sensitivity: 'base', numeric: true });
+                if (ncmp !== 0) return direction === 1 ? ncmp : -ncmp;
+                const tie = String(a.id ?? '').localeCompare(String(b.id ?? ''), 'en', { numeric: true });
+                return direction === 1 ? tie : -tie;
+            }
             case 'banlist': {
                 const priority = { Banned: 1, Forbidden: 1, Limited: 2, 'Semi-Limited': 3 };
                 const statusA = a.banlist_info ? a.banlist_info[`ban_${banlistType}`] : null;
@@ -13286,6 +13605,9 @@
         const levels = getFilterLevels();
         const lv = getFilterLevel(); // compat
         const race = getFilterRaceParam();
+        const linkVals = getFilterLinkVals();
+        const linkMarkerParam = getFilterLinkMarkerParam();
+        const scales = getFilterPendulumScales();
         const dateEnabled = isDateFilterActive();
         const dateRegions = getDateRegionTypes();
         const dateRegion = getDateRegionType(); // compat
@@ -13326,7 +13648,8 @@
             hasFnameQuery || hasDescQuery || (typeCats && typeCats.length) || (subtypes && subtypes.length) ||
             race || attr || (levels && levels.length) || (banlistTypes && banlistTypes.length) ||
             hasSetFilter || hasArchFilter || hasLiveAtkDefField ||
-            (mtf.atk || []).length || (mtf.def || []).length;
+            (mtf.atk || []).length || (mtf.def || []).length ||
+            (linkVals && linkVals.length) || (scales && scales.length) || !!linkMarkerParam;
 
         const hasOtherFilters = narrowing || hasPriceFilter || dateEnabled || banlistOnly || hasSetcodeFilter || hasRarityFilter;
 
@@ -13354,6 +13677,10 @@
             // nível pode ser multi: tratado mais abaixo via loop
             if (levels && levels.length === 1 && levels[0]) p.append('level', levels[0]);
             if (attr) p.append('attribute', attr);
+            // Link / Pendulum extras (só fazem sentido em Monster-only)
+            if (type === 'Monster') {
+                if (linkMarkerParam) p.append('linkmarker', linkMarkerParam);
+            }
         }
         if (archFilters.length === 1) p.append('archetype', archFilters[0]);
         p.append('misc', 'yes');
@@ -13422,6 +13749,10 @@
                             ? ((subtypes && subtypes.length) ? subtypes.filter(Boolean) : [null])
                             : ((cat === 'Monster' && (subtypes && subtypes.length)) ? subtypes.filter(Boolean) : [null]);
 
+                        const wantMonsterBlock = (!multiTypeMode && type === 'Monster') || (multiTypeMode && cat === 'Monster');
+                        const linkLoop = wantMonsterBlock ? ((linkVals && linkVals.length) ? linkVals.filter(Boolean) : [null]) : [null];
+                        const scaleLoop = wantMonsterBlock ? ((scales && scales.length) ? scales.filter(Boolean) : [null]) : [null];
+
                         for (const lvOne of levelLoop) {
                             for (const subOne of subtypeLoop) {
                                 const pReq = new URLSearchParams(pBase);
@@ -13439,29 +13770,47 @@
                                     else if (type !== 'Monster') pReq.append('type', type);
                                 }
 
-                                for (const dr of dateRegionApiLoop) {
-                                    const pReqDr = new URLSearchParams(pReq);
-                                    if (dr != null) {
-                                        pReqDr.set('startdate', dateStart || '1900-01-01');
-                                        pReqDr.set('enddate', dateEnd || '9999-12-31');
-                                        pReqDr.set('dateregion', dr);
+                                // Link markers / link rating / pendulum scale:
+                                // só aplica quando a categoria efetiva é Monster.
+                                const wantMonsterHere = multiTypeMode ? (cat === 'Monster') : (type === 'Monster');
+                                pReq.delete('linkmarker');
+                                if (wantMonsterHere && linkMarkerParam) pReq.append('linkmarker', linkMarkerParam);
+
+                                for (const linkOne of linkLoop) {
+                                    for (const scaleOne of scaleLoop) {
+                                        const pReqLs = new URLSearchParams(pReq);
+                                        pReqLs.delete('link');
+                                        pReqLs.delete('scale');
+                                        if (wantMonsterHere) {
+                                            if (linkOne) pReqLs.append('link', linkOne);
+                                            if (scaleOne) pReqLs.append('scale', scaleOne);
+                                        }
+
+                                        for (const dr of dateRegionApiLoop) {
+                                            const pReqDr = new URLSearchParams(pReqLs);
+                                            if (dr != null) {
+                                                pReqDr.set('startdate', dateStart || '1900-01-01');
+                                                pReqDr.set('enddate', dateEnd || '9999-12-31');
+                                                pReqDr.set('dateregion', dr);
+                                            }
+                                            const baselineIds = mergedById.size;
+                                            const m = await fetchMergedCardinfoDualLoop(
+                                                pReqDr, archFilters, archLoop, fnames, descs, atks, defs, sets,
+                                                (n) => reportProgress(baselineIds + n)
+                                            );
+                                            let list = Array.from(m.values());
+
+                                            // Se Monster sem subtipo, garantir que a categoria Monster esteja aplicada
+                                            const wantMonster = multiTypeMode ? (cat === 'Monster') : (type === 'Monster');
+                                            const wantSpell = multiTypeMode ? (cat === 'Spell Card') : (type === 'Spell Card');
+                                            const wantTrap = multiTypeMode ? (cat === 'Trap Card') : (type === 'Trap Card');
+                                            if (wantMonster) list = list.filter(c => String(c.type || '').toLowerCase().includes('monster'));
+                                            else if (wantSpell) list = list.filter(c => String(c.type || '').toLowerCase().includes('spell'));
+                                            else if (wantTrap) list = list.filter(c => String(c.type || '').toLowerCase().includes('trap'));
+
+                                            list.forEach(card => mergedById.set(card.id, card));
+                                        }
                                     }
-                                    const baselineIds = mergedById.size;
-                                    const m = await fetchMergedCardinfoDualLoop(
-                                        pReqDr, archFilters, archLoop, fnames, descs, atks, defs, sets,
-                                        (n) => reportProgress(baselineIds + n)
-                                    );
-                                    let list = Array.from(m.values());
-
-                                    // Se Monster sem subtipo, garantir que a categoria Monster esteja aplicada
-                                    const wantMonster = multiTypeMode ? (cat === 'Monster') : (type === 'Monster');
-                                    const wantSpell = multiTypeMode ? (cat === 'Spell Card') : (type === 'Spell Card');
-                                    const wantTrap = multiTypeMode ? (cat === 'Trap Card') : (type === 'Trap Card');
-                                    if (wantMonster) list = list.filter(c => String(c.type || '').toLowerCase().includes('monster'));
-                                    else if (wantSpell) list = list.filter(c => String(c.type || '').toLowerCase().includes('spell'));
-                                    else if (wantTrap) list = list.filter(c => String(c.type || '').toLowerCase().includes('trap'));
-
-                                    list.forEach(card => mergedById.set(card.id, card));
                                 }
                             }
                         }
@@ -16004,10 +16353,12 @@
         document.getElementById('date-end').value = hoje;
         window.filterChipState = {
             typeCategory: [], subtype: [], race: [], attribute: [], level: [], era: [],
+            linkval: [], linkmarker: [], scale: [],
             dateRegion: [], banlist: [], archetype: []
         };
         window.multiTextFilters = { fname: [], desc: [], atk: [], def: [], priceRanges: [] };
         ['filter-type-input', 'filter-subtype-input', 'filter-race-input', 'filter-attribute-input', 'filter-level-input',
+            'filter-linkval-input', 'filter-linkmarker-input', 'filter-scale-input',
             'filter-archetype-input', 'filter-era-input', 'filter-date-region-input', 'filter-banlist-input'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.value = '';
