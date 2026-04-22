@@ -593,6 +593,8 @@
            O label "ORDEM" é posicionado na mesma linha do label "ORDENAR". */
         .view-controls-toolbar-row .filter-group.view-controls-sort-tight {
             gap: var(--vc-gap);
+            /* Tamanho natural: a largura do trigger define o grupo */
+            flex: 0 0 auto;
         }
         /* Centraliza "ORDENAR" em relação ao select (não ao conjunto select+botão) */
         .view-controls-toolbar-row .filter-group.view-controls-sort-tight > .sort-label {
@@ -653,6 +655,13 @@
             justify-content: flex-end;
             min-width: 0;
         }
+        /* Compacta o topo do DECK em 3 linhas:
+           1) Deck salvo + ações + Banlist/Validar
+           2) PDF/Grade/Aleatórias/Limpar + Importar + Exportar
+           3) Escala do PDF (%) */
+        .queue-toolbar-extras .label-width-stack {
+            flex: 0 0 auto;
+        }
         .queue-toolbar-extras .filter-group.filter-pdf-scale {
             margin-top: 0;
             margin-bottom: 0;
@@ -660,6 +669,7 @@
             width: fit-content;
             max-width: 100%;
             align-items: center;
+            justify-content: center;
         }
         .queue-toolbar-extras .icon-btn-stack--export {
             flex: 0 0 auto;
@@ -704,6 +714,10 @@
             row-gap: 2px;
             align-items: start;
         }
+        /* Inline-add com operador (select + input): evita sobreposição no mesmo grid-cell */
+        html:not(.help-enabled) .sidebar-content .filter-group.filter-group--inline-add:has(.filter-action-row > select.num-op) {
+            grid-template-columns: 56px minmax(0, 1fr) 48px;
+        }
         html:not(.help-enabled) .sidebar-content .filter-group.filter-group--inline-add > label {
             grid-column: 1;
             grid-row: 1;
@@ -711,6 +725,9 @@
             margin-top: 0;
             margin-bottom: 0;
             line-height: 1.05;
+        }
+        html:not(.help-enabled) .sidebar-content .filter-group.filter-group--inline-add:has(.filter-action-row > select.num-op) > label {
+            grid-column: 1 / 3;
         }
         /* "Quebra" o wrapper e coloca input e stack diretamente no grid */
         html:not(.help-enabled) .sidebar-content .filter-group.filter-group--inline-add .filter-action-row { display: contents; }
@@ -724,12 +741,26 @@
             max-width: 100%;
             box-sizing: border-box;
         }
+        html:not(.help-enabled) .sidebar-content .filter-group.filter-group--inline-add:has(.filter-action-row > select.num-op) .filter-action-row > select.num-op {
+            grid-column: 1;
+            grid-row: 2;
+            width: 56px;
+            min-width: 56px;
+            max-width: 56px;
+        }
+        html:not(.help-enabled) .sidebar-content .filter-group.filter-group--inline-add:has(.filter-action-row > select.num-op) .filter-action-row > input {
+            grid-column: 2;
+            grid-row: 2;
+        }
         html:not(.help-enabled) .sidebar-content .filter-group.filter-group--inline-add .filter-action-row .icon-btn-stack--tool {
             grid-column: 2;
             grid-row: 1 / span 2; /* label "ADICIONAR" alinha na mesma linha do label do campo */
             gap: 2px;
             align-items: stretch;
             justify-content: start;
+        }
+        html:not(.help-enabled) .sidebar-content .filter-group.filter-group--inline-add:has(.filter-action-row > select.num-op) .filter-action-row .icon-btn-stack--tool {
+            grid-column: 3;
         }
         /* Elementos abaixo do input devem ocupar a largura total */
         html:not(.help-enabled) .sidebar-content .filter-group.filter-group--inline-add > .cardset-hint,
@@ -1052,7 +1083,8 @@
 
         /* Escala do PDF: mesmo conceito do "Quantidade" (encaixe + campo compacto) */
         .filter-pdf-scale .stepper {
-            width: fit-content;
+            width: 100%;
+            min-width: 0;
         }
         .filter-pdf-scale #print-scale {
             box-sizing: border-box;
@@ -1064,6 +1096,13 @@
             padding-left: 4px;
             padding-right: 4px;
             text-align: center;
+        }
+
+        /* Escala do PDF: stepper um pouco mais estreito no topo do deck */
+        #col-preview .filter-group.filter-pdf-scale .stepper button {
+            width: 32px;
+            min-width: 32px;
+            flex: 0 0 32px;
         }
         /* Scanner / quantidade (barra de busca) */
         .icon-btn-stack--tool-wide {
@@ -1186,13 +1225,26 @@
             box-sizing: border-box;
         }
         .custom-select-wrap--saved-decks .custom-select-trigger {
-            max-width: 132px;
+            max-width: 190px;
             font-size: 10px;
             padding: 0 6px;
             border-radius: 4px;
             background: var(--panel-bg);
             border: 1px solid var(--border);
             color: var(--accent);
+        }
+        /* Topo do DECK: deixa "Deck salvo" encolher conforme o texto (JS seta width). */
+        #col-preview .queue-toolbar-select-stack .saved-decks-select,
+        #col-preview .queue-toolbar-select-stack .custom-select-wrap--saved-decks,
+        #col-preview .queue-toolbar-select-stack .custom-select-wrap--saved-decks .custom-select-trigger {
+            min-width: 0 !important;
+            width: auto;
+            max-width: none;
+        }
+        #col-preview .queue-toolbar-select-stack .custom-select-wrap--saved-decks .custom-select-trigger {
+            padding: 0 1px;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
         html.theme-white .custom-select-wrap--saved-decks .custom-select-trigger {
             background: #fff;
@@ -1597,6 +1649,122 @@
             padding: 0 16px;
             font-size: 11px;
         }
+
+        /* Modal: cartas aleatórias do deck principal */
+        /* Mais larga para caber 5 cartas lado a lado (desktop) */
+        #random-main-modal .deck-name-modal-dialog {
+            max-width: min(1480px, calc(100vw - 32px));
+        }
+        /* Cards maiores (sem afetar sugestões/deck fora da modal) */
+        #random-main-modal .results-view.grid-mode {
+            /* Até 5 cartas: 5 colunas, 1 linha (sem scroll horizontal) */
+            grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+            gap: 16px;
+            padding: 14px;
+        }
+        #random-main-modal .results-view.grid-mode .suggestion-item-grid-artwrap {
+            height: 320px !important;
+        }
+        #random-main-modal .results-view.grid-mode .suggestion-item-grid-artwrap img {
+            height: 100% !important;
+            max-height: none !important;
+        }
+        #random-main-modal .results-view.grid-mode .suggestion-item .card-grid-name {
+            font-size: 13px;
+        }
+        #random-main-modal .results-view.list-mode .list-card-thumb,
+        #random-main-modal .results-view.list-mode .list-card-thumb img {
+            width: 90px !important;
+        }
+        #random-main-modal .results-view.list-mode .card-name {
+            font-size: 14px;
+        }
+        #random-main-modal .results-view.list-mode .card-info-box {
+            font-size: 12px;
+        }
+        .random-main-modal-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            margin: 0 0 12px 0;
+            flex-wrap: wrap;
+        }
+        .random-main-modal-toolbar .random-main-modal-left,
+        .random-main-modal-toolbar .random-main-modal-right {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .random-main-modal-view-toggle { display: flex; gap: 6px; }
+        .random-main-modal-view-toggle .btn-view {
+            height: 34px;
+            min-width: 34px;
+            padding: 0 12px;
+            font-size: 11px;
+        }
+        .random-main-modal-body {
+            /* Sem scroll interno; a modal já ocupa a tela */
+            max-height: none;
+            overflow: hidden;
+            padding-right: 4px;
+        }
+
+        /* Fallback responsivo: em telas menores, volta a quebrar em colunas fluidas */
+        @media (max-width: 1280px) {
+            #random-main-modal .results-view.grid-mode {
+                grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)) !important;
+            }
+            .random-main-modal-body { overflow: auto; max-height: min(70vh, 720px); }
+        }
+        .random-main-cards { display: grid; gap: 10px; }
+        .random-main-cards.grid-mode { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); }
+        .random-main-cards.list-mode { grid-template-columns: 1fr; }
+        .random-main-card {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            width: 100%;
+            padding: 8px 10px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: rgba(0, 0, 0, 0.2);
+            color: inherit;
+            cursor: pointer;
+            text-align: left;
+            font: inherit;
+        }
+        html.theme-white .random-main-card { background: #f3f4f6; }
+        .random-main-cards.grid-mode .random-main-card {
+            flex-direction: column;
+            align-items: stretch;
+            padding: 10px;
+        }
+        .random-main-card:hover { border-color: var(--accent); }
+        .random-main-card img {
+            width: 44px;
+            height: auto;
+            border-radius: 6px;
+            flex: 0 0 auto;
+            object-fit: contain;
+            background: rgba(255,255,255,0.03);
+        }
+        .random-main-cards.grid-mode .random-main-card img {
+            width: 100%;
+            max-height: 140px;
+        }
+        .random-main-card .random-main-card-name {
+            font-size: 12px;
+            font-weight: 700;
+            line-height: 1.2;
+            word-break: break-word;
+        }
+        .random-main-modal-empty {
+            font-size: 12px;
+            opacity: 0.9;
+            padding: 6px 2px;
+        }
         .deck-swap-modal-list {
             max-height: min(52vh, 420px);
             overflow-y: auto;
@@ -1968,6 +2136,41 @@
         .stepper { display: flex; border: 1px solid var(--border); border-radius: 4px; overflow: hidden; height: 35px; background: var(--panel-bg); }
         .stepper button { background: var(--bg-dark); color: var(--text); border: none; width: 35px; min-width: 35px; flex: 0 0 35px; cursor: pointer; font-size: 18px; font-weight: bold; }
         .stepper input { border: none !important; text-align: center; width: 100%; background: transparent; color: var(--text); }
+        .stepper select.num-op {
+            border: none;
+            border-left: 1px solid var(--border);
+            border-right: 1px solid var(--border);
+            background: var(--panel-bg);
+            color: var(--text);
+            width: 56px;
+            min-width: 56px;
+            padding: 0 6px;
+            text-align: center;
+            cursor: pointer;
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+        }
+        .stepper select.num-op option,
+        .filter-action-row select.num-op option {
+            background: var(--panel-bg);
+            color: var(--text);
+        }
+        .stepper select.num-op:focus-visible {
+            outline: 2px solid var(--accent);
+            outline-offset: -2px;
+        }
+        /* Dropdown compacto para operadores em linhas de filtro (ex.: Nível) */
+        .filter-action-row select.num-op {
+            height: 35px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            background: var(--panel-bg);
+            color: var(--text);
+            width: 56px;
+            min-width: 56px;
+            padding: 0 6px;
+        }
 
         .search-area { background: var(--panel-bg); padding: 15px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
         .view-controls {
@@ -2061,6 +2264,29 @@
             background: var(--bg-dark);
             color: var(--text);
             border: 1px solid var(--border);
+        }
+
+        /* Resultados: permite rótulos longos (ex.: "Setas (Link Markers)") sem quebrar linha */
+        #sort-by {
+            /* Encolhe/expande conforme o valor selecionado (autosize). */
+            flex: 0 0 auto;
+            width: auto;
+            min-width: 0;
+            white-space: nowrap;
+        }
+
+        /* Autosize do "Ordenar": o texto define a largura (sem quebrar linha). */
+        .custom-select-ui-wrap.custom-select-wrap--results-sort,
+        .custom-select-ui-wrap.custom-select-wrap--results-sort .custom-select-trigger {
+            flex: 0 0 auto;
+            width: fit-content;
+            min-width: 0;
+            white-space: nowrap;
+        }
+        /* Ordenar (resultados): padding mais justo para não "sobrar" espaço. */
+        .custom-select-ui-wrap.custom-select-wrap--results-sort .custom-select-trigger {
+            padding-left: 6px;
+            padding-right: 6px;
         }
 
         .sort-controls button {
@@ -2565,6 +2791,19 @@
             flex: 0 0 auto;
             flex-wrap: wrap;
             justify-content: flex-end;
+        }
+        .deck-validate-toggle-stack {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            flex: 0 0 auto;
+            min-width: max-content;
+        }
+        #btn-deck-validate-toggle-label {
+            white-space: nowrap;
+            width: max-content;
+            max-width: none;
         }
         /* Deck sort dentro da barra de stats (inline, sem "segunda barra") */
         .deck-stats-bar .deck-sort-bar {
@@ -3141,8 +3380,10 @@
         .deck-validate-controls {
             display: inline-flex;
             align-items: center;
-            gap: 8px;
-            flex-wrap: wrap;
+            gap: 5px;
+            flex-wrap: nowrap;
+            flex: 0 1 auto;
+            min-width: 0;
         }
         .deck-validate-select {
             height: 35px;
@@ -3152,7 +3393,8 @@
             border: 1px solid var(--border);
             background: var(--panel-bg);
             color: var(--text);
-            max-width: 220px;
+            max-width: 170px;
+            min-width: 0;
             box-sizing: border-box;
         }
         html.theme-white .deck-validate-select {
@@ -3370,6 +3612,86 @@
             flex: 1 1 auto;
             min-width: 0;
         }
+        /* Topo do DECK: layout compacto sem sobreposição (grid). */
+        #col-preview .queue-col-toolbar {
+            display: grid;
+            /* 5 colunas: escala fica imediatamente à esquerda do bloco de ações (PDF/Grade/…). */
+            grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr) auto auto;
+            grid-template-areas:
+                "validate saved saved saved saved"
+                "scale controls controls import export";
+            align-items: end;
+            justify-content: stretch;
+            gap: 3px 6px;
+            min-width: 0;
+        }
+        /* 1.ª linha: deixa "Deck salvo" usar o espaço vazio sem mexer na linha 2.
+           O bloco "Deck salvo" estica dentro da sua área e o conteúdo fica alinhado à direita. */
+        #col-preview .queue-saved-decks {
+            grid-area: saved;
+            justify-self: stretch;
+            width: 100%;
+            min-width: 0;
+            justify-content: flex-end;
+        }
+        /* Topo do deck: mantém Banlist + botão agrupados (sem criar "vão" interno). */
+        #col-preview .deck-validate-controls { grid-area: validate; justify-self: start; min-width: 0; max-width: 100%; }
+        #col-preview .queue-col-controls { grid-area: controls; justify-self: end; min-width: 0; }
+
+        /* “Abre” o wrapper para posicionar import/export/scale no grid acima. */
+        #col-preview .queue-toolbar-extras { display: contents; }
+        #col-preview .queue-toolbar-extras .label-width-stack { grid-area: import; justify-self: end; }
+        #col-preview .queue-toolbar-extras .icon-btn-stack--export { grid-area: export; justify-self: end; }
+        #col-preview .queue-toolbar-extras .filter-group.filter-pdf-scale {
+            grid-area: scale;
+            justify-self: start;
+            width: fit-content;
+            max-width: 100%;
+            min-width: 0;
+        }
+        /* Telas mais estreitas: mantém a ordem, mas ajusta alinhamento da escala. */
+        @media (max-width: 1180px) {
+            #col-preview .queue-col-toolbar {
+                /* Mesma lógica do layout largo; se não couber, o grid deixa a linha 2 crescer (wrap) naturalmente. */
+                grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr) auto auto;
+                grid-template-areas:
+                    "validate saved saved saved saved"
+                    "scale controls controls import export";
+            }
+            #col-preview .queue-toolbar-extras .filter-group.filter-pdf-scale {
+                justify-self: start;
+            }
+        }
+        /* Evita “sobreposição” de labels quando o topo está estreito. */
+        #col-preview .queue-col-toolbar .icon-btn-stack--tool {
+            width: 46px; /* largura fixa por botão (salvar/renomear/apagar/etc) */
+        }
+        #col-preview .queue-col-toolbar .icon-btn-stack--tool .theme-row-label {
+            width: 100%;
+            max-width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-size: 9px;
+            letter-spacing: 0.01em;
+        }
+        /* O select da banlist precisa poder encolher sem “empurrar” tudo. */
+        #col-preview .deck-validate-controls .queue-toolbar-select-stack {
+            min-width: 0;
+            width: auto;
+            max-width: 100%;
+            overflow: hidden;
+        }
+        #col-preview .deck-validate-controls .queue-toolbar-select-stack .theme-row-label {
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        /* Banlist no topo do deck: mais compacto que o padrão global (evita invadir "Renomear"). */
+        #col-preview .deck-validate-controls .queue-toolbar-select-stack .deck-validate-select,
+        #col-preview .deck-validate-controls .queue-toolbar-select-stack .custom-select-ui-wrap {
+            min-width: 7.25rem;
+            max-width: 9.5rem;
+        }
         .queue-col-toolbar .theme-row-label {
             display: flex;
             align-items: flex-end;
@@ -3387,12 +3709,15 @@
         }
         .queue-saved-decks {
             display: flex;
-            flex-wrap: wrap;
+            flex-wrap: nowrap;
             align-items: center;
-            gap: 6px;
+            gap: 3px;
+            /* tenta “segurar” a validação na mesma linha */
+            flex: 0 1 auto;
+            min-width: 0;
         }
         .saved-decks-select {
-            max-width: 132px;
+            max-width: 96px;
             min-width: 0;
             font-size: 10px;
             height: 35px;
@@ -3410,7 +3735,7 @@
         .queue-col-controls {
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 3px;
             flex-shrink: 0;
         }
         .queue-col-controls .btn-view {
@@ -4421,6 +4746,41 @@
     </div>
 </div>
 
+<div id="random-main-modal" class="deck-name-modal" aria-hidden="true">
+    <div class="deck-name-modal-backdrop" id="random-main-modal-backdrop"></div>
+    <div class="deck-name-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="random-main-modal-title">
+        <h3 id="random-main-modal-title" data-i18n="ui.random_main_title">Cartas aleatórias</h3>
+        <div class="random-main-modal-toolbar">
+            <div class="random-main-modal-left">
+                <div class="icon-btn-stack icon-btn-stack--tool">
+                    <label class="theme-row-label" for="btn-random-main-toggle-view" id="label-random-main-toggle-view" data-i18n="ui.grid_label">Grade</label>
+                    <button type="button" class="btn-view btn-icon-tool" id="btn-random-main-toggle-view" data-i18n-title="ui.random_main_grid_title" data-i18n-aria="ui.random_main_grid_title" title="" aria-label="">
+                        <i class="fas fa-th-large" id="icon-random-main-toggle-view" aria-hidden="true"></i>
+                    </button>
+                </div>
+                <div class="icon-btn-stack icon-btn-stack--tool">
+                    <label class="theme-row-label" for="random-main-reroll" data-i18n="ui.random_main_reroll_label">Sortear</label>
+                    <button type="button" class="btn-view btn-icon-tool" id="random-main-reroll" data-i18n-title="ui.random_main_reroll_title" data-i18n-aria="ui.random_main_reroll_title" title="" aria-label="">
+                        <i class="fas fa-shuffle" aria-hidden="true"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="random-main-modal-right">
+                <div class="icon-btn-stack">
+                    <label class="theme-row-label" for="random-main-close">Fechar</label>
+                    <button type="button" class="btn-view btn-icon-tool" id="random-main-close" title="Fechar" aria-label="Fechar">
+                        <i class="fas fa-times" aria-hidden="true"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="random-main-modal-body">
+            <div id="random-main-cards" class="results-view grid-mode" aria-live="polite"></div>
+            <div id="random-main-empty" class="random-main-modal-empty" style="display:none;"></div>
+        </div>
+    </div>
+</div>
+
 <div id="help-mouse-modal" class="deck-name-modal" aria-hidden="true">
     <div class="deck-name-modal-backdrop" id="help-mouse-modal-backdrop"></div>
     <div class="deck-name-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="help-mouse-modal-title">
@@ -4588,6 +4948,13 @@
                 <div class="filter-group"><label data-i18n="filter.level_label">Nível</label>
                     <p class="cardset-hint" data-i18n-html="filter.level_hint">0 a 13. Um nível por vez.</p>
                     <div class="filter-action-row">
+                        <select id="filter-level-op" class="num-op" aria-label="Operador do nível">
+                            <option value="eq" selected>=</option>
+                            <option value="lt">&lt;</option>
+                            <option value="lte">&lt;=</option>
+                            <option value="gt">&gt;</option>
+                            <option value="gte">&gt;=</option>
+                        </select>
                         <input type="text" id="filter-level-input" list="datalist-filter-level" data-i18n-placeholder="filter.level_ph" placeholder="Ex.: 4" autocomplete="off" style="flex: 1;">
                         <div class="icon-btn-stack icon-btn-stack--tool">
 
@@ -4606,7 +4973,18 @@
                 </div>
                 <div class="filter-group"><label>ATK</label>
                     <p class="cardset-hint" data-i18n-html="filter.atk_hint">Valor atual + Adicionar = mais buscas em união. O campo continua filtrando em tempo real.</p>
-                    <div class="stepper"><button type="button" onclick="adjustVal('filter-atk', -50)" aria-label="−50"><i class="fas fa-minus" aria-hidden="true"></i></button><input type="number" id="filter-atk" placeholder="---"><button type="button" onclick="adjustVal('filter-atk', 50)" aria-label="+50"><i class="fas fa-plus" aria-hidden="true"></i></button></div>
+                    <div class="stepper">
+                        <button type="button" onclick="adjustVal('filter-atk', -50)" aria-label="−50"><i class="fas fa-minus" aria-hidden="true"></i></button>
+                        <select id="filter-atk-op" class="num-op" aria-label="Operador do ATK">
+                            <option value="eq" selected>=</option>
+                            <option value="lt">&lt;</option>
+                            <option value="lte">&lt;=</option>
+                            <option value="gt">&gt;</option>
+                            <option value="gte">&gt;=</option>
+                        </select>
+                        <input type="number" id="filter-atk" placeholder="---">
+                        <button type="button" onclick="adjustVal('filter-atk', 50)" aria-label="+50"><i class="fas fa-plus" aria-hidden="true"></i></button>
+                    </div>
                     <div class="filter-full-add-stack">
                         <span class="theme-row-label" data-i18n="filter.atk_add">Adicionar ATK à busca</span>
                         <button type="button" id="filter-atk-add-chip" class="btn-secondary btn-icon-tool btn-icon-tool--block" data-i18n-title="filter.atk_add" data-i18n-aria="filter.atk_add" title="" aria-label=""><i class="fas fa-plus" aria-hidden="true"></i></button>
@@ -4619,7 +4997,18 @@
                 </div>
                 <div class="filter-group"><label>DEF</label>
                     <p class="cardset-hint" data-i18n-html="filter.def_hint">Igual ao ATK: chips em união com o valor do campo.</p>
-                    <div class="stepper"><button type="button" onclick="adjustVal('filter-def', -50)" aria-label="−50"><i class="fas fa-minus" aria-hidden="true"></i></button><input type="number" id="filter-def" placeholder="---"><button type="button" onclick="adjustVal('filter-def', 50)" aria-label="+50"><i class="fas fa-plus" aria-hidden="true"></i></button></div>
+                    <div class="stepper">
+                        <button type="button" onclick="adjustVal('filter-def', -50)" aria-label="−50"><i class="fas fa-minus" aria-hidden="true"></i></button>
+                        <select id="filter-def-op" class="num-op" aria-label="Operador do DEF">
+                            <option value="eq" selected>=</option>
+                            <option value="lt">&lt;</option>
+                            <option value="lte">&lt;=</option>
+                            <option value="gt">&gt;</option>
+                            <option value="gte">&gt;=</option>
+                        </select>
+                        <input type="number" id="filter-def" placeholder="---">
+                        <button type="button" onclick="adjustVal('filter-def', 50)" aria-label="+50"><i class="fas fa-plus" aria-hidden="true"></i></button>
+                    </div>
                     <div class="filter-full-add-stack">
                         <span class="theme-row-label" data-i18n="filter.def_add">Adicionar DEF à busca</span>
                         <button type="button" id="filter-def-add-chip" class="btn-secondary btn-icon-tool btn-icon-tool--block" data-i18n-title="filter.def_add" data-i18n-aria="filter.def_add" title="" aria-label=""><i class="fas fa-plus" aria-hidden="true"></i></button>
@@ -4925,8 +5314,8 @@
                 </div>
                 <div class="filter-group view-controls-sort-tight">
                     <label for="sort-by" class="sort-label" data-i18n="ui.sort_results">Ordenar</label>
-                    <div class="sort-controls" style="display: flex; gap: 5px; width: 100%;">
-                        <select id="sort-by" style="flex: 1;">
+                    <div class="sort-controls">
+                        <select id="sort-by">
                             <option data-i18n-opt="opt.sort.name" value="name">Nome</option>
                             <option data-i18n-opt="opt.sort.atk" value="atk">Ataque</option>
                             <option data-i18n-opt="opt.sort.def" value="def">Defesa</option>
@@ -5041,12 +5430,6 @@
                             <option value="">Sem banlist (regras padrão)</option>
                         </select>
                     </div>
-                    <div class="icon-btn-stack icon-btn-stack--tool">
-                        <span class="theme-row-label" id="btn-deck-validate-toggle-label">Validar</span>
-                        <button type="button" id="btn-deck-validate-toggle" class="btn-view btn-icon-tool" data-i18n-title="ui.deck_validate_label_on" title="">
-                            <i class="fas fa-clipboard-check" id="btn-deck-validate-toggle-icon" aria-hidden="true"></i>
-                        </button>
-                    </div>
                 </div>
                 <div class="queue-col-controls">
                     <div class="icon-btn-stack icon-btn-stack--tool">
@@ -5062,13 +5445,19 @@
                         </button>
                     </div>
                     <div class="icon-btn-stack icon-btn-stack--tool">
+                        <label class="theme-row-label" for="btn-deck-random-main">Aleatórias</label>
+                        <button type="button" id="btn-deck-random-main" class="btn-view btn-icon-tool" title="Mostrar até 5 cartas aleatórias do Deck Principal" aria-label="Cartas aleatórias do Deck Principal">
+                            <i class="fas fa-dice-five" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                    <div class="icon-btn-stack icon-btn-stack--tool">
                         <span class="theme-row-label" data-i18n="ui.clear_queue">Limpar</span>
                         <button type="button" class="btn-view btn-icon-tool" onclick="clearQueue()" data-i18n-title="ui.clear_queue" data-i18n-aria="ui.clear_queue" title="" aria-label=""><i class="fas fa-broom" aria-hidden="true"></i></button>
                     </div>
                 </div>
                 <div class="queue-toolbar-extras">
                     <div class="label-width-stack" style="margin-top: 0;">
-                        <span class="theme-row-label" data-i18n="ui.import_deck">Importar DECK</span>
+                        <span class="theme-row-label" data-i18n="ui.import_deck">Importar</span>
                         <label class="btn-secondary btn-icon-tool" style="cursor: pointer; margin: 0;">
                             <i class="fas fa-file-import" aria-hidden="true"></i>
                             <input type="file" id="file-deck-import" accept=".ydk,.csv,.pdf,.zip,.png,.jpg,.jpeg,application/pdf,application/zip,image/png,image/jpeg" style="display:none" onchange="importDeckFile(this)">
@@ -5120,6 +5509,12 @@
                             <span id="deck-validity-text">Validação OFF</span>
                         </span>
                     </span>
+                    <div class="deck-validate-toggle-stack">
+                        <span class="theme-row-label" id="btn-deck-validate-toggle-label">Validar</span>
+                        <button type="button" id="btn-deck-validate-toggle" class="btn-view btn-icon-tool" data-i18n-title="ui.deck_validate_label_on" title="">
+                            <i class="fas fa-clipboard-check" id="btn-deck-validate-toggle-icon" aria-hidden="true"></i>
+                        </button>
+                    </div>
                     <div class="deck-sort-bar" role="group" data-i18n-aria="ui.deck_sort_bar_aria" aria-label="Ordenação do deck">
                         <div class="deck-sort-bar-field">
                         <div class="sort-controls">
@@ -6282,6 +6677,269 @@
             modal.setAttribute('aria-hidden', 'false');
         });
     }
+
+    // Modal: até 5 cartas aleatórias do Deck Principal (sem Extra)
+    let randomMainModalKeyHandler = null;
+    let randomMainModalViewMode = 'grid'; // 'grid' | 'list'
+    let randomMainModalSample = [];
+
+    function getMainDeckUniqueStacksForRandom() {
+        const ordered = [];
+        const seen = new Set();
+        for (const q of cardQueue) {
+            const imgId = String(q.imgId);
+            if (seen.has(imgId)) continue;
+            seen.add(imgId);
+            const c0 = cardQueue.find((x) => String(x.imgId) === imgId);
+            const full = c0 ? cardCache[c0.id] : null;
+            if (getQueueCardSection(full) === 'extra') continue;
+            ordered.push({ imgId, id: c0 && c0.id, name: (c0 && c0.name) || (full && full.name) || '' });
+        }
+        return ordered;
+    }
+
+    function sampleRandomMainCards(max = 5) {
+        const stacks = getMainDeckUniqueStacksForRandom();
+        if (!stacks.length) return [];
+        const copy = [...stacks];
+        shuffleArrayInPlace(copy);
+        return copy.slice(0, Math.max(0, Math.min(max, copy.length)));
+    }
+
+    function syncRandomMainViewToggleUi() {
+        const btn = document.getElementById('btn-random-main-toggle-view');
+        const lab = document.getElementById('label-random-main-toggle-view');
+        const icon = document.getElementById('icon-random-main-toggle-view');
+        if (!btn || !lab) return;
+        const inList = randomMainModalViewMode === 'list';
+        if (inList) {
+            lab.textContent = T('ui.grid_label');
+            const t = T('ui.random_main_grid_title');
+            btn.setAttribute('title', t);
+            btn.setAttribute('aria-label', t);
+            if (icon) icon.className = 'fas fa-th-large';
+        } else {
+            lab.textContent = T('ui.list_label');
+            const t = T('ui.random_main_list_title');
+            btn.setAttribute('title', t);
+            btn.setAttribute('aria-label', t);
+            if (icon) icon.className = 'fas fa-list';
+        }
+    }
+
+    function setRandomMainModalView(mode) {
+        randomMainModalViewMode = mode === 'list' ? 'list' : 'grid';
+        syncRandomMainViewToggleUi();
+        const cards = document.getElementById('random-main-cards');
+        if (cards) cards.className = `results-view ${randomMainModalViewMode}-mode`;
+    }
+
+    function renderRandomMainModalSample() {
+        const cards = document.getElementById('random-main-cards');
+        const empty = document.getElementById('random-main-empty');
+        if (!cards || !empty) return;
+        cards.innerHTML = '';
+        empty.style.display = 'none';
+        cards.className = `results-view ${randomMainModalViewMode}-mode`;
+
+        const sample = Array.isArray(randomMainModalSample) ? randomMainModalSample : [];
+        if (!sample.length) {
+            empty.textContent = 'Nenhuma carta no Deck Principal.';
+            empty.style.display = 'block';
+            return;
+        }
+
+        const racesTrad = { "Aqua": "Aqua", "Beast": "Besta", "Beast-Warrior": "Besta-Guerreira", "Cyberse": "Ciberso", "Dinosaur": "Dinossauro", "Dragon": "Drag\u00e3o", "Fiend": "Dem\u00f4nio", "Fish": "Peixe", "Insect": "Inseto", "Machine": "M\u00e1quina", "Plant": "Planta", "Psychic": "Ps\u00edquico", "Pyro": "Piro", "Reptile": "R\u00e9ptil", "Rock": "Rocha", "Sea Serpent": "Serpente Marinha", "Spellcaster": "Mago", "Thunder": "Trov\u00e3o", "Warrior": "Guerreiro", "Winged Beast": "Besta Alada", "Wyrm": "Wyrm", "Zombie": "Zumbi", "Divine-Beast": "Besta Divina", "Normal": "Normal", "Continuous": "Cont\u00ednua", "Field": "Campo", "Equip": "Equipamento", "Quick-Play": "R\u00e1pida", "Ritual": "Ritual", "Counter": "Resposta" };
+        const typeColors = {
+            "Normal Monster": "#d1b55a", "Effect Monster": "#a6522a", "Spell Card": "#1d7d5c",
+            "Trap Card": "#8c345d", "Fusion Monster": "#6e4a8c", "Synchro Monster": "#8a8a8a",
+            "Xyz Monster": "#1a1a1a", "Link Monster": "#164687", "Ritual Monster": "#3b73a3",
+            "Token": "#6e6e6e"
+        };
+        const hasCustomTheme = document.documentElement.classList.contains('theme-white') ||
+            document.documentElement.classList.contains('theme-black') ||
+            document.documentElement.classList.contains('theme-kaiba');
+
+        for (const s of sample) {
+            const c0 = cardQueue.find((x) => String(x.imgId) === String(s.imgId));
+            const full = (c0 && cardCache[c0.id]) ? cardCache[c0.id] : (s.id && cardCache[s.id]) ? cardCache[s.id] : null;
+            if (!full) continue;
+            const imageObj = (full.card_images || []).find((ci) => ci && String(ci.id) === String(s.imgId)) || (full.card_images && full.card_images[0]) || null;
+            const image_url = (imageObj && (imageObj.image_url || imageObj.image_url_small)) ? (imageObj.image_url || imageObj.image_url_small) : `https://images.ygoprodeck.com/images/cards/${s.imgId}.jpg`;
+            const image_url_small = (imageObj && imageObj.image_url_small) ? imageObj.image_url_small : `https://images.ygoprodeck.com/images/cards_small/${s.imgId}.jpg`;
+            const card = { ...full, current_image: { id: String(s.imgId), image_url, image_url_small } };
+            const view = randomMainModalViewMode;
+
+            const div = document.createElement('div');
+            div.className = 'suggestion-item';
+            const colorKey = getTypeColorKeyFromCardType(card.type);
+            const cardBgColor = typeColors[colorKey] || "var(--panel-bg)";
+            if (!hasCustomTheme) {
+                div.style.backgroundColor = cardBgColor;
+                div.style.borderLeft = "none";
+            } else {
+                div.style.backgroundColor = "var(--panel-bg)";
+                div.style.borderLeft = `5px solid ${cardBgColor}`;
+            }
+
+            const variantSuffix = (imageObj && full.card_images && full.card_images.length > 1)
+                ? ` (${T('variant.art')} #${(full.card_images.findIndex((ci) => ci && String(ci.id) === String(s.imgId)) || 0) + 1})`
+                : "";
+            const displayName = (isEnglishMode() ? (card.name || card.name_en || '') : (card.name_pt || card.name)) + variantSuffix;
+
+            if (view === 'grid') {
+                div.style.padding = "0";
+                div.style.backgroundColor = "transparent";
+                const banSvgGrid = getBanIcon(card, 'grid');
+                const banOverlayGrid = banSvgGrid ? `<span class="card-grid-ban-badge" aria-hidden="true">${banSvgGrid}</span>` : '';
+                div.innerHTML = `<div class="suggestion-item-grid-artwrap"><img src="${image_url}" style="width: 100%; height: 100%; object-fit: contain; display: block;" loading="lazy" onerror="this.src='https://images.ygoprodeck.com/images/cards/back_high.jpg'" alt="${escapeHtml(card.name || 'Card')}">${banOverlayGrid}</div>`;
+                if (card.card_sets && card.card_sets.length) {
+                    const fab = document.createElement('button');
+                    fab.type = 'button';
+                    fab.className = 'card-sets-fab';
+                    fab.title = T('fab.sets');
+                    fab.setAttribute('aria-label', T('fab.sets'));
+                    fab.innerHTML = '<i class="fa-solid fa-layer-group"></i>';
+                    fab.addEventListener('click', (ev) => {
+                        ev.stopPropagation();
+                        ev.preventDefault();
+                        openCardSetsPanel(cardCache[card.id] || card);
+                    });
+                    div.appendChild(fab);
+                }
+            } else {
+                const attrRaw = card.attribute ? card.attribute.toUpperCase() : (String(card.type || '').includes("Spell") ? "SPELL" : "TRAP");
+                const attrIconUrl = card.attribute ? `https://images.ygoprodeck.com/images/cards/${attrRaw}.jpg` : "";
+                const raceIconUrl = `https://images.ygoprodeck.com/images/cards/icons/race/${card.race}.png`;
+                const starIcon = "https://ygoprodeck.com/wp-content/uploads/2017/01/level.png";
+                const raceTraduzida = isEnglishMode() ? card.race : (racesTrad[card.race] || card.race);
+                let nameColor = hasCustomTheme ? cardBgColor : (["Normal Monster", "Synchro Monster"].includes(colorKey) ? "#000" : "var(--accent)");
+                const textColor = (!hasCustomTheme) ? "#fff" : "var(--text)";
+                const tipoTexto = formatCardTypeForUi(card.type);
+                const typeIconUrl = `https://images.ygoprodeck.com/images/cards/icons/${encodeURIComponent(card.type)}.jpg`;
+                const isLinkMonster = String(card.type || '').toLowerCase().includes("link");
+                const pendulumHtml = cardHasPendulumScale(card) ? getPendulumScaleHtml(card.scale, 12) : '';
+                const linkMarkersHtml = (isLinkMonster && card.linkmarkers && card.linkmarkers.length)
+                    ? getLinkMarkersHtml(card.linkmarkers, 13) : '';
+                div.innerHTML = `
+                    <div class="list-card-thumb">
+                    <img src="${image_url_small}" loading="lazy" onerror="this.src='https://images.ygoprodeck.com/images/cards/back_high.jpg'" alt="${escapeHtml(card.name || 'Card')}">
+                    </div>
+                    <div class="card-info-box">
+                        <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
+                            ${getBanIcon(card)}
+                            <b class="card-name" style="margin: 0; line-height: 1.2; color: ${nameColor};">${escapeHtml(displayName)}</b>
+                        </div>
+                        <div class="info-row" style="display: flex; align-items: center; flex-wrap: wrap; gap: 10px; row-gap: 4px; color: ${textColor};">
+                            ${attrIconUrl ? `<div style="display: flex; align-items: center; gap: 4px;"><img src="${attrIconUrl}" style="width: 14px; height: 14px; border-radius: 50%;"><span style="font-size: 10px; color: inherit;">${escapeHtml(attrDisplayName(attrRaw))}</span></div>` : ''}
+                            ${pendulumHtml}
+                            ${(card.level || card.rank) && !isLinkMonster ? `<div style="display: flex; align-items: center; gap: 2px;"><img src="${starIcon}" style="width: 12px; height: 12px; ${String(card.type || '').toUpperCase().includes('XYZ') ? 'filter:invert(1) brightness(0.5);' : ''}"><span style="font-size: 10px; color: inherit;">${escapeHtml(String(card.level || card.rank))}</span></div>` : ''}
+                            ${linkMarkersHtml}
+                        </div>
+                        <div class="info-row" style="display: flex; align-items: center; gap: 4px; margin-top: 2px; flex-wrap: wrap; color: ${textColor};">
+                            <img src="${raceIconUrl}" style="width: 14px; height: 14px;" onerror="this.style.display='none'">
+                            <span style="color: inherit;">${escapeHtml(raceTraduzida)} / </span>
+                            <img src="${typeIconUrl}" title="Tipo" style="width: 14px; height: 14px; border-radius: 2px;" onerror="this.style.display='none'">
+                            <span style="color: inherit;">${escapeHtml(tipoTexto)}</span>
+                        </div>
+                        ${card.atk !== undefined ? `
+                            <div class="info-row atk-def-row" style="border-top: 1px solid ${!hasCustomTheme ? 'rgba(255,255,255,0.1)' : 'var(--border)'};">
+                                <div style="display: flex; align-items: center; gap: 4px;"><i class="fas fa-fist-raised" style="color: #4d94ff; font-size: 10px;"></i><span style="color: #4d94ff; font-weight: bold;">ATK/</span><span style="color: ${textColor};">${escapeHtml(String(card.atk))}</span></div>
+                                ${!String(card.type || '').toLowerCase().includes("link") ? `<div style="display: flex; align-items: center; gap: 4px;"><i class="fas fa-shield-alt" style="color: #ff4d4d; font-size: 10px;"></i><span style="color: #ff4d4d; font-weight: bold;">DEF/</span><span style="color: ${textColor};">${escapeHtml(String(card.def))}</span></div>`
+                                : `<div style="display: flex; align-items: center; gap: 4px;"><span style="color: ${textColor}; font-weight: bold;">LINK-${escapeHtml(String(card.linkval || ''))}</span></div>`}
+                            </div>` : ''}
+                        ${card.card_sets && card.card_sets.length ? `<button type="button" class="btn-open-card-sets" data-card-id="${escapeHtml(String(card.id))}">${escapeHtml(T('ui.prints_btn', { n: card.card_sets.length }))}</button>` : ''}
+                    </div>`;
+            }
+
+            const cardWithSpecificArt = { ...card, card_images: [{ id: String(s.imgId), image_url, image_url_small }] };
+            div.onmouseenter = (e) => { if (window.innerWidth >= 900) showTooltip(cardWithSpecificArt, e); };
+            div.onmousemove = (e) => { if (window.innerWidth >= 900) moveTooltip(e); };
+            div.onmouseleave = () => { if (window.innerWidth >= 900) hideTooltip(); };
+            div.addEventListener('mousedown', (ev) => { if (ev.button === 1) ev.preventDefault(); });
+            div.addEventListener('auxclick', (ev) => {
+                if (ev.button !== 1) return;
+                if (ev.target.closest('button')) return;
+                ev.preventDefault();
+                openTooltipDetailsModal(cardWithSpecificArt);
+            });
+            div.onclick = (e) => {
+                if (e.target.closest('.btn-open-card-sets')) {
+                    e.stopPropagation();
+                    const btn = e.target.closest('.btn-open-card-sets');
+                    const cid = btn && btn.getAttribute('data-card-id');
+                    const cached = cid != null ? cardCache[cid] : null;
+                    if (cached) openCardSetsPanel(cached);
+                    return;
+                }
+            };
+
+            cards.appendChild(div);
+        }
+    }
+
+    async function openRandomMainModal() {
+        const modal = document.getElementById('random-main-modal');
+        const backdrop = document.getElementById('random-main-modal-backdrop');
+        const closeBtn = document.getElementById('random-main-close');
+        const rerollBtn = document.getElementById('random-main-reroll');
+        const toggleBtn = document.getElementById('btn-random-main-toggle-view');
+        if (!modal || !backdrop || !closeBtn || !rerollBtn || !toggleBtn) return;
+
+        try { await ensureCardCacheForQueue(); } catch (_) {}
+
+        if (randomMainModalKeyHandler) {
+            document.removeEventListener('keydown', randomMainModalKeyHandler);
+            randomMainModalKeyHandler = null;
+        }
+
+        function cleanup() {
+            modal.classList.remove('is-open');
+            modal.setAttribute('aria-hidden', 'true');
+            backdrop.onclick = null;
+            closeBtn.onclick = null;
+            rerollBtn.onclick = null;
+            toggleBtn.onclick = null;
+            if (randomMainModalKeyHandler) {
+                document.removeEventListener('keydown', randomMainModalKeyHandler);
+                randomMainModalKeyHandler = null;
+            }
+        }
+
+        function onClose() {
+            cleanup();
+        }
+
+        backdrop.onclick = onClose;
+        closeBtn.onclick = onClose;
+        rerollBtn.onclick = () => {
+            randomMainModalSample = sampleRandomMainCards(5);
+            renderRandomMainModalSample();
+        };
+        toggleBtn.onclick = () => {
+            setRandomMainModalView(randomMainModalViewMode === 'list' ? 'grid' : 'list');
+            renderRandomMainModalSample();
+        };
+
+        randomMainModalKeyHandler = (e) => {
+            if (!modal.classList.contains('is-open')) return;
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                onClose();
+            }
+        };
+        document.addEventListener('keydown', randomMainModalKeyHandler);
+
+        setRandomMainModalView(randomMainModalViewMode);
+        randomMainModalSample = sampleRandomMainCards(5);
+        renderRandomMainModalSample();
+
+        modal.classList.add('is-open');
+        modal.setAttribute('aria-hidden', 'false');
+        try { closeBtn.focus(); } catch (_) {}
+    }
+
+    window.openRandomMainModal = openRandomMainModal;
 
     async function forceAddToSide(entry, depth = 0) {
         if (isDeckValidationDisabled()) {
@@ -7656,10 +8314,15 @@
         "ui.generating_pdf": { pt: "GERANDO PDF...", en: "GENERATING PDF..." },
         "ui.grid_label": { pt: "Grade", en: "Grid" },
         "ui.grid_title": { pt: "Visualiza\u00e7\u00e3o em Grade", en: "Grid view" },
-        "ui.import_deck": { pt: "Importar DECK", en: "Import DECK" },
+        "ui.import_deck": { pt: "Importar", en: "Import" },
         "ui.import_overlay": { pt: "A importar\u2026", en: "Importing\u2026" },
         "ui.list_label": { pt: "Lista", en: "List" },
         "ui.list_title": { pt: "Visualiza\u00e7\u00e3o em Lista", en: "List view" },
+        "ui.random_main_title": { pt: "Cartas aleat\u00f3rias", en: "Random cards" },
+        "ui.random_main_reroll_label": { pt: "Sortear", en: "Roll" },
+        "ui.random_main_reroll_title": { pt: "Sortear novas cartas", en: "Roll new cards" },
+        "ui.random_main_grid_title": { pt: "Visualiza\u00e7\u00e3o em Grade", en: "Grid view" },
+        "ui.random_main_list_title": { pt: "Visualiza\u00e7\u00e3o em Lista", en: "List view" },
         "ui.modal_deck_name": { pt: "Nome do deck", en: "Deck name" },
         "ui.ok": { pt: "OK", en: "OK" },
         "ui.pdf_preview_title_on": { pt: "Ocultar pr\u00e9-visualiza\u00e7\u00e3o do PDF", en: "Hide PDF preview" },
@@ -8079,6 +8742,7 @@
         const btnRename = document.getElementById('btn-deck-rename');
         const btnDel = document.getElementById('btn-deck-delete-saved');
         const btnPdf = document.getElementById('btn-toggle-pdf-preview');
+        const btnRandomMain = document.getElementById('btn-deck-random-main');
         if (!sel || sel.dataset.init === '1') return;
         sel.dataset.init = '1';
         paintSavedDecksSelect();
@@ -8097,6 +8761,12 @@
                 applyPdfPreviewVisibility(!currentlyHidden);
                 const hiddenAfter = col && col.classList.contains('pdf-preview-hidden');
                 applyCardSurfaceFeedback(hiddenAfter ? 'pdf_preview_hide' : 'pdf_preview_show');
+            };
+        }
+
+        if (btnRandomMain) {
+            btnRandomMain.onclick = () => {
+                openRandomMainModal();
             };
         }
 
@@ -8807,7 +9477,10 @@
             if (isEnglishMode()) return ({ dark: 'DARK', light: 'LIGHT', earth: 'EARTH', fire: 'FIRE', water: 'WATER', wind: 'WIND', divine: 'DIVINE' }[val] || val);
             return ({ dark: 'Trevas', light: 'Luz', earth: 'Terra', fire: 'Fogo', water: 'Água', wind: 'Vento', divine: 'Divino' }[val] || val);
         }
-        if (key === 'level') return isEnglishMode() ? `Level ${val}` : `Nv. ${val}`;
+        if (key === 'level') {
+            const lab = formatApiNumericFilterValueForLabel(val);
+            return isEnglishMode() ? `Level ${lab}` : `Nv. ${lab}`;
+        }
         if (key === 'linkval') return `LINK-${val}`;
         if (key === 'scale') return isEnglishMode() ? `Scale ${val}` : `Escala ${val}`;
         if (key === 'linkmarker') {
@@ -8983,7 +9656,7 @@
         const lvDl = document.getElementById('datalist-filter-level');
         if (lvDl) {
             lvDl.innerHTML = '';
-            for (let i = 0; i <= 13; i++) {
+            for (let i = 1; i <= 13; i++) {
                 lvDl.innerHTML += `<option value="${escAttr(T('filter.level_opt', { n: i }))}"></option>`;
             }
         }
@@ -9890,6 +10563,96 @@
         const i = sel.selectedIndex;
         const t = i >= 0 && sel.options[i] ? sel.options[i].textContent : '—';
         btn.textContent = (t && t.trim()) ? t.trim() : '—';
+        try { if (selId === 'sort-by') autosizeResultsSortTrigger(); } catch (_) {}
+        try { if (selId === 'saved-decks-select') autosizeSavedDeckTrigger(); } catch (_) {}
+    }
+
+    function autosizeSavedDeckTrigger() {
+        const btn = document.querySelector('[data-native-custom-trigger="saved-decks-select"]');
+        if (!btn) return;
+        const wrap = btn.closest('.custom-select-ui-wrap');
+        if (wrap) {
+            wrap.classList.add('custom-select-wrap--saved-decks');
+            wrap.style.flex = '0 0 auto';
+        }
+        btn.style.flex = '0 0 auto';
+        btn.style.whiteSpace = 'nowrap';
+
+        // Medir o texto e ajustar largura (no topo do deck, não deixar cortar o nome).
+        const cs = window.getComputedStyle(btn);
+        const probe = document.createElement('span');
+        probe.style.position = 'fixed';
+        probe.style.left = '-9999px';
+        probe.style.top = '-9999px';
+        probe.style.whiteSpace = 'nowrap';
+        probe.style.font = cs.font;
+        probe.textContent = btn.textContent || '';
+        document.body.appendChild(probe);
+        const textW = probe.getBoundingClientRect().width;
+        probe.remove();
+
+        const padL = parseFloat(cs.paddingLeft) || 0;
+        const padR = parseFloat(cs.paddingRight) || 0;
+        const borderL = parseFloat(cs.borderLeftWidth) || 0;
+        const borderR = parseFloat(cs.borderRightWidth) || 0;
+        const extra = 4; // respiro mínimo (campo bem justo)
+        const wanted = Math.ceil(textW + padL + padR + borderL + borderR + extra);
+        const minW = 66;
+        // Permite nomes maiores sem cortar (há espaço disponível no topo).
+        const maxW = 320;
+        const w = Math.max(minW, Math.min(maxW, wanted));
+        btn.style.width = `${w}px`;
+        if (wrap) {
+            wrap.style.width = `${w}px`;
+            // não travar maxWidth aqui; o CSS pode impor limites por layout/tema
+            wrap.style.maxWidth = '';
+            wrap.style.flex = '0 0 auto';
+        }
+
+        // Mantém o select nativo consistente (quando visível / acessibilidade).
+        const sel = document.getElementById('saved-decks-select');
+        if (sel) sel.style.width = `${w}px`;
+    }
+
+    function autosizeResultsSortTrigger() {
+        const btn = document.querySelector('[data-native-custom-trigger="sort-by"]');
+        if (!btn) return;
+        const wrap = btn.closest('.custom-select-ui-wrap');
+        if (wrap) {
+            wrap.classList.add('custom-select-wrap--results-sort');
+            wrap.style.flex = '0 0 auto';
+        }
+        btn.style.flex = '0 0 auto';
+        btn.style.whiteSpace = 'nowrap';
+
+        // Medir o texto e ajustar largura. Clamp para não quebrar a toolbar.
+        const cs = window.getComputedStyle(btn);
+        const probe = document.createElement('span');
+        probe.style.position = 'fixed';
+        probe.style.left = '-9999px';
+        probe.style.top = '-9999px';
+        probe.style.whiteSpace = 'nowrap';
+        probe.style.font = cs.font;
+        probe.textContent = btn.textContent || '';
+        document.body.appendChild(probe);
+        const textW = probe.getBoundingClientRect().width;
+        probe.remove();
+
+        const padL = parseFloat(cs.paddingLeft) || 0;
+        const padR = parseFloat(cs.paddingRight) || 0;
+        const borderL = parseFloat(cs.borderLeftWidth) || 0;
+        const borderR = parseFloat(cs.borderRightWidth) || 0;
+        const extra = 8; // respiro mínimo (sem folga visível)
+        const wanted = Math.ceil(textW + padL + padR + borderL + borderR + extra);
+        // O pedido aqui é "só a largura do texto selecionado": mantemos apenas um piso pequeno
+        // para o caso de valores curtíssimos ("Nome") e um teto para não esmagar a toolbar.
+        const minW = 68;
+        const maxW = 420;
+        const w = Math.max(minW, Math.min(maxW, wanted));
+        btn.style.width = `${w}px`;
+        // Mantém o select nativo consistente (quando visível / acessibilidade).
+        const sel = document.getElementById('sort-by');
+        if (sel) sel.style.width = `${w}px`;
     }
 
     function syncAllNativeCustomSelectTriggers() {
@@ -9926,7 +10689,12 @@
             wrap.className = 'custom-select-ui-wrap';
             if (selId === 'saved-decks-select') wrap.classList.add('custom-select-wrap--saved-decks');
             else if (selId === 'deck-banlist-select') wrap.classList.add('custom-select-wrap--deck-banlist');
-            if (sel.id === 'sort-by' || sel.id === 'deck-sort-by') wrap.style.flex = '1';
+            if (sel.id === 'sort-by') {
+                wrap.style.flex = '0 0 auto';
+                wrap.classList.add('custom-select-wrap--results-sort');
+            } else if (sel.id === 'deck-sort-by') {
+                wrap.style.flex = '1';
+            }
             parent.insertBefore(wrap, sel);
             const btn = document.createElement('button');
             btn.type = 'button';
@@ -10012,6 +10780,16 @@
                 showToast(T('toast.value_unknown'));
             }
             return;
+        }
+        if (kind === 'level') {
+            const op = normalizeUiNumericOp(document.getElementById('filter-level-op')?.value || 'eq');
+            const n = parseInt(val, 10);
+            const v2 = makeApiNumericFilterValue(op, n);
+            if (!v2) {
+                showToast(T('toast.value_unknown'));
+                return;
+            }
+            val = v2;
         }
         const st = window.filterChipState;
         const prevSingle = (st[cfg.key] && st[cfg.key].length ? st[cfg.key][0] : '');
@@ -11234,6 +12012,69 @@
         return [...new Set(list)];
     }
 
+    function apiNumericOpPrefix(op) {
+        if (op === 'eq') return '';
+        if (op === 'lt') return 'lt';
+        if (op === 'lte') return 'lte';
+        if (op === 'gt') return 'gt';
+        if (op === 'gte') return 'gte';
+        if (op === '<') return 'lt';
+        if (op === '<=') return 'lte';
+        if (op === '>') return 'gt';
+        if (op === '>=') return 'gte';
+        return '';
+    }
+
+    function normalizeUiNumericOp(op) {
+        const t = (op == null) ? '' : String(op).trim();
+        if (t === 'eq' || t === 'lt' || t === 'lte' || t === 'gt' || t === 'gte') return t;
+        if (t === '&lt;') return '<';
+        if (t === '&lt;=') return '<=';
+        if (t === '&gt;') return '>';
+        if (t === '&gt;=') return '>=';
+        if (t === '=' || t === '<' || t === '<=' || t === '>' || t === '>=') return t;
+        return 'eq';
+    }
+
+    function normalizeApiNumericFilterValue(v) {
+        const t = (v == null) ? '' : String(v).trim();
+        if (!t) return null;
+        if (/^\d+$/.test(t)) return t;
+        const m = t.match(/^(lt|lte|gt|gte)(\d+)$/i);
+        if (m) return (m[1].toLowerCase() + m[2]);
+        return null;
+    }
+
+    function makeApiNumericFilterValue(op, n) {
+        if (!Number.isFinite(n)) return null;
+        const pref = apiNumericOpPrefix(normalizeUiNumericOp(op));
+        return pref ? (pref + String(n)) : String(n);
+    }
+
+    function chipListApiNumericWithLive(chips, liveRaw, op) {
+        const list = [...(chips || [])].map(normalizeApiNumericFilterValue).filter(Boolean);
+        const t = (liveRaw === undefined || liveRaw === null) ? '' : String(liveRaw).trim();
+        if (t !== '') {
+            const n = parseInt(t, 10);
+            if (!Number.isNaN(n)) {
+                const v = makeApiNumericFilterValue(normalizeUiNumericOp(op), n);
+                if (v) list.push(v);
+            }
+        }
+        return [...new Set(list)];
+    }
+
+    function formatApiNumericFilterValueForLabel(v) {
+        const t = normalizeApiNumericFilterValue(v);
+        if (!t) return String(v || '').trim();
+        const m = t.match(/^(lt|lte|gt|gte)?(\d+)$/i);
+        if (!m) return t;
+        const op = (m[1] || '').toLowerCase();
+        const n = m[2];
+        const sym = ({ lt: '<', lte: '<=', gt: '>', gte: '>=' }[op] || '=');
+        return `${sym} ${n}`;
+    }
+
     function wireMultiTextChipButtons(container) {
         if (!container) return;
         container.querySelectorAll('.mt-chip-x').forEach(btn => {
@@ -11278,7 +12119,8 @@
             if (!box) return;
             box.innerHTML = (m.atk || []).map(s => {
                 const safe = escAttr(s);
-                return `<span class="cardset-chip">ATK ${safe}<button type="button" class="mt-chip-x" data-mt="atk" data-mt-val="${safe}">&times;</button></span>`;
+                const lab = `ATK ${formatApiNumericFilterValueForLabel(s)}`;
+                return `<span class="cardset-chip">${escAttr(lab)}<button type="button" class="mt-chip-x" data-mt="atk" data-mt-val="${safe}">&times;</button></span>`;
             }).join('');
             wireMultiTextChipButtons(box);
             if (clr) setChipClearRowVisible('filter-atk-clear-chips', (m.atk || []).length > 0);
@@ -11290,7 +12132,8 @@
             if (!box) return;
             box.innerHTML = (m.def || []).map(s => {
                 const safe = escAttr(s);
-                return `<span class="cardset-chip">DEF ${safe}<button type="button" class="mt-chip-x" data-mt="def" data-mt-val="${safe}">&times;</button></span>`;
+                const lab = `DEF ${formatApiNumericFilterValueForLabel(s)}`;
+                return `<span class="cardset-chip">${escAttr(lab)}<button type="button" class="mt-chip-x" data-mt="def" data-mt-val="${safe}">&times;</button></span>`;
             }).join('');
             wireMultiTextChipButtons(box);
             if (clr) setChipClearRowVisible('filter-def-clear-chips', (m.def || []).length > 0);
@@ -11369,6 +12212,7 @@
     function tryAddAtkChip() {
         const el = document.getElementById('filter-atk');
         if (!el) return;
+        const op = normalizeUiNumericOp(document.getElementById('filter-atk-op')?.value || 'eq');
         const raw = String(el.value).trim();
         if (raw === '') {
             showToast(T('toast.atk_need'));
@@ -11379,7 +12223,11 @@
             showToast(T('toast.atk_invalid'));
             return;
         }
-        const v = String(n);
+        const v = makeApiNumericFilterValue(op, n);
+        if (!v) {
+            showToast(T('toast.atk_invalid'));
+            return;
+        }
         if (!window.multiTextFilters.atk) window.multiTextFilters.atk = [];
         if (window.multiTextFilters.atk.includes(v)) {
             showToast(T('toast.atk_dup'));
@@ -11393,6 +12241,7 @@
     function tryAddDefChip() {
         const el = document.getElementById('filter-def');
         if (!el) return;
+        const op = normalizeUiNumericOp(document.getElementById('filter-def-op')?.value || 'eq');
         const raw = String(el.value).trim();
         if (raw === '') {
             showToast(T('toast.def_need'));
@@ -11403,7 +12252,11 @@
             showToast(T('toast.def_invalid'));
             return;
         }
-        const v = String(n);
+        const v = makeApiNumericFilterValue(op, n);
+        if (!v) {
+            showToast(T('toast.def_invalid'));
+            return;
+        }
         if (!window.multiTextFilters.def) window.multiTextFilters.def = [];
         if (window.multiTextFilters.def.includes(v)) {
             showToast(T('toast.def_dup'));
@@ -13601,6 +14454,8 @@
         const sub = getFilterSubtype(); // compat
         const atk = document.getElementById('filter-atk').value;
         const def = document.getElementById('filter-def').value;
+        const atkOp = normalizeUiNumericOp(document.getElementById('filter-atk-op')?.value || 'eq');
+        const defOp = normalizeUiNumericOp(document.getElementById('filter-def-op')?.value || 'eq');
         const attr = getFilterAttrParam();
         const levels = getFilterLevels();
         const lv = getFilterLevel(); // compat
@@ -13626,8 +14481,8 @@
         const mtf = window.multiTextFilters || { fname: [], desc: [], atk: [], def: [], priceRanges: [] };
         const fnameList = chipListWithLiveText(mtf.fname, q, 3);
         const descList = chipListWithLiveText(mtf.desc, desc, 3);
-        const atkList = chipListNumWithLive(mtf.atk, atk);
-        const defList = chipListNumWithLive(mtf.def, def);
+        const atkList = chipListApiNumericWithLive(mtf.atk, atk, atkOp);
+        const defList = chipListApiNumericWithLive(mtf.def, def, defOp);
 
         const hasFnameQuery = fnameList.length > 0;
         const hasDescQuery = descList.length > 0;
