@@ -565,6 +565,9 @@
         .sidebar-content { padding: 15px; overflow-y: auto; flex-grow: 1; }
         .filter-group { margin-bottom: 12px; display: flex; flex-direction: column; gap: 4px; align-items: stretch; }
         .filter-group > .cardset-hint { text-align: left; }
+        /* "Possui efeito" só quando Tipo inclui Monstro */
+        #filter-haseffect-group { display: none !important; }
+        html.has-monster-type #filter-haseffect-group { display: flex !important; }
         /* Mesmo espaçamento rótulo→campo que .theme-select-stack (5px) */
         .view-controls .filter-group.view-controls-sort-tight { gap: 5px; }
         .view-controls-toolbar-row .sort-controls {
@@ -5143,6 +5146,40 @@
                     <input type="checkbox" id="enable-banlist-only" style="width: auto;" onchange="performSearch()"> <span data-i18n="filter.banlist_only">Exibir somente cartas da Banlist</span>
                 </label>
             </div>
+            <div class="filter-group">
+                <label data-i18n="filter.staple_label">Staple</label>
+                <p class="cardset-hint" data-i18n-html="filter.staple_hint">API: <code>staple=yes</code> para staples. “Não é Staple” combina com outros filtros — o servidor não aceita <code>staple=no</code>; aplicamos no resultado (<code>misc_info.staple</code>).</p>
+                <div class="filter-action-row">
+                    <input type="text" id="filter-staple-input" list="datalist-filter-staple" data-i18n-placeholder="filter.staple_ph" placeholder="É Staple ou Não é Staple…" autocomplete="off" style="flex: 1;">
+                    <div class="icon-btn-stack icon-btn-stack--tool">
+                        <span class="theme-row-label" data-i18n="filter.add">Adicionar</span>
+                        <button type="button" id="filter-staple-add" class="btn-secondary btn-icon-tool" data-i18n-title="filter.add" data-i18n-aria="filter.add" title="" aria-label=""><i class="fas fa-plus" aria-hidden="true"></i></button>
+                    </div>
+                </div>
+                <datalist id="datalist-filter-staple"></datalist>
+                <div id="filter-staple-chips" class="cardset-chips"></div>
+                <div class="filter-clear-stack">
+                    <span class="theme-row-label" data-i18n="filter.staple_clear"></span>
+                    <button type="button" id="filter-staple-clear" class="btn-secondary btn-icon-tool" data-i18n-title="filter.staple_clear" data-i18n-aria="filter.staple_clear" title="" aria-label=""><i class="fas fa-eraser" aria-hidden="true"></i></button>
+                </div>
+            </div>
+            <div class="filter-group" id="filter-haseffect-group">
+                <label data-i18n="filter.haseffect_label">Possui efeito</label>
+                <p class="cardset-hint" data-i18n-html="filter.haseffect_hint">Se a carta tem efeito de jogo de verdade (API: <code>has_effect</code> + <code>misc</code>).</p>
+                <div class="filter-action-row">
+                    <input type="text" id="filter-haseffect-input" list="datalist-filter-haseffect" data-i18n-placeholder="filter.haseffect_ph" placeholder="Possui efeito ou Não possui efeito…" autocomplete="off" style="flex: 1;">
+                    <div class="icon-btn-stack icon-btn-stack--tool">
+                        <span class="theme-row-label" data-i18n="filter.add">Adicionar</span>
+                        <button type="button" id="filter-haseffect-add" class="btn-secondary btn-icon-tool" data-i18n-title="filter.add" data-i18n-aria="filter.add" title="" aria-label=""><i class="fas fa-plus" aria-hidden="true"></i></button>
+                    </div>
+                </div>
+                <datalist id="datalist-filter-haseffect"></datalist>
+                <div id="filter-haseffect-chips" class="cardset-chips"></div>
+                <div class="filter-clear-stack">
+                    <span class="theme-row-label" data-i18n="filter.haseffect_clear"></span>
+                    <button type="button" id="filter-haseffect-clear" class="btn-secondary btn-icon-tool" data-i18n-title="filter.haseffect_clear" data-i18n-aria="filter.haseffect_clear" title="" aria-label=""><i class="fas fa-eraser" aria-hidden="true"></i></button>
+                </div>
+            </div>
             <div class="filter-group filter-group--price">
                 <label><i class="fa-solid fa-dollar-sign" aria-hidden="true"></i> <span data-i18n="filter.price_label">Faixa de Preço (USD)</span></label>
                 <p class="cardset-hint" data-i18n-html="filter.price_hint">Sem faixas salvas: um intervalo (min/max) filtra como antes. Com <strong>Adicionar faixa</strong>: várias faixas em união (carta em qualquer uma).</p>
@@ -7964,6 +8001,14 @@
         "filter.ban_label": { pt: "Formato / Banlist", en: "Format / Banlist" },
         "filter.ban_ph": { pt: "Ex.: Formato TCG (principal)", en: "e.g. TCG Format (main)" },
         "filter.banlist_only": { pt: "Exibir somente cartas da Banlist", en: "Show only cards on the banlist" },
+        "filter.staple_label": { pt: "Staple", en: "Staple" },
+        "filter.staple_hint": { pt: "<strong>\u00c9 Staple</strong> usa <code>staple=yes</code> na API. <strong>N\u00e3o \u00e9 Staple</strong> filtra no resultado (<code>misc_info</code>); combine com nome, tipo, data, etc. (a API n\u00e3o aceita <code>staple=no</code>).", en: "<strong>Is staple</strong> uses <code>staple=yes</code>. <strong>Not staple</strong> filters client-side via <code>misc_info</code>; combine with name, type, dates, etc. (API has no <code>staple=no</code>)." },
+        "filter.staple_ph": { pt: "\u00c9 Staple ou N\u00e3o \u00e9 Staple\u2026", en: "Is staple or Not staple\u2026" },
+        "filter.staple_clear": { pt: "Limpar Staple", en: "Clear staple" },
+        "filter.haseffect_label": { pt: "Possui efeito", en: "Has effect text" },
+        "filter.haseffect_hint": { pt: "API: <code>has_effect=true</code> ou <code>false</code> (efeito de jogo real; ver guia YGOPRODeck). Requer <code>misc=yes</code> nos resultados.", en: "API: <code>has_effect=true</code> or <code>false</code> (actual game effect; see YGOPRODeck guide). Responses use <code>misc=yes</code>." },
+        "filter.haseffect_ph": { pt: "Possui efeito ou N\u00e3o possui efeito\u2026", en: "Has effect or No effect\u2026" },
+        "filter.haseffect_clear": { pt: "Limpar efeito de texto", en: "Clear effect filter" },
         "filter.def_add": { pt: "Adicionar DEF \u00e0 busca", en: "Add DEF to search" },
         "filter.def_clear": { pt: "Limpar DEFs", en: "Clear DEFs" },
         "filter.def_hint": { pt: "Igual ao ATK: chips em uni\u00e3o com o valor do campo.", en: "Same as ATK: chips union with the field value." },
@@ -8041,6 +8086,10 @@
         "filteropt.ban_tcg": { pt: "Formato TCG (principal)", en: "TCG Format (main)" },
         "filteropt.date_ocg": { pt: "OCG \u2014 lan\u00e7amento japon\u00eas", en: "OCG \u2014 Japanese release" },
         "filteropt.date_tcg": { pt: "TCG \u2014 lan\u00e7amento ocidental", en: "TCG \u2014 Western release" },
+        "filteropt.staple_yes": { pt: "\u00c9 Staple", en: "Is staple" },
+        "filteropt.staple_no": { pt: "N\u00e3o \u00e9 Staple", en: "Not staple" },
+        "filteropt.haseffect_true": { pt: "Possui efeito", en: "Has effect" },
+        "filteropt.haseffect_false": { pt: "N\u00e3o possui efeito", en: "No effect" },
         "ocr.btn.calibrate": { pt: "CALIBRAR OCR", en: "CALIBRATE OCR" },
         "ocr.btn.close": { pt: "FECHAR", en: "CLOSE" },
         "ocr.btn.copy_logs": { pt: "COPIAR LOGS", en: "COPY LOGS" },
@@ -8081,9 +8130,9 @@
         "ui.race_unknown": { pt: "Desconhecido", en: "Unknown" },
         "ui.scan_card_ocr": { pt: "Escanear Carta (OCR)", en: "Scan card (OCR)" },
         "ui.search_fname_clear": { pt: "Limpar nomes", en: "Clear names" },
-        "ui.search_fname_hint": { pt: "\u22653 letras: busca enquanto digita. Use <strong>Adicionar</strong> para guardar termos extras (uni\u00e3o OR com o que ainda estiver no campo).", en: "\u22653 letters: search while typing. Use <strong>Add</strong> to save extra terms (OR union with whatever remains in the field)." },
-        "ui.search_name_label": { pt: "Nome", en: "Name" },
-        "ui.search_placeholder": { pt: "Buscar pelo nome\u2026", en: "Search by name\u2026" },
+        "ui.search_fname_hint": { pt: "\u22653 letras: busca enquanto digita (ou <strong>\"nome exato\"</strong> para o par\u00e2metro <code>name</code> da API). Se digitar <strong>s\u00f3 n\u00fameros</strong> com <strong>\u22655 d\u00edgitos</strong>, busca por <strong>ID</strong> e <strong>Konami ID</strong>. Use <strong>Adicionar</strong> para guardar termos extras (uni\u00e3o OR com o que ainda estiver no campo).", en: "\u22653 letters: search while typing (or <strong>\"exact name\"</strong> for the API <code>name</code> parameter). If you type <strong>digits only</strong> with <strong>\u22655 digits</strong>, it searches by <strong>ID</strong> and <strong>Konami ID</strong>. Use <strong>Add</strong> to save extra terms (OR union with whatever remains in the field)." },
+        "ui.search_name_label": { pt: "Nome / ID", en: "Name / ID" },
+        "ui.search_placeholder": { pt: "Nome\u2026 ou ID/Konami ID (5+ d\u00edgitos)\u2026", en: "Name\u2026 or ID/Konami ID (5+ digits)\u2026" },
         "ui.help_label": { pt: "Ajuda", en: "Help" },
         "ui.help_group_aria": { pt: "Ajuda", en: "Help" },
         "ui.help_toggle_on": { pt: "Ajuda: ligada (clique para desligar)", en: "Help: on (click to turn off)" },
@@ -8151,6 +8200,8 @@
         "search.rarity_scan": { pt: "A pesquisar por raridade no cat\u00e1logo completo (v\u00e1rios pedidos)\u2026", en: "Searching rarity across the full catalog (several requests)\u2026" },
         "search.price_full_scan": { pt: "A filtrar por pre\u00e7o no cat\u00e1logo completo (v\u00e1rios pedidos)\u2026", en: "Filtering by price across the full catalog (several requests)\u2026" },
         "search.too_many": { pt: "Muitas combina\u00e7\u00f5es ({count}). Limite {max}. Reduza chips de nome, descri\u00e7\u00e3o, ATK, DEF, expans\u00f5es ou arqu\u00e9tipos.", en: "Too many combinations ({count}). Limit {max}. Reduce name, description, ATK, DEF, set, or archetype chips." },
+        "search.staple_full_scan": { pt: "Buscando no cat\u00e1logo inteiro para filtrar \u201cN\u00e3o \u00e9 Staple\u201d (pode demorar na 1\u00aa vez).", en: "Scanning the full catalog to filter \u201cNot staple\u201d (may take a while the first time)." },
+        "search.staple_no_combine": { pt: "\u201cN\u00e3o \u00e9 Staple\u201d precisa de outro filtro (nome, tipo, formato, data, efeito de texto, etc.). A API s\u00f3 oferece staples via <code>staple=yes</code>.", en: "\u201cNot staple\u201d needs another filter (name, type, format, dates, has_effect, etc.). The API only supports staples via <code>staple=yes</code>." },
         "toast.added_qty": { pt: "{qty}x {name} adicionado!", en: "{qty}x {name} added!" },
         "toast.added_qty_m": { pt: "{qty}x {name} adicionado(a)!", en: "{qty}x {name} added!" },
         "toast.all_decks_empty": { pt: "Todos os decks guardados est\u00e3o vazios.", en: "All saved decks are empty." },
@@ -9065,7 +9116,9 @@
         era: [],
         dateRegion: [],
         banlist: [],
-        archetype: []
+        archetype: [],
+        staple: [],
+        hasEffect: []
     };
     window.multiTextFilters = { fname: [], desc: [], atk: [], def: [], priceRanges: [] };
     let searchTimeout;
@@ -9316,6 +9369,16 @@
         { v: 'goat', label: 'Formato Goat (clássico)' }
     ];
 
+    const FILTER_STAPLE_LABELS = [
+        { v: 'yes', label: 'É Staple' },
+        { v: 'no', label: 'Não é Staple' }
+    ];
+
+    const FILTER_HASEFFECT_LABELS = [
+        { v: 'true', label: 'Possui efeito' },
+        { v: 'false', label: 'Não possui efeito' }
+    ];
+
     function getFilterTypeCategory() {
         const a = window.filterChipState.typeCategory;
         return a.length ? a[0] : '';
@@ -9517,6 +9580,16 @@
             const row = FILTER_BANLIST_LABELS.find(e => e.v === val);
             return row ? row.label : val;
         }
+        if (key === 'staple') {
+            if (val === 'yes') return isEnglishMode() ? T('filteropt.staple_yes') : FILTER_STAPLE_LABELS.find(e => e.v === 'yes').label;
+            if (val === 'no') return isEnglishMode() ? T('filteropt.staple_no') : FILTER_STAPLE_LABELS.find(e => e.v === 'no').label;
+            return val;
+        }
+        if (key === 'hasEffect') {
+            if (val === 'true') return isEnglishMode() ? T('filteropt.haseffect_true') : FILTER_HASEFFECT_LABELS.find(e => e.v === 'true').label;
+            if (val === 'false') return isEnglishMode() ? T('filteropt.haseffect_false') : FILTER_HASEFFECT_LABELS.find(e => e.v === 'false').label;
+            return val;
+        }
         if (key === 'archetype') return val;
         return val;
     }
@@ -9542,7 +9615,9 @@
             ['archetype', 'filter-archetype-chips', 'filter-archetype-clear'],
             ['era', 'filter-era-chips', 'filter-era-clear'],
             ['dateRegion', 'filter-date-region-chips', 'filter-date-region-clear'],
-            ['banlist', 'filter-banlist-chips', 'filter-banlist-clear']
+            ['banlist', 'filter-banlist-chips', 'filter-banlist-clear'],
+            ['staple', 'filter-staple-chips', 'filter-staple-clear'],
+            ['hasEffect', 'filter-haseffect-chips', 'filter-haseffect-clear']
         ];
         rows.forEach(([key, boxId, clrId]) => {
             const box = document.getElementById(boxId);
@@ -9600,9 +9675,23 @@
 
     function syncMonsterFilterGroups() {
         const cat = getFilterTypeCategory();
+        const cats = getFilterTypeCategories();
+        const hasMonster = (cats || []).includes('Monster');
+        document.documentElement.classList.toggle('has-monster-type', hasMonster);
         document.getElementById('group-subtype').style.display = (cat === 'Monster' ? 'flex' : 'none');
         document.getElementById('monster-extras').style.display = (cat === 'Monster' ? 'block' : 'none');
         document.getElementById('group-race').style.display = (cat ? 'flex' : 'none');
+        const heGroup = document.getElementById('filter-haseffect-group');
+        if (heGroup) {
+            if (!hasMonster) {
+                // Se o usuário removiu "Monstro" do filtro de tipo, limpar o filtro "Possui efeito"
+                // para não ficar aplicado enquanto está oculto.
+                window.filterChipState.hasEffect = [];
+                const inp = document.getElementById('filter-haseffect-input');
+                if (inp) inp.value = '';
+                try { paintComboFilterChips(); } catch (_) {}
+            }
+        }
     }
 
     function refreshSubtypeRaceDatalists() {
@@ -9695,6 +9784,29 @@
                       .map((e) => `<option value="${escAttr(e.label)}"></option>`)
                       .join('')
                 : FILTER_BANLIST_LABELS.map((e) => `<option value="${escAttr(e.label)}"></option>`).join('');
+        }
+
+        const stapleDl = document.getElementById('datalist-filter-staple');
+        if (stapleDl) {
+            stapleDl.innerHTML = isEnglishMode()
+                ? [
+                      { v: 'yes', label: T('filteropt.staple_yes') },
+                      { v: 'no', label: T('filteropt.staple_no') }
+                  ]
+                      .map((e) => `<option value="${escAttr(e.label)}"></option>`)
+                      .join('')
+                : FILTER_STAPLE_LABELS.map((e) => `<option value="${escAttr(e.label)}"></option>`).join('');
+        }
+        const hefDl = document.getElementById('datalist-filter-haseffect');
+        if (hefDl) {
+            hefDl.innerHTML = isEnglishMode()
+                ? [
+                      { v: 'true', label: T('filteropt.haseffect_true') },
+                      { v: 'false', label: T('filteropt.haseffect_false') }
+                  ]
+                      .map((e) => `<option value="${escAttr(e.label)}"></option>`)
+                      .join('')
+                : FILTER_HASEFFECT_LABELS.map((e) => `<option value="${escAttr(e.label)}"></option>`).join('');
         }
 
         const linkDl = document.getElementById('datalist-filter-linkval');
@@ -9882,6 +9994,61 @@
         return null;
     }
 
+    function resolveStapleInput(raw) {
+        const q0 = String(raw || '').trim();
+        if (!q0) return null;
+        const q = q0.toLowerCase();
+        const rows = isEnglishMode()
+            ? [
+                  { v: 'yes', label: T('filteropt.staple_yes') },
+                  { v: 'no', label: T('filteropt.staple_no') }
+              ]
+            : FILTER_STAPLE_LABELS;
+        const byLabel = rows.find((e) => e.label.toLowerCase() === q);
+        if (byLabel) return byLabel.v;
+        const byPt = FILTER_STAPLE_LABELS.find((e) => e.label.toLowerCase() === q);
+        if (byPt) return byPt.v;
+        if (q === 'yes' || q === 'y' || q === 'staple' || q === 'is staple' || q === 'staples') return 'yes';
+        if (q === 'no' || q === 'n' || q === 'not staple' || q === 'non-staple' || q === 'non staple') return 'no';
+        if (q.includes('não') || q.includes('nao')) {
+            if (q.includes('staple')) return 'no';
+        } else if (q.includes('staple')) return 'yes';
+        return null;
+    }
+
+    function resolveHasEffectInput(raw) {
+        const q0 = String(raw || '').trim();
+        if (!q0) return null;
+        const q = q0.toLowerCase();
+        const rows = isEnglishMode()
+            ? [
+                  { v: 'true', label: T('filteropt.haseffect_true') },
+                  { v: 'false', label: T('filteropt.haseffect_false') }
+              ]
+            : FILTER_HASEFFECT_LABELS;
+        const byLabel = rows.find((e) => e.label.toLowerCase() === q);
+        if (byLabel) return byLabel.v;
+        const byPt = FILTER_HASEFFECT_LABELS.find((e) => e.label.toLowerCase() === q);
+        if (byPt) return byPt.v;
+        if (q === 'true' || q === '1' || q === 'yes' || q === 'sim' || q.includes('possui efeito') || q === 'has effect') return 'true';
+        if (q === 'false' || q === '0' || q === 'no' || q === 'não' || q === 'nao' || q.includes('não possui') || q.includes('nao possui') || q === 'no effect') return 'false';
+        return null;
+    }
+
+    /** misc_info.staple === "Yes" (YGOPRODeck) */
+    function cardIsStapleFromMisc(card) {
+        const m = card && card.misc_info && card.misc_info[0];
+        if (!m || m.staple == null || String(m.staple).trim() === '') return false;
+        const t = String(m.staple).trim().toLowerCase();
+        return t === 'yes' || t === '1' || t === 'true';
+    }
+
+    function cardHasEffectFromMisc(card) {
+        const m = card && card.misc_info && card.misc_info[0];
+        if (!m || m.has_effect == null) return false;
+        return Number(m.has_effect) === 1;
+    }
+
     function resolveBanlistInput(raw) {
         const q0 = raw.trim();
         if (!q0) return null;
@@ -10009,7 +10176,9 @@
                 else applyReleasePeriodDefaults();
             }},
             banlist: { max: 3, resolve: resolveBanlistInput, key: 'banlist', after: () => { toggleBanlistCheckbox(); } },
-            archetype: { max: 99, resolve: resolveArchetypeNameFromInput, key: 'archetype', after: () => {} }
+            archetype: { max: 99, resolve: resolveArchetypeNameFromInput, key: 'archetype', after: () => {} },
+            staple: { max: 1, resolve: resolveStapleInput, key: 'staple', after: () => {} },
+            hasEffect: { max: 1, resolve: resolveHasEffectInput, key: 'hasEffect', after: () => {} }
         };
         const cfg = map[kind];
         if (!cfg || !String(rawText || '').trim()) return false;
@@ -10243,6 +10412,8 @@
             ['filter-era-input', 'era'],
             ['filter-date-region-input', 'dateRegion'],
             ['filter-banlist-input', 'banlist'],
+            ['filter-staple-input', 'staple'],
+            ['filter-haseffect-input', 'hasEffect'],
             ['filter-archetype-input', 'archetype'],
             ['filter-cardset-input', 'cardset'],
             ['filter-setcode-input', 'setcode'],
@@ -10765,7 +10936,9 @@
                 else applyReleasePeriodDefaults();
             }},
             banlist: { input: 'filter-banlist-input', max: 3, resolve: resolveBanlistInput, key: 'banlist', after: () => { toggleBanlistCheckbox(); } },
-            archetype: { input: 'filter-archetype-input', max: 99, resolve: resolveArchetypeNameFromInput, key: 'archetype', after: () => {} }
+            archetype: { input: 'filter-archetype-input', max: 99, resolve: resolveArchetypeNameFromInput, key: 'archetype', after: () => {} },
+            staple: { input: 'filter-staple-input', max: 1, resolve: resolveStapleInput, key: 'staple', after: () => {} },
+            hasEffect: { input: 'filter-haseffect-input', max: 1, resolve: resolveHasEffectInput, key: 'hasEffect', after: () => {} }
         };
         const cfg = map[kind];
         if (!cfg) return;
@@ -10865,6 +11038,8 @@
             ['filter-era-add', 'filter-era-input', 'era'],
             ['filter-date-region-add', 'filter-date-region-input', 'dateRegion'],
             ['filter-banlist-add', 'filter-banlist-input', 'banlist'],
+            ['filter-staple-add', 'filter-staple-input', 'staple'],
+            ['filter-haseffect-add', 'filter-haseffect-input', 'hasEffect'],
             ['filter-archetype-add', 'filter-archetype-input', 'archetype']
         ];
         binds.forEach(([addId, inpId, kind]) => {
@@ -10888,7 +11063,8 @@
             ['filter-linkval-clear', 'linkval'], ['filter-linkmarker-clear', 'linkmarker'], ['filter-scale-clear', 'scale'],
             ['filter-archetype-clear', 'archetype'],
             ['filter-era-clear', 'era'],
-            ['filter-date-region-clear', 'dateRegion'], ['filter-banlist-clear', 'banlist']].forEach(([cid, key]) => {
+            ['filter-date-region-clear', 'dateRegion'], ['filter-banlist-clear', 'banlist'],
+            ['filter-staple-clear', 'staple'], ['filter-haseffect-clear', 'hasEffect']].forEach(([cid, key]) => {
             const b = document.getElementById(cid);
             if (b) b.onclick = () => clearComboFilterGroup(key);
         });
@@ -11076,6 +11252,10 @@
         if (dr.length) out.set(`${FILTER_URL_PREFIX}dr`, dr.join(','));
         const bn = (st.banlist || []).filter(Boolean);
         if (bn.length) out.set(`${FILTER_URL_PREFIX}bn`, bn.join(','));
+        const stl = (st.staple || [])[0];
+        if (stl === 'yes' || stl === 'no') out.set(`${FILTER_URL_PREFIX}stl`, stl);
+        const hef = (st.hasEffect || [])[0];
+        if (hef === 'true' || hef === 'false') out.set(`${FILTER_URL_PREFIX}hef`, hef);
         appendMulti(`${FILTER_URL_PREFIX}ar`, st.archetype || []);
         appendMulti(`${FILTER_URL_PREFIX}cs`, window.selectedCardsetNames || []);
         appendMulti(`${FILTER_URL_PREFIX}sc`, window.selectedSetCodes || []);
@@ -11171,7 +11351,9 @@
             era: [],
             dateRegion: [],
             banlist: [],
-            archetype: []
+            archetype: [],
+            staple: [],
+            hasEffect: []
         };
         window.multiTextFilters = { fname: [], desc: [], atk: [], def: [], priceRanges: [] };
         window.selectedCardsetNames = [];
@@ -11193,6 +11375,7 @@
         ['filter-type-input', 'filter-subtype-input', 'filter-race-input', 'filter-attribute-input', 'filter-level-input',
             'filter-linkval-input', 'filter-linkmarker-input', 'filter-scale-input',
             'filter-archetype-input', 'filter-era-input', 'filter-date-region-input', 'filter-banlist-input',
+            'filter-staple-input', 'filter-haseffect-input',
             'filter-cardset-input', 'filter-setcode-input', 'filter-rarity-input'].forEach((id) => {
             const el = document.getElementById(id);
             if (el) el.value = '';
@@ -11313,6 +11496,10 @@
         if (bnRaw) {
             window.filterChipState.banlist = parseBanlistTokensFromUrl(splitCommaList(bnRaw));
         }
+        const stlRaw = (sp.get(`${FILTER_URL_PREFIX}stl`) || '').trim().toLowerCase();
+        if (stlRaw === 'yes' || stlRaw === 'no') window.filterChipState.staple = [stlRaw];
+        const hefRaw = (sp.get(`${FILTER_URL_PREFIX}hef`) || '').trim().toLowerCase();
+        if (hefRaw === 'true' || hefRaw === 'false') window.filterChipState.hasEffect = [hefRaw];
 
         for (const name of sp.getAll(`${FILTER_URL_PREFIX}ar`)) {
             const raw = sanitizeUrlFilterText(name, 120);
@@ -11807,6 +11994,7 @@
             let first = true;
             for (;;) {
                 const pBase = new URLSearchParams({ num: String(num), offset: String(offset) });
+                pBase.set('misc', 'yes');
                 const url = `https://db.ygoprodeck.com/api/v7/cardinfo.php?${pBase.toString()}`;
                 const res = await fetch(url).then(rr => rr.ok ? rr.json() : { data: [], meta: {} });
                 if (first) {
@@ -11835,6 +12023,7 @@
         let first = true;
         for (;;) {
             const pBase = new URLSearchParams({ num: String(num), offset: String(offset) });
+            pBase.set('misc', 'yes');
             const pPt = new URLSearchParams(pBase);
             pPt.set('language', 'pt');
             const urlGlobal = `https://db.ygoprodeck.com/api/v7/cardinfo.php?${pBase.toString()}`;
@@ -11876,7 +12065,7 @@
             let totalRows = 0;
             let first = true;
             /** Com interface em EN, nomes/descrições em PT ainda exigem catálogo PT na API (fname só em PT, senão 400/vazio). */
-            const useDualTextMerge = !isEnglishMode() || pReq.has('fname') || pReq.has('desc');
+            const useDualTextMerge = !isEnglishMode() || pReq.has('fname') || pReq.has('name') || pReq.has('desc');
             for (;;) {
                 const pr = new URLSearchParams(pReq);
                 pr.set('num', String(CARDINFO_PAGE));
@@ -11940,7 +12129,11 @@
                             for (const sn of sets) {
                                 const pReq = new URLSearchParams(p);
                                 if (archFilters.length > 1 && arArch != null) pReq.append('archetype', arArch);
-                                if (fn != null) pReq.append('fname', fn);
+                                if (fn != null) {
+                                    const pn = parseDoubleQuotedExactNameToken(fn);
+                                    if (pn.isExact && pn.inner.length > 0) pReq.append('name', pn.inner);
+                                    else pReq.append('fname', String(fn).trim());
+                                }
                                 if (d != null) pReq.append('desc', d);
                                 if (a != null) pReq.append('atk', a);
                                 if (df != null) pReq.append('def', df);
@@ -11991,14 +12184,70 @@
         return mergedMap;
     }
 
+    async function fetchCardsByKonamiIdsBatched(konamiIdIterable, onProgress) {
+        const idArr = [...konamiIdIterable]
+            .map(x => String(x ?? '').trim())
+            .filter(s => /^\d+$/.test(s));
+        const mergedMap = new Map();
+        const BATCH = 60;
+        for (let i = 0; i < idArr.length; i += BATCH) {
+            const chunk = idArr.slice(i, i + BATCH);
+            const pReq = new URLSearchParams();
+            pReq.append('konami_id', chunk.join(','));
+            pReq.append('misc', 'yes');
+            if (isEnglishMode()) {
+                const urlGlobal = `https://db.ygoprodeck.com/api/v7/cardinfo.php?${pReq.toString()}`;
+                const resG = await fetch(urlGlobal).then(rr => rr.ok ? rr.json() : { data: [] });
+                (resG.data || []).forEach(card => mergedMap.set(card.id, card));
+            } else {
+                const urlGlobal = `https://db.ygoprodeck.com/api/v7/cardinfo.php?${pReq.toString()}`;
+                const pPt = new URLSearchParams(pReq);
+                pPt.set('language', 'pt');
+                const urlPT = `https://db.ygoprodeck.com/api/v7/cardinfo.php?${pPt.toString()}`;
+                const [resGlobal, resPT] = await Promise.all([
+                    fetch(urlGlobal).then(rr => rr.ok ? rr.json() : { data: [] }),
+                    fetch(urlPT).then(rr => rr.ok ? rr.json() : { data: [] })
+                ]);
+                (resGlobal.data || []).forEach(card => mergedMap.set(card.id, card));
+                (resPT.data || []).forEach(card => {
+                    const existing = mergedMap.get(card.id);
+                    if (existing) mergedMap.set(card.id, { ...existing, ...card });
+                    else mergedMap.set(card.id, card);
+                });
+            }
+            if (typeof onProgress === 'function') {
+                try { onProgress(mergedMap.size); } catch (_) {}
+            }
+        }
+        return mergedMap;
+    }
+
     const MULTI_SEARCH_MAX_COMBO = 36;
+
+    /** Termo `name` (exato) na API: string inteira entre aspas duplas; conteúdo após trim (ver guia YGOPRODeck: `name` vs `fname`). */
+    function parseDoubleQuotedExactNameToken(s) {
+        const t = String(s ?? '').trim();
+        const m = /^"([^"]*)"$/.exec(t);
+        if (!m) return { isExact: false, raw: t, inner: '' };
+        return { isExact: true, raw: t, inner: m[1].trim() };
+    }
+
+    /** Enquanto o utilizador digita uma citação incompleta (`"foo`), não misturar com fname. */
+    function shouldIncludeLiveFnameForSearch(t, minLen) {
+        const s = String(t ?? '').trim();
+        if (!s) return false;
+        if (s[0] === '"') {
+            const parsed = parseDoubleQuotedExactNameToken(s);
+            if (parsed.isExact) return parsed.inner.length > 0;
+            return false;
+        }
+        return minLen > 0 ? s.length >= minLen : s !== '';
+    }
 
     function chipListWithLiveText(chips, live, minLen) {
         const list = [...(chips || [])];
         const t = (live || '').trim();
-        if (minLen > 0) {
-            if (t.length >= minLen) list.push(t);
-        } else if (t !== '') list.push(t);
+        if (shouldIncludeLiveFnameForSearch(t, minLen)) list.push(t);
         return [...new Set(list)];
     }
 
@@ -12175,7 +12424,9 @@
         const inp = document.getElementById('search-input');
         if (!inp) return;
         const v = inp.value.trim();
-        if (v.length < 3) {
+        const pq = parseDoubleQuotedExactNameToken(v);
+        const okLen = (pq.isExact && pq.inner.length > 0) || (!pq.isExact && v.length >= 3);
+        if (!okLen) {
             showToast(T('toast.fname_short'));
             return;
         }
@@ -14479,12 +14730,24 @@
         const pMaxInput = document.getElementById('filter-price-max')?.value;
 
         const mtf = window.multiTextFilters || { fname: [], desc: [], atk: [], def: [], priceRanges: [] };
-        const fnameList = chipListWithLiveText(mtf.fname, q, 3);
+        const fnameListRaw = chipListWithLiveText(mtf.fname, q, 3);
+        const numericOnlyTokens = fnameListRaw
+            .map(s => String(s ?? '').trim())
+            .filter(s => /^\d+$/.test(s));
+        // Regra: só tratar como ID/Konami ID quando for apenas números e tiver 5+ dígitos.
+        // 4 ou menos deve continuar como busca por nome (há cartas que começam com número).
+        const numericIdTokens = numericOnlyTokens.filter(s => s.length >= 5);
+        const fnameList = fnameListRaw.filter(s => {
+            const t = String(s ?? '').trim();
+            return !(/^\d+$/.test(t) && t.length >= 5);
+        });
         const descList = chipListWithLiveText(mtf.desc, desc, 3);
         const atkList = chipListApiNumericWithLive(mtf.atk, atk, atkOp);
         const defList = chipListApiNumericWithLive(mtf.def, def, defOp);
 
-        const hasFnameQuery = fnameList.length > 0;
+        const hasFnameTextQuery = fnameList.length > 0;
+        const hasFnameNumericQuery = numericIdTokens.length > 0;
+        const hasFnameQuery = hasFnameTextQuery || hasFnameNumericQuery;
         const hasDescQuery = descList.length > 0;
         const hasLegacyPrice = !!(pMinInput || pMaxInput);
         const hasChipPrices = (mtf.priceRanges || []).length > 0;
@@ -14497,22 +14760,46 @@
         const rarities = window.selectedRarities || [];
         const hasSetcodeFilter = setcodes.length > 0;
         const hasRarityFilter = rarities.length > 0;
+        const stapleChip = (window.filterChipState.staple || [])[0];
+        const hasEffectChip = (window.filterChipState.hasEffect || [])[0];
 
         const hasLiveAtkDefField = !!(String(atk || '').trim() || String(def || '').trim());
-        const narrowing =
+        const narrowingBase =
             hasFnameQuery || hasDescQuery || (typeCats && typeCats.length) || (subtypes && subtypes.length) ||
             race || attr || (levels && levels.length) || (banlistTypes && banlistTypes.length) ||
             hasSetFilter || hasArchFilter || hasLiveAtkDefField ||
             (mtf.atk || []).length || (mtf.def || []).length ||
             (linkVals && linkVals.length) || (scales && scales.length) || !!linkMarkerParam;
 
+        const narrowing = narrowingBase || !!stapleChip || !!hasEffectChip;
+
         const hasOtherFilters = narrowing || hasPriceFilter || dateEnabled || banlistOnly || hasSetcodeFilter || hasRarityFilter;
+
+        // Para decidir caminhos sem varrer o catálogo: "outros filtros" excluindo o campo Nome/Descrição.
+        const narrowingBaseNoText =
+            (typeCats && typeCats.length) || (subtypes && subtypes.length) ||
+            race || attr || (levels && levels.length) || (banlistTypes && banlistTypes.length) ||
+            hasSetFilter || hasArchFilter || hasLiveAtkDefField ||
+            (mtf.atk || []).length || (mtf.def || []).length ||
+            (linkVals && linkVals.length) || (scales && scales.length) || !!linkMarkerParam;
+        const narrowingNoText = narrowingBaseNoText || !!stapleChip || !!hasEffectChip;
+        const hasOtherFiltersNoText = narrowingNoText || hasPriceFilter || dateEnabled || banlistOnly || hasSetcodeFilter || hasRarityFilter;
 
         if (document.getElementById('ocr-container')?.style.display === 'block') return { kind: 'skip' };
 
         if (!initial && !hasFnameQuery && !hasDescQuery && !hasOtherFilters) {
             return { kind: 'clear' };
         }
+
+        const stapleNoOnlyPath =
+            (stapleChip === 'no') &&
+            !narrowingBase &&
+            !hasSetcodeFilter &&
+            !hasRarityFilter &&
+            !hasPriceFilter &&
+            !dateEnabled &&
+            !banlistOnly &&
+            !hasEffectChip;
 
         const rarityOnlyPath = hasRarityFilter && !narrowing && !hasSetcodeFilter;
         /** Só USD: a API não filtra por preço — varremos o catálogo (como em só raridade). */
@@ -14539,6 +14826,8 @@
         }
         if (archFilters.length === 1) p.append('archetype', archFilters[0]);
         p.append('misc', 'yes');
+        if (stapleChip === 'yes') p.append('staple', 'yes');
+        if (hasEffectChip === 'true' || hasEffectChip === 'false') p.append('has_effect', hasEffectChip);
 
         const fnames = fnameList.length ? fnameList : [null];
         const descs = descList.length ? descList : [null];
@@ -14563,13 +14852,46 @@
             paintResultsLoadingState(requestId);
             const reportProgress = (n) => updateResultsLoadingProgress(n, requestId);
             let finalData;
+
+            // Se o utilizador digitou apenas números no "Nome", buscar direto por ID/Konami ID (sem varrer catálogo).
+            if (hasFnameNumericQuery && !hasFnameTextQuery && !hasDescQuery && !hasOtherFiltersNoText) {
+                const [mById, mByKonami] = await Promise.all([
+                    fetchCardsByIdsBatched(numericIdTokens, reportProgress),
+                    fetchCardsByKonamiIdsBatched(numericIdTokens, reportProgress)
+                ]);
+                const mergedById = new Map();
+                mById.forEach((v, k) => mergedById.set(k, v));
+                mByKonami.forEach((v, k) => mergedById.set(k, v));
+                finalData = Array.from(mergedById.values());
+                return {
+                    kind: 'data',
+                    finalData,
+                    hasFnameQuery,
+                    hasDescQuery,
+                    hasOtherFilters
+                };
+            }
+
             if (setcodesOnlyPath) {
                 const idUnion = await unionIdsFromSetcodesList(setcodes);
                 if (idUnion.size === 0) {
                     return { kind: 'toast', msg: T('search.no_setcode') };
                 }
                 const mergedById = await fetchCardsByIdsBatched(idUnion, reportProgress);
+                if (numericIdTokens.length) {
+                    const base = mergedById.size;
+                    const [mById, mByKonami] = await Promise.all([
+                        fetchCardsByIdsBatched(numericIdTokens, (n) => reportProgress(base + n)),
+                        fetchCardsByKonamiIdsBatched(numericIdTokens, (n) => reportProgress(base + n))
+                    ]);
+                    mById.forEach((v, k) => mergedById.set(k, v));
+                    mByKonami.forEach((v, k) => mergedById.set(k, v));
+                }
                 finalData = Array.from(mergedById.values());
+            } else if (stapleNoOnlyPath) {
+                showToast(T('search.staple_full_scan'));
+                const bigMap = await fetchAllCardsPaginatedMerged(reportProgress);
+                finalData = Array.from(bigMap.values()).filter(c => !cardIsStapleFromMisc(c));
             } else if (rarityOnlyPath) {
                 showToast(T('search.rarity_scan'));
                 const bigMap = await fetchAllCardsPaginatedMerged(reportProgress);
@@ -14672,6 +14994,16 @@
                     }
                 }
 
+                if (numericIdTokens.length) {
+                    const base = mergedById.size;
+                    const [mById, mByKonami] = await Promise.all([
+                        fetchCardsByIdsBatched(numericIdTokens, (n) => reportProgress(base + n)),
+                        fetchCardsByKonamiIdsBatched(numericIdTokens, (n) => reportProgress(base + n))
+                    ]);
+                    mById.forEach((v, k) => mergedById.set(k, v));
+                    mByKonami.forEach((v, k) => mergedById.set(k, v));
+                }
+
                 finalData = Array.from(mergedById.values());
                 if (hasSetcodeFilter) {
                     const idUnion = await unionIdsFromSetcodesList(setcodes);
@@ -14680,6 +15012,19 @@
                     }
                     finalData = finalData.filter(card => idUnion.has(card.id));
                 }
+            }
+
+            // Se "Nome" foi numérico (ID/Konami) e não houve termo textual,
+            // então o resultado deve ser a interseção com esses IDs (evita alargar com união).
+            if (hasFnameNumericQuery && !hasFnameTextQuery) {
+                const [mById, mByKonami] = await Promise.all([
+                    fetchCardsByIdsBatched(numericIdTokens),
+                    fetchCardsByKonamiIdsBatched(numericIdTokens)
+                ]);
+                const allow = new Set();
+                mById.forEach((_, k) => allow.add(Number(k)));
+                mByKonami.forEach((_, k) => allow.add(Number(k)));
+                finalData = finalData.filter(c => allow.has(Number(c.id)));
             }
 
             if (hasChipPrices) {
@@ -14735,6 +15080,16 @@
             }
             if (!multiTypeMode && type === "Monster" && !(subtypes && subtypes.length)) {
                 finalData = finalData.filter(c => c.type.toLowerCase().includes("monster"));
+            }
+            if (stapleChip === 'yes') {
+                finalData = finalData.filter(c => cardIsStapleFromMisc(c));
+            } else if (stapleChip === 'no') {
+                finalData = finalData.filter(c => !cardIsStapleFromMisc(c));
+            }
+            if (hasEffectChip === 'true') {
+                finalData = finalData.filter(c => cardHasEffectFromMisc(c));
+            } else if (hasEffectChip === 'false') {
+                finalData = finalData.filter(c => !cardHasEffectFromMisc(c));
             }
 
             return {
@@ -17209,12 +17564,13 @@
         window.filterChipState = {
             typeCategory: [], subtype: [], race: [], attribute: [], level: [], era: [],
             linkval: [], linkmarker: [], scale: [],
-            dateRegion: [], banlist: [], archetype: []
+            dateRegion: [], banlist: [], archetype: [], staple: [], hasEffect: []
         };
         window.multiTextFilters = { fname: [], desc: [], atk: [], def: [], priceRanges: [] };
         ['filter-type-input', 'filter-subtype-input', 'filter-race-input', 'filter-attribute-input', 'filter-level-input',
             'filter-linkval-input', 'filter-linkmarker-input', 'filter-scale-input',
-            'filter-archetype-input', 'filter-era-input', 'filter-date-region-input', 'filter-banlist-input'].forEach(id => {
+            'filter-archetype-input', 'filter-era-input', 'filter-date-region-input', 'filter-banlist-input',
+            'filter-staple-input', 'filter-haseffect-input'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.value = '';
         });
