@@ -562,12 +562,26 @@
             justify-content: space-between; align-items: center; text-transform: uppercase;
         }
 
-        .sidebar-content { padding: 15px; overflow-y: auto; flex-grow: 1; }
+        .sidebar-content {
+            padding: 15px;
+            overflow-y: auto;
+            flex-grow: 1;
+        }
         .filter-group { margin-bottom: 12px; display: flex; flex-direction: column; gap: 4px; align-items: stretch; }
         .filter-group > .cardset-hint { text-align: left; }
         /* "Possui efeito" só quando Tipo inclui Monstro */
         #filter-haseffect-group { display: none !important; }
-        html.has-monster-type #filter-haseffect-group { display: flex !important; }
+        /* Mesma linha input + Adicionar que os outros filtros (grid inline-add) */
+        html.has-monster-type #filter-haseffect-group { display: flex !important; flex-direction: column !important; }
+        html:not(.help-enabled).has-monster-type .sidebar-content #filter-haseffect-group.filter-group.filter-group--inline-add {
+            display: grid !important; /* o seletor por # acima vencia o grid genérico sem o id */
+        }
+        /* Filtros que dependem de "Monstro" (seguro contra estados/caches estranhos). */
+        html:not(.has-monster-type) #group-subtype,
+        html:not(.has-monster-type) #group-race,
+        html:not(.has-monster-type) #monster-extras {
+            display: none !important;
+        }
         /* Mesmo espaçamento rótulo→campo que .theme-select-stack (5px) */
         .view-controls .filter-group.view-controls-sort-tight { gap: 5px; }
         .view-controls-toolbar-row .sort-controls {
@@ -898,6 +912,7 @@
         .filter-action-row {
             display: flex;
             gap: 8px;
+            flex-wrap: nowrap;
             align-items: flex-end;
         }
         /* Largura da pilha = largura do rótulo; botão estica até essa largura (sem barra larga demais) */
@@ -931,9 +946,10 @@
         /* Sugestões customizadas (substituem datalist nativo): hover pré-visualiza a busca. */
         .filter-combo-suggest-panel {
             position: fixed;
-            z-index: 10001;
-            max-height: min(40vh, 320px);
+            z-index: 20050;
+            max-height: min(55vh, 480px);
             overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
             background: var(--panel-bg);
             border: 1px solid var(--border);
             border-radius: 6px;
@@ -2664,6 +2680,28 @@
         }
         .info-row img { width: 14px; height: 14px; object-fit: contain; }
 
+        /* Raça + tipo: ícone permanece com o rótulo; a barra fica após a raça para que a quebra seja [raça] | [tipo], nunca [ícone] | [só categoria] */
+        .card-race-type-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            column-gap: 4px;
+            row-gap: 2px;
+        }
+        .card-race-type-group {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            min-width: 0;
+        }
+        .card-race-type-group > span {
+            white-space: nowrap;
+        }
+        .card-race-type-group--with-slash::after {
+            content: " / ";
+            white-space: pre;
+        }
+
         /* Link markers + Pêndulo (SVG estilo carta) */
         .link-markers-band {
             display: inline-flex;
@@ -3615,55 +3653,73 @@
             flex: 1 1 auto;
             min-width: 0;
         }
-        /* Topo do DECK: layout compacto sem sobreposição (grid). */
+        /* Topo do DECK: duas linhas em flex, alinhadas à direita (o “vão” fica à esquerda do
+           título "Deck" via coluna; dentro da toolbar não usamos 1fr entre banlist e deck salvo). */
         #col-preview .queue-col-toolbar {
-            display: grid;
-            /* 5 colunas: escala fica imediatamente à esquerda do bloco de ações (PDF/Grade/…). */
-            grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr) auto auto;
-            grid-template-areas:
-                "validate saved saved saved saved"
-                "scale controls controls import export";
-            align-items: end;
-            justify-content: stretch;
-            gap: 3px 6px;
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            justify-content: flex-end;
+            flex-wrap: nowrap;
+            gap: 3px 0;
             min-width: 0;
         }
-        /* 1.ª linha: deixa "Deck salvo" usar o espaço vazio sem mexer na linha 2.
-           O bloco "Deck salvo" estica dentro da sua área e o conteúdo fica alinhado à direita. */
-        #col-preview .queue-saved-decks {
-            grid-area: saved;
-            justify-self: stretch;
+        /* Sempre 2 linhas lógicas: com coluna do deck estreita, evita wrap (que vira 3+ linhas). */
+        #col-preview .queue-deck-toolbar-line {
+            display: flex;
+            flex-wrap: nowrap;
+            align-items: flex-end;
+            justify-content: flex-end;
+            gap: 5px 6px;
             width: 100%;
             min-width: 0;
-            justify-content: flex-end;
+            overflow-x: auto;
+            overflow-y: hidden;
+            overscroll-behavior-x: contain;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: thin;
         }
-        /* Topo do deck: mantém Banlist + botão agrupados (sem criar "vão" interno). */
-        #col-preview .deck-validate-controls { grid-area: validate; justify-self: start; min-width: 0; max-width: 100%; }
-        #col-preview .queue-col-controls { grid-area: controls; justify-self: end; min-width: 0; }
-
-        /* “Abre” o wrapper para posicionar import/export/scale no grid acima. */
-        #col-preview .queue-toolbar-extras { display: contents; }
-        #col-preview .queue-toolbar-extras .label-width-stack { grid-area: import; justify-self: end; }
-        #col-preview .queue-toolbar-extras .icon-btn-stack--export { grid-area: export; justify-self: end; }
-        #col-preview .queue-toolbar-extras .filter-group.filter-pdf-scale {
-            grid-area: scale;
-            justify-self: start;
-            width: fit-content;
+        #col-preview .queue-deck-toolbar-line > * {
+            flex: 0 0 auto;
+        }
+        #col-preview .queue-saved-decks {
+            justify-content: flex-start;
+            width: auto;
+            max-width: none;
+        }
+        #col-preview .deck-validate-controls {
+            min-width: 0;
             max-width: 100%;
+        }
+        #col-preview .queue-col-controls {
+            flex: 0 0 auto;
             min-width: 0;
         }
-        /* Telas mais estreitas: mantém a ordem, mas ajusta alinhamento da escala. */
-        @media (max-width: 1180px) {
-            #col-preview .queue-col-toolbar {
-                /* Mesma lógica do layout largo; se não couber, o grid deixa a linha 2 crescer (wrap) naturalmente. */
-                grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr) auto auto;
-                grid-template-areas:
-                    "validate saved saved saved saved"
-                    "scale controls controls import export";
-            }
-            #col-preview .queue-toolbar-extras .filter-group.filter-pdf-scale {
-                justify-self: start;
-            }
+        /* Evita o extras a esticar (flex:1) e abrir vão; import/escala/export numa linha. */
+        #col-preview .queue-deck-toolbar-line .queue-toolbar-extras {
+            flex: 0 0 auto;
+            min-width: 0;
+            flex-wrap: nowrap;
+        }
+        #col-preview .queue-deck-toolbar-line .queue-toolbar-extras .label-width-stack,
+        #col-preview .queue-deck-toolbar-line .queue-toolbar-extras .icon-btn-stack--export {
+            flex: 0 0 auto;
+        }
+        #col-preview .queue-deck-toolbar-line .queue-toolbar-extras .filter-group.filter-pdf-scale {
+            flex: 0 0 auto;
+        }
+        /* Coluna do deck “normal” (não ampliada): controlos um pouco mais compactos para caber sem scroll. */
+        .app-container:not(.deck-col-wide) #col-preview .queue-deck-toolbar-line {
+            gap: 4px 4px;
+        }
+        .app-container:not(.deck-col-wide) #col-preview .queue-col-toolbar .icon-btn-stack--tool {
+            width: 40px;
+        }
+        #col-preview .queue-deck-toolbar-line .filter-pdf-scale .theme-row-label {
+            max-width: 8.5rem;
+            display: block;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
         /* Evita “sobreposição” de labels quando o topo está estreito. */
         #col-preview .queue-col-toolbar .icon-btn-stack--tool {
@@ -5362,6 +5418,10 @@
                             <option data-i18n-opt="opt.sort.pendscale" value="pend_scale">Escala (Pêndulo)</option>
                             <option data-i18n-opt="opt.sort.tcg" value="tcg_date">Data TCG</option>
                             <option data-i18n-opt="opt.sort.ocg" value="ocg_date">Data OCG</option>
+                            <option data-i18n-opt="opt.sort.views" value="views">Popular (visualizações)</option>
+                            <option data-i18n-opt="opt.sort.viewsweek" value="viewsweek">Popular (visualizações na semana)</option>
+                            <option data-i18n-opt="opt.sort.upvotes" value="upvotes">Votos positivos</option>
+                            <option data-i18n-opt="opt.sort.downvotes" value="downvotes">Votos negativos</option>
                             <option data-i18n-opt="opt.sort.price" value="price">Preço</option>
                             <option data-i18n-opt="opt.sort.banlist" value="banlist">Banlist</option>
                             <option data-i18n-opt="opt.sort.random" value="random">Aleatório</option>
@@ -5436,6 +5496,15 @@
         <div class="col-header queue-col-header">
             <span class="queue-col-title" data-i18n="ui.deck_header">Deck</span>
             <div class="queue-col-toolbar">
+                <div class="queue-deck-toolbar-line" aria-label="Deck salvo e banlist">
+                <div class="deck-validate-controls" aria-label="Validação do deck">
+                    <div class="queue-toolbar-select-stack">
+                        <label class="theme-row-label" for="deck-banlist-select" data-i18n="ui.deck_banlist_select_label">Banlist</label>
+                        <select id="deck-banlist-select" class="deck-validate-select" title="Banlist para validar o deck">
+                            <option value="">Sem banlist (regras padrão)</option>
+                        </select>
+                    </div>
+                </div>
                 <div class="queue-saved-decks">
                     <div class="queue-toolbar-select-stack">
                         <label class="theme-row-label" for="saved-decks-select" data-i18n="ui.saved_deck_select_label">Deck salvo</label>
@@ -5460,14 +5529,8 @@
                         </button>
                     </div>
                 </div>
-                <div class="deck-validate-controls" aria-label="Validação do deck">
-                    <div class="queue-toolbar-select-stack">
-                        <label class="theme-row-label" for="deck-banlist-select" data-i18n="ui.deck_banlist_select_label">Banlist</label>
-                        <select id="deck-banlist-select" class="deck-validate-select" title="Banlist para validar o deck">
-                            <option value="">Sem banlist (regras padrão)</option>
-                        </select>
-                    </div>
                 </div>
+                <div class="queue-deck-toolbar-line" aria-label="Ferramentas do deck">
                 <div class="queue-col-controls">
                     <div class="icon-btn-stack icon-btn-stack--tool">
                         <span class="theme-row-label" data-i18n="ui.deck_pdf_label">PDF</span>
@@ -5512,6 +5575,7 @@
                         <span class="theme-row-label" data-i18n="ui.export_action_label">Exportar</span>
                         <button type="button" class="btn-accent" id="btn-open-export-menu" data-i18n-title="ui.export_btn" data-i18n-aria="ui.export_btn" title="" aria-label=""><i class="fas fa-file-export" aria-hidden="true"></i></button>
                     </div>
+                </div>
                 </div>
             </div>
         </div>
@@ -6845,16 +6909,19 @@
                     div.appendChild(fab);
                 }
             } else {
-                const attrRaw = card.attribute ? card.attribute.toUpperCase() : (String(card.type || '').includes("Spell") ? "SPELL" : "TRAP");
+                const ft = getFrameType(card);
+                const attrRaw = card.attribute
+                    ? card.attribute.toUpperCase()
+                    : (frameTypeIsSpell(ft) ? "SPELL" : frameTypeIsTrap(ft) ? "TRAP" : (String(card.type || '').includes("Spell") ? "SPELL" : "TRAP"));
                 const attrIconUrl = card.attribute ? `https://images.ygoprodeck.com/images/cards/${attrRaw}.jpg` : "";
-                const raceIconUrl = `https://images.ygoprodeck.com/images/cards/icons/race/${card.race}.png`;
+                const raceIconUrl = `https://images.ygoprodeck.com/images/cards/icons/race/${encodeURIComponent(card.race || '')}.png`;
                 const starIcon = "https://ygoprodeck.com/wp-content/uploads/2017/01/level.png";
                 const raceTraduzida = isEnglishMode() ? card.race : (racesTrad[card.race] || card.race);
                 let nameColor = hasCustomTheme ? cardBgColor : (["Normal Monster", "Synchro Monster"].includes(colorKey) ? "#000" : "var(--accent)");
                 const textColor = (!hasCustomTheme) ? "#fff" : "var(--text)";
                 const tipoTexto = formatCardTypeForUi(card.type);
                 const typeIconUrl = `https://images.ygoprodeck.com/images/cards/icons/${encodeURIComponent(card.type)}.jpg`;
-                const isLinkMonster = String(card.type || '').toLowerCase().includes("link");
+                const isLinkMonster = frameTypeIsLink(ft) || String(card.type || '').toLowerCase().includes("link");
                 const pendulumHtml = cardHasPendulumScale(card) ? getPendulumScaleHtml(card.scale, 12) : '';
                 const linkMarkersHtml = (isLinkMonster && card.linkmarkers && card.linkmarkers.length)
                     ? getLinkMarkersHtml(card.linkmarkers, 13) : '';
@@ -6870,19 +6937,23 @@
                         <div class="info-row" style="display: flex; align-items: center; flex-wrap: wrap; gap: 10px; row-gap: 4px; color: ${textColor};">
                             ${attrIconUrl ? `<div style="display: flex; align-items: center; gap: 4px;"><img src="${attrIconUrl}" style="width: 14px; height: 14px; border-radius: 50%;"><span style="font-size: 10px; color: inherit;">${escapeHtml(attrDisplayName(attrRaw))}</span></div>` : ''}
                             ${pendulumHtml}
-                            ${(card.level || card.rank) && !isLinkMonster ? `<div style="display: flex; align-items: center; gap: 2px;"><img src="${starIcon}" style="width: 12px; height: 12px; ${String(card.type || '').toUpperCase().includes('XYZ') ? 'filter:invert(1) brightness(0.5);' : ''}"><span style="font-size: 10px; color: inherit;">${escapeHtml(String(card.level || card.rank))}</span></div>` : ''}
+                            ${(card.level || card.rank) && !isLinkMonster ? `<div style="display: flex; align-items: center; gap: 2px;"><img src="${starIcon}" style="width: 12px; height: 12px; ${(frameTypeIsXyz(ft) || String(card.type || '').toUpperCase().includes('XYZ')) ? 'filter:invert(1) brightness(0.5);' : ''}"><span style="font-size: 10px; color: inherit;">${escapeHtml(String(card.level || card.rank))}</span></div>` : ''}
                             ${linkMarkersHtml}
                         </div>
-                        <div class="info-row" style="display: flex; align-items: center; gap: 4px; margin-top: 2px; flex-wrap: wrap; color: ${textColor};">
+                        <div class="info-row card-race-type-row" style="margin-top: 2px; color: ${textColor};">
+                            <span class="card-race-type-group card-race-type-group--with-slash">
                             <img src="${raceIconUrl}" style="width: 14px; height: 14px;" onerror="this.style.display='none'">
-                            <span style="color: inherit;">${escapeHtml(raceTraduzida)} / </span>
+                            <span style="color: inherit;">${escapeHtml(raceTraduzida)}</span>
+                            </span>
+                            <span class="card-race-type-group">
                             <img src="${typeIconUrl}" title="Tipo" style="width: 14px; height: 14px; border-radius: 2px;" onerror="this.style.display='none'">
                             <span style="color: inherit;">${escapeHtml(tipoTexto)}</span>
+                            </span>
                         </div>
                         ${card.atk !== undefined ? `
                             <div class="info-row atk-def-row" style="border-top: 1px solid ${!hasCustomTheme ? 'rgba(255,255,255,0.1)' : 'var(--border)'};">
                                 <div style="display: flex; align-items: center; gap: 4px;"><i class="fas fa-fist-raised" style="color: #4d94ff; font-size: 10px;"></i><span style="color: #4d94ff; font-weight: bold;">ATK/</span><span style="color: ${textColor};">${escapeHtml(String(card.atk))}</span></div>
-                                ${!String(card.type || '').toLowerCase().includes("link") ? `<div style="display: flex; align-items: center; gap: 4px;"><i class="fas fa-shield-alt" style="color: #ff4d4d; font-size: 10px;"></i><span style="color: #ff4d4d; font-weight: bold;">DEF/</span><span style="color: ${textColor};">${escapeHtml(String(card.def))}</span></div>`
+                                ${!isLinkMonster ? `<div style="display: flex; align-items: center; gap: 4px;"><i class="fas fa-shield-alt" style="color: #ff4d4d; font-size: 10px;"></i><span style="color: #ff4d4d; font-weight: bold;">DEF/</span><span style="color: ${textColor};">${escapeHtml(String(card.def))}</span></div>`
                                 : `<div style="display: flex; align-items: center; gap: 4px;"><span style="color: ${textColor}; font-weight: bold;">LINK-${escapeHtml(String(card.linkval || ''))}</span></div>`}
                             </div>` : ''}
                         ${card.card_sets && card.card_sets.length ? `<button type="button" class="btn-open-card-sets" data-card-id="${escapeHtml(String(card.id))}">${escapeHtml(T('ui.prints_btn', { n: card.card_sets.length }))}</button>` : ''}
@@ -6898,6 +6969,7 @@
                 if (ev.button !== 1) return;
                 if (ev.target.closest('button')) return;
                 ev.preventDefault();
+                tooltipSetShowYgoprodeckRef(true);
                 openTooltipDetailsModal(cardWithSpecificArt);
             });
             div.onclick = (e) => {
@@ -7471,13 +7543,50 @@
             .replace(/"/g, '&quot;');
     }
 
+    /**
+     * Frame type (YGOPRODeck) é mais estável que `type` textual.
+     * Fallback: heurística leve por `type` quando `frameType` faltar (ex.: dados legados/import).
+     * Retorna sempre em lowercase (ex.: "link", "xyz_pendulum", "spell", "trap", "effect", ...).
+     */
+    function getFrameType(card) {
+        const ftRaw = card && card.frameType != null ? String(card.frameType).trim() : '';
+        if (ftRaw) return ftRaw.toLowerCase();
+        const t = String(card && card.type ? card.type : '').toLowerCase();
+        if (!t) return '';
+        if (t.includes('spell')) return 'spell';
+        if (t.includes('trap')) return 'trap';
+        if (t.includes('link')) return 'link';
+        if (t.includes('xyz')) return 'xyz';
+        if (t.includes('synchro')) return 'synchro';
+        if (t.includes('fusion')) return 'fusion';
+        if (t.includes('ritual')) return 'ritual';
+        if (t.includes('token')) return 'token';
+        if (t.includes('normal') && t.includes('monster')) return 'normal';
+        if (t.includes('monster')) return 'effect';
+        return '';
+    }
+
+    function frameTypeIsSpell(ft) { return String(ft || '').toLowerCase() === 'spell'; }
+    function frameTypeIsTrap(ft) { return String(ft || '').toLowerCase() === 'trap'; }
+    function frameTypeIsLink(ft) { return /^link(_|$)/i.test(String(ft || '')); }
+    function frameTypeIsXyz(ft) { return /^xyz(_|$)/i.test(String(ft || '')); }
+    function frameTypeIsExtraDeck(ft) { return /^(fusion|synchro|xyz|link)(_|$)/i.test(String(ft || '')); }
+    function frameTypeIsPendulum(ft) { return /pendulum/i.test(String(ft || '')); }
+
     function getQueueCardSection(full) {
-        if (!full || !full.type) return 'unknown';
-        const t = full.type;
+        if (!full) return 'unknown';
+        const ft = getFrameType(full);
+        if (frameTypeIsSpell(ft)) return 'spells';
+        if (frameTypeIsTrap(ft)) return 'traps';
+        if (frameTypeIsExtraDeck(ft)) return 'extra';
+        // Ritual é main deck; Pendulum/Token/Normal/Effect/etc entram como monster.
+        if (ft && !frameTypeIsSpell(ft) && !frameTypeIsTrap(ft)) return 'monsters';
+        // Fallback legado por type (casos sem frameType e sem inferência).
+        const t = String(full.type || '');
         if (t.includes('Spell Card')) return 'spells';
         if (t.includes('Trap Card')) return 'traps';
         if (/(Fusion|Synchro|Xyz|Link) Monster/i.test(t)) return 'extra';
-        if (t.includes('Monster')) return 'monsters';
+        if (/Monster/i.test(t)) return 'monsters';
         return 'unknown';
     }
 
@@ -8164,6 +8273,10 @@
         "opt.sort.level": { pt: "Level/Rank", en: "Level/Rank" },
         "opt.sort.name": { pt: "Nome", en: "Name" },
         "opt.sort.ocg": { pt: "Data OCG", en: "OCG date" },
+        "opt.sort.views": { pt: "Popular (visualizações)", en: "Popular (views)" },
+        "opt.sort.viewsweek": { pt: "Popular (visualizações na semana)", en: "Popular (weekly views)" },
+        "opt.sort.upvotes": { pt: "Votos positivos", en: "Upvotes" },
+        "opt.sort.downvotes": { pt: "Votos negativos", en: "Downvotes" },
         "opt.sort.price": { pt: "Pre\u00e7o", en: "Price" },
         "opt.sort.pendscale": { pt: "Escala (Pêndulo)", en: "Pendulum scale" },
         "opt.sort.random": { pt: "Aleat\u00f3rio", en: "Random" },
@@ -9674,13 +9787,13 @@
     }
 
     function syncMonsterFilterGroups() {
-        const cat = getFilterTypeCategory();
         const cats = getFilterTypeCategories();
         const hasMonster = (cats || []).includes('Monster');
         document.documentElement.classList.toggle('has-monster-type', hasMonster);
-        document.getElementById('group-subtype').style.display = (cat === 'Monster' ? 'flex' : 'none');
-        document.getElementById('monster-extras').style.display = (cat === 'Monster' ? 'block' : 'none');
-        document.getElementById('group-race').style.display = (cat ? 'flex' : 'none');
+        // Subtipo, raça e extras só fazem sentido quando "Monstro" está entre os tipos filtrados.
+        document.getElementById('group-subtype').style.display = (hasMonster ? 'flex' : 'none');
+        document.getElementById('monster-extras').style.display = (hasMonster ? 'block' : 'none');
+        document.getElementById('group-race').style.display = (hasMonster ? 'flex' : 'none');
         const heGroup = document.getElementById('filter-haseffect-group');
         if (heGroup) {
             if (!hasMonster) {
@@ -9692,12 +9805,37 @@
                 try { paintComboFilterChips(); } catch (_) {}
             }
         }
+
+        if (!hasMonster) {
+            // Evita filtros dependentes ativos enquanto ocultos (ex.: via URL/import).
+            const st = window.filterChipState || {};
+            st.subtype = [];
+            st.race = [];
+            st.attribute = [];
+            st.level = [];
+            st.linkval = [];
+            st.linkmarker = [];
+            st.scale = [];
+
+            ['filter-subtype-input', 'filter-race-input', 'filter-attribute-input', 'filter-level-input',
+             'filter-linkval-input', 'filter-linkmarker-input', 'filter-scale-input'].forEach((id) => {
+                const el = document.getElementById(id);
+                if (el) el.value = '';
+            });
+
+            const atkEl = document.getElementById('filter-atk');
+            const defEl = document.getElementById('filter-def');
+            if (atkEl) atkEl.value = '';
+            if (defEl) defEl.value = '';
+        }
     }
 
     function refreshSubtypeRaceDatalists() {
         const subDl = document.getElementById('datalist-filter-subtype');
         const raceDl = document.getElementById('datalist-filter-race');
-        const cat = getFilterTypeCategory();
+        const cats = getFilterTypeCategories();
+        const hasMonster = (cats || []).includes('Monster');
+        const cat = hasMonster ? 'Monster' : getFilterTypeCategory();
         if (subDl) {
             if (cat === 'Monster') {
                 let opts = getMonsterSubtypeOpts();
@@ -9812,7 +9950,7 @@
         const linkDl = document.getElementById('datalist-filter-linkval');
         if (linkDl) {
             linkDl.innerHTML = '';
-            for (let i = 1; i <= 8; i++) linkDl.innerHTML += `<option value="${i}"></option>`;
+            for (let i = 1; i <= 6; i++) linkDl.innerHTML += `<option value="${i}"></option>`;
         }
         const lmDl = document.getElementById('datalist-filter-linkmarker');
         if (lmDl) {
@@ -9852,7 +9990,7 @@
         if (!q) return null;
         q = q.replace(/^(link)\s*[-:]?\s*/i, '');
         const n = parseInt(q, 10);
-        if (Number.isNaN(n) || n < 1 || n > 8) return null;
+        if (Number.isNaN(n) || n < 1 || n > 6) return null;
         return String(n);
     }
 
@@ -10268,9 +10406,28 @@
         const panel = document.getElementById('filter-combo-suggest-panel');
         if (!panel || !anchor) return;
         const r = anchor.getBoundingClientRect();
-        panel.style.left = `${Math.round(r.left)}px`;
-        panel.style.top = `${Math.round(r.bottom + 2)}px`;
-        panel.style.width = `${Math.round(Math.max(r.width, 160))}px`;
+        const vh = window.innerHeight;
+        const vw = window.innerWidth;
+        const pad = 8;
+        const gap = 4;
+        const w = Math.max(r.width, 160);
+        panel.style.width = `${Math.round(w)}px`;
+        panel.style.left = `${Math.max(pad, Math.min(Math.round(r.left), vw - pad - w))}px`;
+        const maxCap = Math.min(480, vh * 0.55);
+        panel.style.maxHeight = `${maxCap}px`;
+        const h = Math.min(maxCap, Math.max(panel.scrollHeight, 1));
+        let top = r.bottom + gap;
+        if (top + h > vh - pad) {
+            const above = r.top - gap - h;
+            if (above >= pad) {
+                top = above;
+            } else {
+                const maxH = Math.max(120, vh - 2 * pad);
+                panel.style.maxHeight = `${maxH}px`;
+                top = pad;
+            }
+        }
+        panel.style.top = `${Math.round(Math.max(pad, top))}px`;
     }
 
     function bindFilterComboSuggestScrollReposition() {
@@ -10381,8 +10538,9 @@
             });
             panel.appendChild(div);
         });
-        positionFilterComboSuggestPanel(inp);
+        // Visível antes de posicionar (senão scrollHeight=0 e o painel corta no fundo do ecrã)
         panel.style.display = 'block';
+        positionFilterComboSuggestPanel(inp);
     }
 
     function initFilterComboSuggestBehavior() {
@@ -11447,7 +11605,7 @@
             const out = [];
             for (const tok of splitCommaList(lkRaw)) {
                 const n = parseInt(tok, 10);
-                if (!Number.isNaN(n) && n >= 1 && n <= 8 && !out.includes(String(n))) out.push(String(n));
+                if (!Number.isNaN(n) && n >= 1 && n <= 6 && !out.includes(String(n))) out.push(String(n));
             }
             window.filterChipState.linkval = out;
         }
@@ -12605,7 +12763,10 @@
     }
 
     function cardHasPendulumScale(card) {
-        if (!card || !String(card.type || '').toLowerCase().includes('pendulum')) return false;
+        if (!card) return false;
+        const ft = getFrameType(card);
+        const isPend = frameTypeIsPendulum(ft) || String(card.type || '').toLowerCase().includes('pendulum');
+        if (!isPend) return false;
         const sc = card.scale;
         if (sc === undefined || sc === null) return false;
         if (typeof sc === 'string' && String(sc).trim() === '') return false;
@@ -12711,6 +12872,37 @@
                 valA = a.misc_info?.[0]?.ocg_date || '1900-01-01';
                 valB = b.misc_info?.[0]?.ocg_date || '1900-01-01';
                 return direction === 1 ? valA.localeCompare(valB) : valB.localeCompare(valA);
+            case 'views':
+            case 'viewsweek':
+            case 'upvotes':
+            case 'downvotes': {
+                const ma = a && a.misc_info && a.misc_info[0] ? a.misc_info[0] : null;
+                const mb = b && b.misc_info && b.misc_info[0] ? b.misc_info[0] : null;
+                const pick = (m) => {
+                    if (!m) return null;
+                    const raw = m[criterion];
+                    if (raw === undefined || raw === null || raw === '') return null;
+                    const n = Number(raw);
+                    return Number.isFinite(n) ? n : null;
+                };
+                const na = pick(ma);
+                const nb = pick(mb);
+                // Nulls last: itens sem métrica ficam no fim independente da direção.
+                const aNull = na == null;
+                const bNull = nb == null;
+                if (aNull && bNull) return 0;
+                if (aNull) return 1;
+                if (bNull) return -1;
+                if (na < nb) return -1 * direction;
+                if (na > nb) return 1 * direction;
+                // Tie-break estável por nome/id (similar ao resto dos sorts)
+                const n1 = String((isEnglishMode() ? (a.name || a.name_en) : (a.name_pt || a.name)) || '').toLowerCase();
+                const n2 = String((isEnglishMode() ? (b.name || b.name_en) : (b.name_pt || b.name)) || '').toLowerCase();
+                const cmp = n1.localeCompare(n2, 'en', { sensitivity: 'base' });
+                if (cmp !== 0) return direction === 1 ? cmp : -cmp;
+                const tie = String(a.id ?? '').localeCompare(String(b.id ?? ''), 'en', { numeric: true });
+                return direction === 1 ? tie : -tie;
+            }
             default:
                 return 0;
         }
@@ -13049,8 +13241,22 @@
         } catch (_) {}
     }
 
+    // Chrome bloqueia vibrate sem gesto do usuário; além disso, evita flood de warnings no console.
+    let __hasUserGesture = false;
+    (() => {
+        const mark = () => {
+            __hasUserGesture = true;
+            window.removeEventListener('pointerdown', mark, true);
+            window.removeEventListener('touchstart', mark, true);
+            window.removeEventListener('keydown', mark, true);
+        };
+        window.addEventListener('pointerdown', mark, true);
+        window.addEventListener('touchstart', mark, true);
+        window.addEventListener('keydown', mark, true);
+    })();
+
     function pulseCardSurfaceHaptic(kind) {
-        if (!navigator.vibrate) return;
+        if (!__hasUserGesture || !navigator.vibrate) return;
         const fam = mapReasonToSurfaceFamily(kind);
         if (fam === 'pop') navigator.vibrate([16, 36, 20]);
         else if (fam === 'sink') navigator.vibrate([32, 28, 40]);
@@ -13529,9 +13735,22 @@
         applyHelpUi();
     }
 
+    let __tooltipShowYgoprodeckRef = false;
+
+    function getYgoprodeckCardUrl(card) {
+        const q = String((card && (card.name_en || card.name || '')) || '').trim();
+        if (!q) return '';
+        return `https://ygoprodeck.com/card/?search=${encodeURIComponent(q)}`;
+    }
+
+    function tooltipSetShowYgoprodeckRef(next) {
+        __tooltipShowYgoprodeckRef = !!next;
+    }
+
     function showTooltip(card, e) {
         if (!card) return;
         if (!isTooltipEnabled()) return;
+        tooltipSetShowYgoprodeckRef(false);
         const tt = document.getElementById('card-tooltip');
         if (window.innerWidth < 900) {
             setTimeout(() => {
@@ -13776,12 +13995,13 @@
             "Ritual": "Ritual", "Counter": "Resposta" 
         };
         let infoHtml = `<div style="display: flex; flex-direction: column; gap: 8px; width: 100%;">`;
-        const isLinkTt = card.type.toLowerCase().includes("link");
-        if(card.attribute || card.type.includes("Spell") || card.type.includes("Trap")) {
-            let iconUrl = card.type.includes("Spell") ? "https://static.wikia.nocookie.net/yugioh/images/0/09/SPELL.svg" :
-                        card.type.includes("Trap") ? "https://static.wikia.nocookie.net/yugioh/images/2/28/TRAP.svg" :
+        const ft = getFrameType(card);
+        const isLinkTt = frameTypeIsLink(ft) || card.type.toLowerCase().includes("link");
+        if (card.attribute || frameTypeIsSpell(ft) || frameTypeIsTrap(ft) || card.type.includes("Spell") || card.type.includes("Trap")) {
+            let iconUrl = frameTypeIsSpell(ft) || card.type.includes("Spell") ? "https://static.wikia.nocookie.net/yugioh/images/0/09/SPELL.svg" :
+                        frameTypeIsTrap(ft) || card.type.includes("Trap") ? "https://static.wikia.nocookie.net/yugioh/images/2/28/TRAP.svg" :
                         `https://images.ygoprodeck.com/images/cards/${card.attribute ? card.attribute.toUpperCase() : 'UNKNOWN'}.jpg`;
-            let labelText = card.type.includes("Spell") ? T('ui.spell_attr') : card.type.includes("Trap") ? T('ui.trap_attr') :
+            let labelText = frameTypeIsSpell(ft) || card.type.includes("Spell") ? T('ui.spell_attr') : frameTypeIsTrap(ft) || card.type.includes("Trap") ? T('ui.trap_attr') :
                             attrDisplayName(card.attribute ? card.attribute.toUpperCase() : '');
             infoHtml += `<div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
                             <div style="display: flex; align-items: center; gap: 4px; color: #ffffff;">
@@ -13793,7 +14013,7 @@
             }
             if((card.level || card.rank) && !isLinkTt) {
                 infoHtml += `<div style="display: flex; align-items: center; gap: 4px; color: #ffffff; margin-left: 5px;">
-                                <img src="https://ygoprodeck.com/wp-content/uploads/2017/01/level.png" style="width:16px; height:16px; ${card.type.toUpperCase().includes('XYZ') ? 'filter:invert(1) brightness(0.5);' : ''}">
+                                <img src="https://ygoprodeck.com/wp-content/uploads/2017/01/level.png" style="width:16px; height:16px; ${(frameTypeIsXyz(ft) || card.type.toUpperCase().includes('XYZ')) ? 'filter:invert(1) brightness(0.5);' : ''}">
                                 <span>${card.level || card.rank}</span>
                             </div>`;
             }
@@ -13804,12 +14024,17 @@
         }
         let tipoTexto = formatCardTypeForUi(card.type);
         const raceTraduzida = isEnglishMode() ? (card.race || T('ui.race_unknown')) : (racesTrad[card.race] || card.race || T('ui.race_unknown'));
-        infoHtml += `<div style="display: flex; align-items: center; gap: 4px; color: #ffffff; font-size: 11px; margin-bottom: 8px; flex-wrap: wrap;">
+        infoHtml += `<div class="card-race-type-row" style="color: #ffffff; font-size: 11px; margin-bottom: 8px;">
                         <span>[</span>
-                        <img src="https://images.ygoprodeck.com/images/cards/icons/race/${card.race}.png" style="width: 14px; height: 14px;" onerror="this.style.display='none'">
-                        <span>${raceTraduzida} / </span>
+                        <span class="card-race-type-group card-race-type-group--with-slash">
+                        <img src="https://images.ygoprodeck.com/images/cards/icons/race/${encodeURIComponent(card.race || '')}.png" style="width: 14px; height: 14px;" onerror="this.style.display='none'">
+                        <span>${raceTraduzida}</span>
+                        </span>
+                        <span class="card-race-type-group">
                         <img src="https://images.ygoprodeck.com/images/cards/icons/${encodeURIComponent(card.type)}.jpg" style="width: 14px; height: 14px; border-radius: 2px;" onerror="this.style.display='none'">
-                        <span>${tipoTexto} ]</span>
+                        <span>${tipoTexto}</span>
+                        </span>
+                        <span> ]</span>
                     </div>`;
         if(card.atk !== undefined) {
             infoHtml += `
@@ -13819,7 +14044,7 @@
                     <span style="color: #4d94ff;">ATK/</span>
                     <span style="color: #ffffff;">${card.atk}</span>
                 </div>
-                ${!card.type.toLowerCase().includes("link") ? `
+                ${!isLinkTt ? `
                     <div style="display: flex; align-items: center; gap: 5px;">
                         <i class="fas fa-shield-alt" style="color: #ff4d4d;"></i>
                         <span style="color: #ff4d4d;">DEF/</span>
@@ -13858,6 +14083,15 @@
             <span title="eBay"><i class="fa-brands fa-ebay" style="color:var(--accent); font-size: 14px;"></i> ${formatP(p.ebay_price)}</span>
             <span title="Amazon"><i class="fa-brands fa-amazon" style="color:var(--accent); font-size: 13px;"></i> ${formatP(p.amazon_price)}</span>
         </div>`;
+        const ygoRefUrl = (__tooltipShowYgoprodeckRef ? getYgoprodeckCardUrl(card) : '');
+        const ygoRefHtml = ygoRefUrl
+            ? `<div style="margin-top: 10px; display:flex; justify-content:flex-end;">
+                    <a href="${escAttr(ygoRefUrl)}" target="_blank" rel="noopener" style="display:inline-flex; align-items:center; gap:8px; font-size:11px; color: var(--accent); text-decoration:none; font-weight:600;">
+                        <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                        <span>${isEnglishMode() ? 'View on YGOPRODeck' : 'Ver no YGOPRODeck'}</span>
+                    </a>
+               </div>`
+            : '';
         let setsBlock = '';
         if (card.card_sets && card.card_sets.length) {
             const nSets = card.card_sets.length;
@@ -13880,7 +14114,7 @@
         }
         let formattedDescription = description.replace(/\n/g, '<br>');
         formattedDescription = formattedDescription.replace(/(?:<br\s*\/?>|\s)+$/gi, '');
-        document.getElementById('tooltip-text').innerHTML = `<div class="tt-tooltip-desc" style="word-wrap: break-word;">${formattedDescription}</div>${setsBlock}${idHtml}${datesHtml}${separatorHtml}${pricesHtml}`;
+        document.getElementById('tooltip-text').innerHTML = `<div class="tt-tooltip-desc" style="word-wrap: break-word;">${formattedDescription}</div>${setsBlock}${idHtml}${datesHtml}${separatorHtml}${pricesHtml}${ygoRefHtml}`;
     }
 
     function moveTooltip(e) {
@@ -13908,6 +14142,7 @@
 
     let tooltipDetailsModalEscHandler = null;
     let tooltipDetailsModalRestoreCtx = null;
+    let tooltipDetailsModalRestoreFocusEl = null;
 
     function openTooltipDetailsModal(card) {
         if (!card) return;
@@ -13919,6 +14154,7 @@
         if (!modal || !backdrop || !closeBtn || !body || !tt) return;
 
         hideTooltip();
+        tooltipDetailsModalRestoreFocusEl = document.activeElement instanceof HTMLElement ? document.activeElement : null;
 
         if (!tooltipDetailsModalRestoreCtx) {
             tooltipDetailsModalRestoreCtx = {
@@ -13946,6 +14182,8 @@
 
         modal.classList.add('is-open');
         modal.setAttribute('aria-hidden', 'false');
+        // 'inert' previne foco/interação quando fechado (e evita warning de aria-hidden com foco)
+        modal.inert = false;
         document.body.style.overflow = 'hidden';
 
         const onClose = () => closeTooltipDetailsModal();
@@ -13971,8 +14209,20 @@
         if (!modal || !body || !tt) return;
         if (!modal.classList.contains('is-open')) return;
 
+        // Antes de esconder/inertar, tira o foco de dentro do modal
+        const active = document.activeElement;
+        if (active && modal.contains(active)) {
+            if (tooltipDetailsModalRestoreFocusEl && tooltipDetailsModalRestoreFocusEl.isConnected) {
+                tooltipDetailsModalRestoreFocusEl.focus();
+            } else {
+                document.body.focus?.();
+            }
+        }
+
         modal.classList.remove('is-open');
         modal.setAttribute('aria-hidden', 'true');
+        modal.inert = true;
+        tooltipSetShowYgoprodeckRef(false);
 
         tt.classList.remove('tt-in-modal');
         tt.style.display = 'none';
@@ -14981,9 +15231,14 @@
                                             const wantMonster = multiTypeMode ? (cat === 'Monster') : (type === 'Monster');
                                             const wantSpell = multiTypeMode ? (cat === 'Spell Card') : (type === 'Spell Card');
                                             const wantTrap = multiTypeMode ? (cat === 'Trap Card') : (type === 'Trap Card');
-                                            if (wantMonster) list = list.filter(c => String(c.type || '').toLowerCase().includes('monster'));
-                                            else if (wantSpell) list = list.filter(c => String(c.type || '').toLowerCase().includes('spell'));
-                                            else if (wantTrap) list = list.filter(c => String(c.type || '').toLowerCase().includes('trap'));
+                                            if (wantMonster) list = list.filter(c => {
+                                                const ft = getFrameType(c);
+                                                if (frameTypeIsSpell(ft) || frameTypeIsTrap(ft)) return false;
+                                                if (ft) return true;
+                                                return String(c.type || '').toLowerCase().includes('monster');
+                                            });
+                                            else if (wantSpell) list = list.filter(c => frameTypeIsSpell(getFrameType(c)) || String(c.type || '').toLowerCase().includes('spell'));
+                                            else if (wantTrap) list = list.filter(c => frameTypeIsTrap(getFrameType(c)) || String(c.type || '').toLowerCase().includes('trap'));
 
                                             list.forEach(card => mergedById.set(card.id, card));
                                         }
@@ -15079,7 +15334,12 @@
                 finalData = finalData.filter(card => cardMatchesRarityFilters(card, rarities));
             }
             if (!multiTypeMode && type === "Monster" && !(subtypes && subtypes.length)) {
-                finalData = finalData.filter(c => c.type.toLowerCase().includes("monster"));
+                finalData = finalData.filter(c => {
+                    const ft = getFrameType(c);
+                    if (frameTypeIsSpell(ft) || frameTypeIsTrap(ft)) return false;
+                    if (ft) return true;
+                    return String(c.type || '').toLowerCase().includes("monster");
+                });
             }
             if (stapleChip === 'yes') {
                 finalData = finalData.filter(c => cardIsStapleFromMisc(c));
@@ -15306,16 +15566,19 @@
                     div.appendChild(fab);
                 }
             } else {
-                const attrRaw = card.attribute ? card.attribute.toUpperCase() : (card.type.includes("Spell") ? "SPELL" : "TRAP");
+                const ft = getFrameType(card);
+                const attrRaw = card.attribute
+                    ? card.attribute.toUpperCase()
+                    : (frameTypeIsSpell(ft) ? "SPELL" : frameTypeIsTrap(ft) ? "TRAP" : (card.type.includes("Spell") ? "SPELL" : "TRAP"));
                 const attrIconUrl = card.attribute ? `https://images.ygoprodeck.com/images/cards/${attrRaw}.jpg` : "";
-                const raceIconUrl = `https://images.ygoprodeck.com/images/cards/icons/race/${card.race}.png`;
+                const raceIconUrl = `https://images.ygoprodeck.com/images/cards/icons/race/${encodeURIComponent(card.race || '')}.png`;
                 const starIcon = "https://ygoprodeck.com/wp-content/uploads/2017/01/level.png";
                 const raceTraduzida = isEnglishMode() ? card.race : (racesTrad[card.race] || card.race);
                 let nameColor = hasCustomTheme ? cardBgColor : (["Normal Monster", "Synchro Monster"].includes(colorKey) ? "#000" : "var(--accent)");
                 const textColor = (!hasCustomTheme) ? "#fff" : "var(--text)";
                 const tipoTexto = formatCardTypeForUi(card.type);
                 const typeIconUrl = `https://images.ygoprodeck.com/images/cards/icons/${encodeURIComponent(card.type)}.jpg`;
-                const isLinkMonster = card.type.toLowerCase().includes("link");
+                const isLinkMonster = frameTypeIsLink(ft) || card.type.toLowerCase().includes("link");
                 const pendulumHtml = cardHasPendulumScale(card) ? getPendulumScaleHtml(card.scale, 12) : '';
                 const linkMarkersHtml = (isLinkMonster && card.linkmarkers && card.linkmarkers.length)
                     ? getLinkMarkersHtml(card.linkmarkers, 13) : '';
@@ -15331,19 +15594,23 @@
                         <div class="info-row" style="display: flex; align-items: center; flex-wrap: wrap; gap: 10px; row-gap: 4px; color: ${textColor};">
                             ${attrIconUrl ? `<div style="display: flex; align-items: center; gap: 4px;"><img src="${attrIconUrl}" style="width: 14px; height: 14px; border-radius: 50%;"><span style="font-size: 10px; color: inherit;">${attrDisplayName(attrRaw)}</span></div>` : ''}
                             ${pendulumHtml}
-                            ${(card.level || card.rank) && !isLinkMonster ? `<div style="display: flex; align-items: center; gap: 2px;"><img src="${starIcon}" style="width: 12px; height: 12px; ${card.type.toUpperCase().includes('XYZ') ? 'filter:invert(1) brightness(0.5);' : ''}"><span style="font-size: 10px; color: inherit;">${card.level || card.rank}</span></div>` : ''}
+                            ${(card.level || card.rank) && !isLinkMonster ? `<div style="display: flex; align-items: center; gap: 2px;"><img src="${starIcon}" style="width: 12px; height: 12px; ${(frameTypeIsXyz(ft) || card.type.toUpperCase().includes('XYZ')) ? 'filter:invert(1) brightness(0.5);' : ''}"><span style="font-size: 10px; color: inherit;">${card.level || card.rank}</span></div>` : ''}
                             ${linkMarkersHtml}
                         </div>
-                        <div class="info-row" style="display: flex; align-items: center; gap: 4px; margin-top: 2px; flex-wrap: wrap; color: ${textColor};">
+                        <div class="info-row card-race-type-row" style="margin-top: 2px; color: ${textColor};">
+                            <span class="card-race-type-group card-race-type-group--with-slash">
                             <img src="${raceIconUrl}" style="width: 14px; height: 14px;" onerror="this.style.display='none'">
-                            <span style="color: inherit;">${raceTraduzida} / </span>
+                            <span style="color: inherit;">${raceTraduzida}</span>
+                            </span>
+                            <span class="card-race-type-group">
                             <img src="${typeIconUrl}" title="Tipo" style="width: 14px; height: 14px; border-radius: 2px;" onerror="this.style.display='none'">
                             <span style="color: inherit;">${tipoTexto}</span>
+                            </span>
                         </div>
                         ${card.atk !== undefined ? `
                             <div class="info-row atk-def-row" style="border-top: 1px solid ${!hasCustomTheme ? 'rgba(255,255,255,0.1)' : 'var(--border)'};">
                                 <div style="display: flex; align-items: center; gap: 4px;"><i class="fas fa-fist-raised" style="color: #4d94ff; font-size: 10px;"></i><span style="color: #4d94ff; font-weight: bold;">ATK/</span><span style="color: ${textColor};">${card.atk}</span></div>
-                                ${!card.type.toLowerCase().includes("link") ? `<div style="display: flex; align-items: center; gap: 4px;"><i class="fas fa-shield-alt" style="color: #ff4d4d; font-size: 10px;"></i><span style="color: #ff4d4d; font-weight: bold;">DEF/</span><span style="color: ${textColor};">${card.def}</span></div>` 
+                                ${!isLinkMonster ? `<div style="display: flex; align-items: center; gap: 4px;"><i class="fas fa-shield-alt" style="color: #ff4d4d; font-size: 10px;"></i><span style="color: #ff4d4d; font-weight: bold;">DEF/</span><span style="color: ${textColor};">${card.def}</span></div>` 
                                 : `<div style="display: flex; align-items: center; gap: 4px;"><span style="color: ${textColor}; font-weight: bold;">LINK-${card.linkval}</span></div>`}
                             </div>` : ''}
                         ${card.card_sets && card.card_sets.length ? `<button type="button" class="btn-open-card-sets" data-card-id="${card.id}">${T('ui.prints_btn', { n: card.card_sets.length })}</button>` : ''}
@@ -15362,6 +15629,7 @@
                 if (ev.button !== 1) return;
                 if (ev.target.closest('button')) return;
                 ev.preventDefault();
+                tooltipSetShowYgoprodeckRef(true);
                 openTooltipDetailsModal(cardWithSpecificArt);
             });
             div.ontouchstart = (e) => {
@@ -15371,7 +15639,7 @@
                     isLongPress = true;
                     const touch = e.touches[0];
                     showTooltip(cardWithSpecificArt, { clientX: touch.clientX, clientY: touch.clientY });
-                    if (navigator.vibrate) navigator.vibrate(50);
+                    if (__hasUserGesture && navigator.vibrate) navigator.vibrate(50);
                 }, 600);
             };
             div.ontouchmove = () => clearTimeout(pressTimer);
@@ -15493,13 +15761,16 @@
               ? '#000'
               : 'var(--accent)';
         const textColor = !hasCustomTheme ? '#fff' : 'var(--text)';
-        const attrRaw = card.attribute ? card.attribute.toUpperCase() : (card.type.includes('Spell') ? 'SPELL' : 'TRAP');
+        const ft = getFrameType(card);
+        const attrRaw = card.attribute
+            ? card.attribute.toUpperCase()
+            : (frameTypeIsSpell(ft) ? 'SPELL' : frameTypeIsTrap(ft) ? 'TRAP' : (card.type.includes('Spell') ? 'SPELL' : 'TRAP'));
         const attrIconUrl = card.attribute ? `https://images.ygoprodeck.com/images/cards/${attrRaw}.jpg` : '';
-        const raceIconUrl = `https://images.ygoprodeck.com/images/cards/icons/race/${card.race}.png`;
+        const raceIconUrl = `https://images.ygoprodeck.com/images/cards/icons/race/${encodeURIComponent(card.race || '')}.png`;
         const raceTraduzida = isEnglishMode() ? (card.race || '') : (RACES_TRAD_DECK[card.race] || card.race || '');
         const tipoTexto = formatCardTypeForUi(card.type);
         const typeIconUrl = `https://images.ygoprodeck.com/images/cards/icons/${encodeURIComponent(card.type)}.jpg`;
-        const isLinkMonster = card.type.toLowerCase().includes('link');
+        const isLinkMonster = frameTypeIsLink(ft) || card.type.toLowerCase().includes('link');
         const pendulumHtml = cardHasPendulumScale(card) ? getPendulumScaleHtml(card.scale, 12) : '';
         const linkMarkersHtml =
             isLinkMonster && card.linkmarkers && card.linkmarkers.length ? getLinkMarkersHtml(card.linkmarkers, 13) : '';
@@ -15511,19 +15782,23 @@
                         <div class="info-row" style="display: flex; align-items: center; flex-wrap: wrap; gap: 10px; row-gap: 4px; color: ${textColor};">
                             ${attrIconUrl ? `<div style="display: flex; align-items: center; gap: 4px;"><img src="${attrIconUrl}" style="width: 14px; height: 14px; border-radius: 50%;"><span style="font-size: 10px; color: inherit;">${attrDisplayName(attrRaw)}</span></div>` : ''}
                             ${pendulumHtml}
-                            ${(card.level || card.rank) && !isLinkMonster ? `<div style="display: flex; align-items: center; gap: 2px;"><img src="${starIcon}" style="width: 12px; height: 12px; ${card.type.toUpperCase().includes('XYZ') ? 'filter:invert(1) brightness(0.5);' : ''}"><span style="font-size: 10px; color: inherit;">${card.level || card.rank}</span></div>` : ''}
+                            ${(card.level || card.rank) && !isLinkMonster ? `<div style="display: flex; align-items: center; gap: 2px;"><img src="${starIcon}" style="width: 12px; height: 12px; ${(frameTypeIsXyz(ft) || card.type.toUpperCase().includes('XYZ')) ? 'filter:invert(1) brightness(0.5);' : ''}"><span style="font-size: 10px; color: inherit;">${card.level || card.rank}</span></div>` : ''}
                             ${linkMarkersHtml}
                         </div>
-                        <div class="info-row" style="display: flex; align-items: center; gap: 4px; margin-top: 2px; flex-wrap: wrap; color: ${textColor};">
+                        <div class="info-row card-race-type-row" style="margin-top: 2px; color: ${textColor};">
+                            <span class="card-race-type-group card-race-type-group--with-slash">
                             <img src="${raceIconUrl}" style="width: 14px; height: 14px;" onerror="this.style.display='none'">
-                            <span style="color: inherit;">${raceTraduzida} / </span>
+                            <span style="color: inherit;">${raceTraduzida}</span>
+                            </span>
+                            <span class="card-race-type-group">
                             <img src="${typeIconUrl}" title="Tipo" style="width: 14px; height: 14px; border-radius: 2px;" onerror="this.style.display='none'">
                             <span style="color: inherit;">${tipoTexto}</span>
+                            </span>
                         </div>
                         ${card.atk !== undefined ? `
                             <div class="info-row atk-def-row" style="border-top: 1px solid ${!hasCustomTheme ? 'rgba(255,255,255,0.1)' : 'var(--border)'};">
                                 <div style="display: flex; align-items: center; gap: 4px;"><i class="fas fa-fist-raised" style="color: #4d94ff; font-size: 10px;"></i><span style="color: #4d94ff; font-weight: bold;">ATK/</span><span style="color: ${textColor};">${card.atk}</span></div>
-                                ${!card.type.toLowerCase().includes('link') ? `<div style="display: flex; align-items: center; gap: 4px;"><i class="fas fa-shield-alt" style="color: #ff4d4d; font-size: 10px;"></i><span style="color: #ff4d4d; font-weight: bold;">DEF/</span><span style="color: ${textColor};">${card.def}</span></div>`
+                                ${!isLinkMonster ? `<div style="display: flex; align-items: center; gap: 4px;"><i class="fas fa-shield-alt" style="color: #ff4d4d; font-size: 10px;"></i><span style="color: #ff4d4d; font-weight: bold;">DEF/</span><span style="color: ${textColor};">${card.def}</span></div>`
                 : `<div style="display: flex; align-items: center; gap: 4px;"><span style="color: ${textColor}; font-weight: bold;">LINK-${card.linkval}</span></div>`}
                             </div>` : ''}
                         ${card.card_sets && card.card_sets.length ? `<button type="button" class="btn-open-card-sets" data-card-id="${card.id}">${T('ui.prints_btn', { n: card.card_sets.length })}</button>` : ''}`;
@@ -17654,7 +17929,7 @@ function triggerScanHaptic(cardId) {
     lastScanHapticTime = now;
     pulseScanMatchVisual();
     try {
-        if (navigator.vibrate) navigator.vibrate(200);
+        if (__hasUserGesture && navigator.vibrate) navigator.vibrate(200);
     } catch (e) {}
     playOcrMatchBeep();
 }
@@ -18561,7 +18836,7 @@ window.forceAddToQueue = (cardId) => {
         }
         updateUI();
         showToast(T('toast.added_qty', { qty, name: isEnglishMode() ? card.name : (card.name_pt || card.name) }));
-        if (navigator.vibrate) navigator.vibrate(50);
+        if (__hasUserGesture && navigator.vibrate) navigator.vibrate(50);
     }
 };
 
@@ -19174,9 +19449,12 @@ async function autoCalibrate() {
     }
 }
 
+// Debug opcional (evita “poluir” o console em uso normal)
+const __DEBUG_CALIBRATOR = false;
+
 // Função que será chamada pelo botão
 function openCalibrator() {
-    console.log("🔧 openCalibrator chamado!");
+    if (__DEBUG_CALIBRATOR) console.log("🔧 openCalibrator chamado!");
     if (!isOcrActive) {
         addOcrLog("❌ Ative o scanner primeiro! Clique em 'Escanear Carta'");
         showToast(T('toast.scanner_enable'));
@@ -19190,8 +19468,8 @@ function openCalibrator() {
     autoCalibrate();
 }
 
-console.log("🔍 Verificando calibrador...");
-console.log("calibrator:", calibrator);
+if (__DEBUG_CALIBRATOR) console.log("🔍 Verificando calibrador...");
+if (__DEBUG_CALIBRATOR) console.log("calibrator:", calibrator);
 // console.log("openCalibrationUI:", typeof calibrator.openCalibrationUI);
 
 window.testCalibrator = function() {
