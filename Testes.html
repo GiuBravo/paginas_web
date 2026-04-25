@@ -2637,6 +2637,9 @@
             align-items: center;
             padding: 7px 8px;
             gap: 10px;
+            min-width: 0;
+            max-width: 100%;
+            box-sizing: border-box;
             min-height: calc(var(--list-suggestion-art-max-h) + var(--list-suggestion-block-vpad));
         }
         .results-view.list-mode .list-card-thumb,
@@ -2665,7 +2668,12 @@
         }
         .results-view.list-mode .card-info-box,
         .deck-list.deck-queue-view.list-mode .card-info-box {
+            min-width: 0;
             gap: 3px;
+        }
+        .results-view.list-mode .card-name,
+        .deck-list.deck-queue-view.list-mode .card-name {
+            overflow-wrap: anywhere;
         }
         .results-view.list-mode .atk-def-row,
         .deck-list.deck-queue-view.list-mode .atk-def-row {
@@ -2678,7 +2686,7 @@
             padding: 3px 8px;
         }
 
-        /* Lista (imagem cortada): mantém layout e proporção (sem esticar). */
+        /* Lista (imagem cortada): tamanho confortável por defeito (sugestões, fila, modal). */
         .results-view.list-mode.cropped-list,
         .deck-list.deck-queue-view.list-mode.cropped-list,
         #random-main-modal .results-view.list-mode.cropped-list {
@@ -5368,6 +5376,10 @@
                         <span class="theme-row-label" data-i18n="filter.add">Adicionar</span>
                         <button type="button" id="filter-fname-add-chip" class="btn-secondary btn-icon-tool" data-i18n-title="filter.add" data-i18n-aria="filter.add" title="" aria-label=""><i class="fas fa-plus" aria-hidden="true"></i></button>
                     </div>
+                    <div class="icon-btn-stack icon-btn-stack--tool filter-clear-stack filter-clear-stack--tight">
+                        <span class="theme-row-label" data-i18n="ui.search_fname_clear"></span>
+                        <button type="button" id="filter-fname-clear-chips" class="btn-secondary btn-icon-tool" data-i18n-title="ui.search_fname_clear" data-i18n-aria="ui.search_fname_clear" title="" aria-label=""><i class="fas fa-eraser" aria-hidden="true"></i></button>
+                    </div>
                 </div>
                 <div class="icon-btn-stack icon-btn-stack--tool icon-btn-stack--tool-wide search-qty-stack">
                     <span class="theme-row-label" data-i18n="ui.search_qty_label">Quantidade</span>
@@ -5403,10 +5415,6 @@
                 </div>
             </div>
             <div id="filter-fname-chips" class="cardset-chips" style="margin-top: 4px;"></div>
-            <div class="filter-clear-stack filter-clear-stack--tight">
-                    <span class="theme-row-label" data-i18n="ui.search_fname_clear"></span>
-                    <button type="button" id="filter-fname-clear-chips" class="btn-secondary btn-icon-tool" data-i18n-title="ui.search_fname_clear" data-i18n-aria="ui.search_fname_clear" title="" aria-label=""><i class="fas fa-eraser" aria-hidden="true"></i></button>
-                </div>
         </div>
         <div class="view-controls">
             <div class="result-info-row" id="result-info-row">
@@ -8315,7 +8323,7 @@
         "ui.queue_add_ocr": { pt: "+ ADICIONAR", en: "+ ADD" },
         "ui.race_unknown": { pt: "Desconhecido", en: "Unknown" },
         "ui.scan_card_ocr": { pt: "Escanear Carta (OCR)", en: "Scan card (OCR)" },
-        "ui.search_fname_clear": { pt: "Limpar nomes", en: "Clear names" },
+        "ui.search_fname_clear": { pt: "Limpar nomes / IDs", en: "Clear names / IDs" },
         "ui.search_fname_hint": { pt: "\u22653 letras: busca enquanto digita (ou <strong>\"nome exato\"</strong> para o par\u00e2metro <code>name</code> da API). Se digitar <strong>s\u00f3 n\u00fameros</strong> com <strong>\u22655 d\u00edgitos</strong>, busca por <strong>ID</strong> e <strong>Konami ID</strong>. Use <strong>Adicionar</strong> para guardar termos extras (uni\u00e3o OR com o que ainda estiver no campo).", en: "\u22653 letters: search while typing (or <strong>\"exact name\"</strong> for the API <code>name</code> parameter). If you type <strong>digits only</strong> with <strong>\u22655 digits</strong>, it searches by <strong>ID</strong> and <strong>Konami ID</strong>. Use <strong>Add</strong> to save extra terms (OR union with whatever remains in the field)." },
         "ui.search_name_label": { pt: "Nome / ID", en: "Name / ID" },
         "ui.search_placeholder": { pt: "Nome\u2026 ou ID/Konami ID (5+ d\u00edgitos)\u2026", en: "Name\u2026 or ID/Konami ID (5+ digits)\u2026" },
@@ -12284,11 +12292,11 @@
             const dG = resGlobal.data || [];
             const dP = resPT.data || [];
             if (!dG.length && !dP.length) break;
-            dG.forEach(card => mergedMap.set(card.id, card));
+            dG.forEach(card => mergedMap.set(card.id, { ...card, __lang: 'en' }));
             dP.forEach(card => {
                 const existing = mergedMap.get(card.id);
-                if (existing) mergedMap.set(card.id, { ...existing, ...card });
-                else mergedMap.set(card.id, card);
+                if (existing) mergedMap.set(card.id, { ...existing, ...card, __lang: 'pt' });
+                else mergedMap.set(card.id, { ...card, __lang: 'pt' });
             });
             if (typeof onProgress === 'function') {
                 try { onProgress(mergedMap.size); } catch (_) {}
@@ -12347,11 +12355,11 @@
                         totalRows = Math.max(tG, tP);
                         first = false;
                     }
-                    rowsG.forEach(card => mergedMap.set(card.id, card));
+                    rowsG.forEach(card => mergedMap.set(card.id, { ...card, __lang: 'en' }));
                     rowsP.forEach(card => {
                         const existing = mergedMap.get(card.id);
-                        if (existing) mergedMap.set(card.id, { ...existing, ...card });
-                        else mergedMap.set(card.id, card);
+                        if (existing) mergedMap.set(card.id, { ...existing, ...card, __lang: 'pt' });
+                        else mergedMap.set(card.id, { ...card, __lang: 'pt' });
                     });
                     rowCount = Math.max(rowsG.length, rowsP.length);
                     if (typeof onProgress === 'function') {
@@ -12403,7 +12411,7 @@
             if (isEnglishMode()) {
                 const urlGlobal = `https://db.ygoprodeck.com/api/v7/cardinfo.php?${pReq.toString()}`;
                 const resG = await fetch(urlGlobal).then(rr => rr.ok ? rr.json() : { data: [] });
-                (resG.data || []).forEach(card => mergedMap.set(card.id, card));
+                (resG.data || []).forEach(card => mergedMap.set(card.id, { ...card, __lang: 'en' }));
             } else {
                 const urlGlobal = `https://db.ygoprodeck.com/api/v7/cardinfo.php?${pReq.toString()}`;
                 const pPt = new URLSearchParams(pReq);
@@ -12413,11 +12421,11 @@
                     fetch(urlGlobal).then(rr => rr.ok ? rr.json() : { data: [] }),
                     fetch(urlPT).then(rr => rr.ok ? rr.json() : { data: [] })
                 ]);
-                (resGlobal.data || []).forEach(card => mergedMap.set(card.id, card));
+                (resGlobal.data || []).forEach(card => mergedMap.set(card.id, { ...card, __lang: 'en' }));
                 (resPT.data || []).forEach(card => {
                     const existing = mergedMap.get(card.id);
-                    if (existing) mergedMap.set(card.id, { ...existing, ...card });
-                    else mergedMap.set(card.id, card);
+                    if (existing) mergedMap.set(card.id, { ...existing, ...card, __lang: 'pt' });
+                    else mergedMap.set(card.id, { ...card, __lang: 'pt' });
                 });
             }
             if (typeof onProgress === 'function') {
@@ -12441,7 +12449,7 @@
             if (isEnglishMode()) {
                 const urlGlobal = `https://db.ygoprodeck.com/api/v7/cardinfo.php?${pReq.toString()}`;
                 const resG = await fetch(urlGlobal).then(rr => rr.ok ? rr.json() : { data: [] });
-                (resG.data || []).forEach(card => mergedMap.set(card.id, card));
+                (resG.data || []).forEach(card => mergedMap.set(card.id, { ...card, __lang: 'en' }));
             } else {
                 const urlGlobal = `https://db.ygoprodeck.com/api/v7/cardinfo.php?${pReq.toString()}`;
                 const pPt = new URLSearchParams(pReq);
@@ -12451,11 +12459,11 @@
                     fetch(urlGlobal).then(rr => rr.ok ? rr.json() : { data: [] }),
                     fetch(urlPT).then(rr => rr.ok ? rr.json() : { data: [] })
                 ]);
-                (resGlobal.data || []).forEach(card => mergedMap.set(card.id, card));
+                (resGlobal.data || []).forEach(card => mergedMap.set(card.id, { ...card, __lang: 'en' }));
                 (resPT.data || []).forEach(card => {
                     const existing = mergedMap.get(card.id);
-                    if (existing) mergedMap.set(card.id, { ...existing, ...card });
-                    else mergedMap.set(card.id, card);
+                    if (existing) mergedMap.set(card.id, { ...existing, ...card, __lang: 'pt' });
+                    else mergedMap.set(card.id, { ...card, __lang: 'pt' });
                 });
             }
             if (typeof onProgress === 'function') {
@@ -14353,10 +14361,24 @@
     let __resultsListRerenderQueued = false;
     let __resultsListFullscreenFixTries = 0;
 
-    const RESULTS_LIST_MIN_COL_PX = 260; // largura mínima para manter info legível
     const RESULTS_LIST_MAX_COLS = 6;     // trava superior de colunas no modo lista (evita micro-cards em telas largas)
-    // Sincronizado com .results-view.list-mode: --list-suggestion-art-max-h + --list-suggestion-block-vpad (+ ~1px gap da grade).
-    const RESULTS_LIST_TARGET_ITEM_H = 133;
+
+    function buildMainResultsViewClassName(viewModeOpt) {
+        const vMode = normalizeViewMode4(viewModeOpt ?? currentView, 'list');
+        const vLayout = viewModeLayout(vMode);
+        const croppedListClass = (vLayout === 'list' && viewModeIsCropped(vMode)) ? ' cropped-list' : '';
+        return `results-view ${vLayout}-mode${croppedListClass}`;
+    }
+
+    function getResultsListMinColPx() {
+        return 260;
+    }
+
+    /** Altura-alvo para paginação da lista (sincronizar com --list-suggestion-art-max-h + padding). */
+    function getResultsListTargetItemH() {
+        if (viewModeLayout(currentView) !== 'list') return 133;
+        return viewModeIsCropped(currentView) ? 156 : 133;
+    }
 
     function getResultsViewColumnCount(rv) {
         if (!rv) return 1;
@@ -14370,7 +14392,7 @@
         if (!rv) return;
         const c = Math.max(1, Math.min(RESULTS_LIST_MAX_COLS, parseInt(String(cols), 10) || 1));
         resultsListColsOverride = c;
-        rv.style.gridTemplateColumns = `repeat(${c}, minmax(${RESULTS_LIST_MIN_COL_PX}px, 1fr))`;
+        rv.style.gridTemplateColumns = `repeat(${c}, minmax(${getResultsListMinColPx()}px, 1fr))`;
     }
 
     function clearResultsListOverrides(rv) {
@@ -14394,6 +14416,7 @@
             filtersHidden ? 'fh1' : 'fh0',
             deckHidden ? 'dh1' : 'dh0',
             deckWide ? 'dw1' : 'dw0',
+            viewModeIsCropped(currentView) ? 'cr1' : 'cr0',
             'w' + w,
             'h' + h
         ].join('|');
@@ -14430,7 +14453,8 @@
             const rvStyle = window.getComputedStyle(rv);
             const colGap = parseFloat(rvStyle.columnGap || rvStyle.gap || '0') || 0;
             const availW = rv.clientWidth;
-            let cols = Math.floor((availW + colGap) / (RESULTS_LIST_MIN_COL_PX + colGap));
+            const minColPx = getResultsListMinColPx();
+            let cols = Math.floor((availW + colGap) / (minColPx + colGap));
             cols = Math.max(1, Math.min(RESULTS_LIST_MAX_COLS, cols || 1));
 
             // 2) Altura: calcula rows por altura-alvo (estável entre páginas e aproveita melhor o espaço).
@@ -14438,9 +14462,10 @@
             const availH = rv.clientHeight;
             // margem de segurança evita cortar a última linha (especialmente em fullscreen/zoom)
             const safeH = Math.max(0, availH - 24);
-            let rows = Math.max(1, Math.floor((safeH + rowGap) / (RESULTS_LIST_TARGET_ITEM_H + rowGap)));
+            const targetItemH = getResultsListTargetItemH();
+            let rows = Math.max(1, Math.floor((safeH + rowGap) / (targetItemH + rowGap)));
             // Evita "1 linha" quando claramente cabe 2.
-            if (rows < 2 && safeH >= (RESULTS_LIST_TARGET_ITEM_H * 2 + rowGap)) rows = 2;
+            if (rows < 2 && safeH >= (targetItemH * 2 + rowGap)) rows = 2;
             rows = Math.max(1, Math.min(6, rows));
             const maxLimit = 300;
             let perPage = Math.min(maxLimit, Math.max(cols, cols * rows));
@@ -15004,10 +15029,7 @@
         if (requestId != null && requestId !== latestSearchRequestSeq) return;
         const container = document.getElementById('results-view');
         if (!container) return;
-        const vMode = normalizeViewMode4(currentView, 'list');
-        const vLayout = viewModeLayout(vMode);
-        const croppedListClass = (vLayout === 'list' && viewModeIsCropped(vMode)) ? ' cropped-list' : '';
-        container.className = `results-view ${vLayout}-mode${croppedListClass}`;
+        container.className = buildMainResultsViewClassName(currentView);
         container.innerHTML = `
             <div class="results-state-placeholder" role="status" aria-live="polite">
                 <div class="results-loading-spinner" aria-hidden="true"><i class="fas fa-circle-notch fa-spin" style="font-size: 3em; color: var(--accent); opacity: 0.88;"></i></div>
@@ -15513,7 +15535,34 @@
                     });
                 });
             });
-            searchResults = expandedResults;
+            // Quando uma arte existir nas duas línguas (PT/EN) com a mesma imagem, preferir PT.
+            // Só manter EN quando não houver equivalente em PT.
+            const keyForImage = (img) => {
+                if (!img) return '';
+                if (img.id != null && String(img.id) !== '') return `id:${String(img.id)}`;
+                if (img.image_url) return `url:${String(img.image_url)}`;
+                if (img.image_url_small) return `small:${String(img.image_url_small)}`;
+                if (img.image_url_cropped) return `crop:${String(img.image_url_cropped)}`;
+                try { return `json:${JSON.stringify(img)}`; } catch (_) { return ''; }
+            };
+            const isPtRow = (row) => (row && row.__lang === 'pt');
+            const byArt = new Map();
+            for (const row of expandedResults) {
+                const k = keyForImage(row && row.current_image);
+                const key = k || `fallback:${String(row?.id ?? '')}:${String(row?.variant_idx ?? '')}`;
+                const prev = byArt.get(key);
+                if (!prev) {
+                    byArt.set(key, row);
+                    continue;
+                }
+                const prevIsPt = isPtRow(prev);
+                const rowIsPt = isPtRow(row);
+                // Se houver empate de arte, PT vence EN.
+                if (!prevIsPt && rowIsPt) {
+                    byArt.set(key, row);
+                }
+            }
+            searchResults = Array.from(byArt.values());
             clearRandomPickState();
             finalData.forEach(c => { cardCache[c.id] = c; });
             if (initial || pack.hasFnameQuery || pack.hasDescQuery || pack.hasOtherFilters) currentPage = 1;
@@ -15568,8 +15617,7 @@
         container.innerHTML = "";
         const viewMode = normalizeViewMode4(currentView, 'list');
         const viewLayout = viewModeLayout(viewMode);
-        const croppedListClass = (viewLayout === 'list' && viewModeIsCropped(viewMode)) ? ' cropped-list' : '';
-        container.className = `results-view ${viewLayout}-mode${croppedListClass}`;
+        container.className = buildMainResultsViewClassName(viewMode);
         const items = getItemsPerPage();
         if (searchResults.length > 0) {
             const maxPage = Math.max(1, Math.ceil(searchResults.length / items));
@@ -15579,7 +15627,7 @@
             if (activeCardSearchInFlight) {
                 const rv = document.getElementById('results-view');
                 if (rv && rv.querySelector('.results-state-placeholder')) {
-                    rv.className = `results-view ${viewLayout}-mode${croppedListClass}`;
+                    rv.className = buildMainResultsViewClassName(viewMode);
                     try { refreshViewControlsHeaderCompact(); } catch (_) {}
                     return;
                 }
