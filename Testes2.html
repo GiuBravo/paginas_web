@@ -1695,6 +1695,17 @@
         #random-main-modal .results-view.list-mode .list-card-thumb img {
             width: 90px !important;
         }
+        /* Modal (lista cortada): sobrescreve o thumb fixo de 90px */
+        #random-main-modal .results-view.list-mode.cropped-list .list-card-thumb {
+            width: min(122px, 27vw) !important;
+            min-width: 88px !important;
+            max-width: 140px !important;
+            max-height: var(--list-suggestion-art-max-h) !important;
+        }
+        #random-main-modal .results-view.list-mode.cropped-list .list-card-thumb img {
+            width: 100% !important;
+            max-height: 100% !important;
+        }
         #random-main-modal .results-view.list-mode .card-name {
             font-size: 14px;
         }
@@ -2667,6 +2678,27 @@
             padding: 3px 8px;
         }
 
+        /* Lista (imagem cortada): mantém layout e proporção (sem esticar). */
+        .results-view.list-mode.cropped-list,
+        .deck-list.deck-queue-view.list-mode.cropped-list,
+        #random-main-modal .results-view.list-mode.cropped-list {
+            --list-suggestion-art-max-h: 142px;
+        }
+        .results-view.list-mode.cropped-list .list-card-thumb,
+        .deck-list.deck-queue-view.list-mode.cropped-list .list-card-thumb,
+        #random-main-modal .results-view.list-mode.cropped-list .list-card-thumb {
+            width: min(122px, 27vw);
+            min-width: 88px;
+            max-width: 140px;
+        }
+        .results-view.list-mode.cropped-list .list-card-thumb img,
+        .deck-list.deck-queue-view.list-mode.cropped-list .list-card-thumb img {
+            object-fit: contain;
+            height: auto;
+            width: 100%;
+            max-height: 100%;
+        }
+
         .card-info-box { flex-grow: 1; display: flex; flex-direction: column; gap: 5px; text-align: left; }
         .card-name { color: var(--accent); font-size: 13px; font-weight: bold; }
         
@@ -2760,6 +2792,7 @@
             align-content: start;
             background: var(--bg-dark);
         }
+        
 
         .results-view.grid-mode .suggestion-item {
             position: relative;
@@ -6781,8 +6814,39 @@
 
     // Modal: até 5 cartas aleatórias do Deck Principal (sem Extra)
     let randomMainModalKeyHandler = null;
-    let randomMainModalViewMode = 'grid'; // 'grid' | 'list'
+    let randomMainModalViewMode = 'grid'; // 'list' | 'list_cropped' | 'grid' | 'grid_cropped'
     let randomMainModalSample = [];
+
+    const VIEW_MODES_4 = ['list', 'list_cropped', 'grid', 'grid_cropped'];
+    function normalizeViewMode4(v, fallback = 'list') {
+        const s = String(v || '').trim();
+        return VIEW_MODES_4.includes(s) ? s : fallback;
+    }
+    function viewModeLayout(v) {
+        const m = normalizeViewMode4(v, 'list');
+        return m.startsWith('grid') ? 'grid' : 'list';
+    }
+    function viewModeIsCropped(v) {
+        const m = normalizeViewMode4(v, 'list');
+        return m.endsWith('_cropped');
+    }
+    function nextViewMode4(v) {
+        const cur = normalizeViewMode4(v, 'list');
+        const idx = VIEW_MODES_4.indexOf(cur);
+        const nextIdx = (((idx >= 0 ? idx : 0) + 1) % VIEW_MODES_4.length);
+        return VIEW_MODES_4[nextIdx] || 'list';
+    }
+    function cardImageUrlForMode(imageObj, mode, fallbackImgId) {
+        const layout = viewModeLayout(mode);
+        const cropped = viewModeIsCropped(mode);
+        const id = imageObj && imageObj.id != null ? String(imageObj.id) : (fallbackImgId != null ? String(fallbackImgId) : '');
+        const fallbackFull = id ? `https://images.ygoprodeck.com/images/cards/${id}.jpg` : 'https://images.ygoprodeck.com/images/cards/back_high.jpg';
+        const fallbackSmall = id ? `https://images.ygoprodeck.com/images/cards_small/${id}.jpg` : 'https://images.ygoprodeck.com/images/cards/back_high.jpg';
+        const fallbackCropped = id ? `https://images.ygoprodeck.com/images/cards_cropped/${id}.jpg` : 'https://images.ygoprodeck.com/images/cards/back_high.jpg';
+        if (cropped) return (imageObj && imageObj.image_url_cropped) ? imageObj.image_url_cropped : fallbackCropped;
+        if (layout === 'grid') return (imageObj && (imageObj.image_url || imageObj.image_url_small)) ? (imageObj.image_url || imageObj.image_url_small) : fallbackFull;
+        return (imageObj && imageObj.image_url_small) ? imageObj.image_url_small : fallbackSmall;
+    }
 
     function getMainDeckUniqueStacksForRandom() {
         const ordered = [];
@@ -6812,27 +6876,32 @@
         const lab = document.getElementById('label-random-main-toggle-view');
         const icon = document.getElementById('icon-random-main-toggle-view');
         if (!btn || !lab) return;
-        const inList = randomMainModalViewMode === 'list';
-        if (inList) {
-            lab.textContent = T('ui.grid_label');
-            const t = T('ui.random_main_grid_title');
-            btn.setAttribute('title', t);
-            btn.setAttribute('aria-label', t);
-            if (icon) icon.className = 'fas fa-th-large';
-        } else {
-            lab.textContent = T('ui.list_label');
-            const t = T('ui.random_main_list_title');
-            btn.setAttribute('title', t);
-            btn.setAttribute('aria-label', t);
-            if (icon) icon.className = 'fas fa-list';
-        }
+        const next = nextViewMode4(randomMainModalViewMode);
+        const nextLayout = viewModeLayout(next);
+        const nextCropped = viewModeIsCropped(next);
+        const labelKey = nextLayout === 'grid'
+            ? (nextCropped ? 'ui.grid_cropped_label' : 'ui.grid_label')
+            : (nextCropped ? 'ui.list_cropped_label' : 'ui.list_label');
+        const titleKey = nextLayout === 'grid'
+            ? (nextCropped ? 'ui.random_main_grid_cropped_title' : 'ui.random_main_grid_title')
+            : (nextCropped ? 'ui.random_main_list_cropped_title' : 'ui.random_main_list_title');
+        lab.textContent = T(labelKey);
+        const t = T(titleKey);
+        btn.setAttribute('title', t);
+        btn.setAttribute('aria-label', t);
+        if (icon) icon.className = nextLayout === 'grid' ? 'fas fa-th-large' : 'fas fa-list';
     }
 
     function setRandomMainModalView(mode) {
-        randomMainModalViewMode = mode === 'list' ? 'list' : 'grid';
+        randomMainModalViewMode = normalizeViewMode4(mode, 'grid');
         syncRandomMainViewToggleUi();
         const cards = document.getElementById('random-main-cards');
-        if (cards) cards.className = `results-view ${randomMainModalViewMode}-mode`;
+        if (cards) {
+            const vMode = normalizeViewMode4(randomMainModalViewMode, 'grid');
+            const vLayout = viewModeLayout(vMode);
+            const croppedListClass = (vLayout === 'list' && viewModeIsCropped(vMode)) ? ' cropped-list' : '';
+            cards.className = `results-view ${vLayout}-mode${croppedListClass}`;
+        }
     }
 
     function renderRandomMainModalSample() {
@@ -6841,7 +6910,12 @@
         if (!cards || !empty) return;
         cards.innerHTML = '';
         empty.style.display = 'none';
-        cards.className = `results-view ${randomMainModalViewMode}-mode`;
+        {
+            const vMode = normalizeViewMode4(randomMainModalViewMode, 'grid');
+            const vLayout = viewModeLayout(vMode);
+            const croppedListClass = (vLayout === 'list' && viewModeIsCropped(vMode)) ? ' cropped-list' : '';
+            cards.className = `results-view ${vLayout}-mode${croppedListClass}`;
+        }
 
         const sample = Array.isArray(randomMainModalSample) ? randomMainModalSample : [];
         if (!sample.length) {
@@ -6868,8 +6942,10 @@
             const imageObj = (full.card_images || []).find((ci) => ci && String(ci.id) === String(s.imgId)) || (full.card_images && full.card_images[0]) || null;
             const image_url = (imageObj && (imageObj.image_url || imageObj.image_url_small)) ? (imageObj.image_url || imageObj.image_url_small) : `https://images.ygoprodeck.com/images/cards/${s.imgId}.jpg`;
             const image_url_small = (imageObj && imageObj.image_url_small) ? imageObj.image_url_small : `https://images.ygoprodeck.com/images/cards_small/${s.imgId}.jpg`;
-            const card = { ...full, current_image: { id: String(s.imgId), image_url, image_url_small } };
-            const view = randomMainModalViewMode;
+            const image_url_cropped = (imageObj && imageObj.image_url_cropped) ? imageObj.image_url_cropped : `https://images.ygoprodeck.com/images/cards_cropped/${s.imgId}.jpg`;
+            const card = { ...full, current_image: { id: String(s.imgId), image_url, image_url_small, image_url_cropped } };
+            const view = normalizeViewMode4(randomMainModalViewMode, 'grid');
+            const viewLayout = viewModeLayout(view);
 
             const div = document.createElement('div');
             div.className = 'suggestion-item';
@@ -6888,12 +6964,13 @@
                 : "";
             const displayName = (isEnglishMode() ? (card.name || card.name_en || '') : (card.name_pt || card.name)) + variantSuffix;
 
-            if (view === 'grid') {
+            if (viewLayout === 'grid') {
                 div.style.padding = "0";
                 div.style.backgroundColor = "transparent";
                 const banSvgGrid = getBanIcon(card, 'grid');
                 const banOverlayGrid = banSvgGrid ? `<span class="card-grid-ban-badge" aria-hidden="true">${banSvgGrid}</span>` : '';
-                div.innerHTML = `<div class="suggestion-item-grid-artwrap"><img src="${image_url}" style="width: 100%; height: 100%; object-fit: contain; display: block;" loading="lazy" onerror="this.src='https://images.ygoprodeck.com/images/cards/back_high.jpg'" alt="${escapeHtml(card.name || 'Card')}">${banOverlayGrid}</div>`;
+                const artSrc = cardImageUrlForMode(card.current_image, view, s.imgId);
+                div.innerHTML = `<div class="suggestion-item-grid-artwrap"><img src="${artSrc}" style="width: 100%; height: 100%; object-fit: contain; display: block;" loading="lazy" onerror="this.src='https://images.ygoprodeck.com/images/cards/back_high.jpg'" alt="${escapeHtml(card.name || 'Card')}">${banOverlayGrid}</div>`;
                 if (card.card_sets && card.card_sets.length) {
                     const fab = document.createElement('button');
                     fab.type = 'button';
@@ -6927,7 +7004,7 @@
                     ? getLinkMarkersHtml(card.linkmarkers, 13) : '';
                 div.innerHTML = `
                     <div class="list-card-thumb">
-                    <img src="${image_url_small}" loading="lazy" onerror="this.src='https://images.ygoprodeck.com/images/cards/back_high.jpg'" alt="${escapeHtml(card.name || 'Card')}">
+                    <img src="${cardImageUrlForMode(card.current_image, view, s.imgId)}" loading="lazy" onerror="this.src='https://images.ygoprodeck.com/images/cards/back_high.jpg'" alt="${escapeHtml(card.name || 'Card')}">
                     </div>
                     <div class="card-info-box">
                         <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
@@ -6960,7 +7037,7 @@
                     </div>`;
             }
 
-            const cardWithSpecificArt = { ...card, card_images: [{ id: String(s.imgId), image_url, image_url_small }] };
+            const cardWithSpecificArt = { ...card, card_images: [{ id: String(s.imgId), image_url, image_url_small, image_url_cropped }] };
             div.onmouseenter = (e) => { if (window.innerWidth >= 900) showTooltip(cardWithSpecificArt, e); };
             div.onmousemove = (e) => { if (window.innerWidth >= 900) moveTooltip(e); };
             div.onmouseleave = () => { if (window.innerWidth >= 900) hideTooltip(); };
@@ -7026,7 +7103,7 @@
             renderRandomMainModalSample();
         };
         toggleBtn.onclick = () => {
-            setRandomMainModalView(randomMainModalViewMode === 'list' ? 'grid' : 'list');
+            setRandomMainModalView(nextViewMode4(randomMainModalViewMode));
             renderRandomMainModalSample();
         };
 
@@ -8476,17 +8553,23 @@
         "ui.filters_toggle_label": { pt: "Filtros", en: "Filters" },
         "ui.filters_toggle_title_on": { pt: "Ocultar coluna de filtros", en: "Hide filters column" },
         "ui.generating_pdf": { pt: "GERANDO PDF...", en: "GENERATING PDF..." },
-        "ui.grid_label": { pt: "Grade", en: "Grid" },
+        "ui.grid_label": { pt: "Grade 1", en: "Grid 1" },
         "ui.grid_title": { pt: "Visualiza\u00e7\u00e3o em Grade", en: "Grid view" },
         "ui.import_deck": { pt: "Importar", en: "Import" },
         "ui.import_overlay": { pt: "A importar\u2026", en: "Importing\u2026" },
-        "ui.list_label": { pt: "Lista", en: "List" },
+        "ui.list_label": { pt: "Lista 1", en: "List 1" },
         "ui.list_title": { pt: "Visualiza\u00e7\u00e3o em Lista", en: "List view" },
+        "ui.grid_cropped_label": { pt: "Grade 2", en: "Grid 2" },
+        "ui.list_cropped_label": { pt: "Lista 2", en: "List 2" },
+        "ui.grid_cropped_title": { pt: "Visualiza\u00e7\u00e3o em Grade (imagem cortada)", en: "Grid view (cropped art)" },
+        "ui.list_cropped_title": { pt: "Visualiza\u00e7\u00e3o em Lista (imagem cortada)", en: "List view (cropped art)" },
         "ui.random_main_title": { pt: "Cartas aleat\u00f3rias", en: "Random cards" },
         "ui.random_main_reroll_label": { pt: "Sortear", en: "Roll" },
         "ui.random_main_reroll_title": { pt: "Sortear novas cartas", en: "Roll new cards" },
         "ui.random_main_grid_title": { pt: "Visualiza\u00e7\u00e3o em Grade", en: "Grid view" },
         "ui.random_main_list_title": { pt: "Visualiza\u00e7\u00e3o em Lista", en: "List view" },
+        "ui.random_main_grid_cropped_title": { pt: "Visualiza\u00e7\u00e3o em Grade (imagem cortada)", en: "Grid view (cropped art)" },
+        "ui.random_main_list_cropped_title": { pt: "Visualiza\u00e7\u00e3o em Lista (imagem cortada)", en: "List view (cropped art)" },
         "ui.modal_deck_name": { pt: "Nome do deck", en: "Deck name" },
         "ui.ok": { pt: "OK", en: "OK" },
         "ui.pdf_preview_title_on": { pt: "Ocultar pr\u00e9-visualiza\u00e7\u00e3o do PDF", en: "Hide PDF preview" },
@@ -8494,6 +8577,8 @@
         "ui.pdf_scale": { pt: "Escala do PDF (%)", en: "PDF scale (%)" },
         "ui.queue_grid_title": { pt: "Deck em grade", en: "Deck as grid" },
         "ui.queue_list_title": { pt: "Deck em lista", en: "Deck as list" },
+        "ui.queue_grid_cropped_title": { pt: "Deck em grade (imagem cortada)", en: "Deck as grid (cropped art)" },
+        "ui.queue_list_cropped_title": { pt: "Deck em lista (imagem cortada)", en: "Deck as list (cropped art)" },
         "ui.random_label": { pt: "Aleat\u00f3rio", en: "Random" },
         "ui.random_title": { pt: "Sorteia uma carta aleat\u00f3ria da lista atual; clique de novo para desfazer", en: "Pick a random card from the current list; click again to undo" },
         "ui.rename_deck_aria": { pt: "Renomear deck salvo", en: "Rename saved deck" },
@@ -8526,8 +8611,8 @@
         "ui.deck_validate_label_on": { pt: "Validar", en: "Validate" },
         "ui.deck_validate_label_off": { pt: "N\u00e3o validar", en: "Skip check" },
         "ui.deck_pdf_label": { pt: "PDF", en: "PDF" },
-        "ui.deck_queue_list_label": { pt: "Lista", en: "List" },
-        "ui.deck_queue_grid_label": { pt: "Grade", en: "Grid" },
+        "ui.deck_queue_list_label": { pt: "Lista 1", en: "List 1" },
+        "ui.deck_queue_grid_label": { pt: "Grade 1", en: "Grid 1" },
         "ui.export_action_label": { pt: "Exportar", en: "Export" },
         "ui.export_back_label": { pt: "Voltar", en: "Back" },
         "ui.export_close_label": { pt: "Fechar", en: "Close" },
@@ -14318,7 +14403,7 @@
         if (__fittingResultsListLayout) return false;
         const rv = document.getElementById('results-view');
         if (!rv) return false;
-        if (currentView !== 'list') {
+        if (viewModeLayout(currentView) !== 'list') {
             clearResultsListOverrides(rv);
             return false;
         }
@@ -14376,7 +14461,7 @@
     }
 
     function getItemsPerPage() {
-        if (currentView === 'list' && resultsItemsPerPageOverride != null) {
+        if (viewModeLayout(currentView) === 'list' && resultsItemsPerPageOverride != null) {
             const n = parseInt(String(resultsItemsPerPageOverride), 10);
             if (Number.isFinite(n) && n >= 1) return Math.min(300, n);
         }
@@ -14440,14 +14525,17 @@
         const d = deckColumnCycle;
         const layout = document.getElementById('app-layout');
         const filtersHidden = !!(layout && layout.classList.contains('filters-col-hidden'));
-        const bonus = filtersHidden ? (currentView === 'list' ? 4 : 6) : 0;
+        const curLayout = viewModeLayout(currentView);
+        const isCroppedGrid = curLayout === 'grid' && viewModeIsCropped(currentView);
+        const bonus = filtersHidden ? (curLayout === 'list' ? 4 : 6) : 0;
         const fs = !!getFullscreenElement();
         const isMobile = window.innerWidth < 900;
-        const perRow = fs ? getItemsPerRowForCurrentLayout(isMobile, d, filtersHidden, currentView) : 0;
+        const perRow = fs ? getItemsPerRowForCurrentLayout(isMobile, d, filtersHidden, curLayout) : 0;
+        const extraRow = isCroppedGrid ? getItemsPerRowForCurrentLayout(isMobile, d, filtersHidden, 'grid') : 0;
         const measured = tryComputeItemsPerPageFromViewport(isMobile);
         // Mobile
         if (isMobile) {
-            if (currentView === 'list') {
+            if (curLayout === 'list') {
                 // Regras específicas quando os filtros estão ocultos (modo lista).
                 if (filtersHidden) {
                     if (d === 1) return 20 + perRow;
@@ -14457,12 +14545,12 @@
                 if (d === 1) return 16 + bonus + perRow;
                 return 12 + bonus + perRow;
             }
-            if (d === 0) return 24 + bonus + perRow;
-            if (d === 1) return 22 + bonus + perRow;
-            return 16 + bonus + perRow;
+            if (d === 0) return Math.min(300, 24 + bonus + perRow + extraRow);
+            if (d === 1) return Math.min(300, 22 + bonus + perRow + extraRow);
+            return Math.min(300, 16 + bonus + perRow + extraRow);
         }
         // Desktop List Mode
-        if (currentView === 'list') {
+        if (curLayout === 'list') {
             // Regras específicas quando os filtros estão ocultos (modo lista).
             if (filtersHidden) {
                 if (d === 1) return measured ?? (20 + perRow);
@@ -14473,9 +14561,9 @@
             return measured ?? (8 + bonus + perRow);
         }
         // Desktop Grid Mode
-        if (d === 0) return measured ?? (30 + bonus + perRow);
-        if (d === 1) return measured ?? (21 + bonus + perRow);
-        return measured ?? (15 + bonus + perRow);
+        if (d === 0) return Math.min(300, (measured ?? (30 + bonus + perRow)) + extraRow);
+        if (d === 1) return Math.min(300, (measured ?? (21 + bonus + perRow)) + extraRow);
+        return Math.min(300, (measured ?? (15 + bonus + perRow)) + extraRow);
     }
 
     /** Ciclo da coluna do deck, vista lista/grade da fila, validação, escala PDF e tooltip — antes dos inits que aplicam layout. */
@@ -14486,7 +14574,7 @@
         } catch (_) {}
         try {
             const qv = getUiPref(UI_PREF_KEYS.queueView);
-            if (qv === 'list' || qv === 'grid') queueView = qv;
+            if (qv === 'list' || qv === 'list_cropped' || qv === 'grid' || qv === 'grid_cropped') queueView = qv;
         } catch (_) {}
         try {
             deckValidationDisabled = getUiPref(UI_PREF_KEYS.deckValidateOff) === '1';
@@ -14529,7 +14617,7 @@
         } catch (_) {}
         try {
             const viewPref = getUiPref(UI_PREF_KEYS.view);
-            if (viewPref === 'list' || viewPref === 'grid') {
+            if (viewPref === 'list' || viewPref === 'list_cropped' || viewPref === 'grid' || viewPref === 'grid_cropped') {
                 currentView = viewPref;
                 syncResultsViewToggleUi();
             }
@@ -14800,14 +14888,14 @@
             let moTimer = null;
             if (layout) {
                 const scheduleRefit = () => {
-                    if (currentView !== 'list') return;
+                    if (viewModeLayout(currentView) !== 'list') return;
                     const rv = document.getElementById('results-view');
                     clearResultsListOverrides(rv);
                     try { requestCardSurfaceFeedback('silent'); } catch (_) {}
                     renderResults();
                 };
                 const obs = new MutationObserver(() => {
-                    if (currentView !== 'list') return;
+                    if (viewModeLayout(currentView) !== 'list') return;
                     clearTimeout(moTimer);
                     moTimer = setTimeout(() => {
                         // 1) imediato (para trocar cols/perPage já)
@@ -14823,7 +14911,7 @@
                 layout.addEventListener(
                     'transitionend',
                     (ev) => {
-                        if (currentView !== 'list') return;
+                        if (viewModeLayout(currentView) !== 'list') return;
                         const prop = String(ev && ev.propertyName ? ev.propertyName : '');
                         if (prop && !/grid-template-columns|width|max-width|min-width/.test(prop)) return;
                         scheduleRefit();
@@ -14839,20 +14927,20 @@
         const lab = document.getElementById('label-toggle-results-view');
         const icon = document.getElementById('icon-toggle-results-view');
         if (!btn || !lab) return;
-        const inList = currentView === 'list';
-        if (inList) {
-            lab.textContent = T('ui.grid_label');
-            const t = T('ui.grid_title');
-            btn.setAttribute('title', t);
-            btn.setAttribute('aria-label', t);
-            if (icon) icon.className = 'fas fa-th-large';
-        } else {
-            lab.textContent = T('ui.list_label');
-            const t = T('ui.list_title');
-            btn.setAttribute('title', t);
-            btn.setAttribute('aria-label', t);
-            if (icon) icon.className = 'fas fa-list';
-        }
+        const next = nextViewMode4(currentView);
+        const nextLayout = viewModeLayout(next);
+        const nextCropped = viewModeIsCropped(next);
+        const labelKey = nextLayout === 'grid'
+            ? (nextCropped ? 'ui.grid_cropped_label' : 'ui.grid_label')
+            : (nextCropped ? 'ui.list_cropped_label' : 'ui.list_label');
+        const titleKey = nextLayout === 'grid'
+            ? (nextCropped ? 'ui.grid_cropped_title' : 'ui.grid_title')
+            : (nextCropped ? 'ui.list_cropped_title' : 'ui.list_title');
+        lab.textContent = T(labelKey);
+        const t = T(titleKey);
+        btn.setAttribute('title', t);
+        btn.setAttribute('aria-label', t);
+        if (icon) icon.className = nextLayout === 'grid' ? 'fas fa-th-large' : 'fas fa-list';
     }
 
     function syncQueueViewToggleUi() {
@@ -14860,34 +14948,34 @@
         const lab = document.getElementById('label-toggle-queue-view');
         const icon = document.getElementById('icon-toggle-queue-view');
         if (!btn || !lab) return;
-        const inList = queueView === 'list';
-        if (inList) {
-            lab.textContent = T('ui.deck_queue_grid_label');
-            const t = T('ui.queue_grid_title');
-            btn.setAttribute('title', t);
-            btn.setAttribute('aria-label', t);
-            if (icon) icon.className = 'fas fa-th-large';
-        } else {
-            lab.textContent = T('ui.deck_queue_list_label');
-            const t = T('ui.queue_list_title');
-            btn.setAttribute('title', t);
-            btn.setAttribute('aria-label', t);
-            if (icon) icon.className = 'fas fa-list';
-        }
+        const next = nextViewMode4(queueView);
+        const nextLayout = viewModeLayout(next);
+        const nextCropped = viewModeIsCropped(next);
+        const labelKey = nextLayout === 'grid'
+            ? (nextCropped ? 'ui.grid_cropped_label' : 'ui.deck_queue_grid_label')
+            : (nextCropped ? 'ui.list_cropped_label' : 'ui.deck_queue_list_label');
+        const titleKey = nextLayout === 'grid'
+            ? (nextCropped ? 'ui.queue_grid_cropped_title' : 'ui.queue_grid_title')
+            : (nextCropped ? 'ui.queue_list_cropped_title' : 'ui.queue_list_title');
+        lab.textContent = T(labelKey);
+        const t = T(titleKey);
+        btn.setAttribute('title', t);
+        btn.setAttribute('aria-label', t);
+        if (icon) icon.className = nextLayout === 'grid' ? 'fas fa-th-large' : 'fas fa-list';
     }
 
     function toggleResultsView() {
-        changeView(currentView === 'list' ? 'grid' : 'list');
+        changeView(nextViewMode4(currentView));
     }
 
     function toggleQueueView() {
-        changeQueueView(queueView === 'list' ? 'grid' : 'list');
+        changeQueueView(nextViewMode4(queueView));
     }
 
     function changeView(view) {
-        currentView = view;
+        currentView = normalizeViewMode4(view, 'list');
         syncResultsViewToggleUi();
-        setUiPref(UI_PREF_KEYS.view, view);
+        setUiPref(UI_PREF_KEYS.view, currentView);
         requestCardSurfaceFeedback('suggestions_view');
         currentPage = 1;
         renderResults();
@@ -14916,7 +15004,10 @@
         if (requestId != null && requestId !== latestSearchRequestSeq) return;
         const container = document.getElementById('results-view');
         if (!container) return;
-        container.className = `results-view ${currentView}-mode`;
+        const vMode = normalizeViewMode4(currentView, 'list');
+        const vLayout = viewModeLayout(vMode);
+        const croppedListClass = (vLayout === 'list' && viewModeIsCropped(vMode)) ? ' cropped-list' : '';
+        container.className = `results-view ${vLayout}-mode${croppedListClass}`;
         container.innerHTML = `
             <div class="results-state-placeholder" role="status" aria-live="polite">
                 <div class="results-loading-spinner" aria-hidden="true"><i class="fas fa-circle-notch fa-spin" style="font-size: 3em; color: var(--accent); opacity: 0.88;"></i></div>
@@ -15398,12 +15489,27 @@
             const finalData = pack.finalData || [];
             const expandedResults = [];
             finalData.forEach(card => {
-                (card.card_images || []).forEach((img, idx) => {
+                const imgs = Array.isArray(card.card_images) ? card.card_images : [];
+                const seen = new Set();
+                const uniqueImgs = [];
+                for (const img of imgs) {
+                    if (!img) continue;
+                    const key = (img.id != null && String(img.id) !== '')
+                        ? `id:${String(img.id)}`
+                        : (img.image_url ? `url:${String(img.image_url)}`
+                            : (img.image_url_small ? `small:${String(img.image_url_small)}`
+                                : (img.image_url_cropped ? `crop:${String(img.image_url_cropped)}` : '')));
+                    const safeKey = key || `json:${JSON.stringify(img)}`;
+                    if (seen.has(safeKey)) continue;
+                    seen.add(safeKey);
+                    uniqueImgs.push(img);
+                }
+                uniqueImgs.forEach((img, idx) => {
                     expandedResults.push({
                         ...card,
                         current_image: img,
                         variant_idx: idx,
-                        is_variant: (card.card_images || []).length > 1
+                        is_variant: uniqueImgs.length > 1
                     });
                 });
             });
@@ -15460,7 +15566,10 @@
     function renderResults() {
         const container = document.getElementById('results-view'); 
         container.innerHTML = "";
-        container.className = `results-view ${currentView}-mode`;
+        const viewMode = normalizeViewMode4(currentView, 'list');
+        const viewLayout = viewModeLayout(viewMode);
+        const croppedListClass = (viewLayout === 'list' && viewModeIsCropped(viewMode)) ? ' cropped-list' : '';
+        container.className = `results-view ${viewLayout}-mode${croppedListClass}`;
         const items = getItemsPerPage();
         if (searchResults.length > 0) {
             const maxPage = Math.max(1, Math.ceil(searchResults.length / items));
@@ -15470,7 +15579,7 @@
             if (activeCardSearchInFlight) {
                 const rv = document.getElementById('results-view');
                 if (rv && rv.querySelector('.results-state-placeholder')) {
-                    rv.className = `results-view ${currentView}-mode`;
+                    rv.className = `results-view ${viewLayout}-mode${croppedListClass}`;
                     try { refreshViewControlsHeaderCompact(); } catch (_) {}
                     return;
                 }
@@ -15543,14 +15652,14 @@
             }
             const variantSuffix = card.is_variant ? ` (${T('variant.art')} #${card.variant_idx + 1})` : "";
             const displayName = (isEnglishMode() ? (card.name || card.name_en || '') : (card.name_pt || card.name)) + variantSuffix;
-            if (currentView === 'grid') {
+            if (viewLayout === 'grid') {
                 div.style.padding = "0";
                 div.style.backgroundColor = "transparent";
                 const banSvgGrid = getBanIcon(card, 'grid');
                 const banOverlayGrid = banSvgGrid
                     ? `<span class="card-grid-ban-badge" aria-hidden="true">${banSvgGrid}</span>`
                     : '';
-                div.innerHTML = `<div class="suggestion-item-grid-artwrap"><img src="${imageObj.image_url}" style="width: 100%; height: 100%; object-fit: contain; display: block;" loading="lazy" onerror="this.src='https://images.ygoprodeck.com/images/cards/back_high.jpg'" alt="${card.name}">${banOverlayGrid}</div>`;
+                div.innerHTML = `<div class="suggestion-item-grid-artwrap"><img src="${cardImageUrlForMode(imageObj, viewMode, imageObj && imageObj.id)}" style="width: 100%; height: 100%; object-fit: contain; display: block;" loading="lazy" onerror="this.src='https://images.ygoprodeck.com/images/cards/back_high.jpg'" alt="${card.name}">${banOverlayGrid}</div>`;
                 if (card.card_sets && card.card_sets.length) {
                     const fab = document.createElement('button');
                     fab.type = 'button';
@@ -15584,7 +15693,7 @@
                     ? getLinkMarkersHtml(card.linkmarkers, 13) : '';
                 div.innerHTML = `
                     <div class="list-card-thumb">
-                    <img src="${imageObj.image_url_small}" loading="lazy" onerror="this.src='https://images.ygoprodeck.com/images/cards/back_high.jpg'" alt="${card.name}">
+                    <img src="${cardImageUrlForMode(imageObj, viewMode, imageObj && imageObj.id)}" loading="lazy" onerror="this.src='https://images.ygoprodeck.com/images/cards/back_high.jpg'" alt="${card.name}">
                     </div>
                     <div class="card-info-box">
                         <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
@@ -15691,13 +15800,13 @@
         });
         // Ajuste responsivo do modo lista: colunas e itens por página sem scroll.
         // Se precisar re-render, agenda no próximo frame para evitar thrash.
-        if (currentView === 'list') {
+        if (viewLayout === 'list') {
             const needsRerender = fitResultsListLayoutAfterRender();
             if (needsRerender && !__resultsListRerenderQueued) {
                 __resultsListRerenderQueued = true;
                 requestAnimationFrame(() => {
                     __resultsListRerenderQueued = false;
-                    if (currentView !== 'list') return;
+                    if (viewModeLayout(currentView) !== 'list') return;
                     const items2 = getItemsPerPage();
                     if (searchResults.length > 0) {
                         const maxPage = Math.max(1, Math.ceil(searchResults.length / items2));
@@ -15721,7 +15830,7 @@
                             __resultsListRerenderQueued = true;
                             requestAnimationFrame(() => {
                                 __resultsListRerenderQueued = false;
-                                if (currentView !== 'list') return;
+                                if (viewModeLayout(currentView) !== 'list') return;
                                 renderResults();
                             });
                         }
@@ -15805,8 +15914,7 @@
     }
 
     function changeQueueView(view) {
-        if (view !== 'list' && view !== 'grid') return;
-        queueView = view;
+        queueView = normalizeViewMode4(view, 'list');
         syncQueueViewToggleUi();
         requestCardSurfaceFeedback('deck_view');
         renderDeckQueue();
@@ -15828,7 +15936,10 @@
         applyDeckColumnCycleClasses();
         updateDeckColumnCycleButtonUi();
         list.innerHTML = '';
-        list.className = `deck-list deck-queue-view ${queueView}-mode`;
+        const qMode = normalizeViewMode4(queueView, 'list');
+        const qLayout = viewModeLayout(qMode);
+        const croppedListClass = (qLayout === 'list' && viewModeIsCropped(qMode)) ? ' cropped-list' : '';
+        list.className = `deck-list deck-queue-view ${qLayout}-mode${croppedListClass}`;
         list.dataset.deckSort = getDeckSortCriterion();
         paintDeckStatsBar();
 
@@ -15870,7 +15981,17 @@
             if (!c) return;
             const fullCardData = cardCache[c.id];
             const qty = counts[stackImgId];
-            const thumbUrl = `https://images.ygoprodeck.com/images/cards_small/${stackImgId}.jpg`;
+            const deckThumbUrl = (() => {
+                const id = String(stackImgId);
+                if (viewModeIsCropped(qMode)) {
+                    const ci =
+                        fullCardData && Array.isArray(fullCardData.card_images)
+                            ? (fullCardData.card_images.find((x) => x && String(x.id) === id) || fullCardData.card_images[0])
+                            : null;
+                    return (ci && ci.image_url_cropped) ? ci.image_url_cropped : `https://images.ygoprodeck.com/images/cards_cropped/${id}.jpg`;
+                }
+                return `https://images.ygoprodeck.com/images/cards_small/${id}.jpg`;
+            })();
             const safeName = escapeHtml(c.name);
             const hasSets = fullCardData && fullCardData.card_sets && fullCardData.card_sets.length;
             const hasCustomTheme =
@@ -15881,7 +16002,7 @@
             const cardBgColor = colorKey ? typeColors[colorKey] : 'var(--panel-bg)';
 
             const row = document.createElement('div');
-            row.className = `queue-item queue-item--${queueView}`;
+            row.className = `queue-item queue-item--${qLayout}`;
             row.dataset.stackImgId = String(stackImgId);
             row.title = rowHint;
             if (!hasCustomTheme && colorKey) {
@@ -15892,7 +16013,7 @@
                 row.style.borderLeft = `4px solid ${cardBgColor}`;
             }
 
-            if (queueView === 'list') {
+            if (qLayout === 'list') {
                 row.classList.add('deck-queue-list-row');
                 const infoInner =
                     fullCardData != null
@@ -15901,7 +16022,7 @@
                 row.innerHTML = `
                     <span class="queue-item-qty">${qty}×</span>
                     <div class="list-card-thumb">
-                        <img src="${thumbUrl}" loading="lazy" alt="" onerror="this.src='https://images.ygoprodeck.com/images/cards/back_high.jpg'">
+                        <img src="${deckThumbUrl}" loading="lazy" alt="" onerror="this.src='https://images.ygoprodeck.com/images/cards/back_high.jpg'">
                     </div>
                     <div class="card-info-box">${infoInner}</div>
                     <button type="button" class="queue-item-remove deck-queue-remove-float" data-i18n-title="queue.remove_copies" title="Remover todas as cópias" data-i18n-aria="queue.remove_copies" aria-label="Remover todas as cópias" data-queue-remove="${escapeHtml(stackImgId)}">✖</button>`;
@@ -15916,7 +16037,7 @@
                 row.innerHTML = `
                     <div class="queue-item-thumb-wrap">
                         <span class="queue-item-qty-badge">${qty}×</span>
-                        <img src="${thumbUrl}" loading="lazy" alt="" onerror="this.src='https://images.ygoprodeck.com/images/cards/back_high.jpg'">
+                        <img src="${deckThumbUrl}" loading="lazy" alt="" onerror="this.src='https://images.ygoprodeck.com/images/cards/back_high.jpg'">
                         ${banDeckHtml}
                         ${setsFab}
                     </div>
@@ -16018,7 +16139,7 @@
             head.innerHTML = `<span>${sec.label}</span><span class="deck-section-count">${sec.copies}</span>`;
             list.appendChild(head);
             const pool = sec.key === 'side' ? 'side' : 'build';
-            if (queueView === 'grid') {
+            if (qLayout === 'grid') {
                 const body = document.createElement('div');
                 body.className = 'deck-section-body deck-section-body--grid';
                 body.dataset.deckSection = sec.key;
