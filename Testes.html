@@ -2996,6 +2996,23 @@
             font-variant-numeric: tabular-nums;
         }
 
+        .deck-stat-genesys-wrap {
+            display: inline-flex;
+            align-items: baseline;
+            gap: 8px;
+        }
+        .deck-stat-genesys-label {
+            text-transform: uppercase;
+            opacity: 0.65;
+            font-size: 9px;
+        }
+        .deck-stat-genesys-val {
+            color: var(--accent);
+            font-size: 12px;
+            font-variant-numeric: tabular-nums;
+            font-weight: 900;
+        }
+
         .deck-validity-flag {
             display: inline-flex;
             align-items: center;
@@ -3074,7 +3091,7 @@
             visibility: visible;
         }
         .deck-validity-tooltip.is-visible {
-            pointer-events: none;
+            pointer-events: auto;
         }
         .deck-stat-tooltip.is-visible {
             pointer-events: auto;
@@ -3209,6 +3226,31 @@
             display: flex;
             flex-direction: column;
             gap: 10px;
+        }
+
+        /* Genesys / listas longas: grelha com 1–3 colunas e scroll quando a altura não couber. */
+        .deck-validity-tooltip-body-scroll {
+            max-height: calc(100vh - 140px);
+            overflow-y: auto;
+            overscroll-behavior: contain;
+            padding-right: 6px;
+        }
+        .deck-validity-tooltip-card-grid {
+            display: grid;
+            grid-template-columns: repeat(var(--deck-valid-cols, 1), minmax(0, 1fr));
+            gap: 10px;
+        }
+        .deck-validity-tooltip-card-grid .deck-validity-tooltip-card-row {
+            border-top: none;
+            padding-top: 0;
+            margin-top: 0;
+        }
+        .deck-validity-tooltip-card-grid .deck-validity-tooltip-card-row + .deck-validity-tooltip-card-row {
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            padding-top: 10px;
+        }
+        html.theme-white .deck-validity-tooltip-card-grid .deck-validity-tooltip-card-row + .deck-validity-tooltip-card-row {
+            border-top-color: rgba(15, 23, 42, 0.12);
         }
         .deck-validity-tooltip-rule {
             font-weight: 600;
@@ -5464,6 +5506,7 @@
                             <option data-i18n-opt="opt.sort.upvotes" value="upvotes">Votos positivos</option>
                             <option data-i18n-opt="opt.sort.downvotes" value="downvotes">Votos negativos</option>
                             <option data-i18n-opt="opt.sort.price" value="price">Preço</option>
+                            <option data-i18n-opt="opt.sort.genesys_points" value="genesys_points">Pontos Genesys</option>
                             <option data-i18n-opt="opt.sort.banlist" value="banlist">Banlist</option>
                             <option data-i18n-opt="opt.sort.random" value="random">Aleatório</option>
                         </select>
@@ -5644,6 +5687,10 @@
                     <span class="deck-stat-price-label" data-i18n="ui.deck_stat_total_usd">Total</span>
                     <span id="deck-stat-price" class="deck-stat-price-val">—</span>
                 </span>
+                <span id="deck-stat-genesys-wrap" class="deck-stat-genesys-wrap" data-i18n-title="ui.deck_stat_genesys_title" title="Pontos Genesys do deck (Main+Extra+Side)" style="display:none;">
+                    <span class="deck-stat-genesys-label" data-i18n="ui.deck_stat_genesys_label">Genesys</span>
+                    <span id="deck-stat-genesys" class="deck-stat-genesys-val">—</span>
+                </span>
                 <span class="deck-stats-right">
                     <span class="deck-validity-wrap">
                         <span id="deck-validity-flag" class="deck-validity-flag is-off" tabindex="0">
@@ -5671,6 +5718,7 @@
                                     <option data-i18n-opt="opt.sort.tcg" value="tcg_date">Data TCG</option>
                                     <option data-i18n-opt="opt.sort.ocg" value="ocg_date">Data OCG</option>
                                     <option data-i18n-opt="opt.sort.price" value="price">Preço</option>
+                                    <option data-i18n-opt="opt.sort.genesys_points" value="genesys_points">Pontos Genesys</option>
                                     <option data-i18n-opt="opt.sort.banlist" value="banlist">Banlist</option>
                                     <option data-i18n-opt="opt.sort.random" value="random">Aleatório</option>
                                 </select>
@@ -6036,17 +6084,49 @@
         if (extraCount > DECK_LIMIT_EXTRA) issues.push({ kind: 'rule', message: `Deck extra tem ${extraCount} (máximo ${DECK_LIMIT_EXTRA}).` });
         if (sideCount > DECK_LIMIT_SIDE) issues.push({ kind: 'rule', message: `Deck side tem ${sideCount} (máximo ${DECK_LIMIT_SIDE}).` });
 
+        const allEntries = [...cardQueue, ...cardQueueSide];
         const counts = new Map();
-        for (const e of [...cardQueue, ...cardQueueSide]) {
+        for (const e of allEntries) {
             const id = String(e.id);
             counts.set(id, (counts.get(id) || 0) + 1);
         }
-        for (const [id, n] of counts.entries()) {
-            const full = cardCache[id];
-            const max = banType ? banlistMaxCopiesForCard(full, banType) : 3;
-            if (n > max) {
-                const name = (full && (full.name_pt || full.name || full.name_en)) || id;
-                issues.push({ kind: 'copies', cardId: id, message: `${name}: ${n} cópias (máximo ${max}).` });
+
+        // Genesys: valida por pontuação e restrições do formato (sem F&L padrão).
+        const GENESYS_POINT_CAP = 100;
+        if (String(banType).trim().toLowerCase() === 'genesys') {
+            let pointsTotal = 0;
+            for (const [id, n] of counts.entries()) {
+                const full = cardCache[id];
+                const gpRaw = (full && full.genesys_points != null) ? full.genesys_points
+                    : (full && full.misc_info && full.misc_info[0] && full.misc_info[0].genesys_points != null ? full.misc_info[0].genesys_points : null);
+                // Se a API não devolver o campo, assume 0 (a maioria das cartas custa 0 pontos).
+                const gp = gpRaw == null ? 0 : Number(gpRaw);
+                if (Number.isFinite(gp) && gp > 0) pointsTotal += Math.trunc(gp) * n;
+
+                // Regras do formato: Link e Pendulum não são permitidos.
+                const t = String(full?.type || '').toLowerCase();
+                if (t.includes('link') || t.includes('pendulum')) {
+                    const name = (full && (full.name_pt || full.name || full.name_en)) || id;
+                    issues.push({ kind: 'illegal', cardId: id, message: `${name}: não permitido no Genesys (${t.includes('link') ? 'Link' : 'Pêndulo'}).` });
+                }
+
+                // Genesys usa 3 cópias padrão.
+                if (n > 3) {
+                    const name = (full && (full.name_pt || full.name || full.name_en)) || id;
+                    issues.push({ kind: 'copies', cardId: id, message: `${name}: ${n} cópias (máximo 3).` });
+                }
+            }
+            if (pointsTotal > GENESYS_POINT_CAP) {
+                issues.push({ kind: 'rule', message: `Genesys: ${pointsTotal} pontos (máximo ${GENESYS_POINT_CAP}).` });
+            }
+        } else {
+            for (const [id, n] of counts.entries()) {
+                const full = cardCache[id];
+                const max = banType ? banlistMaxCopiesForCard(full, banType) : 3;
+                if (n > max) {
+                    const name = (full && (full.name_pt || full.name || full.name_en)) || id;
+                    issues.push({ kind: 'copies', cardId: id, message: `${name}: ${n} cópias (máximo ${max}).` });
+                }
             }
         }
 
@@ -6071,6 +6151,7 @@
         const body = document.getElementById('deck-validity-tooltip-body');
         if (!tip || !body) return;
         body.textContent = '';
+        body.classList.remove('deck-validity-tooltip-body-scroll');
         tip.classList.remove('is-off', 'is-valid', 'is-invalid');
         if (isOff) {
             tip.classList.add('is-off');
@@ -6110,8 +6191,106 @@
         listWrap.className = 'deck-validity-tooltip-issues';
         let richSlots = DECK_VALIDITY_RICH_CARD_CAP;
 
+        // Genesys: quando inválido, mostra o total de pontos e o detalhamento das cartas pontuadas.
+        const isGenesys = String(v.banlistType || '').trim().toLowerCase() === 'genesys';
+        if (isGenesys) {
+            const GENESYS_POINT_CAP = 100;
+            const allEntries = [...cardQueue, ...cardQueueSide];
+            const counts = new Map();
+            for (const e of allEntries) {
+                const id = String(e && e.id != null ? e.id : '').trim();
+                if (!id) continue;
+                counts.set(id, (counts.get(id) || 0) + 1);
+            }
+
+            let pointsTotal = 0;
+            const scored = [];
+            let copiesScored = 0;
+            let copiesZero = 0;
+            for (const [id, n] of counts.entries()) {
+                const full = cardCache[id];
+                const gpRaw = (full && full.genesys_points != null) ? full.genesys_points
+                    : (full && full.misc_info && full.misc_info[0] && full.misc_info[0].genesys_points != null ? full.misc_info[0].genesys_points : null);
+                const gp = gpRaw == null ? 0 : Number(gpRaw);
+                if (!Number.isFinite(gp) || gp <= 0) {
+                    copiesZero += n;
+                    continue;
+                }
+                const each = Math.trunc(gp);
+                const sub = each * n;
+                pointsTotal += sub;
+                copiesScored += n;
+                scored.push({ id, full, n, each, sub });
+            }
+            scored.sort((a, b) => {
+                if (b.sub !== a.sub) return b.sub - a.sub;
+                if (b.each !== a.each) return b.each - a.each;
+                const na = a.full ? (isEnglishMode() ? (a.full.name || '') : (a.full.name_pt || a.full.name || '')) : '';
+                const nb = b.full ? (isEnglishMode() ? (b.full.name || '') : (b.full.name_pt || b.full.name || '')) : '';
+                return na.localeCompare(nb, undefined, { sensitivity: 'base' });
+            });
+
+            const headPts = document.createElement('div');
+            headPts.className = 'deck-validity-tooltip-rule';
+            const over = pointsTotal > GENESYS_POINT_CAP;
+            headPts.textContent = isEnglishMode()
+                ? `Genesys points: ${pointsTotal} (cap ${GENESYS_POINT_CAP}).`
+                : `Pontos Genesys: ${pointsTotal} (máximo ${GENESYS_POINT_CAP}).`;
+            if (over) headPts.style.color = isEnglishMode() ? '#ffb3ab' : '#ffb3ab';
+            listWrap.appendChild(headPts);
+
+            const headMix = document.createElement('div');
+            headMix.className = 'deck-validity-tooltip-compact-line';
+            headMix.style.opacity = '0.9';
+            headMix.textContent = isEnglishMode()
+                ? `Scored copies: ${copiesScored} · Zero-point copies: ${copiesZero}`
+                : `Cópias com pontuação: ${copiesScored} · Cópias sem pontuação: ${copiesZero}`;
+            listWrap.appendChild(headMix);
+
+            if (scored.length) {
+                const title = document.createElement('div');
+                title.className = 'deck-validity-tooltip-compact-line';
+                title.style.opacity = '0.9';
+                title.style.fontWeight = '800';
+                title.textContent = isEnglishMode() ? 'Scored cards:' : 'Cartas com pontuação:';
+                listWrap.appendChild(title);
+
+                // Lista longa: usa grelha (1–3 colunas) e permite scroll.
+                const grid = document.createElement('div');
+                grid.className = 'deck-validity-tooltip-card-grid';
+                grid.style.setProperty('--deck-valid-cols', '1');
+                let shown = 0;
+                for (const row of scored) {
+                    const detail = isEnglishMode()
+                        ? `${row.n}× · ${row.each} pts each · ${row.sub} pts`
+                        : `${row.n}× · ${row.each} pts cada · ${row.sub} pts`;
+                    if (row.full) {
+                        appendDeckTooltipCardRow(grid, row.full, detail);
+                        shown++;
+                    } else {
+                        const div = document.createElement('div');
+                        div.className = 'deck-validity-tooltip-compact-line';
+                        const nm = row.id;
+                        div.textContent = `${nm}: ${detail}`;
+                        grid.appendChild(div);
+                    }
+                }
+                listWrap.appendChild(grid);
+            } else {
+                const p = document.createElement('div');
+                p.className = 'deck-validity-tooltip-compact-line';
+                p.style.opacity = '0.9';
+                p.textContent = isEnglishMode()
+                    ? 'No scored cards found in this deck.'
+                    : 'Nenhuma carta com pontuação neste deck.';
+                listWrap.appendChild(p);
+            }
+        }
+
         for (const issue of v.issues) {
             if (issue.kind === 'rule') {
+                // No Genesys, o resumo de pontos já é mostrado acima.
+                if (isGenesys && typeof issue.message === 'string' && issue.message.toLowerCase().startsWith('genesys:')) continue;
                 const div = document.createElement('div');
                 div.className = 'deck-validity-tooltip-rule';
                 div.textContent = issue.message;
@@ -6127,9 +6306,43 @@
                     div.textContent = issue.message;
                     listWrap.appendChild(div);
                 }
+            } else if (issue.kind === 'illegal') {
+                const full = cardCache[issue.cardId];
+                if (full && richSlots > 0) {
+                    appendDeckTooltipCardRow(listWrap, full, issue.message);
+                    richSlots--;
+                } else {
+                    const div = document.createElement('div');
+                    div.className = 'deck-validity-tooltip-compact-line';
+                    div.textContent = issue.message;
+                    listWrap.appendChild(div);
+                }
             }
         }
         body.appendChild(listWrap);
+        // Se o conteúdo ficar alto demais, habilita scroll e aumenta colunas até 3.
+        try {
+            const maxH = Math.max(260, window.innerHeight - 140);
+            body.classList.toggle('deck-validity-tooltip-body-scroll', body.scrollHeight > maxH);
+            const grid = body.querySelector('.deck-validity-tooltip-card-grid');
+            if (grid) {
+                const rows = grid.querySelectorAll('.deck-validity-tooltip-card-row').length;
+                let cols = 1;
+                if (rows >= 10 || window.innerHeight < 720) cols = 2;
+                if (rows >= 18 || window.innerHeight < 600) cols = 3;
+                if (cols > 3) cols = 3;
+                grid.style.setProperty('--deck-valid-cols', String(cols));
+                // Com 3 colunas, aumenta a largura para caber texto/ícones.
+                const tipEl = document.getElementById('deck-validity-tooltip');
+                if (tipEl) {
+                    tipEl.style.maxWidth = cols >= 3
+                        ? 'min(920px, calc(100vw - 24px))'
+                        : cols === 2
+                            ? 'min(720px, calc(100vw - 24px))'
+                            : '';
+                }
+            }
+        } catch (_) {}
         const copyIssues = v.issues.filter((x) => x.kind === 'copies');
         if (copyIssues.length > DECK_VALIDITY_RICH_CARD_CAP) {
             const hint = document.createElement('div');
@@ -6381,6 +6594,11 @@
             showDeckValidityTooltipPanel();
         });
         wrap.addEventListener('mouseleave', scheduleHideDeckValidityTooltip);
+        if (!tip.dataset.deckValidTtHoverInit) {
+            tip.dataset.deckValidTtHoverInit = '1';
+            tip.addEventListener('mouseenter', clearDeckValidityHideTimer);
+            tip.addEventListener('mouseleave', scheduleHideDeckValidityTooltip);
+        }
         flag.addEventListener('focus', () => {
             clearDeckValidityHideTimer();
             showDeckValidityTooltipPanel();
@@ -6502,9 +6720,21 @@
                     sel.value = String(banPref);
                 }
             } catch (_) {}
-            sel.addEventListener('change', () => {
+            sel.addEventListener('change', async () => {
                 try {
                     setUiPref(UI_PREF_KEYS.deckBanlist, sel.value || '');
+                } catch (_) {}
+                // Pré-carrega pontuação Genesys (a API só devolve genesys_points com format=genesys).
+                try {
+                    if (String(sel.value || '').trim().toLowerCase() === 'genesys') {
+                        await ensureCardCacheForQueue();
+                        const ids = [
+                            ...new Set(
+                                [...cardQueue.map((c) => c.id), ...cardQueueSide.map((c) => c.id)].filter((x) => x != null)
+                            )
+                        ];
+                        await ensureGenesysPointsForIds(ids);
+                    }
                 } catch (_) {}
                 paintDeckValidityFlag();
                 requestCardSurfaceFeedback('banlist_deck');
@@ -7251,7 +7481,7 @@
         });
     }
 
-    const DECK_SORT_ORDERABLE = new Set(['name', 'atk', 'def', 'level', 'tcg_date', 'ocg_date', 'price', 'banlist']);
+    const DECK_SORT_ORDERABLE = new Set(['name', 'atk', 'def', 'level', 'tcg_date', 'ocg_date', 'price', 'genesys_points', 'banlist']);
     /** Opções sem `value` no HTML usam o texto visível; mapeamos para o critério interno. */
     const DECK_SORT_VALUE_ALIASES = {
         nome: 'name',
@@ -7699,7 +7929,17 @@
             extra: 0,
             unknown: 0,
             side: cardQueueSide.length,
-            price: 0
+            price: 0,
+            genesysPoints: 0,
+            genesysCopiesScored: 0,
+            genesysCopiesZero: 0
+        };
+        const pickGenesysPoints = (full) => {
+            if (!full) return 0;
+            const raw = (full.genesys_points != null) ? full.genesys_points
+                : (full.misc_info && full.misc_info[0] && full.misc_info[0].genesys_points != null ? full.misc_info[0].genesys_points : null);
+            const n = raw == null ? 0 : Number(raw);
+            return Number.isFinite(n) ? Math.trunc(n) : 0;
         };
         for (const entry of cardQueue) {
             const full = cardCache[entry.id];
@@ -7711,11 +7951,19 @@
             else out.unknown++;
             const p = getTcgplayerPriceUsd(full);
             if (Number.isFinite(p)) out.price += p;
+            const gp = pickGenesysPoints(full);
+            out.genesysPoints += gp;
+            if (gp > 0) out.genesysCopiesScored++;
+            else out.genesysCopiesZero++;
         }
         for (const entry of cardQueueSide) {
             const full = cardCache[entry.id];
             const p = getTcgplayerPriceUsd(full);
             if (Number.isFinite(p)) out.price += p;
+            const gp = pickGenesysPoints(full);
+            out.genesysPoints += gp;
+            if (gp > 0) out.genesysCopiesScored++;
+            else out.genesysCopiesZero++;
         }
         return out;
     }
@@ -7733,6 +7981,17 @@
         set('deck-stat-extra', a.extra);
         const pe = document.getElementById('deck-stat-price');
         if (pe) pe.textContent = a.total === 0 ? '—' : `$${a.price.toFixed(2)}`;
+        const isGenesys = String(getDeckBanlistTypeForValidation() || '').trim().toLowerCase() === 'genesys';
+        const gw = document.getElementById('deck-stat-genesys-wrap');
+        const gv = document.getElementById('deck-stat-genesys');
+        if (gw && gv) {
+            gw.style.display = isGenesys ? 'inline-flex' : 'none';
+            gv.textContent = isGenesys ? String(a.genesysPoints || 0) : '—';
+            const tip = isEnglishMode()
+                ? `Genesys points: ${a.genesysPoints || 0}. Scored copies: ${a.genesysCopiesScored}. Zero-point copies: ${a.genesysCopiesZero}.`
+                : `Pontos Genesys: ${a.genesysPoints || 0}. Cópias com pontuação: ${a.genesysCopiesScored}. Cópias sem pontuação: ${a.genesysCopiesZero}.`;
+            gw.title = tip;
+        }
         try {
             refreshDeckStatTooltipIfOpen();
         } catch (_) {}
@@ -8036,6 +8295,7 @@
             applyCardSurfaceFeedback(r);
         }
         triggerPDFUpdate();
+        try { if (!opts || !opts.preview) scheduleDeckbuilderFilterUrlSync(); } catch (_) {}
     }
 
     async function toggleDeckOrder() {
@@ -8050,6 +8310,7 @@
                 applyCardSurfaceFeedback(r);
             }
             triggerPDFUpdate();
+            try { scheduleDeckbuilderFilterUrlSync(); } catch (_) {}
             return;
         }
         requestCardSurfaceFeedback('deck_sort');
@@ -8062,6 +8323,7 @@
             applyCardSurfaceFeedback(r);
         }
         triggerPDFUpdate();
+        try { scheduleDeckbuilderFilterUrlSync(); } catch (_) {}
     }
 
     const SAVED_DECKS_COOKIE = 'ygo_proxy_saved_decks_v1';
@@ -8278,6 +8540,12 @@
         "filteropt.ban_goat": { pt: "Formato Goat (cl\u00e1ssico)", en: "Goat Format (classic)" },
         "filteropt.ban_ocg": { pt: "Formato OCG (Jap\u00e3o)", en: "OCG Format (Japan)" },
         "filteropt.ban_tcg": { pt: "Formato TCG (principal)", en: "TCG Format (main)" },
+        "filteropt.ban_ocg_goat": { pt: "Formato OCG Goat (cl\u00e1ssico no Jap\u00e3o)", en: "OCG Goat (classic Japan)" },
+        "filteropt.ban_speed_duel": { pt: "Formato Speed Duel", en: "Speed Duel" },
+        "filteropt.ban_rush_duel": { pt: "Formato Rush Duel", en: "Rush Duel" },
+        "filteropt.ban_duel_links": { pt: "Formato Duel Links", en: "Duel Links" },
+        "filteropt.ban_master_duel": { pt: "Formato Master Duel", en: "Master Duel" },
+        "filteropt.ban_genesys": { pt: "Formato Genesys", en: "Genesys" },
         "filteropt.date_ocg": { pt: "OCG \u2014 lan\u00e7amento japon\u00eas", en: "OCG \u2014 Japanese release" },
         "filteropt.date_tcg": { pt: "TCG \u2014 lan\u00e7amento ocidental", en: "TCG \u2014 Western release" },
         "filteropt.staple_yes": { pt: "\u00c9 Staple", en: "Is staple" },
@@ -8363,6 +8631,7 @@
         "opt.sort.upvotes": { pt: "Votos positivos", en: "Upvotes" },
         "opt.sort.downvotes": { pt: "Votos negativos", en: "Downvotes" },
         "opt.sort.price": { pt: "Pre\u00e7o", en: "Price" },
+        "opt.sort.genesys_points": { pt: "Pontos Genesys", en: "Genesys points" },
         "opt.sort.pendscale": { pt: "Escala (Pêndulo)", en: "Pendulum scale" },
         "opt.sort.random": { pt: "Aleat\u00f3rio", en: "Random" },
         "opt.sort.tcg": { pt: "Data TCG", en: "TCG date" },
@@ -8525,6 +8794,8 @@
         "ui.deck_stat_total_title": { pt: "Total de cartas (c\u00f3pias)", en: "Total cards (copies)" },
         "ui.deck_stat_total_usd": { pt: "Total", en: "Total" },
         "ui.deck_stat_traps": { pt: "Armadilhas", en: "Traps" },
+        "ui.deck_stat_genesys_title": { pt: "Pontos Genesys do deck (Main+Extra+Side)", en: "Deck Genesys points (Main+Extra+Side)" },
+        "ui.deck_stat_genesys_label": { pt: "Genesys", en: "Genesys" },
         "ui.deck_stat_tt_empty": { pt: "Nenhuma carta nesta categoria no deck.", en: "No cards in this category in the deck." },
         "ui.deck_stat_tt_qty": { pt: "\u00d7{n} no deck", en: "\u00d7{n} in deck" },
         "ui.deck_stat_tt_qty_extra": { pt: "\u00d7{n} no deck adicional", en: "\u00d7{n} in Extra Deck" },
@@ -9374,6 +9645,9 @@
             renderResults();
             const rv = document.getElementById('results-view');
             if (rv) rv.scrollTop = 0;
+            // Atualiza a URL imediatamente (file:// pode não respeitar bem timers curtos).
+            try { pushDeckbuilderFilterUrlToHistory(); } catch (_) {}
+            scheduleDeckbuilderFilterUrlSync();
         }
     }
 
@@ -9569,10 +9843,18 @@
         { v: 'ocg', label: 'OCG — lançamento japonês' }
     ];
 
+    // OBS: este filtro alimenta `format` (API) e, opcionalmente, `banlist` quando "somente banlist" está marcado.
+    // Por isso, a lista inclui formatos adicionais além de tcg/ocg/goat.
     const FILTER_BANLIST_LABELS = [
         { v: 'tcg', label: 'Formato TCG (principal)' },
         { v: 'ocg', label: 'Formato OCG (Japão)' },
-        { v: 'goat', label: 'Formato Goat (clássico)' }
+        { v: 'goat', label: 'Formato Goat (clássico)' },
+        { v: 'ocg goat', label: 'Formato OCG Goat (clássico no Japão)' },
+        { v: 'speed duel', label: 'Formato Speed Duel' },
+        { v: 'rush duel', label: 'Formato Rush Duel' },
+        { v: 'duel links', label: 'Formato Duel Links' },
+        { v: 'master duel', label: 'Formato Master Duel' },
+        { v: 'genesys', label: 'Formato Genesys' }
     ];
 
     const FILTER_STAPLE_LABELS = [
@@ -9778,12 +10060,20 @@
             return row ? row.label : (val === 'ocg' ? 'OCG — lançamento japonês' : 'TCG — lançamento ocidental');
         }
         if (key === 'banlist') {
-            if (isEnglishMode()) {
-                if (val === 'ocg') return T('filteropt.ban_ocg');
-                if (val === 'goat') return T('filteropt.ban_goat');
-                return T('filteropt.ban_tcg');
-            }
-            const row = FILTER_BANLIST_LABELS.find(e => e.v === val);
+            const rows = isEnglishMode()
+                ? [
+                      { v: 'tcg', label: T('filteropt.ban_tcg') },
+                      { v: 'ocg', label: T('filteropt.ban_ocg') },
+                      { v: 'goat', label: T('filteropt.ban_goat') },
+                      { v: 'ocg goat', label: T('filteropt.ban_ocg_goat') },
+                      { v: 'speed duel', label: T('filteropt.ban_speed_duel') },
+                      { v: 'rush duel', label: T('filteropt.ban_rush_duel') },
+                      { v: 'duel links', label: T('filteropt.ban_duel_links') },
+                      { v: 'master duel', label: T('filteropt.ban_master_duel') },
+                      { v: 'genesys', label: T('filteropt.ban_genesys') },
+                  ]
+                : FILTER_BANLIST_LABELS;
+            const row = rows.find(e => e.v === val) || FILTER_BANLIST_LABELS.find(e => e.v === val);
             return row ? row.label : val;
         }
         if (key === 'staple') {
@@ -10011,6 +10301,12 @@
                       { v: 'tcg', label: T('filteropt.ban_tcg') },
                       { v: 'ocg', label: T('filteropt.ban_ocg') },
                       { v: 'goat', label: T('filteropt.ban_goat') },
+                      { v: 'ocg goat', label: T('filteropt.ban_ocg_goat') },
+                      { v: 'speed duel', label: T('filteropt.ban_speed_duel') },
+                      { v: 'rush duel', label: T('filteropt.ban_rush_duel') },
+                      { v: 'duel links', label: T('filteropt.ban_duel_links') },
+                      { v: 'master duel', label: T('filteropt.ban_master_duel') },
+                      { v: 'genesys', label: T('filteropt.ban_genesys') },
                   ]
                       .map((e) => `<option value="${escAttr(e.label)}"></option>`)
                       .join('')
@@ -10289,15 +10585,28 @@
                   { v: 'tcg', label: T('filteropt.ban_tcg') },
                   { v: 'ocg', label: T('filteropt.ban_ocg') },
                   { v: 'goat', label: T('filteropt.ban_goat') },
+                  { v: 'ocg goat', label: T('filteropt.ban_ocg_goat') },
+                  { v: 'speed duel', label: T('filteropt.ban_speed_duel') },
+                  { v: 'rush duel', label: T('filteropt.ban_rush_duel') },
+                  { v: 'duel links', label: T('filteropt.ban_duel_links') },
+                  { v: 'master duel', label: T('filteropt.ban_master_duel') },
+                  { v: 'genesys', label: T('filteropt.ban_genesys') },
               ]
             : FILTER_BANLIST_LABELS;
         const byLabel = rows.find((e) => e.label.toLowerCase() === q);
         if (byLabel) return byLabel.v;
         const byLabelPt = FILTER_BANLIST_LABELS.find((e) => e.label.toLowerCase() === q);
         if (byLabelPt) return byLabelPt.v;
+        // Aceita o valor literal da API, além de rótulos PT/EN.
         if (q === 'tcg' || q.includes('formato tcg') || q.includes('tcg format')) return 'tcg';
         if (q === 'ocg' || q.includes('formato ocg') || q.includes('ocg format')) return 'ocg';
         if (q === 'goat' || q.includes('formato goat') || q.includes('goat format')) return 'goat';
+        if (q === 'ocg goat' || q.replace(/\s+/g, ' ').includes('ocg goat')) return 'ocg goat';
+        if (q === 'speed duel' || q.includes('speed duel')) return 'speed duel';
+        if (q === 'rush duel' || q.includes('rush duel')) return 'rush duel';
+        if (q === 'duel links' || q.includes('duel links')) return 'duel links';
+        if (q === 'master duel' || q.includes('master duel')) return 'master duel';
+        if (q === 'genesys' || q.includes('genesys')) return 'genesys';
         return null;
     }
 
@@ -11421,7 +11730,9 @@
         const banlistType = getBanlistTypeFromState();
         const container = document.getElementById('banlist-only-container');
         const checkbox = document.getElementById('enable-banlist-only');
-        if (banlistType === "") {
+        // `banlist` (API) só aceita tcg/ocg/goat. Para outros formatos, o filtro usa apenas `format`.
+        const supportsBanlist = banlistType === 'tcg' || banlistType === 'ocg' || banlistType === 'goat';
+        if (banlistType === "" || !supportsBanlist) {
             container.style.display = 'none';
             checkbox.checked = false;
         } else {
@@ -11542,6 +11853,27 @@
         }
         const bonly = document.getElementById('enable-banlist-only')?.checked;
         if (bonly && (st.banlist || []).length) out.set(`${FILTER_URL_PREFIX}bo`, '1');
+        // Página atual (paginação) — mantida na URL para compartilhamento.
+        try {
+            const pg = Number(currentPage);
+            if (Number.isFinite(pg) && pg > 1) out.set(`${FILTER_URL_PREFIX}pg`, String(Math.trunc(pg)));
+        } catch (_) {}
+
+        // Ordenação (resultados + deck): persistir na URL para compartilhar estado completo.
+        try {
+            const sb = (document.getElementById('sort-by')?.value || '').trim();
+            if (sb) out.set(`${FILTER_URL_PREFIX}sby`, sb);
+        } catch (_) {}
+        try {
+            if (sortDirection === 1 || sortDirection === -1) out.set(`${FILTER_URL_PREFIX}sdir`, String(sortDirection));
+        } catch (_) {}
+        try {
+            const dby = (document.getElementById('deck-sort-by')?.value || '').trim();
+            if (dby) out.set(`${FILTER_URL_PREFIX}dby`, dby);
+        } catch (_) {}
+        try {
+            if (deckSortDirection === 1 || deckSortDirection === -1) out.set(`${FILTER_URL_PREFIX}ddir`, String(deckSortDirection));
+        } catch (_) {}
         return out;
     }
 
@@ -11553,13 +11885,35 @@
             const next = buildDeckbuilderFilterUrlSearchParams();
             next.forEach((v, k) => merged.append(k, v));
             const qs = merged.toString();
-            const newUrl = `${url.pathname}${qs ? `?${qs}` : ''}${url.hash}`;
+            const targetSearch = qs ? `?${qs}` : '';
+            // Atualiza sem recarregar (inclusive em `file://` quando permitido).
+            // Se o ambiente bloquear `replaceState`, não forçamos navegação pois isso deixaria lento.
             const cur = `${url.pathname}${url.search}${url.hash}`;
+            const newUrl = `${url.pathname}${targetSearch}${url.hash}`;
             if (newUrl === cur) return;
-            history.replaceState(null, '', newUrl);
+            try { history.replaceState(null, '', newUrl); } catch (_) {}
         } catch (e) {
             console.warn('URL filtros:', e);
         }
+    }
+
+    function jumpToPage(raw) {
+        const totalPages = Math.ceil(searchResults.length / getItemsPerPage()) || 1;
+        let pg = parseInt(String(raw ?? '').trim(), 10);
+        if (!Number.isFinite(pg)) pg = 1;
+        pg = Math.max(1, Math.min(totalPages, pg));
+        if (pg === currentPage) {
+            const pj = document.getElementById('page-jump');
+            if (pj) pj.value = currentPage;
+            return;
+        }
+        requestCardSurfaceFeedback('page');
+        currentPage = pg;
+        renderResults();
+        const rv = document.getElementById('results-view');
+        if (rv) rv.scrollTop = 0;
+        try { pushDeckbuilderFilterUrlToHistory(); } catch (_) {}
+        scheduleDeckbuilderFilterUrlSync();
     }
 
     function scheduleDeckbuilderFilterUrlSync() {
@@ -11572,7 +11926,19 @@
     }
 
     function parseBanlistTokensFromUrl(parts) {
-        const allowed = new Set(['tcg', 'ocg', 'goat', 'masterduel']);
+        // Tokens aceitos neste filtro (mesmo estado alimenta `format` e `banlist`).
+        // `banlist` em si só aceita tcg/ocg/goat, mas guardamos os demais para `format`.
+        const allowed = new Set([
+            'tcg', 'ocg', 'goat',
+            'ocg goat',
+            'speed duel',
+            'rush duel',
+            'duel links',
+            'master duel',
+            'genesys',
+            // compat antiga (sem espaço)
+            'masterduel'
+        ]);
         const out = [];
         for (const raw of parts) {
             const t = String(raw || '').trim().toLowerCase();
@@ -11633,6 +11999,38 @@
         });
         const bchk = document.getElementById('enable-banlist-only');
         if (bchk) bchk.checked = false;
+
+        // Ordenação (resultados + deck) a partir da URL (antes da pesquisa/primeiro render).
+        try {
+            const sbRaw = (sp.get(`${FILTER_URL_PREFIX}sby`) || '').trim();
+            const sb = document.getElementById('sort-by');
+            if (sbRaw && sb && [...sb.options].some((o) => String(o.value) === sbRaw)) {
+                sb.value = sbRaw;
+            }
+        } catch (_) {}
+        try {
+            const dirRaw = parseInt(String(sp.get(`${FILTER_URL_PREFIX}sdir`) || ''), 10);
+            if (dirRaw === 1 || dirRaw === -1) {
+                sortDirection = dirRaw;
+                const icon = document.getElementById('order-icon');
+                if (icon) icon.className = 'fas ' + (sortDirection === 1 ? 'fa-arrow-up' : 'fa-arrow-down');
+            }
+        } catch (_) {}
+        try {
+            const dbyRaw = (sp.get(`${FILTER_URL_PREFIX}dby`) || '').trim();
+            const ds = document.getElementById('deck-sort-by');
+            if (dbyRaw && ds && [...ds.options].some((o) => String(o.value) === dbyRaw)) {
+                ds.value = dbyRaw;
+                deckSortCriterionPinned = dbyRaw;
+            }
+        } catch (_) {}
+        try {
+            const ddirRaw = parseInt(String(sp.get(`${FILTER_URL_PREFIX}ddir`) || ''), 10);
+            if (ddirRaw === 1 || ddirRaw === -1) {
+                deckSortDirection = ddirRaw;
+                updateDeckSortOrderIcon();
+            }
+        } catch (_) {}
 
         const tcRaw = sp.get(`${FILTER_URL_PREFIX}tc`);
         if (tcRaw) {
@@ -11844,6 +12242,13 @@
         if (bchk && sp.get(`${FILTER_URL_PREFIX}bo`) === '1' && (window.filterChipState.banlist || []).length) {
             bchk.checked = true;
         }
+
+        // Página atual (paginação).
+        try {
+            const pgRaw = (sp.get(`${FILTER_URL_PREFIX}pg`) || '').trim();
+            const pg = parseInt(pgRaw, 10);
+            if (Number.isFinite(pg) && pg > 0) currentPage = pg;
+        } catch (_) {}
 
         paintComboFilterChips();
         toggleBanlistCheckbox();
@@ -12823,6 +13228,7 @@
             currentPage = 1;
             requestCardSurfaceFeedback('sort');
             renderResults();
+            try { scheduleDeckbuilderFilterUrlSync(); } catch (_) {}
             return;
         }
         sortDirection *= -1;
@@ -12883,6 +13289,32 @@
     function compareCardsBySortCriterion(a, b, criterion, direction, banlistType) {
         let valA, valB;
         switch (criterion) {
+            case 'genesys_points': {
+                const pick = (c) => {
+                    if (!c) return 0;
+                    const raw = (c.genesys_points != null) ? c.genesys_points
+                        : (c.misc_info && c.misc_info[0] && c.misc_info[0].genesys_points != null ? c.misc_info[0].genesys_points : null);
+                    if (raw != null) {
+                        const n = Number(raw);
+                        return Number.isFinite(n) ? Math.trunc(n) : 0;
+                    }
+                    const id = c.id != null ? String(c.id) : '';
+                    const cached = id ? cardCache[id] : null;
+                    const raw2 = cached && cached.genesys_points != null ? cached.genesys_points : null;
+                    const n2 = raw2 == null ? 0 : Number(raw2);
+                    return Number.isFinite(n2) ? Math.trunc(n2) : 0;
+                };
+                valA = pick(a);
+                valB = pick(b);
+                // Maior pontuação primeiro quando direction=1 (como outros números). Mantém tie-break por nome/id.
+                if (valA !== valB) return (valA < valB ? -1 : 1) * direction;
+                const n1 = String((isEnglishMode() ? (a.name || a.name_en) : (a.name_pt || a.name)) || '').toLowerCase();
+                const n2 = String((isEnglishMode() ? (b.name || b.name_en) : (b.name_pt || b.name)) || '').toLowerCase();
+                const cmp = n1.localeCompare(n2, 'en', { sensitivity: 'base' });
+                if (cmp !== 0) return direction === 1 ? cmp : -cmp;
+                const tie = String(a.id ?? '').localeCompare(String(b.id ?? ''), 'en', { numeric: true });
+                return direction === 1 ? tie : -tie;
+            }
             case 'price':
                 valA = getTcgplayerPriceUsd(a);
                 valB = getTcgplayerPriceUsd(b);
@@ -13012,12 +13444,21 @@
             shuffleArrayInPlace(searchResults);
             currentPage = 1;
             renderResults();
+            try { if (!opts || !opts.preview) scheduleDeckbuilderFilterUrlSync(); } catch (_) {}
             return;
+        }
+        if (criterion === 'genesys_points') {
+            try {
+                const ids = [...new Set((searchResults || []).map((c) => c && c.id).filter((x) => x != null))];
+                // Preenche pontos Genesys no cache para este conjunto (API só devolve com format=genesys).
+                void ensureGenesysPointsForIds(ids);
+            } catch (_) {}
         }
         const banlistType = getBanlistTypeFromState();
         searchResults.sort((a, b) => compareCardsBySortCriterion(a, b, criterion, sortDirection, banlistType));
         currentPage = 1;
         renderResults();
+        try { if (!opts || !opts.preview) scheduleDeckbuilderFilterUrlSync(); } catch (_) {}
     }
 
     const trad = { 
@@ -14088,6 +14529,18 @@
             "Ritual": "Ritual", "Counter": "Resposta" 
         };
         let infoHtml = `<div style="display: flex; flex-direction: column; gap: 8px; width: 100%;">`;
+        const gpRawTt = (card && card.genesys_points != null) ? card.genesys_points
+            : (card && card.misc_info && card.misc_info[0] && card.misc_info[0].genesys_points != null ? card.misc_info[0].genesys_points : null);
+        const gpValTt = gpRawTt == null ? null : Number(gpRawTt);
+        if (Number.isFinite(gpValTt) && gpValTt > 0) {
+            infoHtml += `<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:11px; font-weight:800; letter-spacing:.03em;">
+                            <span style="display:inline-flex; align-items:center; gap:6px; padding:3px 8px; border-radius:999px; border:1px solid rgba(255,255,255,0.18); background:rgba(0,0,0,0.18);">
+                                <i class="fa-solid fa-star" style="color:var(--accent); font-size:12px;"></i>
+                                <span style="color:#fff;">${isEnglishMode() ? 'GENESYS POINTS' : 'PONTOS GENESYS'}:</span>
+                                <span style="color:var(--accent);">${Math.trunc(gpValTt)}</span>
+                            </span>
+                        </div>`;
+        }
         const ft = getFrameType(card);
         const isLinkTt = frameTypeIsLink(ft) || card.type.toLowerCase().includes("link");
         if (card.attribute || frameTypeIsSpell(ft) || frameTypeIsTrap(ft) || card.type.includes("Spell") || card.type.includes("Trap")) {
@@ -14167,6 +14620,17 @@
             <span class="tt-card-id-pair"><span class="tt-card-id-label">ID</span><span class="tt-card-id-value">${cardIdDisplay}</span></span>
             <span class="tt-card-id-pair"><span class="tt-konami-id-label">Konami</span><span class="tt-konami-id-value">${konamiDisplay}</span></span>
         </div>`;
+        const gpRaw = (card && card.genesys_points != null) ? card.genesys_points
+            : (card && card.misc_info && card.misc_info[0] && card.misc_info[0].genesys_points != null ? card.misc_info[0].genesys_points : null);
+        const gpVal = gpRaw == null ? null : Number(gpRaw);
+        const genesysHtml = Number.isFinite(gpVal) && gpVal > 0
+            ? `<div class="tt-card-id-row" style="margin-top:6px;">
+                   <span class="tt-card-id-pair">
+                       <span class="tt-card-id-label">${isEnglishMode() ? 'Genesys Points' : 'Pontos Genesys'}</span>
+                       <span class="tt-card-id-value">${Math.trunc(gpVal)}</span>
+                   </span>
+               </div>`
+            : '';
         const datesHtml = `<div class="tt-tooltip-dates"><span>📅 TCG: ${tcgDate}</span><span>📅 OCG: ${ocgDate}</span></div>`;
         const separatorHtml = `<hr style="border: 0; border-top: 1px solid #444; margin: 4px 0; opacity: 1;">`;
         const pricesHtml = `<div style="margin-top: 4px; display: flex; flex-wrap: wrap; gap: 8px; font-size: 11px; color: #fff; font-weight: 500;">
@@ -14207,7 +14671,7 @@
         }
         let formattedDescription = description.replace(/\n/g, '<br>');
         formattedDescription = formattedDescription.replace(/(?:<br\s*\/?>|\s)+$/gi, '');
-        document.getElementById('tooltip-text').innerHTML = `<div class="tt-tooltip-desc" style="word-wrap: break-word;">${formattedDescription}</div>${setsBlock}${idHtml}${datesHtml}${separatorHtml}${pricesHtml}${ygoRefHtml}`;
+        document.getElementById('tooltip-text').innerHTML = `<div class="tt-tooltip-desc" style="word-wrap: break-word;">${formattedDescription}</div>${setsBlock}${idHtml}${genesysHtml}${datesHtml}${separatorHtml}${pricesHtml}${ygoRefHtml}`;
     }
 
     function moveTooltip(e) {
@@ -16500,6 +16964,8 @@
             renderResults();
             const rv = document.getElementById('results-view');
             if (rv) rv.scrollTop = 0;
+            try { pushDeckbuilderFilterUrlToHistory(); } catch (_) {}
+            scheduleDeckbuilderFilterUrlSync();
         }
     };
     window.jumpToPage = (val) => {
@@ -16510,6 +16976,8 @@
         renderResults();
         const rv = document.getElementById('results-view');
         if (rv) rv.scrollTop = 0;
+        try { pushDeckbuilderFilterUrlToHistory(); } catch (_) {}
+        scheduleDeckbuilderFilterUrlSync();
     };
     window.downloadPDF = () => {
         if (window.currentPdf) {
@@ -16737,6 +17205,36 @@
             if (data.data) {
                 data.data.forEach((card) => {
                     cardCache[card.id] = card;
+                });
+            }
+        }
+    }
+
+    async function ensureGenesysPointsForIds(idList) {
+        const ids = [...new Set((idList || []).filter((x) => x != null))];
+        if (!ids.length) return;
+        const missing = ids.filter((id) => {
+            const c = cardCache[id];
+            return !c || c.genesys_points == null;
+        });
+        if (!missing.length) return;
+        const chunk = 64;
+        for (let i = 0; i < missing.length; i += chunk) {
+            const part = missing.slice(i, i + chunk);
+            const res = await fetch(`https://db.ygoprodeck.com/api/v7/cardinfo.php?id=${part.join(',')}&misc=yes&format=genesys`);
+            const data = await res.json();
+            if (data.data) {
+                data.data.forEach((card) => {
+                    const id = card && card.id != null ? String(card.id) : '';
+                    if (!id) return;
+                    if (!cardCache[id]) cardCache[id] = card;
+                    else {
+                        // Mescla só o que nos importa para Genesys, sem perder traduções ou campos já carregados.
+                        if (card.genesys_points != null) cardCache[id].genesys_points = card.genesys_points;
+                        if (card.misc_info && card.misc_info[0] && card.misc_info[0].genesys_points != null) {
+                            cardCache[id].genesys_points = card.misc_info[0].genesys_points;
+                        }
+                    }
                 });
             }
         }
