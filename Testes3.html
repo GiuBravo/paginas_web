@@ -2649,10 +2649,21 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            position: relative;
             width: min(98px, 23vw);
             min-width: 72px;
             max-width: 112px;
             max-height: 118px;
+        }
+        .list-card-thumb .card-grid-ban-badge {
+            top: 3px;
+            right: 3px;
+            z-index: 5;
+        }
+        .list-card-thumb .card-grid-md-badge {
+            top: 3px;
+            left: 3px;
+            z-index: 5;
         }
         .results-view.list-mode .list-card-thumb {
             max-height: var(--list-suggestion-art-max-h);
@@ -2836,9 +2847,23 @@
             line-height: 0;
             pointer-events: none;
         }
+        .card-grid-md-badge {
+            position: absolute;
+            top: 4px;
+            left: 4px;
+            z-index: 4;
+            line-height: 0;
+            pointer-events: none;
+            filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.75));
+        }
         .queue-item-thumb-wrap .card-grid-ban-badge--deck-thumb {
             top: 4px;
             right: 30px;
+            z-index: 3;
+        }
+        .queue-item-thumb-wrap .card-grid-md-badge--deck-thumb {
+            top: 4px;
+            left: 4px;
             z-index: 3;
         }
         .card-grid-ban-badge svg {
@@ -2846,6 +2871,22 @@
             height: 22px;
             margin: 0;
             display: block;
+        }
+        .card-grid-md-badge img {
+            width: 22px;
+            height: 22px;
+            object-fit: contain;
+            display: block;
+        }
+        /* Em alguns modos, CSS global força img dentro do artwrap a 100% (!important). */
+        .results-view.grid-mode .suggestion-item-grid-artwrap img.md-badge-img,
+        #random-main-modal .results-view.grid-mode .suggestion-item-grid-artwrap img.md-badge-img,
+        .grid-mode .suggestion-item-grid-artwrap img.md-badge-img {
+            width: 18px !important;
+            height: 18px !important;
+            max-width: none !important;
+            max-height: none !important;
+            object-fit: contain !important;
         }
 
         .deck-stats-bar {
@@ -3011,6 +3052,76 @@
             font-size: 12px;
             font-variant-numeric: tabular-nums;
             font-weight: 900;
+        }
+
+        .deck-stat-md-wrap {
+            display: inline-flex;
+            align-items: baseline;
+            gap: 10px;
+        }
+        .deck-stat-md-badges {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .deck-stat-md-icon {
+            width: 18px;
+            height: 18px;
+            object-fit: contain;
+            display: inline-block;
+            vertical-align: -2px;
+        }
+        .deck-stat-md-gem-icon {
+            width: 14px;
+            height: 14px;
+            object-fit: contain;
+            display: inline-block;
+            vertical-align: -2px;
+            filter: drop-shadow(0 1px 1px rgba(0,0,0,0.35));
+        }
+        .deck-stat-md-gems {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            opacity: 0.95;
+            font-weight: 900;
+        }
+        .deck-stat-md-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 2px 8px;
+            border-radius: 999px;
+            font-weight: 900;
+            font-size: 10px;
+            letter-spacing: 0.02em;
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            font-variant-numeric: tabular-nums;
+        }
+        html.theme-white .deck-stat-md-badge { border-color: var(--border); }
+        .deck-stat-md-badge--ur { background: rgba(168, 85, 247, 0.14); color: #e9d5ff; }
+        .deck-stat-md-badge--sr { background: rgba(249, 115, 22, 0.14); color: #ffedd5; }
+        .deck-stat-md-badge--r  { background: rgba(59, 130, 246, 0.14); color: #dbeafe; }
+        .deck-stat-md-badge--n  { background: rgba(148, 163, 184, 0.14); color: #e2e8f0; }
+        html.theme-white .deck-stat-md-badge--ur { color: #5b21b6; }
+        html.theme-white .deck-stat-md-badge--sr { color: #9a3412; }
+        html.theme-white .deck-stat-md-badge--r  { color: #1e3a8a; }
+        html.theme-white .deck-stat-md-badge--n  { color: #334155; }
+        .deck-stat-md-points {
+            display: inline-flex;
+            align-items: baseline;
+            gap: 6px;
+            font-weight: 900;
+        }
+        .deck-stat-md-points-label {
+            text-transform: uppercase;
+            opacity: 0.65;
+            font-size: 9px;
+        }
+        .deck-stat-md-points-val {
+            color: var(--accent);
+            font-size: 12px;
+            font-variant-numeric: tabular-nums;
         }
 
         .deck-validity-flag {
@@ -3309,7 +3420,22 @@
             pointer-events: none;
             filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.75));
         }
+        .deck-tooltip-md-badge {
+            position: absolute;
+            left: 1px;
+            top: 1px;
+            line-height: 0;
+            z-index: 1;
+            pointer-events: none;
+            filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.75));
+        }
         .deck-tooltip-ban-badge svg {
+            display: block;
+        }
+        .deck-tooltip-md-badge img {
+            width: 18px;
+            height: 18px;
+            object-fit: contain;
             display: block;
         }
         html.theme-white .deck-tooltip-ban-badge {
@@ -5501,6 +5627,8 @@
                             <option data-i18n-opt="opt.sort.pendscale" value="pend_scale">Escala (Pêndulo)</option>
                             <option data-i18n-opt="opt.sort.tcg" value="tcg_date">Data TCG</option>
                             <option data-i18n-opt="opt.sort.ocg" value="ocg_date">Data OCG</option>
+                            <option data-i18n-opt="opt.sort.md_rarity" value="md_rarity">Raridade (Master Duel)</option>
+                            <option data-i18n-opt="opt.sort.print_rarity" value="print_rarity">Raridade (impressão)</option>
                             <option data-i18n-opt="opt.sort.views" value="views">Popular (visualizações)</option>
                             <option data-i18n-opt="opt.sort.viewsweek" value="viewsweek">Popular (visualizações na semana)</option>
                             <option data-i18n-opt="opt.sort.upvotes" value="upvotes">Votos positivos</option>
@@ -5687,6 +5815,43 @@
                     <span class="deck-stat-price-label" data-i18n="ui.deck_stat_total_usd">Total</span>
                     <span id="deck-stat-price" class="deck-stat-price-val">—</span>
                 </span>
+                <span id="deck-stat-md-wrap" class="deck-stat-md-wrap" data-i18n-title="ui.deck_stat_md_title" title="Master Duel: total por raridade e gemas" style="display:none;">
+                    <span class="deck-stat-md-badges" aria-label="Master Duel rarities">
+                        <span class="deck-stat-chip-wrap deck-stat-md-badge deck-stat-md-badge--ur" data-deck-stat="md_ur" tabindex="0" title="UR">
+                            <img class="deck-stat-md-icon" alt="UR" src="https://ms.yugipedia.com//c/c3/CraftPoints_UR_MD.png" loading="lazy">
+                            <span id="deck-stat-md-ur">0</span>
+                            <span class="deck-stat-md-gems" aria-label="Gemas UR">
+                                <img class="deck-stat-md-gem-icon" alt="Gemas" src="https://ms.yugipedia.com//5/5d/Gem-Master_Duel.png" loading="lazy">
+                                <span id="deck-stat-md-ur-gems">0</span>
+                            </span>
+                        </span>
+                        <span class="deck-stat-chip-wrap deck-stat-md-badge deck-stat-md-badge--sr" data-deck-stat="md_sr" tabindex="0" title="SR">
+                            <img class="deck-stat-md-icon" alt="SR" src="https://ms.yugipedia.com//f/fb/CraftPoints_SR_MD.png" loading="lazy">
+                            <span id="deck-stat-md-sr">0</span>
+                            <span class="deck-stat-md-gems" aria-label="Gemas SR">
+                                <img class="deck-stat-md-gem-icon" alt="Gemas" src="https://ms.yugipedia.com//5/5d/Gem-Master_Duel.png" loading="lazy">
+                                <span id="deck-stat-md-sr-gems">0</span>
+                            </span>
+                        </span>
+                        <span class="deck-stat-chip-wrap deck-stat-md-badge deck-stat-md-badge--r" data-deck-stat="md_r" tabindex="0" title="R">
+                            <img class="deck-stat-md-icon" alt="R" src="https://ms.yugipedia.com//3/3e/CraftPoints_R_MD.png" loading="lazy">
+                            <span id="deck-stat-md-r">0</span>
+                            <span class="deck-stat-md-gems" aria-label="Gemas R">
+                                <img class="deck-stat-md-gem-icon" alt="Gemas" src="https://ms.yugipedia.com//5/5d/Gem-Master_Duel.png" loading="lazy">
+                                <span id="deck-stat-md-r-gems">0</span>
+                            </span>
+                        </span>
+                        <span class="deck-stat-chip-wrap deck-stat-md-badge deck-stat-md-badge--n" data-deck-stat="md_n" tabindex="0" title="N">
+                            <img class="deck-stat-md-icon" alt="N" src="https://ms.yugipedia.com//3/3b/CraftPoints_N_MD.png" loading="lazy">
+                            <span id="deck-stat-md-n">0</span>
+                            <span class="deck-stat-md-gems" aria-label="Gemas N">
+                                <img class="deck-stat-md-gem-icon" alt="Gemas" src="https://ms.yugipedia.com//5/5d/Gem-Master_Duel.png" loading="lazy">
+                                <span id="deck-stat-md-n-gems">0</span>
+                            </span>
+                        </span>
+                    </span>
+                    <!-- total geral (gemas) removido a pedido -->
+                </span>
                 <span id="deck-stat-genesys-wrap" class="deck-stat-genesys-wrap" data-i18n-title="ui.deck_stat_genesys_title" title="Pontos Genesys do deck (Main+Extra+Side)" style="display:none;">
                     <span class="deck-stat-genesys-label" data-i18n="ui.deck_stat_genesys_label">Genesys</span>
                     <span id="deck-stat-genesys" class="deck-stat-genesys-val">—</span>
@@ -5717,6 +5882,8 @@
                                     <option data-i18n-opt="opt.sort.level" value="level">Level/Rank</option>
                                     <option data-i18n-opt="opt.sort.tcg" value="tcg_date">Data TCG</option>
                                     <option data-i18n-opt="opt.sort.ocg" value="ocg_date">Data OCG</option>
+                                    <option data-i18n-opt="opt.sort.md_rarity" value="md_rarity">Raridade (Master Duel)</option>
+                                    <option data-i18n-opt="opt.sort.print_rarity" value="print_rarity">Raridade (impressão)</option>
                                     <option data-i18n-opt="opt.sort.price" value="price">Preço</option>
                                     <option data-i18n-opt="opt.sort.genesys_points" value="genesys_points">Pontos Genesys</option>
                                     <option data-i18n-opt="opt.sort.banlist" value="banlist">Banlist</option>
@@ -5875,7 +6042,9 @@
 
     function banlistMaxCopiesForCard(card, banlistType) {
         if (!banlistType || !card || !card.banlist_info) return 3;
-        const status = card.banlist_info[`ban_${banlistType}`];
+        const banKey = banlistInfoKeyForType(banlistType);
+        if (!banKey) return 3;
+        const status = card.banlist_info[banKey];
         if (status === 'Banned' || status === 'Forbidden') return 0;
         if (status === 'Limited') return 1;
         if (status === 'Semi-Limited') return 2;
@@ -5962,6 +6131,17 @@
             banWrap.innerHTML = banHtml;
             thumbCol.appendChild(banWrap);
         }
+        if (isMasterDuelDeckSelected()) {
+            const md = pickMasterDuelRarity(card);
+            const url = masterDuelRarityIconUrl(md);
+            if (url) {
+                const mdWrap = document.createElement('div');
+                mdWrap.className = 'deck-tooltip-md-badge';
+                mdWrap.setAttribute('aria-hidden', 'true');
+                mdWrap.innerHTML = `<img src="${url}" alt="${md || ''}" loading="lazy">`;
+                thumbCol.appendChild(mdWrap);
+            }
+        }
         const meta = document.createElement('div');
         meta.className = 'deck-validity-tooltip-card-meta';
         const nameEl = document.createElement('div');
@@ -6028,6 +6208,17 @@
             banSt.setAttribute('aria-hidden', 'true');
             banSt.innerHTML = banHtmlStat;
             thumbCol.appendChild(banSt);
+        }
+        if (isMasterDuelDeckSelected()) {
+            const md = pickMasterDuelRarity(card);
+            const url = masterDuelRarityIconUrl(md);
+            if (url) {
+                const mdSt = document.createElement('div');
+                mdSt.className = 'deck-tooltip-md-badge';
+                mdSt.setAttribute('aria-hidden', 'true');
+                mdSt.innerHTML = `<img src="${url}" alt="${md || ''}" loading="lazy">`;
+                thumbCol.appendChild(mdSt);
+            }
         }
         const meta = document.createElement('div');
         meta.className = 'deck-stat-tooltip-tile-meta';
@@ -6388,6 +6579,27 @@
     }
 
     function aggregateQueueCardsForStatSection(section) {
+        const secRaw = String(section || '').trim().toLowerCase();
+        // Master Duel rarity tooltips (include Main+Extra+Side).
+        if (secRaw.startsWith('md_')) {
+            const md = secRaw.replace(/^md_/, '').toUpperCase(); // UR/SR/R/N
+            const byId = new Map();
+            const add = (entry) => {
+                const full = cardCache[entry.id];
+                if (!full) return;
+                if (pickMasterDuelRarity(full) !== md) return;
+                const id = String(entry.id);
+                if (!byId.has(id)) byId.set(id, { full, count: 0 });
+                byId.get(id).count++;
+            };
+            for (const entry of cardQueue) add(entry);
+            for (const entry of cardQueueSide) add(entry);
+            return [...byId.values()].sort((a, b) => {
+                const na = isEnglishMode() ? (a.full.name || '') : (a.full.name_pt || a.full.name || '');
+                const nb = isEnglishMode() ? (b.full.name || '') : (b.full.name_pt || b.full.name || '');
+                return na.localeCompare(nb, undefined, { sensitivity: 'base' });
+            });
+        }
         const byId = new Map();
         for (const entry of cardQueue) {
             const full = cardCache[entry.id];
@@ -6411,8 +6623,11 @@
     }
 
     function buildDeckStatTooltipAriaSummary(section) {
+        const secRaw = String(section || '').trim().toLowerCase();
         const labelKey = { monsters: 'ui.deck_stat_monsters', spells: 'ui.deck_stat_spells', traps: 'ui.deck_stat_traps', extra: 'ui.deck_stat_extra' }[section];
-        const label = labelKey ? T(labelKey) : section;
+        const label = secRaw.startsWith('md_')
+            ? `Master Duel ${secRaw.replace(/^md_/, '').toUpperCase()}`
+            : (labelKey ? T(labelKey) : section);
         const items = aggregateQueueCardsForStatSection(section);
         if (items.length === 0) return `${label}. ${T('ui.deck_stat_tt_empty')}`;
         const parts = items.map(({ full, count }) => {
@@ -6428,13 +6643,22 @@
         const body = document.getElementById('deck-stat-tooltip-body');
         if (!body) return;
         body.textContent = '';
+        const secRaw = String(section || '').trim().toLowerCase();
         const labelKey = { monsters: 'ui.deck_stat_monsters', spells: 'ui.deck_stat_spells', traps: 'ui.deck_stat_traps', extra: 'ui.deck_stat_extra' }[section];
-        const label = labelKey ? T(labelKey) : section;
+        const label = secRaw.startsWith('md_')
+            ? `Master Duel ${secRaw.replace(/^md_/, '').toUpperCase()}`
+            : (labelKey ? T(labelKey) : section);
         const items = aggregateQueueCardsForStatSection(section);
         const head = document.createElement('div');
         head.className = 'deck-stat-tooltip-header';
         const totalCopies = items.reduce((s, x) => s + x.count, 0);
-        head.textContent = `${label} — ${totalCopies}`;
+        if (secRaw.startsWith('md_')) {
+            const md = secRaw.replace(/^md_/, '').toUpperCase();
+            const gems = (MASTER_DUEL_RARITY_POINTS[md] != null) ? (MASTER_DUEL_RARITY_POINTS[md] * totalCopies) : 0;
+            head.textContent = `${label} — ${totalCopies} · ${gems} gemas`;
+        } else {
+            head.textContent = `${label} — ${totalCopies}`;
+        }
         body.appendChild(head);
         if (items.length === 0) {
             const p = document.createElement('div');
@@ -7207,8 +7431,11 @@
                 div.style.backgroundColor = "transparent";
                 const banSvgGrid = getBanIcon(card, 'grid');
                 const banOverlayGrid = banSvgGrid ? `<span class="card-grid-ban-badge" aria-hidden="true">${banSvgGrid}</span>` : '';
+                const md = isMasterDuelFormatFiltered() ? pickMasterDuelRarity(card) : null;
+                const mdUrl = md ? masterDuelRarityIconUrl(md) : '';
+                const mdOverlayGrid = mdUrl ? `<span class="card-grid-md-badge" aria-hidden="true"><img class="md-badge-img" src="${mdUrl}" alt="${md}" style="width:18px;height:18px;object-fit:contain;display:block;"></span>` : '';
                 const artSrc = cardImageUrlForMode(card.current_image, view, s.imgId);
-                div.innerHTML = `<div class="suggestion-item-grid-artwrap"><img src="${artSrc}" style="width: 100%; height: 100%; object-fit: contain; display: block;" loading="lazy" onerror="this.src='https://images.ygoprodeck.com/images/cards/back_high.jpg'" alt="${escapeHtml(card.name || 'Card')}">${banOverlayGrid}</div>`;
+                div.innerHTML = `<div class="suggestion-item-grid-artwrap"><img src="${artSrc}" style="width: 100%; height: 100%; object-fit: contain; display: block;" loading="lazy" onerror="this.src='https://images.ygoprodeck.com/images/cards/back_high.jpg'" alt="${escapeHtml(card.name || 'Card')}">${banOverlayGrid}${mdOverlayGrid}</div>`;
                 if (card.card_sets && card.card_sets.length) {
                     const fab = document.createElement('button');
                     fab.type = 'button';
@@ -7247,6 +7474,7 @@
                     <div class="card-info-box">
                         <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
                             ${getBanIcon(card)}
+                            ${getMasterDuelInlineIconForResults(card)}
                             <b class="card-name" style="margin: 0; line-height: 1.2; color: ${nameColor};">${escapeHtml(displayName)}</b>
                         </div>
                         <div class="info-row" style="display: flex; align-items: center; flex-wrap: wrap; gap: 10px; row-gap: 4px; color: ${textColor};">
@@ -7481,7 +7709,7 @@
         });
     }
 
-    const DECK_SORT_ORDERABLE = new Set(['name', 'atk', 'def', 'level', 'tcg_date', 'ocg_date', 'price', 'genesys_points', 'banlist']);
+    const DECK_SORT_ORDERABLE = new Set(['name', 'atk', 'def', 'level', 'tcg_date', 'ocg_date', 'md_rarity', 'print_rarity', 'price', 'genesys_points', 'banlist']);
     /** Opções sem `value` no HTML usam o texto visível; mapeamos para o critério interno. */
     const DECK_SORT_VALUE_ALIASES = {
         nome: 'name',
@@ -7920,6 +8148,72 @@
         return Number.isFinite(v) ? v : 0;
     }
 
+    // Master Duel rarities (UR/SR/R/N) + points (tweak here if needed).
+    const MASTER_DUEL_RARITY_POINTS = Object.freeze({ UR: 30, SR: 30, R: 30, N: 30 });
+
+    const MASTER_DUEL_RARITY_ICON_URL = Object.freeze({
+        UR: 'https://ms.yugipedia.com//c/c3/CraftPoints_UR_MD.png',
+        SR: 'https://ms.yugipedia.com//f/fb/CraftPoints_SR_MD.png',
+        R: 'https://ms.yugipedia.com//3/3e/CraftPoints_R_MD.png',
+        N: 'https://ms.yugipedia.com//3/3b/CraftPoints_N_MD.png'
+    });
+
+    function isMasterDuelDeckSelected() {
+        const t = String(getDeckBanlistTypeForValidation() || '').trim().toLowerCase();
+        return t === 'master duel' || t === 'masterduel';
+    }
+
+    function isMasterDuelFormatFiltered() {
+        const t = String(getBanlistTypeFromState() || '').trim().toLowerCase();
+        return t === 'master duel' || t === 'masterduel' || t.includes('master duel') || t.includes('masterduel');
+    }
+
+    function masterDuelRarityIconUrl(md) {
+        const k = md != null ? String(md).trim().toUpperCase() : '';
+        return MASTER_DUEL_RARITY_ICON_URL[k] || '';
+    }
+
+    function getMasterDuelInlineIconForResults(card) {
+        // Listagens / sugestões: só quando o filtro estiver em Master Duel.
+        if (!isMasterDuelFormatFiltered()) return '';
+        const md = pickMasterDuelRarity(card);
+        const url = masterDuelRarityIconUrl(md);
+        if (!url) return '';
+        return `<img class="md-inline-badge" src="${url}" alt="${md}" style="width:16px;height:16px;object-fit:contain;display:inline-block;vertical-align:-3px;">`;
+    }
+
+    function getMasterDuelInlineIconForDeck(card) {
+        // Deck: só quando a banlist/formato do DECK for Master Duel.
+        if (!isMasterDuelDeckSelected()) return '';
+        const md = pickMasterDuelRarity(card);
+        const url = masterDuelRarityIconUrl(md);
+        if (!url) return '';
+        return `<img class="md-inline-badge" src="${url}" alt="${md}" style="width:16px;height:16px;object-fit:contain;display:inline-block;vertical-align:-3px;">`;
+    }
+
+    function pickMasterDuelRarity(card) {
+        if (!card) return null;
+        const direct = card.master_duel_rarity ?? card.md_rarity ?? (card.misc_info && card.misc_info[0] ? card.misc_info[0].md_rarity : null);
+        const directNorm = direct != null ? String(direct).trim().toUpperCase() : '';
+        if (directNorm === 'UR' || directNorm === 'SR' || directNorm === 'R' || directNorm === 'N') return directNorm;
+
+        // Fallback heuristic: infer from printing rarities (best-effort).
+        let best = null;
+        const rank = { UR: 4, SR: 3, R: 2, N: 1 };
+        for (const s of (card.card_sets || [])) {
+            const r = String(s?.set_rarity || '').toLowerCase();
+            let md = null;
+            if (r.includes('ultra')) md = 'UR';
+            else if (r.includes('super')) md = 'SR';
+            else if (/\brare\b/.test(r)) md = 'R';
+            else if (r.includes('common')) md = 'N';
+            if (!md) continue;
+            if (!best || rank[md] > rank[best]) best = md;
+            if (best === 'UR') break;
+        }
+        return best;
+    }
+
     function computeDeckAggregates() {
         const out = {
             total: cardQueue.length + cardQueueSide.length,
@@ -7932,7 +8226,12 @@
             price: 0,
             genesysPoints: 0,
             genesysCopiesScored: 0,
-            genesysCopiesZero: 0
+            genesysCopiesZero: 0,
+            mdUR: 0,
+            mdSR: 0,
+            mdR: 0,
+            mdN: 0,
+            mdPoints: 0
         };
         const pickGenesysPoints = (full) => {
             if (!full) return 0;
@@ -7940,6 +8239,14 @@
                 : (full.misc_info && full.misc_info[0] && full.misc_info[0].genesys_points != null ? full.misc_info[0].genesys_points : null);
             const n = raw == null ? 0 : Number(raw);
             return Number.isFinite(n) ? Math.trunc(n) : 0;
+        };
+        const addMd = (full) => {
+            const md = pickMasterDuelRarity(full);
+            if (md === 'UR') out.mdUR++;
+            else if (md === 'SR') out.mdSR++;
+            else if (md === 'R') out.mdR++;
+            else if (md === 'N') out.mdN++;
+            if (md && MASTER_DUEL_RARITY_POINTS[md] != null) out.mdPoints += MASTER_DUEL_RARITY_POINTS[md];
         };
         for (const entry of cardQueue) {
             const full = cardCache[entry.id];
@@ -7955,6 +8262,7 @@
             out.genesysPoints += gp;
             if (gp > 0) out.genesysCopiesScored++;
             else out.genesysCopiesZero++;
+            addMd(full);
         }
         for (const entry of cardQueueSide) {
             const full = cardCache[entry.id];
@@ -7964,6 +8272,7 @@
             out.genesysPoints += gp;
             if (gp > 0) out.genesysCopiesScored++;
             else out.genesysCopiesZero++;
+            addMd(full);
         }
         return out;
     }
@@ -7981,6 +8290,28 @@
         set('deck-stat-extra', a.extra);
         const pe = document.getElementById('deck-stat-price');
         if (pe) pe.textContent = a.total === 0 ? '—' : `$${a.price.toFixed(2)}`;
+        const isMasterDuel = (() => {
+            const t = String(getDeckBanlistTypeForValidation() || '').trim().toLowerCase();
+            return t === 'master duel' || t === 'masterduel';
+        })();
+        const mw = document.getElementById('deck-stat-md-wrap');
+        if (mw) {
+            mw.style.display = isMasterDuel ? 'inline-flex' : 'none';
+            if (isMasterDuel) {
+                set('deck-stat-md-ur', a.mdUR || 0);
+                set('deck-stat-md-sr', a.mdSR || 0);
+                set('deck-stat-md-r', a.mdR || 0);
+                set('deck-stat-md-n', a.mdN || 0);
+                set('deck-stat-md-ur-gems', (a.mdUR || 0) * (MASTER_DUEL_RARITY_POINTS.UR || 0));
+                set('deck-stat-md-sr-gems', (a.mdSR || 0) * (MASTER_DUEL_RARITY_POINTS.SR || 0));
+                set('deck-stat-md-r-gems', (a.mdR || 0) * (MASTER_DUEL_RARITY_POINTS.R || 0));
+                set('deck-stat-md-n-gems', (a.mdN || 0) * (MASTER_DUEL_RARITY_POINTS.N || 0));
+                const tip = isEnglishMode()
+                    ? `Master Duel: UR ${a.mdUR || 0}, SR ${a.mdSR || 0}, R ${a.mdR || 0}, N ${a.mdN || 0}.`
+                    : `Master Duel: UR ${a.mdUR || 0}, SR ${a.mdSR || 0}, R ${a.mdR || 0}, N ${a.mdN || 0}.`;
+                mw.title = tip;
+            }
+        }
         const isGenesys = String(getDeckBanlistTypeForValidation() || '').trim().toLowerCase() === 'genesys';
         const gw = document.getElementById('deck-stat-genesys-wrap');
         const gv = document.getElementById('deck-stat-genesys');
@@ -8236,13 +8567,6 @@
             seen.add(k);
             orderedUnique.push(k);
         }
-        const buckets = { monsters: [], spells: [], traps: [], extra: [], unknown: [] };
-        for (const imgId of orderedUnique) {
-            const c0 = cardQueue.find((x) => String(x.imgId) === String(imgId));
-            const full = c0 ? cardCache[c0.id] : null;
-            const sec = getQueueCardSection(full);
-            buckets[sec].push(imgId);
-        }
         const stackSortKey = (imgId) => {
             const c0 = cardQueue.find((x) => String(x.imgId) === String(imgId));
             const full = c0 ? cardCache[c0.id] : null;
@@ -8267,9 +8591,17 @@
                 compareCardsBySortCriterion(stackSortKey(idA), stackSortKey(idB), criterion, deckSortDirection, banlistType)
             );
         };
-        const orderKeys = ['monsters', 'spells', 'traps', 'extra', 'unknown'];
         const newQueue = [];
-        for (const key of orderKeys) {
+        // Mantém apenas a separação principal vs extra (o UI já separa por secção).
+        // Dentro de cada secção, aplica apenas o critério escolhido (sem agrupar por tipo).
+        const buckets = { main: [], extra: [] };
+        for (const imgId of orderedUnique) {
+            const c0 = cardQueue.find((x) => String(x.imgId) === String(imgId));
+            const full = c0 ? cardCache[c0.id] : null;
+            const sec = getQueueCardSection(full);
+            (sec === 'extra' ? buckets.extra : buckets.main).push(imgId);
+        }
+        for (const key of ['main', 'extra']) {
             const sortedIds = sortBucketIds(buckets[key]);
             for (const imgId of sortedIds) {
                 const c0 = cardQueue.find((x) => String(x.imgId) === String(imgId));
@@ -8631,6 +8963,8 @@
         "opt.sort.upvotes": { pt: "Votos positivos", en: "Upvotes" },
         "opt.sort.downvotes": { pt: "Votos negativos", en: "Downvotes" },
         "opt.sort.price": { pt: "Pre\u00e7o", en: "Price" },
+        "opt.sort.md_rarity": { pt: "Raridade (Master Duel)", en: "Rarity (Master Duel)" },
+        "opt.sort.print_rarity": { pt: "Raridade (impress\u00e3o)", en: "Rarity (printing)" },
         "opt.sort.genesys_points": { pt: "Pontos Genesys", en: "Genesys points" },
         "opt.sort.pendscale": { pt: "Escala (Pêndulo)", en: "Pendulum scale" },
         "opt.sort.random": { pt: "Aleat\u00f3rio", en: "Random" },
@@ -8796,6 +9130,8 @@
         "ui.deck_stat_traps": { pt: "Armadilhas", en: "Traps" },
         "ui.deck_stat_genesys_title": { pt: "Pontos Genesys do deck (Main+Extra+Side)", en: "Deck Genesys points (Main+Extra+Side)" },
         "ui.deck_stat_genesys_label": { pt: "Genesys", en: "Genesys" },
+        "ui.deck_stat_md_title": { pt: "Master Duel: total por raridade e gemas", en: "Master Duel: totals by rarity and gems" },
+        "ui.deck_stat_md_points_label": { pt: "Gemas", en: "Gems" },
         "ui.deck_stat_tt_empty": { pt: "Nenhuma carta nesta categoria no deck.", en: "No cards in this category in the deck." },
         "ui.deck_stat_tt_qty": { pt: "\u00d7{n} no deck", en: "\u00d7{n} in deck" },
         "ui.deck_stat_tt_qty_extra": { pt: "\u00d7{n} no deck adicional", en: "\u00d7{n} in Extra Deck" },
@@ -8870,7 +9206,7 @@
         "ui.saved_deck_new": { pt: "Novo Deck", en: "New deck" },
         "ui.saved_deck_title": { pt: "Novo deck (rascunho) ou deck salvo", en: "New draft or saved deck" },
         "ui.saved_deck_select_label": { pt: "Deck salvo", en: "Saved deck" },
-        "ui.deck_banlist_select_label": { pt: "Banlist", en: "Banlist" },
+        "ui.deck_banlist_select_label": { pt: "Formato/Banlist", en: "Format/Banlist" },
         "ui.screen_aria": { pt: "Entrar em tela inteira", en: "Enter fullscreen" },
         "ui.screen_label": { pt: "Tela", en: "Screen" },
         "ui.screen_title": { pt: "Tela inteira (como F11)", en: "Fullscreen (like F11)" },
@@ -9604,8 +9940,7 @@
     const banKeyMap = {
         "tcg": "ban_tcg",
         "ocg": "ban_ocg",
-        "goat": "ban_goat",
-        "masterduel": "ban_masterduel"
+        "goat": "ban_goat"
     };
 
     const UI_THEME_CLASSES = [
@@ -11638,10 +11973,26 @@
         return getBanlistTypeFromState();
     }
 
+    function normalizeBanlistTypeForInfoKey(raw) {
+        const t = String(raw || '').trim().toLowerCase();
+        if (!t) return '';
+        // YGOPRODeck API não expõe banlist_info de Master Duel; só TCG/OCG/GOAT.
+        if (t === 'master duel' || t === 'masterduel' || t.includes('master duel') || t.includes('masterduel')) return '';
+        if (t === 'tcg' || t === 'ocg' || t === 'goat') return t;
+        // fallback: remove spaces for keys like "ban_xxx"
+        return t.replace(/\s+/g, '');
+    }
+
+    function banlistInfoKeyForType(raw) {
+        const t = normalizeBanlistTypeForInfoKey(raw);
+        return banKeyMap[t] || (t ? `ban_${t}` : '');
+    }
+
     function getBanIcon(card, variant = 'inline') {
         const banType = getBanlistTypeForCardBadges();
         if (!banType || !card.banlist_info) return '';
-        const banKey = `ban_${banType}`;
+        const banKey = banlistInfoKeyForType(banType);
+        if (!banKey) return '';
         const status = card.banlist_info[banKey];
         const svgStyle =
             variant === 'grid'
@@ -11676,7 +12027,9 @@
     function getBanlistBadgeKindForDeckExport(fullCard) {
         const banType = getBanlistTypeForCardBadges();
         if (!banType || !fullCard || !fullCard.banlist_info) return null;
-        const status = fullCard.banlist_info[`ban_${banType}`];
+        const banKey = banlistInfoKeyForType(banType);
+        if (!banKey) return null;
+        const status = fullCard.banlist_info[banKey];
         if (status === 'Banned' || status === 'Forbidden') return 'forbidden';
         if (status === 'Limited') return 'limited';
         if (status === 'Semi-Limited') return 'semi';
@@ -11715,6 +12068,38 @@
             ctx.textBaseline = 'alphabetic';
             ctx.fillText(kind === 'limited' ? '1' : '2', 50, 72);
         }
+        ctx.restore();
+    }
+
+    const __mdExportBadgeBmpCache = new Map();
+    async function getMasterDuelRarityBadgeBmp(md) {
+        const k = String(md || '').trim().toUpperCase();
+        const url = masterDuelRarityIconUrl(k);
+        if (!url) return null;
+        if (__mdExportBadgeBmpCache.has(url)) return await __mdExportBadgeBmpCache.get(url);
+        const p = (async () => {
+            const resp = await fetch(url, { mode: 'cors', credentials: 'omit' });
+            if (!resp.ok) throw new Error('md_badge_http');
+            const blob = await resp.blob();
+            return await createImageBitmap(blob);
+        })();
+        __mdExportBadgeBmpCache.set(url, p);
+        try { return await p; } catch (e) { __mdExportBadgeBmpCache.delete(url); return null; }
+    }
+
+    async function drawDeckListMdRarityBadgeOnCtx(ctx, cx, cy, cw, ch, fullCard) {
+        if (!isMasterDuelDeckSelected()) return;
+        const md = pickMasterDuelRarity(fullCard);
+        if (!md) return;
+        const bmp = await getMasterDuelRarityBadgeBmp(md);
+        if (!bmp) return;
+        const s = Math.max(11, Math.min(26, Math.round(Math.min(cw, ch) * 0.24)));
+        const padPx = 3;
+        const bx = cx + padPx;
+        const by = cy + padPx;
+        ctx.save();
+        ctx.globalAlpha = 0.98;
+        ctx.drawImage(bmp, bx, by, s, s);
         ctx.restore();
     }
 
@@ -13289,6 +13674,67 @@
     function compareCardsBySortCriterion(a, b, criterion, direction, banlistType) {
         let valA, valB;
         switch (criterion) {
+            case 'md_rarity': {
+                const rank = { UR: 4, SR: 3, R: 2, N: 1 };
+                const ra = pickMasterDuelRarity(a);
+                const rb = pickMasterDuelRarity(b);
+                valA = rank[ra] || 0;
+                valB = rank[rb] || 0;
+                if (valA !== valB) return (valA < valB ? -1 : 1) * direction;
+                const na = String((isEnglishMode() ? (a.name || a.name_en) : (a.name_pt || a.name)) || '').toLowerCase();
+                const nb = String((isEnglishMode() ? (b.name || b.name_en) : (b.name_pt || b.name)) || '').toLowerCase();
+                const cmp = na.localeCompare(nb, 'en', { sensitivity: 'base' });
+                if (cmp !== 0) return direction === 1 ? cmp : -cmp;
+                const tie = String(a.id ?? '').localeCompare(String(b.id ?? ''), 'en', { numeric: true });
+                return direction === 1 ? tie : -tie;
+            }
+            case 'print_rarity': {
+                const pickRank = (c) => {
+                    const rarities = [];
+                    for (const s of (c?.card_sets || [])) {
+                        const r = String(s?.set_rarity || '').trim();
+                        if (r) rarities.push(r);
+                    }
+                    if (!rarities.length) return { n: 0, t: '' };
+                    const score = (r) => {
+                        const x = String(r || '').toLowerCase();
+                        if (x.includes('starlight')) return 110;
+                        if (x.includes('quarter century')) return 109;
+                        if (x.includes('prismatic')) return 108;
+                        if (x.includes('ghost')) return 107;
+                        if (x.includes('ultimate')) return 106;
+                        if (x.includes('collector')) return 105;
+                        if (x.includes('secret')) return 100;
+                        if (x.includes('ultra')) return 90;
+                        if (x.includes('super')) return 80;
+                        if (/\brare\b/.test(x)) return 70;
+                        if (x.includes('common')) return 10;
+                        return 50;
+                    };
+                    let best = rarities[0];
+                    let bestN = score(best);
+                    for (let i = 1; i < rarities.length; i++) {
+                        const cur = rarities[i];
+                        const n = score(cur);
+                        if (n > bestN) {
+                            bestN = n;
+                            best = cur;
+                        }
+                    }
+                    return { n: bestN, t: best };
+                };
+                const pa = pickRank(a);
+                const pb = pickRank(b);
+                if (pa.n !== pb.n) return (pa.n < pb.n ? -1 : 1) * direction;
+                const rc = String(pa.t || '').localeCompare(String(pb.t || ''), 'en', { sensitivity: 'base' });
+                if (rc !== 0) return direction === 1 ? rc : -rc;
+                const na = String((isEnglishMode() ? (a.name || a.name_en) : (a.name_pt || a.name)) || '').toLowerCase();
+                const nb = String((isEnglishMode() ? (b.name || b.name_en) : (b.name_pt || b.name)) || '').toLowerCase();
+                const cmp = na.localeCompare(nb, 'en', { sensitivity: 'base' });
+                if (cmp !== 0) return direction === 1 ? cmp : -cmp;
+                const tie = String(a.id ?? '').localeCompare(String(b.id ?? ''), 'en', { numeric: true });
+                return direction === 1 ? tie : -tie;
+            }
             case 'genesys_points': {
                 const pick = (c) => {
                     if (!c) return 0;
@@ -13364,8 +13810,8 @@
             }
             case 'banlist': {
                 const priority = { Banned: 1, Forbidden: 1, Limited: 2, 'Semi-Limited': 3 };
-                const statusA = a.banlist_info ? a.banlist_info[`ban_${banlistType}`] : null;
-                const statusB = b.banlist_info ? b.banlist_info[`ban_${banlistType}`] : null;
+                const statusA = a.banlist_info ? a.banlist_info[banlistInfoKeyForType(banlistType)] : null;
+                const statusB = b.banlist_info ? b.banlist_info[banlistInfoKeyForType(banlistType)] : null;
                 valA = priority[statusA] || 4;
                 valB = priority[statusB] || 4;
                 if (valA === valB) return (a.name || '').localeCompare(b.name || '');
@@ -13433,6 +13879,15 @@
         }
         if (valA < valB) return -1 * direction;
         if (valA > valB) return 1 * direction;
+        // Tie-break estável (evita "ordem aleatória" quando valores são iguais).
+        try {
+            const n1 = String((isEnglishMode() ? (a.name || a.name_en) : (a.name_pt || a.name)) || '').toLowerCase();
+            const n2 = String((isEnglishMode() ? (b.name || b.name_en) : (b.name_pt || b.name)) || '').toLowerCase();
+            const cmp = n1.localeCompare(n2, 'en', { sensitivity: 'base' });
+            if (cmp !== 0) return direction === 1 ? cmp : -cmp;
+            const tie = String(a.id ?? '').localeCompare(String(b.id ?? ''), 'en', { numeric: true });
+            return direction === 1 ? tie : -tie;
+        } catch (_) {}
         return 0;
     }
 
@@ -14342,6 +14797,37 @@
         return SET_RARITY_PT[t] || t;
     }
 
+    function pickBestPrintingRarity(card) {
+        if (!card || !Array.isArray(card.card_sets) || !card.card_sets.length) return null;
+        const score = (r) => {
+            const x = String(r || '').toLowerCase();
+            if (x.includes('starlight')) return 110;
+            if (x.includes('quarter century')) return 109;
+            if (x.includes('prismatic')) return 108;
+            if (x.includes('ghost')) return 107;
+            if (x.includes('ultimate')) return 106;
+            if (x.includes('collector')) return 105;
+            if (x.includes('secret')) return 100;
+            if (x.includes('ultra')) return 90;
+            if (x.includes('super')) return 80;
+            if (/\brare\b/.test(x)) return 70;
+            if (x.includes('common')) return 10;
+            return 50;
+        };
+        let best = null;
+        let bestN = -1;
+        for (const s of card.card_sets) {
+            const r = String(s?.set_rarity || '').trim();
+            if (!r) continue;
+            const n = score(r);
+            if (n > bestN) {
+                bestN = n;
+                best = r;
+            }
+        }
+        return best;
+    }
+
     /** Máximo de impressões no tooltip; lista completa no painel / botão "Impressões". */
     const TOOLTIP_CARDSETS_MAX = 18;
 
@@ -14499,7 +14985,7 @@
             }
         }
         const banlistType = getBanlistTypeForCardBadges();
-        const status = card.banlist_info ? card.banlist_info[`ban_${banlistType}`] : null;
+        const status = card.banlist_info ? card.banlist_info[banlistInfoKeyForType(banlistType)] : null;
         const oldBadge = document.querySelector('.tt-ban-container');
         if (oldBadge) oldBadge.remove();
         if (status && banlistType) {
@@ -14541,6 +15027,40 @@
                             </span>
                         </div>`;
         }
+        const mdRarityTt = pickMasterDuelRarity(card);
+        if (mdRarityTt) {
+            const mdIcon = mdRarityTt === 'UR'
+                ? 'https://ms.yugipedia.com//c/c3/CraftPoints_UR_MD.png'
+                : mdRarityTt === 'SR'
+                    ? 'https://ms.yugipedia.com//f/fb/CraftPoints_SR_MD.png'
+                    : mdRarityTt === 'R'
+                        ? 'https://ms.yugipedia.com//3/3e/CraftPoints_R_MD.png'
+                        : 'https://ms.yugipedia.com//3/3b/CraftPoints_N_MD.png';
+            const mdBg = mdRarityTt === 'UR'
+                ? 'rgba(168, 85, 247, 0.18)'
+                : mdRarityTt === 'SR'
+                    ? 'rgba(249, 115, 22, 0.18)'
+                    : mdRarityTt === 'R'
+                        ? 'rgba(59, 130, 246, 0.18)'
+                        : 'rgba(148, 163, 184, 0.18)';
+            const mdBd = mdRarityTt === 'UR'
+                ? 'rgba(168, 85, 247, 0.38)'
+                : mdRarityTt === 'SR'
+                    ? 'rgba(249, 115, 22, 0.38)'
+                    : mdRarityTt === 'R'
+                        ? 'rgba(59, 130, 246, 0.38)'
+                        : 'rgba(148, 163, 184, 0.38)';
+            infoHtml += `<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:11px; font-weight:900; letter-spacing:.03em;">
+                            <span style="display:inline-flex; align-items:center; gap:8px; padding:3px 10px; border-radius:999px; border:1px solid ${mdBd}; background:${mdBg};">
+                                <span style="opacity:.9;">MASTER DUEL</span>
+                                <span style="display:inline-flex; align-items:center; gap:6px; background:rgba(0,0,0,0.18); border:1px solid rgba(255,255,255,0.14); padding:2px 8px; border-radius:999px; font-variant-numeric:tabular-nums;">
+                                    <img src="${mdIcon}" alt="${mdRarityTt}" style="width:16px;height:16px;object-fit:contain;vertical-align:-2px;">
+                                    <span>${mdRarityTt}</span>
+                                </span>
+                            </span>
+                        </div>`;
+        }
+        // (MD) Tooltip: manter só a primeira linha (Master Duel).
         const ft = getFrameType(card);
         const isLinkTt = frameTypeIsLink(ft) || card.type.toLowerCase().includes("link");
         if (card.attribute || frameTypeIsSpell(ft) || frameTypeIsTrap(ft) || card.type.includes("Spell") || card.type.includes("Trap")) {
@@ -16171,7 +16691,10 @@
                 const banOverlayGrid = banSvgGrid
                     ? `<span class="card-grid-ban-badge" aria-hidden="true">${banSvgGrid}</span>`
                     : '';
-                div.innerHTML = `<div class="suggestion-item-grid-artwrap"><img src="${cardImageUrlForMode(imageObj, viewMode, imageObj && imageObj.id)}" style="width: 100%; height: 100%; object-fit: contain; display: block;" loading="lazy" onerror="this.src='https://images.ygoprodeck.com/images/cards/back_high.jpg'" alt="${card.name}">${banOverlayGrid}</div>`;
+                const md = isMasterDuelFormatFiltered() ? pickMasterDuelRarity(card) : null;
+                const mdUrl = md ? masterDuelRarityIconUrl(md) : '';
+                const mdOverlayGrid = mdUrl ? `<span class="card-grid-md-badge" aria-hidden="true"><img class="md-badge-img" src="${mdUrl}" alt="${md}" style="width:18px;height:18px;object-fit:contain;display:block;"></span>` : '';
+                div.innerHTML = `<div class="suggestion-item-grid-artwrap"><img src="${cardImageUrlForMode(imageObj, viewMode, imageObj && imageObj.id)}" style="width: 100%; height: 100%; object-fit: contain; display: block;" loading="lazy" onerror="this.src='https://images.ygoprodeck.com/images/cards/back_high.jpg'" alt="${card.name}">${banOverlayGrid}${mdOverlayGrid}</div>`;
                 if (card.card_sets && card.card_sets.length) {
                     const fab = document.createElement('button');
                     fab.type = 'button';
@@ -16210,6 +16733,7 @@
                     <div class="card-info-box">
                         <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
                             ${getBanIcon(card)} 
+                            ${getMasterDuelInlineIconForResults(card)}
                             <b class="card-name" style="margin: 0; line-height: 1.2; color: ${nameColor};">${displayName}</b>
                         </div>
                         <div class="info-row" style="display: flex; align-items: center; flex-wrap: wrap; gap: 10px; row-gap: 4px; color: ${textColor};">
@@ -16398,6 +16922,7 @@
         return `
                         <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
                             ${getBanIcon(card)}
+                            ${getMasterDuelInlineIconForDeck(card)}
                             <b class="card-name" style="margin: 0; line-height: 1.2; color: ${nameColor};">${displayNameEscaped}</b>
                         </div>
                         <div class="info-row" style="display: flex; align-items: center; flex-wrap: wrap; gap: 10px; row-gap: 4px; color: ${textColor};">
@@ -16546,11 +17071,17 @@
                 const banDeckHtml = banDeckSvg
                     ? `<span class="card-grid-ban-badge card-grid-ban-badge--deck-thumb" aria-hidden="true">${banDeckSvg}</span>`
                     : '';
+                const mdDeck = (isMasterDuelDeckSelected() && fullCardData) ? pickMasterDuelRarity(fullCardData) : null;
+                const mdDeckUrl = mdDeck ? masterDuelRarityIconUrl(mdDeck) : '';
+                const mdDeckHtml = mdDeckUrl
+                    ? `<span class="card-grid-md-badge card-grid-md-badge--deck-thumb" aria-hidden="true"><img class="md-badge-img" src="${mdDeckUrl}" alt="${mdDeck}" style="width:18px;height:18px;object-fit:contain;display:block;"></span>`
+                    : '';
                 row.innerHTML = `
                     <div class="queue-item-thumb-wrap">
                         <span class="queue-item-qty-badge">${qty}×</span>
                         <img src="${deckThumbUrl}" loading="lazy" alt="" onerror="this.src='https://images.ygoprodeck.com/images/cards/back_high.jpg'">
                         ${banDeckHtml}
+                        ${mdDeckHtml}
                         ${setsFab}
                     </div>
                     <button type="button" class="queue-item-remove" data-i18n-title="queue.remove_copies" title="Remover todas as cópias" data-i18n-aria="queue.remove_copies" aria-label="Remover todas as cópias" data-queue-remove="${escapeHtml(stackImgId)}">✖</button>`;
@@ -17388,6 +17919,20 @@
         return s;
     }
 
+    function computeMasterDuelTotalsForEntries(entries, sideEntries) {
+        const out = { UR: 0, SR: 0, R: 0, N: 0 };
+        const add = (e) => {
+            const full = cardCache[e.id];
+            if (!full) return;
+            const md = pickMasterDuelRarity(full);
+            if (!md || out[md] == null) return;
+            out[md]++;
+        };
+        for (const e of entries || []) add(e);
+        for (const e of sideEntries || []) add(e);
+        return out;
+    }
+
     function aggregateMainDeckTypes(entries) {
         let monsters = 0,
             spells = 0,
@@ -17568,6 +18113,59 @@
         ctx.textAlign = 'left';
         ctx.textBaseline = 'middle';
         ctx.fillText(String(deckTitle || 'Deck').slice(0, 72), pad + 16, y + titleH / 2);
+
+        // Master Duel totals (UR/SR/R/N + gemas) no header da imagem exportada.
+        if (isMasterDuelDeckSelected()) {
+            try {
+                const GEM_URL = 'https://ms.yugipedia.com//5/5d/Gem-Master_Duel.png';
+                const totals = computeMasterDuelTotalsForEntries(q, qSide);
+                const order = ['UR', 'SR', 'R', 'N'];
+                const iconSize = 22;
+                const gemSize = 18;
+                const gap = 12;
+                ctx.font = 'bold 14px Segoe UI, system-ui, sans-serif';
+                ctx.textAlign = 'left';
+                ctx.textBaseline = 'middle';
+                let bx = pad + innerW - 16;
+                // Reaproveita cache, mas com chave separada para a gema.
+                if (!__mdExportBadgeBmpCache.has(GEM_URL)) {
+                    __mdExportBadgeBmpCache.set(GEM_URL, (async () => {
+                        const resp = await fetch(GEM_URL, { mode: 'cors', credentials: 'omit' });
+                        if (!resp.ok) throw new Error('gem_http');
+                        const blob = await resp.blob();
+                        return await createImageBitmap(blob);
+                    })());
+                }
+                const gemBmp = await __mdExportBadgeBmpCache.get(GEM_URL).catch(() => null);
+
+                const measureBlock = (md) => {
+                    const n = totals[md] || 0;
+                    const gems = n * (MASTER_DUEL_RARITY_POINTS[md] || 0);
+                    const wN = ctx.measureText(String(n)).width;
+                    const wG = ctx.measureText(String(gems)).width;
+                    // icon + n + gem + gems + paddings
+                    return iconSize + 6 + wN + 8 + gemSize + 4 + wG + 6;
+                };
+
+                for (const md of order.slice().reverse()) {
+                    const w = measureBlock(md);
+                    bx -= w;
+                    const by = y + titleH / 2 + 0.5;
+                    const url = masterDuelRarityIconUrl(md);
+                    const bmp = await getMasterDuelRarityBadgeBmp(md).catch(() => null);
+                    if (bmp) ctx.drawImage(bmp, bx, by - iconSize / 2, iconSize, iconSize);
+                    ctx.fillStyle = '#ecf0f1';
+                    const n = totals[md] || 0;
+                    ctx.fillText(String(n), bx + iconSize + 6, by);
+                    const gems = n * (MASTER_DUEL_RARITY_POINTS[md] || 0);
+                    const afterN = bx + iconSize + 6 + ctx.measureText(String(n)).width + 8;
+                    if (gemBmp) ctx.drawImage(gemBmp, afterN, by - gemSize / 2, gemSize, gemSize);
+                    ctx.fillStyle = '#fbbf24';
+                    ctx.fillText(String(gems), afterN + gemSize + 4, by);
+                    bx -= gap;
+                }
+            } catch (_) {}
+        }
         y += titleH + gapBetweenSections;
 
         async function drawOneSection(sectionTitle, entries, layout, mode) {
@@ -17674,6 +18272,7 @@
                         canvasRoundRectPath(ctx, cx + 0.5, cy + 0.5, cw - 1, ch - 1, 4);
                         ctx.stroke();
                         drawDeckListBanBadgeOnCtx(ctx, cx, cy, cw, ch, cardCache[entries[i].id]);
+                        await drawDeckListMdRarityBadgeOnCtx(ctx, cx, cy, cw, ch, cardCache[entries[i].id]);
                         bmp.close();
                     } catch (e) {}
                     col++;
