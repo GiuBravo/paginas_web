@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DeckBuilder GiuBravo</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20viewBox%3D%270%200%2064%2064%27%3E%3Cdefs%3E%3ClinearGradient%20id%3D%27shine%27%20x1%3D%270%27%20y1%3D%270%27%20x2%3D%271%27%20y2%3D%271%27%3E%3Cstop%20offset%3D%270%27%20stop-color%3D%27%23ffffff%27%20stop-opacity%3D%270%27/%3E%3Cstop%20offset%3D%270.48%27%20stop-color%3D%27%23ffffff%27%20stop-opacity%3D%270.22%27/%3E%3Cstop%20offset%3D%271%27%20stop-color%3D%27%23ffffff%27%20stop-opacity%3D%270%27/%3E%3C/linearGradient%3E%3CradialGradient%20id%3D%27oval%27%20cx%3D%270.45%27%20cy%3D%270.35%27%20r%3D%270.8%27%3E%3Cstop%20offset%3D%270%27%20stop-color%3D%27%233b3b3b%27/%3E%3Cstop%20offset%3D%270.65%27%20stop-color%3D%27%23131313%27/%3E%3Cstop%20offset%3D%271%27%20stop-color%3D%27%23060606%27/%3E%3C/radialGradient%3E%3C/defs%3E%3Crect%20x%3D%276%27%20y%3D%274%27%20width%3D%2752%27%20height%3D%2756%27%20rx%3D%274%27%20fill%3D%27%23ffffff%27/%3E%3Crect%20x%3D%278%27%20y%3D%276%27%20width%3D%2748%27%20height%3D%2752%27%20rx%3D%273%27%20fill%3D%27%23c68635%27/%3E%3Crect%20x%3D%2711%27%20y%3D%279%27%20width%3D%2742%27%20height%3D%2746%27%20rx%3D%272%27%20fill%3D%27%23724b1a%27/%3E%3Crect%20x%3D%2714%27%20y%3D%2712%27%20width%3D%2736%27%20height%3D%2740%27%20rx%3D%272%27%20fill%3D%27%23805822%27/%3E%3Cpath%20d%3D%27M14%2012%20L50%2052%20L50%2012%20Z%27%20fill%3D%27url(%23shine)%27/%3E%3Cellipse%20cx%3D%2732%27%20cy%3D%2734%27%20rx%3D%2712%27%20ry%3D%2717.5%27%20fill%3D%27url(%23oval)%27/%3E%3C/svg%3E">
+    <meta name="theme-color" content="#0c0c0c">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://unpkg.com/tesseract.js@v4.0.1/dist/tesseract.min.js"></script>
@@ -6204,6 +6206,15 @@
 
     function deckSectionKeyFromIsExtra(isExtra) {
         return isExtra ? 'extra' : 'principal';
+    }
+
+    function deckSectionUiLabel(secKey) {
+        const k = String(secKey || '');
+        const L = getUiLang();
+        const pt = { principal: 'Deck principal', extra: 'Deck extra', side: 'Deck side' };
+        const en = { principal: 'Main deck', extra: 'Extra deck', side: 'Side deck' };
+        const base = L === 'en' ? en : pt;
+        return base[k] || k;
     }
 
     function requestDeckScrollToSection(secKey) {
@@ -17672,6 +17683,7 @@
                     if (!(await forceAddToSide(entry))) return;
                     requestDeckScrollToStack('side', entry.imgId);
                     updateUI();
+                    showToast(`1x ${displayName || 'Carta'} → ${deckSectionUiLabel('side')}`);
                 })();
             });
             div.onclick = (e) => {
@@ -17693,18 +17705,18 @@
                 const qty = parseInt(document.getElementById('search-qty').value) || 1;
                 void (async () => {
                     revealDeckColumnIfHidden();
+                    let added = 0;
                     for (let i = 0; i < qty; i++) {
                         const entry = { id: card.id, name: displayName, imgId: imageObj.id };
                         if (!tryAddEntryToBuild(entry)) {
                             if (!(await forceAddToBuild(entry))) break;
                         }
+                        added += 1;
                     }
-                    requestDeckScrollToStack(
-                        deckSectionKeyFromIsExtra(getQueueCardSection(card) === 'extra'),
-                        String(imageObj.id)
-                    );
+                    const secKey = deckSectionKeyFromIsExtra(getQueueCardSection(card) === 'extra');
+                    requestDeckScrollToStack(secKey, String(imageObj.id));
                     updateUI();
-                    if (isMobile) showToast(T('toast.added_qty_m', { qty, name: displayName }));
+                    if (added > 0) showToast(`${added}x ${displayName || 'Carta'} → ${deckSectionUiLabel(secKey)}`);
                 })();
             };
             bindSuggestionItemDnD(div, { id: card.id, imgId: imageObj.id, name: displayName });
@@ -18057,6 +18069,18 @@
             list.scrollTo({ top: target.offsetTop, behavior: 'smooth' });
         };
 
+        // Auto-scroll durante drag: ao pairar uma “aba” de secção enquanto arrasta, rola para ela.
+        const __deckDragScrollThrottleMs = 220;
+        const __deckDragScrollLastByKey = new Map();
+        const scrollToSectionDuringDrag = (key) => {
+            const k = String(key || '');
+            const now = Date.now();
+            const last = __deckDragScrollLastByKey.get(k) || 0;
+            if (now - last < __deckDragScrollThrottleMs) return;
+            __deckDragScrollLastByKey.set(k, now);
+            scrollToSection(k);
+        };
+
         const anchorsByKey = new Map();
         const headsByKey = new Map();
         const labelsByKey = new Map(sections.map((s) => [String(s.key), String(s.label || '')]));
@@ -18088,6 +18112,8 @@
             head.dataset.deckSection = sec.key;
             head.innerHTML = `<span>${sec.label}</span><span class="deck-section-count">${sec.copies}</span>`;
             head.onclick = () => scrollToSection(String(sec.key));
+            head.ondragenter = (e) => { try { e.preventDefault(); } catch (_) {} scrollToSectionDuringDrag(String(sec.key)); };
+            head.ondragover = (e) => { try { e.preventDefault(); } catch (_) {} scrollToSectionDuringDrag(String(sec.key)); };
             list.appendChild(head);
             headsByKey.set(String(sec.key), head);
 
@@ -18130,6 +18156,8 @@
             el.dataset.deckSection = k;
             el.innerHTML = `<span>${escapeHtml(label)}</span><span class="deck-section-count">${escapeHtml(count)}</span>`;
             el.onclick = () => scrollToSection(k);
+            el.ondragenter = (e) => { try { e.preventDefault(); } catch (_) {} scrollToSectionDuringDrag(k); };
+            el.ondragover = (e) => { try { e.preventDefault(); } catch (_) {} scrollToSectionDuringDrag(k); };
             return el;
         };
 
