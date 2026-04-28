@@ -3829,9 +3829,63 @@
             letter-spacing: 0.06em;
             color: var(--accent);
             flex-shrink: 0;
+            cursor: pointer;
         }
         html.theme-white .deck-section-head {
             background: #e5e7eb;
+        }
+        .deck-section-head.deck-drop-section-active {
+            outline: 2px solid var(--accent);
+            outline-offset: -2px;
+            background: rgba(255, 215, 0, 0.14);
+        }
+        .deck-section-head.deck-drop-section-invalid {
+            outline: 2px solid #ef4444;
+            outline-offset: -2px;
+            background: rgba(239, 68, 68, 0.16);
+            color: #fecaca;
+        }
+        html.theme-white .deck-section-head.deck-drop-section-active {
+            background: rgba(234, 179, 8, 0.14);
+        }
+        html.theme-white .deck-section-head.deck-drop-section-invalid {
+            background: rgba(239, 68, 68, 0.12);
+            color: #b91c1c;
+        }
+        /* Overlay (não remove os separadores do fluxo): mostra seções fixas topo/rodapé
+           quando os títulos reais estiverem fora da área visível do scroll. */
+        .deck-list.deck-queue-view {
+            position: relative;
+        }
+        .deck-sections-overlay {
+            position: absolute;
+            left: 10px;
+            right: 10px;
+            z-index: 6;
+            pointer-events: none;
+        }
+        .deck-sections-overlay.is-top { top: 0; }
+        .deck-sections-overlay.is-bottom { top: 0; }
+        .deck-sections-overlay-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            pointer-events: auto;
+        }
+        .deck-section-head.deck-section-head--overlay {
+            background: rgba(0,0,0,0.55);
+            backdrop-filter: blur(6px);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+        }
+        html.theme-white .deck-section-head.deck-section-head--overlay {
+            background: rgba(229,231,235,0.88);
+        }
+        .deck-section-anchor {
+            height: 0;
+            scroll-margin-top: 0;
+            scroll-margin-bottom: 0;
         }
         .deck-section-count {
             font-variant-numeric: tabular-nums;
@@ -4377,6 +4431,8 @@
         /* Acima do modal de nome do deck (10060) e do painel de impressões (10050). */
         #toast-container { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 10080; pointer-events: none; }
         .toast { background: var(--success); color: white; padding: 12px 20px; border-radius: 30px; font-size: 12px; font-weight: bold; margin-bottom: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); animation: slideUp 0.3s ease, fadeOut 0.5s ease 1.5s forwards; display: flex; align-items: center; gap: 10px; white-space: nowrap; }
+        .toast.toast-error { background: #ef4444; }
+        html.theme-white .toast.toast-error { background: #dc2626; }
 
         .export-menu-overlay {
             position: fixed;
@@ -7753,13 +7809,14 @@
         for (let i = cardQueue.length - 1; i >= 0; i--) {
             if (String(cardQueue[i].imgId) === String(imgId)) moving.unshift(cardQueue.splice(i, 1)[0]);
         }
-        if (!moving.length) return;
+        if (!moving.length) return 0;
         const failed = [];
         for (const e of moving) {
             if (!(await forceAddToSide(cloneQueueEntry(e)))) failed.push(e);
         }
         if (failed.length) cardQueue.push(...failed);
         updateUI();
+        return Math.max(0, moving.length - failed.length);
     }
 
     async function moveStackSideToBuild(imgId) {
@@ -7767,13 +7824,14 @@
         for (let i = cardQueueSide.length - 1; i >= 0; i--) {
             if (String(cardQueueSide[i].imgId) === String(imgId)) moving.unshift(cardQueueSide.splice(i, 1)[0]);
         }
-        if (!moving.length) return;
+        if (!moving.length) return 0;
         const failed = [];
         for (const e of moving) {
             if (!(await forceAddToBuild(cloneQueueEntry(e)))) failed.push(e);
         }
         if (failed.length) cardQueueSide.push(...failed);
         updateUI();
+        return Math.max(0, moving.length - failed.length);
     }
 
     function getDropDeckSectionFromPoint(deckEl, clientX, clientY) {
@@ -7873,6 +7931,84 @@
         if (!deck || deck.dataset.dndInit === '1') return;
         deck.dataset.dndInit = '1';
 
+        function deckSectionUiLabel(secKey) {
+            const k = String(secKey || '');
+            const L = getUiLang();
+            const pt = { principal: 'Deck principal', extra: 'Deck extra', side: 'Deck side' };
+            const en = { principal: 'Main deck', extra: 'Extra deck', side: 'Side deck' };
+            const base = L === 'en' ? en : pt;
+            return base[k] || k;
+        }
+
+        function getQueueEntryByImgId(pool, imgId) {
+            const id = String(imgId);
+            const src = pool === 'side' ? cardQueueSide : cardQueue;
+            for (let i = 0; i < src.length; i++) {
+                if (String(src[i].imgId) === id) return src[i];
+            }
+            return null;
+        }
+
+        function inferIsExtraFromTransfer(dt) {
+            const payloadS = parseDndJson(dt, YGO_DND_SUGGESTION);
+            if (payloadS && payloadS.id != null) {
+                const full = cardCache[String(payloadS.id)];
+                return getQueueCardSection(full) === 'extra';
+            }
+            const payloadQ = parseDndJson(dt, YGO_DND_QUEUE);
+            if (payloadQ && payloadQ.imgId != null) {
+                const pool = payloadQ.pool === 'side' ? 'side' : 'build';
+                const ent = getQueueEntryByImgId(pool, payloadQ.imgId);
+                const full = ent ? cardCache[String(ent.id)] : null;
+                return getQueueCardSection(full) === 'extra';
+            }
+            return null;
+        }
+
+        function isSectionValidForIsExtra(secKey, isExtra) {
+            const k = String(secKey || '');
+            if (!k) return true;
+            if (k === 'side') return true;
+            if (isExtra == null) return true;
+            if (k === 'extra') return !!isExtra;
+            if (k === 'principal') return !isExtra;
+            return true;
+        }
+
+        function setDeckDropSectionHover(deckEl, secKey, validity) {
+            const k = secKey ? String(secKey) : '';
+            const prev = deckEl.dataset.dndHoverSection || '';
+            const prevV = deckEl.dataset.dndHoverValidity || '';
+            const v = validity ? String(validity) : '';
+            if (prev === k && prevV === v) return;
+            deckEl.dataset.dndHoverSection = k;
+            deckEl.dataset.dndHoverValidity = v;
+            deckEl
+                .querySelectorAll('.deck-section-head.deck-drop-section-active, .deck-section-head.deck-drop-section-invalid')
+                .forEach((el) => {
+                    el.classList.remove('deck-drop-section-active');
+                    el.classList.remove('deck-drop-section-invalid');
+                });
+            if (!k) return;
+            deckEl
+                .querySelectorAll(`.deck-section-head[data-deck-section="${CSS.escape(k)}"]`)
+                .forEach((el) => {
+                    if (v === 'invalid') el.classList.add('deck-drop-section-invalid');
+                    else el.classList.add('deck-drop-section-active');
+                });
+        }
+
+        function clearDeckDropSectionHover(deckEl) {
+            deckEl.dataset.dndHoverSection = '';
+            deckEl.dataset.dndHoverValidity = '';
+            deckEl
+                .querySelectorAll('.deck-section-head.deck-drop-section-active, .deck-section-head.deck-drop-section-invalid')
+                .forEach((el) => {
+                    el.classList.remove('deck-drop-section-active');
+                    el.classList.remove('deck-drop-section-invalid');
+                });
+        }
+
         function updateDeckDropPlaceholder(deckEl, ev) {
             const ph = ensureDeckDropPlaceholder(deckEl);
             if (!ph) return;
@@ -7882,10 +8018,15 @@
             } catch {
                 probe = null;
             }
-            const deckBody =
+            let deckBody =
                 closestDeckBody(probe, deckEl) ||
                 deckEl.querySelector('.deck-section-body:last-of-type') ||
                 deckEl;
+            const probeSec = getDropDeckSectionFromPoint(deckEl, ev.clientX, ev.clientY);
+            if (probeSec) {
+                const secBody = deckEl.querySelector(`.deck-section-body[data-deck-section="${CSS.escape(String(probeSec))}"]`);
+                if (secBody) deckBody = secBody;
+            }
 
             const items = deckBody === deckEl ? [] : Array.from(deckBody.querySelectorAll('.queue-item'));
             if (!items.length) {
@@ -7985,6 +8126,9 @@
                 e.preventDefault();
                 e.dataTransfer.dropEffect = 'copy';
                 deck.classList.add('deck-drop-target');
+                const sec = getDropDeckSectionFromPoint(deck, e.clientX, e.clientY);
+                const isExtra = inferIsExtraFromTransfer(e.dataTransfer);
+                setDeckDropSectionHover(deck, sec, isSectionValidForIsExtra(sec, isExtra) ? 'valid' : 'invalid');
                 if (isDeckSortCustom()) updateDeckDropPlaceholder(deck, e);
                 return;
             }
@@ -7992,19 +8136,25 @@
                 e.preventDefault();
                 e.dataTransfer.dropEffect = 'move';
                 deck.classList.add('deck-drop-target');
+                const sec = getDropDeckSectionFromPoint(deck, e.clientX, e.clientY);
+                const isExtra = inferIsExtraFromTransfer(e.dataTransfer);
+                setDeckDropSectionHover(deck, sec, isSectionValidForIsExtra(sec, isExtra) ? 'valid' : 'invalid');
                 if (isDeckSortCustom()) updateDeckDropPlaceholder(deck, e);
                 return;
             }
+            clearDeckDropSectionHover(deck);
             clearDeckDropPlaceholder(deck);
         });
         deck.addEventListener('dragleave', (e) => {
             if (e.relatedTarget && deck.contains(e.relatedTarget)) return;
             deck.classList.remove('deck-drop-target');
+            clearDeckDropSectionHover(deck);
             clearDeckDropPlaceholder(deck);
         });
         deck.addEventListener('drop', async (e) => {
             e.preventDefault();
             deck.classList.remove('deck-drop-target');
+            clearDeckDropSectionHover(deck);
             const phIns = getDeckInsertionFromPlaceholder(deck);
             const dropSec = getDropDeckSectionFromPoint(deck, e.clientX, e.clientY);
             const phEl = deck.querySelector('.deck-drop-placeholder');
@@ -8021,6 +8171,13 @@
                     qty = parseInt(document.getElementById('search-qty').value, 10) || 1;
                 }
                 const nm = payloadSugg.name || '';
+                const full = cardCache[String(payloadSugg.id)];
+                const isExtra = getQueueCardSection(full) === 'extra';
+                if (!isSectionValidForIsExtra(effectiveDropForSuggest, isExtra)) {
+                    showToast(`${qty}x ${nm || 'Carta'} — inválido em ${deckSectionUiLabel(effectiveDropForSuggest)}.`, { variant: 'error' });
+                    clearDeckDropPlaceholder(deck);
+                    return;
+                }
                 const toAdd = [];
                 for (let i = 0; i < qty; i++) {
                     toAdd.push({ id: String(payloadSugg.id), name: nm, imgId: String(payloadSugg.imgId) });
@@ -8045,6 +8202,7 @@
                     } finally {
                         popSuppressCardSurfaceEnterAnimation();
                     }
+                    showToast(`${qty}x ${nm || 'Carta'} → ${deckSectionUiLabel('side')}`);
                     clearDeckDropPlaceholder(deck);
                     return;
                 }
@@ -8066,6 +8224,7 @@
                 } finally {
                     popSuppressCardSurfaceEnterAnimation();
                 }
+                showToast(`${qty}x ${nm || 'Carta'} → ${deckSectionUiLabel(effectiveDropForSuggest === 'extra' ? 'extra' : 'principal')}`);
                 clearDeckDropPlaceholder(deck);
                 return;
             }
@@ -8077,9 +8236,12 @@
                 }
                 const dragId = String(payloadQ.imgId);
                 const dragPool = payloadQ.pool === 'side' ? 'side' : 'build';
+                const ent = getQueueEntryByImgId(dragPool, dragId);
+                const full = ent ? cardCache[String(ent.id)] : null;
+                const isExtra = getQueueCardSection(full) === 'extra';
 
                 if (dragPool === 'build' && dropSec === 'side') {
-                    await moveStackBuildToSide(dragId);
+                    const moved = await moveStackBuildToSide(dragId);
                     clearDeckDropPlaceholder(deck);
                     pushSuppressCardSurfaceEnterAnimation();
                     try {
@@ -8087,10 +8249,16 @@
                     } finally {
                         popSuppressCardSurfaceEnterAnimation();
                     }
+                    if (moved > 0) showToast(`${moved}x ${(ent && ent.name) ? ent.name : ''} → ${deckSectionUiLabel('side')}`.trim());
                     return;
                 }
                 if (dragPool === 'side' && (dropSec === 'principal' || dropSec === 'extra')) {
-                    await moveStackSideToBuild(dragId);
+                    if (!isSectionValidForIsExtra(dropSec, isExtra)) {
+                        showToast(`Inválido em ${deckSectionUiLabel(dropSec)}.`, { variant: 'error' });
+                        clearDeckDropPlaceholder(deck);
+                        return;
+                    }
+                    const moved = await moveStackSideToBuild(dragId);
                     clearDeckDropPlaceholder(deck);
                     pushSuppressCardSurfaceEnterAnimation();
                     try {
@@ -8098,6 +8266,7 @@
                     } finally {
                         popSuppressCardSurfaceEnterAnimation();
                     }
+                    if (moved > 0) showToast(`${moved}x ${(ent && ent.name) ? ent.name : ''} → ${deckSectionUiLabel(dropSec)}`.trim());
                     return;
                 }
 
@@ -8115,6 +8284,11 @@
                         if (dragPool === 'side' && dropSec === 'side') {
                             moveSideStackInQueue(dragId, refId, insertBefore);
                         } else if (dragPool === 'build' && (dropSec === 'principal' || dropSec === 'extra')) {
+                            if (!isSectionValidForIsExtra(dropSec, isExtra)) {
+                                showToast(`Inválido em ${deckSectionUiLabel(dropSec)}.`, { variant: 'error' });
+                                clearDeckDropPlaceholder(deck);
+                                return;
+                            }
                             moveDeckStackInQueue(dragId, refId, insertBefore);
                         }
                         pushSuppressCardSurfaceEnterAnimation();
@@ -8132,6 +8306,7 @@
         if (deck.dataset.dndGlobalEnd !== '1') {
             deck.dataset.dndGlobalEnd = '1';
             document.addEventListener('dragend', () => {
+                clearDeckDropSectionHover(deck);
                 clearDeckDropPlaceholder(deck);
                 deck.classList.remove('deck-drop-target');
             });
@@ -14549,11 +14724,13 @@
         return translateCardTypeUiStr(String(typeStr), L);
     }
 
-    function showToast(msg) {
+    function showToast(msg, opts) {
         const container = document.getElementById('toast-container');
         const toast = document.createElement('div');
-        toast.className = 'toast';
-        toast.innerHTML = `<span>✔</span> ${msg}`;
+        const variant = opts && opts.variant ? String(opts.variant) : 'success';
+        toast.className = `toast${variant === 'error' ? ' toast-error' : ''}`;
+        const ic = variant === 'error' ? '✖' : '✔';
+        toast.innerHTML = `<span>${ic}</span> ${msg}`;
         container.appendChild(toast);
         setTimeout(() => toast.remove(), 2000);
     }
@@ -17786,11 +17963,49 @@
         }
 
         const sections = buildDeckSectionPlans(counts);
+
+        const scrollToSection = (key) => {
+            const head = list.querySelector(`#deck-head-${key}`);
+            const a = list.querySelector(`#deck-sec-${key}`);
+            const target = head || a;
+            if (!target) return;
+            list.scrollTo({ top: target.offsetTop, behavior: 'smooth' });
+        };
+
+        const anchorsByKey = new Map();
+        const headsByKey = new Map();
+        const labelsByKey = new Map(sections.map((s) => [String(s.key), String(s.label || '')]));
+        const countsByKey = new Map(sections.map((s) => [String(s.key), String(s.copies || 0)]));
+
+        const overlayTop = document.createElement('div');
+        overlayTop.className = 'deck-sections-overlay is-top';
+        overlayTop.innerHTML = `<div class="deck-sections-overlay-stack" id="deck-sections-overlay-top"></div>`;
+
+        const overlayBottom = document.createElement('div');
+        overlayBottom.className = 'deck-sections-overlay is-bottom';
+        overlayBottom.innerHTML = `<div class="deck-sections-overlay-stack" id="deck-sections-overlay-bottom"></div>`;
+
+        list.appendChild(overlayTop);
+        list.appendChild(overlayBottom);
+
         for (const sec of sections) {
+            const anchor = document.createElement('div');
+            anchor.className = 'deck-section-anchor';
+            anchor.id = `deck-sec-${sec.key}`;
+            anchor.dataset.deckSection = sec.key;
+            list.appendChild(anchor);
+            anchorsByKey.set(String(sec.key), anchor);
+
+            // Cabeçalho original no fluxo (mantém separador como antes).
             const head = document.createElement('div');
             head.className = 'deck-section-head';
+            head.id = `deck-head-${sec.key}`;
+            head.dataset.deckSection = sec.key;
             head.innerHTML = `<span>${sec.label}</span><span class="deck-section-count">${sec.copies}</span>`;
+            head.onclick = () => scrollToSection(String(sec.key));
             list.appendChild(head);
+            headsByKey.set(String(sec.key), head);
+
             const pool = sec.key === 'side' ? 'side' : 'build';
             if (qLayout === 'grid') {
                 const body = document.createElement('div');
@@ -17806,6 +18021,76 @@
                 list.appendChild(body);
             }
         }
+
+        const topStack = overlayTop.querySelector('#deck-sections-overlay-top');
+        const bottomStack = overlayBottom.querySelector('#deck-sections-overlay-bottom');
+
+        const cloneHead = (key) => {
+            const k = String(key);
+            const label = labelsByKey.get(k) || k;
+            const count = countsByKey.get(k) || '0';
+            const el = document.createElement('div');
+            el.className = 'deck-section-head deck-section-head--overlay';
+            el.setAttribute('data-overlay-key', k);
+            el.dataset.deckSection = k;
+            el.innerHTML = `<span>${escapeHtml(label)}</span><span class="deck-section-count">${escapeHtml(count)}</span>`;
+            el.onclick = () => scrollToSection(k);
+            return el;
+        };
+
+        const setOverlayStacks = (topKeys, bottomKeys) => {
+            topStack.innerHTML = '';
+            bottomStack.innerHTML = '';
+            topKeys.forEach((k) => topStack.appendChild(cloneHead(k)));
+            bottomKeys.forEach((k) => bottomStack.appendChild(cloneHead(k)));
+            overlayBottom.style.display = bottomKeys.length ? '' : 'none';
+            overlayTop.style.display = topKeys.length ? '' : 'none';
+        };
+
+        const updateOverlayState = () => {
+            const st = list.scrollTop || 0;
+            const h = list.clientHeight || 0;
+            const pad = 8;
+
+            const headMain = headsByKey.get('principal');
+            const headExtra = headsByKey.get('extra');
+            const headSide = headsByKey.get('side');
+            if (!headMain || !headExtra || !headSide) return;
+
+            const extraTop = headExtra.offsetTop;
+            const sideTop = headSide.offsetTop;
+
+            // Regras desejadas:
+            // - "principal" sempre aparece no topo (fixo).
+            // - "extra" passa do rodapé para o topo quando o scroll chega nele.
+            // - "side" idem.
+            const reachedExtra = st >= (extraTop - pad);
+            const reachedSide = st >= (sideTop - pad);
+
+            const topKeys = ['principal']
+                .concat(reachedExtra ? ['extra'] : [])
+                .concat(reachedSide ? ['side'] : []);
+
+            const bottomKeys = []
+                .concat(!reachedExtra ? ['extra'] : [])
+                .concat(!reachedSide ? ['side'] : []);
+
+            setOverlayStacks(topKeys, bottomKeys);
+
+            // Mantém os overlays "presos" à viewport do scroll, sem ocupar espaço no fluxo.
+            overlayTop.style.transform = `translateY(${st + pad}px)`;
+            const bottomH = bottomStack.getBoundingClientRect().height || 0;
+            const yBottom = st + Math.max(pad, h - bottomH - pad);
+            overlayBottom.style.transform = `translateY(${yBottom}px)`;
+        };
+
+        // Atualiza ao rolar e imediatamente após render.
+        list.onscroll = () => updateOverlayState();
+        try {
+            window.addEventListener('resize', updateOverlayState, { passive: true });
+        } catch (_) {}
+        updateOverlayState();
+
         paintCardSurfaceEnterAnimations('#deck-items', '.queue-item');
     }
 
