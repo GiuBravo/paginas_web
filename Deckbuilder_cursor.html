@@ -3871,6 +3871,7 @@
             flex-direction: column;
             gap: 6px;
             pointer-events: auto;
+            align-items: center; /* centraliza os botões do overlay na coluna do deck */
         }
         .deck-section-head.deck-section-head--overlay {
             background: rgba(0,0,0,0.55);
@@ -3878,6 +3879,20 @@
             border: 1px solid var(--border);
             border-radius: 10px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+            /* Evita “faixas” largas que cobrem os títulos reais por trás */
+            width: fit-content;
+            max-width: min(420px, 100%);
+            display: inline-flex;
+        }
+        .deck-section-head.deck-section-head--overlay > span:first-child {
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .deck-section-head.deck-section-head--overlay > .deck-section-count {
+            flex: 0 0 auto;
+            margin-left: 10px;
         }
         html.theme-white .deck-section-head.deck-section-head--overlay {
             background: rgba(229,231,235,0.88);
@@ -3913,6 +3928,28 @@
             gap: 0;
             align-items: stretch;
             border-bottom: 1px solid var(--border);
+        }
+        .deck-empty-hint {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px;
+            opacity: 0.8;
+            font-size: 11px;
+            grid-column: 1 / -1; /* em modo 2 colunas, ocupa a largura toda */
+            min-width: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .deck-empty-hint > i {
+            flex: 0 0 auto;
+            opacity: 0.9;
+        }
+        .deck-empty-hint > span {
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
         @media (min-width: 901px) {
             .app-container.deck-col-wide .deck-section-body--list {
@@ -6143,6 +6180,8 @@
     let __suppressCardSurfaceEnterAnimDepth = 0;
     let __deckSnapshotForSurface = null;
     let surfaceFilterFxTimer = null;
+    /** Scroll automático pós-add: tenta focar a pilha/carta recém adicionada. */
+    let __pendingDeckScrollTarget = null;
     /** Ordenação do deck: critério no DOM (#deck-sort-by); «Personalizado» = ordem da fila + arrastar; «Aleatório» só baralha ao mudar o critério ou ao botão de ordem. */
     let deckSortDirection = 1;
     /** Ultimo criterio lido do select (fallback se getElementById('deck-sort-by') falhar). */
@@ -6161,6 +6200,31 @@
 
     function isDeckValidationDisabled() {
         return !!deckValidationDisabled;
+    }
+
+    function deckSectionKeyFromIsExtra(isExtra) {
+        return isExtra ? 'extra' : 'principal';
+    }
+
+    function requestDeckScrollToSection(secKey) {
+        const k = String(secKey || '').trim().toLowerCase();
+        if (!k) return;
+        if (k !== 'principal' && k !== 'extra' && k !== 'side') return;
+        __pendingDeckScrollTarget = { sectionKey: k, stackImgId: null };
+    }
+
+    function requestDeckScrollToStack(sectionKey, stackImgId) {
+        const k = String(sectionKey || '').trim().toLowerCase();
+        const id = stackImgId != null ? String(stackImgId) : '';
+        if (!k || !id) return requestDeckScrollToSection(k);
+        if (k !== 'principal' && k !== 'extra' && k !== 'side') return;
+        __pendingDeckScrollTarget = { sectionKey: k, stackImgId: id };
+    }
+
+    function requestDeckScrollForBuildEntry(entry) {
+        const full = entry && entry.id != null ? cardCache[String(entry.id)] : null;
+        const isExtra = getQueueCardSection(full) === 'extra';
+        requestDeckScrollToStack(deckSectionKeyFromIsExtra(isExtra), entry && entry.imgId != null ? entry.imgId : null);
     }
 
     function getDeckBanlistTypeForValidation() {
@@ -7215,7 +7279,19 @@
     function insertDeckEntriesAtStackBoundary(entries, refImgId, insertBefore) {
         if (!entries.length) return;
         if (!refImgId) {
-            cardQueue.push(...entries);
+            // Sem referência: em modo «Personalizado», adiciona no fim da secção (principal/extra) onde pertence.
+            // Nos restantes modos, a ordenação será aplicada no `renderDeckQueue()` via `applyDeckSortToQueue()`.
+            if (isDeckSortCustom()) {
+                const ex = [], main = [];
+                for (const e of entries) {
+                    const full = e && e.id != null ? cardCache[String(e.id)] : null;
+                    (getQueueCardSection(full) === 'extra' ? ex : main).push(e);
+                }
+                if (main.length) cardQueue.push(...main);
+                if (ex.length) cardQueue.push(...ex);
+            } else {
+                cardQueue.push(...entries);
+            }
             return;
         }
         const refId = String(refImgId);
@@ -7794,6 +7870,7 @@
         const removed = removeOneCopyFromQueueByImgId(cardQueue, imgId);
         if (!removed) return;
         if (!(await forceAddToSide(removed))) cardQueue.push(removed);
+        requestDeckScrollToStack('side', removed.imgId);
         updateUI();
     }
 
@@ -7801,6 +7878,7 @@
         const removed = removeOneCopyFromQueueByImgId(cardQueueSide, imgId);
         if (!removed) return;
         if (!(await forceAddToBuild(removed))) cardQueueSide.push(removed);
+        requestDeckScrollForBuildEntry(removed);
         updateUI();
     }
 
@@ -7815,6 +7893,7 @@
             if (!(await forceAddToSide(cloneQueueEntry(e)))) failed.push(e);
         }
         if (failed.length) cardQueue.push(...failed);
+        requestDeckScrollToStack('side', String(imgId));
         updateUI();
         return Math.max(0, moving.length - failed.length);
     }
@@ -7830,6 +7909,8 @@
             if (!(await forceAddToBuild(cloneQueueEntry(e)))) failed.push(e);
         }
         if (failed.length) cardQueueSide.push(...failed);
+        const anyMoved = moving.find((e) => !failed.includes(e)) || moving[0];
+        requestDeckScrollForBuildEntry(anyMoved);
         updateUI();
         return Math.max(0, moving.length - failed.length);
     }
@@ -8196,6 +8277,7 @@
                             if (!(await forceAddToSide(ent))) break;
                         }
                     }
+                    requestDeckScrollToStack('side', toAdd && toAdd[0] ? toAdd[0].imgId : null);
                     pushSuppressCardSurfaceEnterAnimation();
                     try {
                         updateUI();
@@ -8218,6 +8300,10 @@
                     }
                 }
                 revealDeckColumnIfHidden();
+                requestDeckScrollToStack(
+                    effectiveDropForSuggest === 'extra' ? 'extra' : 'principal',
+                    toAdd && toAdd[0] ? toAdd[0].imgId : null
+                );
                 pushSuppressCardSurfaceEnterAnimation();
                 try {
                     updateUI();
@@ -8633,14 +8719,12 @@
             { key: 'extra', label: T('ui.deck_section_extra'), ids: extraIds },
             { key: 'side', label: T('ui.deck_section_side'), ids: orderedSideIds }
         ];
-        return defs
-            .map((d) => ({
-                key: d.key,
-                label: d.label,
-                ids: d.ids,
-                copies: d.ids.reduce((s, id) => s + (counts[id] || 0), 0)
-            }))
-            .filter((s) => s.ids.length > 0);
+        return defs.map((d) => ({
+            key: d.key,
+            label: d.label,
+            ids: d.ids,
+            copies: d.ids.reduce((s, id) => s + (counts[id] || 0), 0)
+        }));
     }
 
     function updateDeckSortOrderIcon() {
@@ -17586,6 +17670,7 @@
                 void (async () => {
                     revealDeckColumnIfHidden();
                     if (!(await forceAddToSide(entry))) return;
+                    requestDeckScrollToStack('side', entry.imgId);
                     updateUI();
                 })();
             });
@@ -17614,6 +17699,10 @@
                             if (!(await forceAddToBuild(entry))) break;
                         }
                     }
+                    requestDeckScrollToStack(
+                        deckSectionKeyFromIsExtra(getQueueCardSection(card) === 'extra'),
+                        String(imageObj.id)
+                    );
                     updateUI();
                     if (isMobile) showToast(T('toast.added_qty_m', { qty, name: displayName }));
                 })();
@@ -17787,11 +17876,7 @@
         cardQueueSide.forEach((c) => {
             counts[c.imgId] = (counts[c.imgId] || 0) + 1;
         });
-
-        if (cardQueue.length === 0 && cardQueueSide.length === 0) {
-            paintCardSurfaceEnterAnimations('#deck-items', '.queue-item');
-            return;
-        }
+        const deckIsEmpty = (cardQueue.length === 0 && cardQueueSide.length === 0);
 
         const rowHint = isDeckSortCustom()
             ? 'Principal/Extra: clique +1 · direito: enviar 1 ao Side · meio: −1 · arrastar na secção Side: move pilha · arrastar entre linhas: reordenar. Side: clique ou direito → principal/extra · meio: −1.'
@@ -18012,12 +18097,22 @@
                 body.className = 'deck-section-body deck-section-body--grid';
                 body.dataset.deckSection = sec.key;
                 sec.ids.forEach((id) => appendStackRow(body, id, pool));
+                if (deckIsEmpty || !sec.ids.length) {
+                    const msg = sec.key === 'side' ? T('ui.deck_section_empty_side') : T('ui.deck_section_empty');
+                    const safeMsg = escapeHtml(String(msg || ''));
+                    body.innerHTML += `<div class="deck-empty-hint" title="${safeMsg}"><i class="fas fa-inbox" aria-hidden="true"></i><span>${safeMsg}</span></div>`;
+                }
                 list.appendChild(body);
             } else {
                 const body = document.createElement('div');
                 body.className = 'deck-section-body deck-section-body--list';
                 body.dataset.deckSection = sec.key;
                 sec.ids.forEach((id) => appendStackRow(body, id, pool));
+                if (deckIsEmpty || !sec.ids.length) {
+                    const msg = sec.key === 'side' ? T('ui.deck_section_empty_side') : T('ui.deck_section_empty');
+                    const safeMsg = escapeHtml(String(msg || ''));
+                    body.innerHTML += `<div class="deck-empty-hint" title="${safeMsg}"><i class="fas fa-inbox" aria-hidden="true"></i><span>${safeMsg}</span></div>`;
+                }
                 list.appendChild(body);
             }
         }
@@ -18090,6 +18185,38 @@
             window.addEventListener('resize', updateOverlayState, { passive: true });
         } catch (_) {}
         updateOverlayState();
+
+        // Pós-add: rola até à pilha/carta recém adicionada (respeita a ordenação já aplicada).
+        // Se a pilha não for encontrada, faz fallback para o cabeçalho da secção.
+        const pending = __pendingDeckScrollTarget;
+        if (pending) {
+            __pendingDeckScrollTarget = null;
+            const k = pending.sectionKey;
+            const stackId = pending.stackImgId;
+            const pad = 18;
+            const st = list.scrollTop || 0;
+            const h = list.clientHeight || 0;
+            const cssEsc = (s) => {
+                try { return CSS && CSS.escape ? CSS.escape(String(s)) : String(s); } catch (_) { return String(s); }
+            };
+            const body = k ? list.querySelector(`.deck-section-body[data-deck-section="${cssEsc(k)}"]`) : null;
+            const row =
+                body && stackId
+                    ? body.querySelector(`.queue-item[data-stack-img-id="${cssEsc(stackId)}"]`)
+                    : null;
+            const target = row || (k ? (list.querySelector(`#deck-head-${k}`) || list.querySelector(`#deck-sec-${k}`)) : null);
+            if (target) {
+                const y = target.offsetTop || 0;
+                const th = target.offsetHeight || 0;
+                const topVisible = y >= (st + pad);
+                const bottomVisible = (y + th) <= (st + h - pad);
+                if (!(topVisible && bottomVisible)) {
+                    // Coloca o alvo perto do fundo da viewport (útil quando adiciona no fim).
+                    const desiredTop = Math.max(0, y - Math.max(0, h - th - 12));
+                    list.scrollTo({ top: desiredTop, behavior: 'smooth' });
+                }
+            }
+        }
 
         paintCardSurfaceEnterAnimations('#deck-items', '.queue-item');
     }
