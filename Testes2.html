@@ -11,7 +11,7 @@
     <meta name="referrer" content="strict-origin-when-cross-origin">
     <meta http-equiv="Permissions-Policy" content="camera=(self), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()">
     <!-- Ajustar listas quando hospedar ou adicionar origens novas -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' https://cdnjs.cloudflare.com https://unpkg.com blob:; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; img-src https: data: blob:; font-src https://cdnjs.cloudflare.com https://fonts.gstatic.com data:; connect-src 'self' https://db.ygoprodeck.com https://ygoprodeck.com https://www.ygoprodeck.com https://images.ygoprodeck.com https://cdnjs.cloudflare.com https://unpkg.com https://ms.yugipedia.com https://static.wikia.nocookie.net https://fonts.googleapis.com https://fonts.gstatic.com; worker-src 'self' blob: https://unpkg.com https://cdnjs.cloudflare.com; frame-src 'self' blob: data:; media-src blob: https: data:; object-src 'none';">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' https://cdnjs.cloudflare.com https://unpkg.com blob:; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; img-src 'self' https: data: blob:; font-src https://cdnjs.cloudflare.com https://fonts.gstatic.com data:; connect-src 'self' https://db.ygoprodeck.com https://ygoprodeck.com https://www.ygoprodeck.com https://images.ygoprodeck.com https://cdnjs.cloudflare.com https://unpkg.com https://ms.yugipedia.com https://static.wikia.nocookie.net https://fonts.googleapis.com https://fonts.gstatic.com; worker-src 'self' blob: https://unpkg.com https://cdnjs.cloudflare.com; frame-src 'self' blob: data:; media-src blob: https: data:; object-src 'none';">
     <!-- Integrity SRI omitido: cdnjs pode servir variantes diferentes (gzip/brotli) e hashes calculados falham em alguns proxies de dev -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
@@ -1201,6 +1201,10 @@
             justify-content: center;
             width: 100%;
         }
+        .help-controls .icon-btn-stack--tool {
+            min-width: 46px;
+            width: 46px;
+        }
         .help-controls .btn-icon-tool {
             min-width: 38px;
             width: 38px;
@@ -1209,6 +1213,7 @@
             align-items: center;
             justify-content: center;
         }
+        html:not(.help-enabled) .help-controls .icon-btn-stack:has(#btn-help-mouse) { display: none !important; }
         html:not(.help-enabled) #btn-help-mouse { display: none !important; }
         .search-qty-stack .stepper input[type="number"] {
             /* cabe 2 dígitos (ex: 99) sem "esticar" a barra */
@@ -1713,6 +1718,114 @@
             justify-content: center;
             flex: 0 0 auto;
         }
+
+        /* Modal de créditos */
+        #credits-modal { z-index: 10090; }
+        #credits-modal .deck-name-modal-dialog { max-width: 560px; }
+        #credits-modal .credits-modal-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        #credits-modal .credits-modal-header h3 { margin: 0; }
+        #credits-modal .credits-modal-close-top {
+            width: 38px;
+            min-width: 38px;
+            height: 35px;
+            padding: 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex: 0 0 auto;
+        }
+        #credits-modal.credits-locked .deck-name-modal-backdrop { cursor: default; }
+        #credits-modal .credits-body { font-size: 15px; line-height: 1.5; display: flex; flex-direction: column; gap: 12px; }
+        #credits-modal .credits-head {
+            display: flex;
+            gap: 14px;
+            align-items: flex-start;
+            justify-content: space-between;
+            flex-wrap: wrap;
+        }
+        #credits-modal .credits-head-left { min-width: 260px; flex: 1 1 260px; }
+        #credits-modal .credits-head-right {
+            max-width: 100%;
+            flex: 0 1 auto;
+            display: flex;
+            align-items: flex-start;
+            justify-content: flex-end;
+        }
+        #credits-modal .credits-brand-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            align-items: flex-end;
+        }
+        #credits-modal .credits-yugioh-logo {
+            height: 64px;
+            width: auto;
+            max-width: min(340px, 100%);
+            object-fit: contain;
+            display: block;
+            opacity: 0.95;
+            filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.35));
+        }
+        #credits-modal .credits-konami-logo {
+            height: 26px;
+            width: auto;
+            max-width: min(340px, 100%);
+            object-fit: contain;
+            display: block;
+            opacity: 0.92;
+            filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.35));
+        }
+        @media (min-width: 860px) {
+            #credits-modal .credits-head { flex-wrap: nowrap; }
+        }
+        #credits-modal .credits-pix { display: flex; gap: 14px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+        #credits-modal .credits-pix-text { min-width: 220px; }
+        #credits-modal .credits-qr-row { display: flex; gap: 12px; align-items: center; }
+        #credits-modal .credits-qr { width: 230px; height: 230px; border-radius: 10px; border: 1px solid var(--border); background: #fff; padding: 6px; box-sizing: border-box; }
+        #credits-modal .credits-qr img { width: 100%; height: 100%; display: block; }
+        #credits-modal .credits-pix-logo {
+            height: 18px;
+            display: inline-block;
+            vertical-align: middle;
+            margin-left: 6px;
+            opacity: 0.95;
+        }
+        #credits-modal .credits-pix-logo-box {
+            width: 230px;
+            height: 230px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: #fff;
+            padding: 10px 12px;
+            box-sizing: border-box;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #credits-modal .credits-pix-logo-hero {
+            width: 100%;
+            height: 100%;
+            display: block;
+            object-fit: contain;
+            opacity: 0.98;
+        }
+        #credits-modal .credits-api { display: flex; flex-direction: column; gap: 6px; }
+        #credits-modal .credits-api-line { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+        #credits-modal .credits-api-logo {
+            height: 44px;
+            width: auto;
+            max-width: 100%;
+            display: block;
+            object-fit: contain;
+            opacity: 0.95;
+        }
+
         html.theme-white .deck-name-modal-dialog {
             background: #fff;
         }
@@ -5305,6 +5418,56 @@
     </div>
 </div>
 
+<div id="credits-modal" class="deck-name-modal" aria-hidden="true">
+    <div class="deck-name-modal-backdrop" id="credits-modal-backdrop"></div>
+    <div class="deck-name-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="credits-modal-title">
+        <div class="credits-modal-header">
+            <h3 id="credits-modal-title">Créditos</h3>
+            <button type="button" class="btn-view btn-icon-tool credits-modal-close-top" id="credits-modal-close" title="Fechar" aria-label="Fechar">
+                <i class="fas fa-times" aria-hidden="true"></i>
+            </button>
+        </div>
+        <div class="credits-body">
+            <div class="credits-head">
+                <div class="credits-head-left">
+                    <div>
+                        <strong>Desenvolvedor:</strong><br />
+                        Giovanni Viol Assis<br />
+                    </div>
+                    <div style="margin-top: 10px;">
+                        <strong>Email e chave PIX:</strong><br />
+                        <span style="word-break: break-all;">giubravo@yahoo.com.br</span>
+                    </div>
+                </div>
+                <div class="credits-head-right" aria-hidden="true">
+                    <div class="credits-brand-stack">
+                        <img class="credits-yugioh-logo" alt="Yu-Gi-Oh!" loading="lazy" src="assets/yugioh-logo.png" />
+                        <img class="credits-konami-logo" alt="KONAMI" loading="lazy" src="assets/konami.png" />
+                    </div>
+                </div>
+            </div>
+            <div class="credits-qr-row" aria-label="QR Code do PIX">
+                <div class="credits-pix-logo-box" aria-label="Logo do PIX">
+                    <img class="credits-pix-logo-hero" alt="PIX" loading="lazy" src="assets/pix-logo.png" />
+                </div>
+                <div class="credits-qr">
+                    <img alt="QR Code PIX" loading="lazy" src="assets/pix-qr.png" />
+                </div>
+            </div>
+            <div class="credits-api">
+                <div class="credits-api-line">
+                    <strong>API:</strong> ygoprodeck
+                </div>
+                <img class="credits-api-logo" alt="YGOPRODeck" loading="lazy" src="assets/ygoprodeck.png" />
+            </div>
+            <div>
+                Mais de <strong>25 mil linhas</strong> de código em meses de dedicação!<br />
+                Você pode me ajudar me pagando um lanche. Obrigado.
+            </div>
+        </div>
+    </div>
+</div>
+
 <div id="tooltip-details-modal" class="tooltip-details-modal" aria-hidden="true">
     <div class="tooltip-details-modal-backdrop" id="tooltip-details-modal-backdrop"></div>
     <div class="tooltip-details-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="tooltip-details-modal-title">
@@ -5794,15 +5957,26 @@
                         <button type="button" onclick="document.getElementById('search-qty').stepUp()" aria-label="+"><i class="fas fa-plus" aria-hidden="true"></i></button>
                     </div>
                 </div>
-                <div class="icon-btn-stack icon-btn-stack--tool icon-btn-stack--tool-wide">
-                    <label class="theme-row-label" for="btn-help-toggle" data-i18n="ui.help_label">Ajuda</label>
+                <div class="icon-btn-stack--tool icon-btn-stack--tool-wide">
                     <div class="help-controls" role="group" data-i18n-aria="ui.help_group_aria" aria-label="Ajuda">
-                        <button type="button" id="btn-help-toggle" class="btn-secondary btn-icon-tool" data-i18n-aria="ui.help_toggle_off" title="" aria-label="" aria-pressed="false">
-                            <i class="fas fa-circle-question" aria-hidden="true"></i>
-                        </button>
-                        <button type="button" id="btn-help-mouse" class="btn-secondary btn-icon-tool" data-i18n-aria="ui.help_mouse_btn" title="" aria-label="">
-                            <i class="fas fa-mouse" aria-hidden="true"></i>
-                        </button>
+                        <div class="icon-btn-stack icon-btn-stack--tool">
+                            <span class="theme-row-label" data-i18n="ui.help_label">Ajuda</span>
+                            <button type="button" id="btn-help-toggle" class="btn-secondary btn-icon-tool" data-i18n-aria="ui.help_toggle_off" title="" aria-label="" aria-pressed="false">
+                                <i class="fas fa-circle-question" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                        <div class="icon-btn-stack icon-btn-stack--tool">
+                            <span class="theme-row-label" data-i18n="ui.help_mouse_btn">Mouse</span>
+                            <button type="button" id="btn-help-mouse" class="btn-secondary btn-icon-tool" data-i18n-aria="ui.help_mouse_btn" title="" aria-label="">
+                                <i class="fas fa-mouse" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                        <div class="icon-btn-stack icon-btn-stack--tool">
+                            <span class="theme-row-label">Créditos</span>
+                            <button type="button" id="btn-credits" class="btn-secondary btn-icon-tool" title="Créditos" aria-label="Créditos">
+                                <i class="fas fa-heart" aria-hidden="true"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
                 <div class="icon-btn-stack icon-btn-stack--tool">
@@ -10581,6 +10755,7 @@
 
         if (btnSave) {
             btnSave.onclick = () => {
+                openCreditsModal({ lockCloseForMs: 5000 });
                 if (!cardQueue.length && !cardQueueSide.length) {
                     showToast(T('toast.deck_empty_save'));
                     return;
@@ -16104,6 +16279,91 @@
         setTimeout(() => { try { closeBtn.focus(); } catch (_) {} }, 0);
     }
 
+    let __creditsModalInitDone = false;
+    let __creditsModalKeyHandler = null;
+    let __creditsModalUnlockTimer = null;
+    let __creditsCloseAllowedAt = 0;
+
+    function creditsIsCloseAllowed() {
+        return Date.now() >= (__creditsCloseAllowedAt || 0);
+    }
+    function creditsUpdateCloseUi() {
+        const modal = document.getElementById('credits-modal');
+        const closeBtn = document.getElementById('credits-modal-close');
+        if (!modal || !closeBtn) return;
+        const locked = !creditsIsCloseAllowed();
+        modal.classList.toggle('credits-locked', locked);
+        closeBtn.style.display = locked ? 'none' : '';
+    }
+    function creditsLockCloseForMs(ms) {
+        if (__creditsModalUnlockTimer) {
+            clearTimeout(__creditsModalUnlockTimer);
+            __creditsModalUnlockTimer = null;
+        }
+        const n = Number(ms || 0);
+        __creditsCloseAllowedAt = n > 0 ? Date.now() + n : 0;
+        creditsUpdateCloseUi();
+        if (n > 0) {
+            __creditsModalUnlockTimer = setTimeout(() => {
+                __creditsModalUnlockTimer = null;
+                creditsUpdateCloseUi();
+            }, n + 30);
+        }
+    }
+
+    function closeCreditsModal(force) {
+        const modal = document.getElementById('credits-modal');
+        if (!modal || !modal.classList.contains('is-open')) return;
+        if (!force && !creditsIsCloseAllowed()) return;
+        modal.classList.remove('is-open');
+        modal.setAttribute('aria-hidden', 'true');
+        creditsLockCloseForMs(0);
+        if (__creditsModalKeyHandler) {
+            document.removeEventListener('keydown', __creditsModalKeyHandler);
+            __creditsModalKeyHandler = null;
+        }
+    }
+    function openCreditsModal(opts) {
+        const modal = document.getElementById('credits-modal');
+        if (!modal) return;
+        const o = opts || {};
+        creditsLockCloseForMs(o.lockCloseForMs || 0);
+        if (__creditsModalKeyHandler) {
+            document.removeEventListener('keydown', __creditsModalKeyHandler);
+            __creditsModalKeyHandler = null;
+        }
+        __creditsModalKeyHandler = (e) => {
+            if (!modal.classList.contains('is-open')) return;
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                closeCreditsModal(false);
+            }
+        };
+        document.addEventListener('keydown', __creditsModalKeyHandler);
+        modal.classList.add('is-open');
+        modal.setAttribute('aria-hidden', 'false');
+        setTimeout(() => { try { document.getElementById('credits-modal-close')?.focus(); } catch (_) {} }, 0);
+    }
+    function initCreditsModal() {
+        if (__creditsModalInitDone) return;
+        const modal = document.getElementById('credits-modal');
+        const closeBtn = document.getElementById('credits-modal-close');
+        const backdrop = document.getElementById('credits-modal-backdrop');
+        if (!modal || !closeBtn || !backdrop) return;
+        __creditsModalInitDone = true;
+
+        function tryClose() { closeCreditsModal(false); }
+
+        closeBtn.addEventListener('click', tryClose);
+        backdrop.addEventListener('click', tryClose);
+
+        document.getElementById('btn-credits')?.addEventListener('click', () => {
+            openCreditsModal({ lockCloseForMs: 0 });
+        });
+
+        creditsUpdateCloseUi();
+    }
+
     let uiHelpEnabled = false;
     function isHelpEnabled() { return !!uiHelpEnabled; }
     function applyHelpUi() {
@@ -16119,7 +16379,9 @@
         }
         const mouseBtn = document.getElementById('btn-help-mouse');
         if (mouseBtn) {
-            mouseBtn.style.display = isHelpEnabled() ? '' : 'none';
+            const wrap = mouseBtn.closest('.icon-btn-stack');
+            if (wrap) wrap.style.display = isHelpEnabled() ? '' : 'none';
+            else mouseBtn.style.display = isHelpEnabled() ? '' : 'none';
             mouseBtn.setAttribute('title', '');
             mouseBtn.setAttribute('aria-label', T('ui.help_mouse_btn'));
         }
@@ -19206,6 +19468,7 @@
             initFiltersColumnToolbar();
             syncHelpDisabledInlineAddFilterLayout();
             initExportMenu();
+            initCreditsModal();
             initDeckValidationControls();
             initNativeSelectCustomUi();
             try {
@@ -19219,6 +19482,7 @@
         initFiltersColumnToolbar();
         syncHelpDisabledInlineAddFilterLayout();
         initExportMenu();
+        initCreditsModal();
         initDeckValidationControls();
         initNativeSelectCustomUi();
         try {
@@ -20571,6 +20835,7 @@
         overlay.dataset.init = '1';
         if (panel) panel.addEventListener('click', (e) => e.stopPropagation());
         document.getElementById('btn-open-export-menu')?.addEventListener('click', () => {
+            openCreditsModal({ lockCloseForMs: 5000 });
             exportMenuShowRoot();
             overlay.classList.add('is-open');
         });
