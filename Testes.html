@@ -6,6 +6,13 @@
     <title>DeckBuilder GiuBravo</title>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20viewBox%3D%270%200%2064%2064%27%3E%3Cdefs%3E%3ClinearGradient%20id%3D%27shine%27%20x1%3D%270%27%20y1%3D%270%27%20x2%3D%271%27%20y2%3D%271%27%3E%3Cstop%20offset%3D%270%27%20stop-color%3D%27%23ffffff%27%20stop-opacity%3D%270%27/%3E%3Cstop%20offset%3D%270.48%27%20stop-color%3D%27%23ffffff%27%20stop-opacity%3D%270.22%27/%3E%3Cstop%20offset%3D%271%27%20stop-color%3D%27%23ffffff%27%20stop-opacity%3D%270%27/%3E%3C/linearGradient%3E%3CradialGradient%20id%3D%27oval%27%20cx%3D%270.45%27%20cy%3D%270.35%27%20r%3D%270.8%27%3E%3Cstop%20offset%3D%270%27%20stop-color%3D%27%233b3b3b%27/%3E%3Cstop%20offset%3D%270.65%27%20stop-color%3D%27%23131313%27/%3E%3Cstop%20offset%3D%271%27%20stop-color%3D%27%23060606%27/%3E%3C/radialGradient%3E%3C/defs%3E%3Crect%20x%3D%276%27%20y%3D%274%27%20width%3D%2752%27%20height%3D%2756%27%20rx%3D%274%27%20fill%3D%27%23ffffff%27/%3E%3Crect%20x%3D%278%27%20y%3D%276%27%20width%3D%2748%27%20height%3D%2752%27%20rx%3D%273%27%20fill%3D%27%23c68635%27/%3E%3Crect%20x%3D%2711%27%20y%3D%279%27%20width%3D%2742%27%20height%3D%2746%27%20rx%3D%272%27%20fill%3D%27%23724b1a%27/%3E%3Crect%20x%3D%2714%27%20y%3D%2712%27%20width%3D%2736%27%20height%3D%2740%27%20rx%3D%272%27%20fill%3D%27%23805822%27/%3E%3Cpath%20d%3D%27M14%2012%20L50%2052%20L50%2012%20Z%27%20fill%3D%27url(%23shine)%27/%3E%3Cellipse%20cx%3D%2732%27%20cy%3D%2734%27%20rx%3D%2712%27%20ry%3D%2717.5%27%20fill%3D%27url(%23oval)%27/%3E%3C/svg%3E">
     <meta name="theme-color" content="#0c0c0c">
+    <!-- Camada de segurança sem hospedagem: políticas só no documento + SRI nos CDNs públicos -->
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
+    <meta http-equiv="Permissions-Policy" content="camera=(self), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()">
+    <!-- Ajustar listas quando hospedar ou adicionar origens novas -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' https://cdnjs.cloudflare.com https://unpkg.com blob:; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; img-src https: data: blob:; font-src https://cdnjs.cloudflare.com https://fonts.gstatic.com data:; connect-src 'self' https://db.ygoprodeck.com https://ygoprodeck.com https://www.ygoprodeck.com https://images.ygoprodeck.com https://cdnjs.cloudflare.com https://unpkg.com https://ms.yugipedia.com https://static.wikia.nocookie.net https://fonts.googleapis.com https://fonts.gstatic.com; worker-src 'self' blob: https://unpkg.com https://cdnjs.cloudflare.com; frame-src 'self' blob: data:; media-src blob: https: data:; object-src 'none';">
+    <!-- Integrity SRI omitido: cdnjs pode servir variantes diferentes (gzip/brotli) e hashes calculados falham em alguns proxies de dev -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://unpkg.com/tesseract.js@v4.0.1/dist/tesseract.min.js"></script>
@@ -434,6 +441,11 @@
         #tooltip-img { width: 100px; border-radius: 4px; border: 1px solid #444; object-fit: contain; }
         #tooltip-meta { flex: 1; display: flex; flex-direction: column; }
         #tooltip-name { color: white; font-weight: bold; font-size: 16px; margin-bottom: 8px; }
+        #tooltip-beta-name-row { display: none; margin: -2px 0 8px 0; font-size: 11px; line-height: 1.4; text-align: center; }
+        #tooltip-beta-name-row .tt-beta-name-label { color: #9ca3af; font-weight: 600; margin-right: 6px; }
+        #tooltip-beta-name-row .tt-beta-name-value { color: #e5e7eb; word-break: break-word; }
+        html.theme-white #tooltip-beta-name-row .tt-beta-name-label { color: #6b7280 !important; }
+        html.theme-white #tooltip-beta-name-row .tt-beta-name-value { color: #374151 !important; }
 
         .tt-ban-container {
             display: flex;
@@ -1525,6 +1537,62 @@
             border-top-color: var(--border);
             color: var(--text);
         }
+        /* Linha separadora entre bloco de formatos e datas TCG/OCG */
+        #tooltip-text .tt-tooltip-formats + .tt-tooltip-dates {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #444;
+        }
+        html.theme-white #tooltip-text .tt-tooltip-formats + .tt-tooltip-dates {
+            border-top-color: var(--border);
+        }
+        #tooltip-text .tt-tooltip-formats {
+            margin-top: 5px;
+            padding-top: 6px;
+            padding-bottom: 4px;
+            border-top: 1px solid #444;
+            font-size: 12px;
+            color: #fff;
+            line-height: 1.42;
+        }
+        html.theme-white #tooltip-text .tt-tooltip-formats {
+            border-top-color: var(--border);
+            color: var(--text);
+        }
+        #tooltip-text .tt-tooltip-formats .tt-formats-badges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px 8px;
+            margin-top: 4px;
+            align-items: center;
+        }
+        #tooltip-text .tt-tooltip-formats .tt-format-chip {
+            display: inline-block;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 1px 7px;
+            border-radius: 10px;
+            border-style: solid;
+            border-width: 1px;
+            max-width: 100%;
+            word-break: break-word;
+        }
+        #tooltip-text .tt-format-chip--c0 { background: rgba(59, 130, 246, 0.22); border-color: rgba(96, 165, 250, 0.55); color: #bfdbfe; }
+        #tooltip-text .tt-format-chip--c1 { background: rgba(16, 185, 129, 0.2); border-color: rgba(52, 211, 153, 0.5); color: #a7f3d0; }
+        #tooltip-text .tt-format-chip--c2 { background: rgba(245, 158, 11, 0.22); border-color: rgba(251, 191, 36, 0.55); color: #fde68a; }
+        #tooltip-text .tt-format-chip--c3 { background: rgba(236, 72, 153, 0.2); border-color: rgba(249, 168, 212, 0.5); color: #fbcfe8; }
+        #tooltip-text .tt-format-chip--c4 { background: rgba(139, 92, 246, 0.22); border-color: rgba(167, 139, 250, 0.55); color: #ddd6fe; }
+        #tooltip-text .tt-format-chip--c5 { background: rgba(14, 165, 233, 0.2); border-color: rgba(56, 189, 248, 0.5); color: #bae6fd; }
+        #tooltip-text .tt-format-chip--c6 { background: rgba(244, 63, 94, 0.2); border-color: rgba(251, 113, 133, 0.5); color: #fecdd3; }
+        #tooltip-text .tt-format-chip--c7 { background: rgba(234, 179, 8, 0.18); border-color: rgba(250, 204, 21, 0.5); color: #fef08a; }
+        html.theme-white #tooltip-text .tt-format-chip--c0 { background: rgba(219, 234, 254, 0.95); border-color: #93c5fd; color: #1e3a8a; }
+        html.theme-white #tooltip-text .tt-format-chip--c1 { background: rgba(209, 250, 229, 0.95); border-color: #6ee7b7; color: #064e3b; }
+        html.theme-white #tooltip-text .tt-format-chip--c2 { background: rgba(254, 243, 199, 0.95); border-color: #fcd34d; color: #78350f; }
+        html.theme-white #tooltip-text .tt-format-chip--c3 { background: rgba(252, 231, 243, 0.98); border-color: #f9a8d4; color: #831843; }
+        html.theme-white #tooltip-text .tt-format-chip--c4 { background: rgba(237, 233, 254, 0.95); border-color: #c4b5fd; color: #4c1d95; }
+        html.theme-white #tooltip-text .tt-format-chip--c5 { background: rgba(224, 242, 254, 0.95); border-color: #7dd3fc; color: #0c4a6e; }
+        html.theme-white #tooltip-text .tt-format-chip--c6 { background: rgba(255, 241, 242, 0.98); border-color: #fda4af; color: #881337; }
+        html.theme-white #tooltip-text .tt-format-chip--c7 { background: rgba(254, 252, 232, 0.98); border-color: #facc15; color: #713f12; }
         #tooltip-text .tt-cardsets-grid {
             line-height: 1.18;
         }
@@ -1956,6 +2024,10 @@
         .tooltip-details-modal-body #card-tooltip.tt-in-modal #tooltip-name {
             font-size: clamp(22px, 3.0vw, 26px) !important;
             margin-bottom: 6px !important;
+            text-align: center !important;
+        }
+        .tooltip-details-modal-body #card-tooltip.tt-in-modal #tooltip-beta-name-row {
+            text-align: center !important;
         }
         .tooltip-details-modal-body #card-tooltip.tt-in-modal #tooltip-info-rows {
             flex: 0 0 auto;
@@ -5115,6 +5187,7 @@
         <img id="tooltip-img" src="" alt="Carta" data-i18n-alt="ui.card_alt">
         <div class="tt-details">
             <h3 id="tooltip-name" style="margin-top: 0; margin-bottom: 10px;"></h3>
+            <div id="tooltip-beta-name-row" aria-hidden="true"></div>
             <div id="tooltip-archetype-row" style="display: none; margin: 0 0 8px 0; font-size: 11px; color: #e5e7eb; line-height: 1.4;"></div>
             <div id="tooltip-info-rows"></div>
             <div id="tooltip-text" style="font-size: 13px; color: #fff;"></div>
@@ -6160,6 +6233,25 @@
 </div>
 
 <script>
+    (function observeCspViolations() {
+        if (typeof window === 'undefined' || !window.addEventListener) return;
+        window.addEventListener(
+            'securitypolicyviolation',
+            (e) => {
+                try {
+                    console.warn(
+                        '[Deckbuilder CSP]',
+                        String(e.violatedDirective || ''),
+                        String(e.blockedURI || '') || '(inline)',
+                        String(e.effectiveDirective || ''),
+                        typeof e.lineno === 'number' ? 'L' + e.lineno : ''
+                    );
+                } catch (_) {}
+            },
+            { passive: true }
+        );
+    })();
+
     const { jsPDF } = window.jspdf;
     const starIcon = "https://ygoprodeck.com/wp-content/uploads/2017/01/level.png";
     let cardQueue = [],
@@ -6341,7 +6433,7 @@
                 const mdWrap = document.createElement('div');
                 mdWrap.className = 'deck-tooltip-md-badge';
                 mdWrap.setAttribute('aria-hidden', 'true');
-                mdWrap.innerHTML = `<img src="${url}" alt="${md || ''}" loading="lazy">`;
+                mdWrap.innerHTML = `<img src="${escAttr(url)}" alt="${escAttr(md || '')}" loading="lazy">`;
                 thumbCol.appendChild(mdWrap);
             }
         }
@@ -6419,7 +6511,7 @@
                 const mdSt = document.createElement('div');
                 mdSt.className = 'deck-tooltip-md-badge';
                 mdSt.setAttribute('aria-hidden', 'true');
-                mdSt.innerHTML = `<img src="${url}" alt="${md || ''}" loading="lazy">`;
+                mdSt.innerHTML = `<img src="${escAttr(url)}" alt="${escAttr(md || '')}" loading="lazy">`;
                 thumbCol.appendChild(mdSt);
             }
         }
@@ -7224,11 +7316,7 @@
     function parseDndJson(dt, mime) {
         const raw = dt.getData(mime);
         if (!raw) return null;
-        try {
-            return JSON.parse(raw);
-        } catch {
-            return null;
-        }
+        return safeJsonParse(raw, null);
     }
 
     function ensureDeckDropPlaceholder(deckEl) {
@@ -7492,7 +7580,7 @@
                 const btn = document.createElement('button');
                 btn.type = 'button';
                 btn.className = 'deck-swap-pick-row';
-                btn.innerHTML = `<img src="${thumb}" alt="" loading="lazy" onerror="this.src='https://images.ygoprodeck.com/images/cards/back_high.jpg'"><span>${escapeHtml(s.name || s.imgId)}</span>`;
+                btn.innerHTML = `<img src="${escAttr(String(thumb || ''))}" alt="" loading="lazy" decoding="async" onerror="this.src='https://images.ygoprodeck.com/images/cards/back_high.jpg'"><span>${escapeHtml(s.name || s.imgId)}</span>`;
                 btn.addEventListener('click', () => {
                     cleanup();
                     resolve(String(s.imgId));
@@ -7676,9 +7764,9 @@
                 const banOverlayGrid = banSvgGrid ? `<span class="card-grid-ban-badge" aria-hidden="true">${banSvgGrid}</span>` : '';
                 const md = isMasterDuelFormatFiltered() ? pickMasterDuelRarity(card) : null;
                 const mdUrl = md ? masterDuelRarityIconUrl(md) : '';
-                const mdOverlayGrid = mdUrl ? `<span class="card-grid-md-badge" aria-hidden="true"><img class="md-badge-img" src="${mdUrl}" alt="${md}" style="width:18px;height:18px;object-fit:contain;display:block;"></span>` : '';
+                const mdOverlayGrid = mdUrl ? `<span class="card-grid-md-badge" aria-hidden="true"><img class="md-badge-img" src="${escAttr(mdUrl)}" alt="${escapeHtml(String(md || ''))}" loading="lazy" decoding="async" style="width:18px;height:18px;object-fit:contain;display:block;"></span>` : '';
                 const artSrc = cardImageUrlForMode(card.current_image, view, s.imgId);
-                div.innerHTML = `<div class="suggestion-item-grid-artwrap"><img src="${artSrc}" style="width: 100%; height: 100%; object-fit: contain; display: block;" loading="lazy" onerror="this.src='https://images.ygoprodeck.com/images/cards/back_high.jpg'" alt="${escapeHtml(card.name || 'Card')}">${banOverlayGrid}${mdOverlayGrid}</div>`;
+                div.innerHTML = `<div class="suggestion-item-grid-artwrap"><img src="${escAttr(String(artSrc || ''))}" style="width: 100%; height: 100%; object-fit: contain; display: block;" loading="lazy" decoding="async" onerror="this.src='https://images.ygoprodeck.com/images/cards/back_high.jpg'" alt="${escapeHtml(card.name || 'Card')}">${banOverlayGrid}${mdOverlayGrid}</div>`;
                 if (card.card_sets && card.card_sets.length) {
                     const fab = document.createElement('button');
                     fab.type = 'button';
@@ -7698,7 +7786,8 @@
                 const attrRaw = card.attribute
                     ? card.attribute.toUpperCase()
                     : (frameTypeIsSpell(ft) ? "SPELL" : frameTypeIsTrap(ft) ? "TRAP" : (String(card.type || '').includes("Spell") ? "SPELL" : "TRAP"));
-                const attrIconUrl = card.attribute ? `https://images.ygoprodeck.com/images/cards/${attrRaw}.jpg` : "";
+                const attrSegRm = sanitizeYgoCdnAttribFileSegment(card.attribute);
+                const attrIconUrl = card.attribute ? `https://images.ygoprodeck.com/images/cards/${attrSegRm}.jpg` : "";
                 const raceIconUrl = `https://images.ygoprodeck.com/images/cards/icons/race/${encodeURIComponent(card.race || '')}.png`;
                 const starIcon = "https://ygoprodeck.com/wp-content/uploads/2017/01/level.png";
                 const raceTraduzida = !siteUiIsPt() ? card.race : (racesTrad[card.race] || card.race);
@@ -7712,7 +7801,7 @@
                     ? getLinkMarkersHtml(card.linkmarkers, 13) : '';
                 div.innerHTML = `
                     <div class="list-card-thumb">
-                    <img src="${cardImageUrlForMode(card.current_image, view, s.imgId)}" loading="lazy" onerror="this.src='https://images.ygoprodeck.com/images/cards/back_high.jpg'" alt="${escapeHtml(card.name || 'Card')}">
+                    <img src="${escAttr(String(cardImageUrlForMode(card.current_image, view, s.imgId) || ''))}" loading="lazy" decoding="async" onerror="this.src='https://images.ygoprodeck.com/images/cards/back_high.jpg'" alt="${escapeHtml(card.name || 'Card')}">
                     </div>
                     <div class="card-info-box">
                         <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
@@ -8459,6 +8548,157 @@
     }
 
     /**
+     * Controlo (C0), overrides bidireccionais — texto de utilizador, URLs e payloads armazenados.
+     */
+    function stripDangerousUnicodeAndControls(str) {
+        return String(str ?? '')
+            .replace(/\u0000/g, '')
+            .replace(/[\u0001-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '')
+            .replace(/[\u202E\u202D\u061C\u200E-\u200F\u2066-\u2069]/g, '');
+    }
+
+    /** `JSON.parse` sem poluição de prototype via `__proto__` / `constructor`. */
+    function safeJsonParse(raw, fallback) {
+        try {
+            return JSON.parse(String(raw ?? ''), (key, val) => {
+                if (key === '__proto__' || key === 'constructor') return undefined;
+                return val;
+            });
+        } catch (_) {
+            return fallback;
+        }
+    }
+
+    /** Passcodes válidos para parâmetro `id` em cardinfo (lista separada por vírgulas). */
+    function coerceYuGiOhNumericIds(ids) {
+        const out = [];
+        const seen = new Set();
+        for (const x of ids || []) {
+            const s = String(x == null ? '' : x).trim();
+            if (!/^\d{1,16}$/.test(s)) continue;
+            if (seen.has(s)) continue;
+            seen.add(s);
+            const n = Number(s);
+            if (!Number.isSafeInteger(n) || n <= 0) continue;
+            out.push(s);
+        }
+        return out;
+    }
+
+    function sanitizeYuGiOhCardId(raw) {
+        const xs = coerceYuGiOhNumericIds([raw]);
+        return xs.length ? Number(xs[0]) : null;
+    }
+
+    function sanitizeTokenImageId(raw, fallbackIdNum) {
+        const t = String(raw ?? '').trim().slice(0, 160);
+        if (/^[A-Za-z0-9_.-]+$/.test(t)) return t;
+        return String(fallbackIdNum ?? '').trim().slice(0, 160);
+    }
+
+    /**
+     * Reduz fragmentos típicos de tentativas SQLi em texto enviado a APIs (camada cliente; servidor deve usar parametrização).
+     */
+    function stripSqlDangerousSequences(str) {
+        let t = String(str ?? '').replace(/\0/g, '');
+        t = t.replace(/;/g, ' ');
+        t = t.replace(/\/\*[\s\S]*?\*\//g, ' ');
+        t = t.replace(/--([\s]|$)/g, ' ');
+        t = t.replace(
+            /\b(union\s+all\s+select|union\s+select|into\s+outfile|load_file\s*\(|information_schema\b|benchmark\s*\(|sleep\s*\(|waitfor\s+delay|exec\s+|execute\b|truncate\s+|drop\s+table\b|alter\s+table\b)/gi,
+            ' '
+        );
+        return t.replace(/\s+/g, ' ').trim();
+    }
+
+    const DECK_PUBLIC_API_RATE_LIMIT = Object.freeze({
+        /** Máximo de chamadas HTTP ao público `/api/` do YGOPRODeck por janela de 1s (por página). */
+        maxQueriesPerRollingSecond: 18
+    });
+
+    const __deckPublicApiRollingHits = [];
+
+    async function throttleDeckbuilderPublicDbApiHit() {
+        for (;;) {
+            const now = Date.now();
+            const winMs = 1000;
+            while (__deckPublicApiRollingHits.length && __deckPublicApiRollingHits[0] <= now - winMs) {
+                __deckPublicApiRollingHits.shift();
+            }
+            const cap = DECK_PUBLIC_API_RATE_LIMIT.maxQueriesPerRollingSecond;
+            if (__deckPublicApiRollingHits.length < cap) {
+                __deckPublicApiRollingHits.push(now);
+                return;
+            }
+
+            await new Promise((resolve) =>
+                setTimeout(resolve, Math.max(10, Math.min(2500, __deckPublicApiRollingHits[0] + winMs - Date.now())))
+            );
+        }
+    }
+
+    function fetchInputToUrlString(input) {
+        if (typeof input === 'string') return input;
+        try {
+            if (typeof Request !== 'undefined' && typeof input === 'object' && input instanceof Request) return input.url;
+        } catch (_) {}
+        try {
+            if (input && typeof input === 'object' && typeof input.url === 'string') return input.url;
+        } catch (_) {}
+        return '';
+    }
+
+    function isDeckbuilderDbYgoApiUrlCandidate(urlLike) {
+        const s = String(urlLike ?? '');
+        if (!s.includes('ygoprodeck.com')) return false;
+        try {
+            const u = new URL(s, 'https://db.ygoprodeck.com');
+            return (
+                String(u.pathname || '').toLowerCase().indexOf('/api/') !== -1 &&
+                (u.hostname === 'db.ygoprodeck.com' || /\.ygoprodeck\.com$/i.test(u.hostname))
+            );
+        } catch (_) {
+            return /\bygoprodeck\.com\/api\b/i.test(s);
+        }
+    }
+
+    /** Aborta chamadas públicas penduradas (mitiga SSRF cliente + filas zombies). */
+    const PUBLIC_DB_API_FETCH_TIMEOUT_MS = 55000;
+
+    function decorateFetchInitWithTimeout(init) {
+        if (typeof AbortController === 'undefined') return { initFinal: init, clearDeadline: () => {} };
+        const merged = Object.assign({}, init || {});
+        if (merged.signal) return { initFinal: merged, clearDeadline: () => {} };
+
+        const ac = new AbortController();
+        const tid = setTimeout(() => {
+            try {
+                ac.abort(new DOMException('API request timeout', 'TimeoutError'));
+            } catch (_) {
+                try {
+                    ac.abort();
+                } catch (__) {}
+            }
+        }, PUBLIC_DB_API_FETCH_TIMEOUT_MS);
+        merged.signal = ac.signal;
+        const clearDeadline = () => clearTimeout(tid);
+        return { initFinal: merged, clearDeadline };
+    }
+
+    /** `fetch` com limite em janela deslizante + tempo máximo ao público `/api/` YGOPRODeck. */
+    function deckbuilderPublicApiFetch(input, init) {
+        const reqUrl = fetchInputToUrlString(input);
+        const deco = decorateFetchInitWithTimeout(init);
+        const finalize = deco.clearDeadline || (() => {});
+
+        const runFetch = () => fetch(input, deco.initFinal).finally(finalize);
+
+        if (!isDeckbuilderDbYgoApiUrlCandidate(reqUrl)) return runFetch();
+
+        return throttleDeckbuilderPublicDbApiHit().then(runFetch);
+    }
+
+    /**
      * Frame type (YGOPRODeck) é mais estável que `type` textual.
      * Fallback: heurística leve por `type` quando `frameType` faltar (ex.: dados legados/import).
      * Retorna sempre em lowercase (ex.: "link", "xyz_pendulum", "spell", "trap", "effect", ...).
@@ -9119,6 +9359,51 @@
         if (getUiLang() === 'pt') return String(card.name_pt || card.name || '').trim();
         return String(card.name || '').trim();
     }
+
+    function betaTooltipNorm(s) {
+        return String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
+    }
+
+    /**
+     * beta_name na YGOPRODeck vem apenas em inglês (mesmo com `language=pt` na API).
+     * Após mescla EN+segunda língua, `beta_name` na raiz pode ser sobrescrito — preferimos `beta_name_en`.
+     */
+    function getCardBetaNameForTooltip(card) {
+        if (!card) return '';
+        const m = card.misc_info && card.misc_info[0];
+        const fromEn = card.beta_name_en != null && String(card.beta_name_en).trim()
+            ? String(card.beta_name_en).trim()
+            : '';
+        const fromRoot = card.beta_name != null && String(card.beta_name).trim()
+            ? String(card.beta_name).trim()
+            : '';
+        const fromMisc = m && m.beta_name != null && String(m.beta_name).trim()
+            ? String(m.beta_name).trim()
+            : '';
+        return fromEn || fromRoot || fromMisc;
+    }
+
+    function shouldShowBetaNameInTooltip(card) {
+        const beta = getCardBetaNameForTooltip(card);
+        const officialEn = String(card.name != null ? card.name : '').trim();
+        if (!beta || !officialEn) return false;
+        return betaTooltipNorm(beta) !== betaTooltipNorm(officialEn);
+    }
+
+    /** Mescla resposta traduzida sobre EN sem perder `beta_name` inglês (campo só existe nessa língua). */
+    function mergedCardDualLangPreserveBeta(existing, localizedCard, trLang) {
+        const merged = { ...existing, ...localizedCard, __lang: trLang };
+        const prevEnglishBeta =
+            (existing.beta_name_en != null && String(existing.beta_name_en).trim())
+                ? String(existing.beta_name_en).trim()
+                : (existing.beta_name != null && String(existing.beta_name).trim() ? String(existing.beta_name).trim() : '');
+        if (prevEnglishBeta) {
+            merged.beta_name_en = (merged.beta_name_en != null && String(merged.beta_name_en).trim())
+                ? String(merged.beta_name_en).trim()
+                : prevEnglishBeta;
+        }
+        return merged;
+    }
     function getCardTextSortLocale() {
         if (isEnglishMode()) return 'en';
         const L = getUiLang();
@@ -9327,6 +9612,8 @@
         "ban.limited": { pt: "Limitada", en: "Limited" },
         "ban.semi": { pt: "Semi-Limitada", en: "Semi-Limited" },
         "ui.archetype_prefix": { pt: "Arqu\u00e9tipo:", en: "Archetype:" },
+        "ui.tooltip_beta_name": { pt: "Nome anterior (beta):", en: "Beta / former name:" },
+        "ui.tooltip_formats": { pt: "Formatos", en: "Formats" },
         "ui.card_sets_title": { pt: "{name} \u2014 impress\u00f5es / sets", en: "{name} \u2014 prints / sets" },
         "ui.csp_prints_aria": { pt: "C\u00f3digos, raridades e pre\u00e7os por impress\u00e3o", en: "Codes, rarities, and prices per printing" },
         "ui.csp_scroll_aria": { pt: "Impress\u00f5es e cole\u00e7\u00f5es", en: "Prints and sets" },
@@ -9923,23 +10210,70 @@
      * Decks salvos: localStorage (funciona em file:// e https). Cookie legado só leitura para migração
      * (cookies costumam falhar ao abrir o HTML direto do disco).
      */
+    function sanitizeSavedDecksPayload(arr) {
+        if (!Array.isArray(arr)) return [];
+        const out = [];
+        for (const d of arr) {
+            if (!d || typeof d !== 'object') continue;
+            const id = stripDangerousUnicodeAndControls(String(d.id ?? '')).trim().slice(0, 48);
+            if (!id || !Array.isArray(d.stacks)) continue;
+            const name =
+                stripDangerousUnicodeAndControls(String(d.name || 'Deck')).trim().slice(0, 80) ||
+                'Deck';
+            const ts = Number.isFinite(Number(d.ts)) ? Number(d.ts) : Date.now();
+            out.push({
+                id,
+                name,
+                ts,
+                stacks: sanitizeDeckStacksForLoad(d.stacks),
+                sideStacks: sanitizeDeckStacksForLoad(d.sideStacks || [])
+            });
+            if (out.length >= SAVED_DECKS_MAX) break;
+        }
+        return out;
+    }
+
+    function sanitizeDeckStacksForLoad(stacks) {
+        const out = [];
+        if (!Array.isArray(stacks)) return out;
+        for (const s of stacks) {
+            if (!s || typeof s !== 'object') continue;
+            const idNum = sanitizeYuGiOhCardId(s.id);
+            if (idNum == null) continue;
+            const qty = Math.min(999, Math.max(1, parseInt(String(s.qty ?? '1'), 10) || 1));
+            let name = '';
+            try {
+                const rawName =
+                    String(s.name || '').trim() ||
+                    (cardCache[idNum] ? displayNameForApiCard(cardCache[idNum]) : '') ||
+                    T('ui.card_generic');
+                name = stripDangerousUnicodeAndControls(String(rawName)).trim().slice(0, 200);
+            } catch (_) {}
+            if (!name) try { name = T('ui.card_generic'); } catch (_) { name = 'Card'; }
+            const imgId = sanitizeTokenImageId(s.imgId, idNum);
+            out.push({ id: idNum, imgId, name, qty });
+        }
+        return out;
+    }
+
     function loadSavedDecksFromStorage() {
         try {
             const ls = localStorage.getItem(SAVED_DECKS_STORAGE_KEY);
             if (ls) {
-                const j = JSON.parse(ls);
-                if (Array.isArray(j)) return j;
+                const j = safeJsonParse(ls, null);
+                if (Array.isArray(j)) return sanitizeSavedDecksPayload(j);
             }
         } catch (_) {}
         try {
             const raw = getCookie(SAVED_DECKS_COOKIE);
             if (!raw) return [];
-            const j = JSON.parse(raw);
+            const j = safeJsonParse(raw, null);
             if (!Array.isArray(j) || !j.length) return [];
+            const cleaned = sanitizeSavedDecksPayload(j);
             try {
-                localStorage.setItem(SAVED_DECKS_STORAGE_KEY, JSON.stringify(j));
+                localStorage.setItem(SAVED_DECKS_STORAGE_KEY, JSON.stringify(cleaned));
             } catch (_) {}
-            return j;
+            return cleaned;
         } catch {
             return [];
         }
@@ -9997,16 +10331,29 @@
         };
     }
 
+    function sanitizeQueueCardSnapshotRow(c) {
+        if (!c || typeof c !== 'object') return null;
+        const idNum = sanitizeYuGiOhCardId(c.id);
+        if (idNum == null) return null;
+        let name = '';
+        try {
+            name = stripDangerousUnicodeAndControls(String(c.name || '')).trim().slice(0, 200);
+        } catch (_) {}
+        if (!name) try { name = T('ui.card_generic'); } catch (_) { name = 'Card'; }
+        const imgId = sanitizeTokenImageId(c.imgId, idNum);
+        return { id: idNum, name, imgId };
+    }
+
     /** Legado: array só com build; novo formato: `{ build, side }`. */
     function restoreDeckStateSnapshot(snap) {
         if (!snap) return;
         if (Array.isArray(snap)) {
-            cardQueue = snap.map((c) => ({ id: c.id, name: c.name, imgId: c.imgId }));
+            cardQueue = snap.map(sanitizeQueueCardSnapshotRow).filter(Boolean);
             cardQueueSide = [];
             return;
         }
-        cardQueue = (snap.build || []).map((c) => ({ id: c.id, name: c.name, imgId: c.imgId }));
-        cardQueueSide = (snap.side || []).map((c) => ({ id: c.id, name: c.name, imgId: c.imgId }));
+        cardQueue = (snap.build || []).map(sanitizeQueueCardSnapshotRow).filter(Boolean);
+        cardQueueSide = (snap.side || []).map(sanitizeQueueCardSnapshotRow).filter(Boolean);
     }
 
     function setSavedDecksSelectValue(val) {
@@ -10041,13 +10388,22 @@
         const q = [];
         if (!Array.isArray(stacks)) return q;
         for (const s of stacks) {
-            const n = Math.max(1, parseInt(s.qty, 10) || 1);
-            const name =
-                (s.name && String(s.name)) ||
-                (cardCache[s.id] ? displayNameForApiCard(cardCache[s.id]) : '') ||
-                T('ui.card_generic');
+            if (!s || typeof s !== 'object') continue;
+            const idNum = sanitizeYuGiOhCardId(s.id);
+            if (idNum == null) continue;
+            const n = Math.min(999, Math.max(1, parseInt(String(s.qty ?? '1'), 10) || 1));
+            let name = '';
+            try {
+                const rawName =
+                    String(s.name || '').trim() ||
+                    (cardCache[idNum] ? displayNameForApiCard(cardCache[idNum]) : '') ||
+                    T('ui.card_generic');
+                name = stripDangerousUnicodeAndControls(String(rawName)).trim().slice(0, 200);
+            } catch (_) {}
+            if (!name) try { name = T('ui.card_generic'); } catch (_) { name = 'Card'; }
+            const sid = sanitizeTokenImageId(s.imgId, idNum);
             for (let i = 0; i < n; i++) {
-                q.push({ id: s.id, imgId: s.imgId, name });
+                q.push({ id: idNum, imgId: sid, name });
             }
         }
         return q;
@@ -10495,7 +10851,7 @@
 
     async function refreshYgoprodeckDbVersion() {
         try {
-            const res = await fetch('https://db.ygoprodeck.com/api/v7/checkDBVer.php');
+            const res = await deckbuilderPublicApiFetch('https://db.ygoprodeck.com/api/v7/checkDBVer.php');
             if (!res.ok) return;
             applyCheckDbVerJson(await res.json());
         } catch (e) {
@@ -12942,7 +13298,7 @@
         if (!card.banlist_info || !card.banlist_info[key]) return '';
         const status = card.banlist_info[key];
         const iconUrl = banIcons[status];
-        return `<img src="${iconUrl}" style="width: 18px; height: 18px; vertical-align: middle;" title="${status}">`;
+        return `<img src="${escAttr(iconUrl)}" style="width: 18px; height: 18px; vertical-align: middle;" title="${escAttr(String(status))}">`;
     }
 
     function toggleBanlistCheckbox() {
@@ -12989,9 +13345,12 @@
     }
 
     function sanitizeUrlFilterText(s, maxLen) {
-        const t = String(s ?? '').replace(/\0/g, '').trim();
+        let t = stripDangerousUnicodeAndControls(s).trim();
         if (!t) return '';
-        return t.length > maxLen ? t.slice(0, maxLen) : t;
+        t = t.replace(/[<>]/g, '');
+        t = stripSqlDangerousSequences(t);
+        const lim = typeof maxLen === 'number' && maxLen > 0 ? Math.min(maxLen, 8192) : 8192;
+        return t.length > lim ? t.slice(0, lim) : t;
     }
 
     function splitCommaList(s) {
@@ -13481,6 +13840,16 @@
         return String(str ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
     }
 
+    /** Nome seguro para `images/cards/&lt;ATRIBUTO&gt;.jpg` — evita `../`, aspas ou HTML na origem dos dados da API. */
+    function sanitizeYgoCdnAttribFileSegment(seg) {
+        const t = stripDangerousUnicodeAndControls(String(seg ?? ''))
+            .toUpperCase()
+            .replace(/[^A-Z0-9 _\-]/g, '')
+            .trim()
+            .slice(0, 48);
+        return t || 'UNKNOWN';
+    }
+
     let cardinfoCatalogReady = false;
     let cardinfoCatalogPromise = null;
 
@@ -13504,7 +13873,7 @@
         let first = true;
         for (;;) {
             const url = `https://db.ygoprodeck.com/api/v7/cardinfo.php?num=${CARDINFO_CATALOG_NUM}&offset=${offset}`;
-            const res = await fetch(url);
+            const res = await deckbuilderPublicApiFetch(url);
             if (!res.ok) throw new Error(`cardinfo HTTP ${res.status}`);
             const j = await res.json();
             if (j && j.error) break;
@@ -13585,7 +13954,7 @@
 
     async function loadCardsetsCatalog() {
         try {
-            const res = await fetch('https://db.ygoprodeck.com/api/v7/cardsets.php');
+            const res = await deckbuilderPublicApiFetch('https://db.ygoprodeck.com/api/v7/cardsets.php');
             if (!res.ok) return;
             const json = await res.json();
             const rows = Array.isArray(json) ? json : (json.data || []);
@@ -13599,7 +13968,7 @@
 
     async function loadArchetypesCatalog() {
         try {
-            const res = await fetch('https://db.ygoprodeck.com/api/v7/archetypes.php');
+            const res = await deckbuilderPublicApiFetch('https://db.ygoprodeck.com/api/v7/archetypes.php');
             if (!res.ok) return;
             const json = await res.json();
             const rows = Array.isArray(json) ? json : (json.data || []);
@@ -13833,7 +14202,7 @@
     async function fetchIdsForOneSetcodeFlexible(norm) {
         for (const cand of expandSetcodeCandidates(norm)) {
             const sc = encodeURIComponent(cand);
-            const res = await fetch(`https://db.ygoprodeck.com/api/v7/cardsetsinfo.php?setcode=${sc}`);
+            const res = await deckbuilderPublicApiFetch(`https://db.ygoprodeck.com/api/v7/cardsetsinfo.php?setcode=${sc}`);
             if (!res.ok) continue;
             const j = await res.json();
             if (j && j.error) continue;
@@ -13871,7 +14240,7 @@
                 const pBase = new URLSearchParams({ num: String(num), offset: String(offset) });
                 pBase.set('misc', 'yes');
                 const url = `https://db.ygoprodeck.com/api/v7/cardinfo.php?${pBase.toString()}`;
-                const res = await fetch(url).then(rr => rr.ok ? rr.json() : { data: [], meta: {} });
+                const res = await deckbuilderPublicApiFetch(url).then(rr => rr.ok ? rr.json() : { data: [], meta: {} });
                 if (first) {
                     first = false;
                     if (res.meta && typeof res.meta.total_rows === 'number') {
@@ -13908,9 +14277,9 @@
                 : urlGlobal;
             const trLang = getUiLang();
             const [resGlobal, resTr] = await Promise.all([
-                fetch(urlGlobal).then(rr => rr.ok ? rr.json() : { data: [], meta: {} }),
+                deckbuilderPublicApiFetch(urlGlobal).then(rr => rr.ok ? rr.json() : { data: [], meta: {} }),
                 trPar
-                    ? fetch(urlTr).then(rr => rr.ok ? rr.json() : { data: [], meta: {} })
+                    ? deckbuilderPublicApiFetch(urlTr).then(rr => rr.ok ? rr.json() : { data: [], meta: {} })
                     : Promise.resolve({ data: [], meta: {} })
             ]);
             if (first) {
@@ -13925,7 +14294,7 @@
             dG.forEach(card => mergedMap.set(card.id, { ...card, __lang: 'en' }));
             dP.forEach(card => {
                 const existing = mergedMap.get(card.id);
-                if (existing) mergedMap.set(card.id, { ...existing, ...card, __lang: trLang });
+                if (existing) mergedMap.set(card.id, mergedCardDualLangPreserveBeta(existing, card, trLang));
                 else mergedMap.set(card.id, { ...card, __lang: trLang });
             });
             if (typeof onProgress === 'function') {
@@ -13938,8 +14307,155 @@
         return mergedMap;
     }
 
+    /** beta_name / treated_as (YGOPRODeck misc): raiz ou misc_info[0]. */
+    function collectCardAlternateMiscNameFields(card) {
+        if (!card) return [];
+        const out = [];
+        const add = (v) => {
+            if (v == null || v === '') return;
+            const s = String(v).trim();
+            if (s) out.push(s);
+        };
+        add(card.beta_name);
+        add(card.treated_as);
+        const m = card.misc_info && card.misc_info[0];
+        if (m) {
+            add(m.beta_name);
+            add(m.treated_as);
+        }
+        return out;
+    }
+
+    /** Correspondência do filtro Nome (texto) em nomes alternativos — a API só fuzzy no nome principal. */
+    function fnameTokenMatchesMiscAlternateFields(card, fnameRaw) {
+        const raw = String(fnameRaw ?? '').trim();
+        if (!raw) return false;
+        const pn = parseDoubleQuotedExactNameToken(raw);
+        if (!pn.isExact && raw.length < 3) return false;
+        if (pn.isExact && !pn.inner.length) return false;
+        const blobs = collectCardAlternateMiscNameFields(card);
+        if (!blobs.length) return false;
+        const norm = (s) => normalizeForSim(String(s ?? '')).toLowerCase();
+        const needle = pn.isExact ? norm(pn.inner) : norm(raw);
+        if (!needle) return false;
+        for (const b of blobs) {
+            const hn = norm(b);
+            if (!hn) continue;
+            if (pn.isExact) {
+                if (hn === needle) return true;
+            } else if (hn.includes(needle)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Varre cardinfo com os mesmos filtros que pReq (sem fname/name) e adiciona cartas em que o termo
+     * coincide com beta_name ou treated_as. Memoizado por (termo + filtros) no chamador.
+     */
+    async function mergeMiscAlternateNameMatchesIntoMap(pBaseNoFname, fnameToken, mergedMap, onProgress) {
+        const raw = String(fnameToken ?? '').trim();
+        if (!raw) return;
+        const pnT = parseDoubleQuotedExactNameToken(raw);
+        if (!pnT.isExact && raw.length < 3) return;
+        if (pnT.isExact && !pnT.inner.length) return;
+
+        const CARDINFO_PAGE = 5000;
+        const prSeed = new URLSearchParams(pBaseNoFname);
+        prSeed.delete('fname');
+        prSeed.delete('name');
+        prSeed.set('misc', 'yes');
+
+        const useDualTextMerge = getUiLang() !== 'en' || prSeed.has('desc');
+
+        let offset = 0;
+        let totalRows = 0;
+        let first = true;
+
+        const takeDualMerged = (rowsG, rowsP, trPar, trLang) => {
+            const byId = new Map();
+            (rowsG || []).forEach(c => byId.set(c.id, { ...c, __lang: 'en' }));
+            (rowsP || []).forEach(c => {
+                const ex = byId.get(c.id);
+                if (ex) byId.set(c.id, mergedCardDualLangPreserveBeta(ex, c, trLang));
+                else byId.set(c.id, { ...c, __lang: trLang });
+            });
+            for (const card of byId.values()) {
+                if (!fnameTokenMatchesMiscAlternateFields(card, raw)) continue;
+                if (mergedMap.has(card.id)) continue;
+                mergedMap.set(card.id, card);
+                if (typeof onProgress === 'function') {
+                    try { onProgress(mergedMap.size); } catch (_) {}
+                }
+            }
+        };
+
+        for (;;) {
+            const pr = new URLSearchParams(prSeed);
+            pr.set('num', String(CARDINFO_PAGE));
+            pr.set('offset', String(offset));
+            let rowCount = 0;
+
+            if (!useDualTextMerge) {
+                const urlGlobal = `https://db.ygoprodeck.com/api/v7/cardinfo.php?${pr.toString()}`;
+                const resG = await deckbuilderPublicApiFetch(urlGlobal).then(rr => rr.ok ? rr.json() : { data: [] });
+                if (resG.error) break;
+                if (first) {
+                    if (resG.meta && typeof resG.meta.total_rows === 'number') {
+                        totalRows = resG.meta.total_rows;
+                    }
+                    first = false;
+                }
+                const rows = resG.data || [];
+                rowCount = rows.length;
+                if (!rowCount) break;
+                rows.forEach(card => {
+                    if (!fnameTokenMatchesMiscAlternateFields(card, raw)) return;
+                    if (mergedMap.has(card.id)) return;
+                    mergedMap.set(card.id, card);
+                    if (typeof onProgress === 'function') {
+                        try { onProgress(mergedMap.size); } catch (_) {}
+                    }
+                });
+            } else {
+                const urlGlobal = `https://db.ygoprodeck.com/api/v7/cardinfo.php?${pr.toString()}`;
+                const trPar = isEnglishMode() ? 'pt' : getCardinfoLanguageParam();
+                const trLang = isEnglishMode() ? 'pt' : getUiLang();
+                const pTr = new URLSearchParams(pr);
+                if (trPar) pTr.set('language', trPar);
+                const urlTr = trPar
+                    ? `https://db.ygoprodeck.com/api/v7/cardinfo.php?${pTr.toString()}`
+                    : urlGlobal;
+                const [resGlobal, resTr] = await Promise.all([
+                    deckbuilderPublicApiFetch(urlGlobal).then(rr => rr.ok ? rr.json() : { data: [] }),
+                    trPar
+                        ? deckbuilderPublicApiFetch(urlTr).then(rr => rr.ok ? rr.json() : { data: [] })
+                        : Promise.resolve({ data: [] })
+                ]);
+                const rowsG = resGlobal.data || [];
+                const rowsP = trPar ? (resTr.data || []) : [];
+                if (!rowsG.length && !rowsP.length) break;
+                if (first) {
+                    const tG = resGlobal.meta && typeof resGlobal.meta.total_rows === 'number' ? resGlobal.meta.total_rows : 0;
+                    const tP = trPar && resTr.meta && typeof resTr.meta.total_rows === 'number' ? resTr.meta.total_rows : 0;
+                    totalRows = Math.max(tG, tP);
+                    first = false;
+                }
+                rowCount = Math.max(rowsG.length, rowsP.length);
+                takeDualMerged(rowsG, rowsP, trPar, trLang);
+            }
+
+            offset += CARDINFO_PAGE;
+            if (totalRows > 0 && offset >= totalRows) break;
+            if (rowCount < CARDINFO_PAGE) break;
+            if (offset > 250000) break;
+        }
+    }
+
     async function fetchMergedCardinfoDualLoop(p, archFilters, archLoop, fnames, descs, atks, defs, sets, onProgress) {
         const mergedMap = new Map();
+        const miscAltMergeDone = new Set();
         const CARDINFO_PAGE = 5000;
         async function fetchPaginatedIntoMap(pReq) {
             let offset = 0;
@@ -13954,7 +14470,7 @@
                 let rowCount = 0;
                 if (!useDualTextMerge) {
                     const urlGlobal = `https://db.ygoprodeck.com/api/v7/cardinfo.php?${pr.toString()}`;
-                    const resG = await fetch(urlGlobal).then(rr => rr.ok ? rr.json() : { data: [] });
+                    const resG = await deckbuilderPublicApiFetch(urlGlobal).then(rr => rr.ok ? rr.json() : { data: [] });
                     if (resG.error) break;
                     if (first && resG.meta && typeof resG.meta.total_rows === 'number') {
                         totalRows = resG.meta.total_rows;
@@ -13978,9 +14494,9 @@
                         ? `https://db.ygoprodeck.com/api/v7/cardinfo.php?${pTr.toString()}`
                         : urlGlobal;
                     const [resGlobal, resTr] = await Promise.all([
-                        fetch(urlGlobal).then(rr => rr.ok ? rr.json() : { data: [] }),
+                        deckbuilderPublicApiFetch(urlGlobal).then(rr => rr.ok ? rr.json() : { data: [] }),
                         trPar
-                            ? fetch(urlTr).then(rr => rr.ok ? rr.json() : { data: [] })
+                            ? deckbuilderPublicApiFetch(urlTr).then(rr => rr.ok ? rr.json() : { data: [] })
                             : Promise.resolve({ data: [] })
                     ]);
                     const rowsG = resGlobal.data || [];
@@ -13995,7 +14511,7 @@
                     rowsG.forEach(card => mergedMap.set(card.id, { ...card, __lang: 'en' }));
                     rowsP.forEach(card => {
                         const existing = mergedMap.get(card.id);
-                        if (existing) mergedMap.set(card.id, { ...existing, ...card, __lang: trLang });
+                        if (existing) mergedMap.set(card.id, mergedCardDualLangPreserveBeta(existing, card, trLang));
                         else mergedMap.set(card.id, { ...card, __lang: trLang });
                     });
                     rowCount = Math.max(rowsG.length, rowsP.length);
@@ -14027,6 +14543,16 @@
                                 if (df != null) pReq.append('def', df);
                                 if (sn != null) pReq.append('cardset', sn);
                                 await fetchPaginatedIntoMap(pReq);
+                                if (fn != null && String(fn).trim() !== '') {
+                                    const pAlt = new URLSearchParams(pReq);
+                                    pAlt.delete('fname');
+                                    pAlt.delete('name');
+                                    const memoKey = `${String(fn)}\0${pAlt.toString()}`;
+                                    if (!miscAltMergeDone.has(memoKey)) {
+                                        miscAltMergeDone.add(memoKey);
+                                        await mergeMiscAlternateNameMatchesIntoMap(pAlt, fn, mergedMap, onProgress);
+                                    }
+                                }
                             }
                         }
                     }
@@ -14047,7 +14573,7 @@
             pReq.append('misc', 'yes');
             if (getUiLang() === 'en') {
                 const urlGlobal = `https://db.ygoprodeck.com/api/v7/cardinfo.php?${pReq.toString()}`;
-                const resG = await fetch(urlGlobal).then(rr => rr.ok ? rr.json() : { data: [] });
+                const resG = await deckbuilderPublicApiFetch(urlGlobal).then(rr => rr.ok ? rr.json() : { data: [] });
                 (resG.data || []).forEach(card => mergedMap.set(card.id, { ...card, __lang: 'en' }));
             } else {
                 const urlGlobal = `https://db.ygoprodeck.com/api/v7/cardinfo.php?${pReq.toString()}`;
@@ -14059,15 +14585,15 @@
                     : urlGlobal;
                 const trLang = getUiLang();
                 const [resGlobal, resTr] = await Promise.all([
-                    fetch(urlGlobal).then(rr => rr.ok ? rr.json() : { data: [] }),
+                    deckbuilderPublicApiFetch(urlGlobal).then(rr => rr.ok ? rr.json() : { data: [] }),
                     trPar
-                        ? fetch(urlTr).then(rr => rr.ok ? rr.json() : { data: [] })
+                        ? deckbuilderPublicApiFetch(urlTr).then(rr => rr.ok ? rr.json() : { data: [] })
                         : Promise.resolve({ data: [] })
                 ]);
                 (resGlobal.data || []).forEach(card => mergedMap.set(card.id, { ...card, __lang: 'en' }));
                 (trPar ? (resTr.data || []) : []).forEach(card => {
                     const existing = mergedMap.get(card.id);
-                    if (existing) mergedMap.set(card.id, { ...existing, ...card, __lang: trLang });
+                    if (existing) mergedMap.set(card.id, mergedCardDualLangPreserveBeta(existing, card, trLang));
                     else mergedMap.set(card.id, { ...card, __lang: trLang });
                 });
             }
@@ -14091,7 +14617,7 @@
             pReq.append('misc', 'yes');
             if (getUiLang() === 'en') {
                 const urlGlobal = `https://db.ygoprodeck.com/api/v7/cardinfo.php?${pReq.toString()}`;
-                const resG = await fetch(urlGlobal).then(rr => rr.ok ? rr.json() : { data: [] });
+                const resG = await deckbuilderPublicApiFetch(urlGlobal).then(rr => rr.ok ? rr.json() : { data: [] });
                 (resG.data || []).forEach(card => mergedMap.set(card.id, { ...card, __lang: 'en' }));
             } else {
                 const urlGlobal = `https://db.ygoprodeck.com/api/v7/cardinfo.php?${pReq.toString()}`;
@@ -14103,15 +14629,15 @@
                     : urlGlobal;
                 const trLang = getUiLang();
                 const [resGlobal, resTr] = await Promise.all([
-                    fetch(urlGlobal).then(rr => rr.ok ? rr.json() : { data: [] }),
+                    deckbuilderPublicApiFetch(urlGlobal).then(rr => rr.ok ? rr.json() : { data: [] }),
                     trPar
-                        ? fetch(urlTr).then(rr => rr.ok ? rr.json() : { data: [] })
+                        ? deckbuilderPublicApiFetch(urlTr).then(rr => rr.ok ? rr.json() : { data: [] })
                         : Promise.resolve({ data: [] })
                 ]);
                 (resGlobal.data || []).forEach(card => mergedMap.set(card.id, { ...card, __lang: 'en' }));
                 (trPar ? (resTr.data || []) : []).forEach(card => {
                     const existing = mergedMap.get(card.id);
-                    if (existing) mergedMap.set(card.id, { ...existing, ...card, __lang: trLang });
+                    if (existing) mergedMap.set(card.id, mergedCardDualLangPreserveBeta(existing, card, trLang));
                     else mergedMap.set(card.id, { ...card, __lang: trLang });
                 });
             }
@@ -14825,7 +15351,7 @@
         const variant = opts && opts.variant ? String(opts.variant) : 'success';
         toast.className = `toast${variant === 'error' ? ' toast-error' : ''}`;
         const ic = variant === 'error' ? '✖' : '✔';
-        toast.innerHTML = `<span>${ic}</span> ${msg}`;
+        toast.innerHTML = `<span>${ic}</span> ${escapeHtml(msg)}`;
         container.appendChild(toast);
         setTimeout(() => toast.remove(), 2000);
     }
@@ -15169,7 +15695,7 @@
         };
         const toast = document.createElement('div');
         toast.className = `toast toast-surface toast-sfc-${family}`;
-        toast.innerHTML = `<span class="toast-surface-ic" aria-hidden="true">${icons[family] || '✦'}</span> ${msg}`;
+        toast.innerHTML = `<span class="toast-surface-ic" aria-hidden="true">${icons[family] || '✦'}</span> ${escapeHtml(msg)}`;
         container.appendChild(toast);
         setTimeout(() => toast.remove(), 2200);
     }
@@ -15607,6 +16133,14 @@
     let __tooltipShowYgoprodeckRef = false;
 
     function getYgoprodeckCardUrl(card) {
+        const canon = card && card.ygoprodeck_url != null ? String(card.ygoprodeck_url).trim() : '';
+        if (canon) {
+            try {
+                const u = new URL(canon);
+                const h = u.hostname.toLowerCase();
+                if (h === 'ygoprodeck.com' || h === 'www.ygoprodeck.com') return u.href;
+            } catch (_) { /* falha de parse ou host inesperado → fallback por nome */ }
+        }
         const q = String((card && (card.name_en || card.name || '')) || '').trim();
         if (!q) return '';
         return `https://ygoprodeck.com/card/?search=${encodeURIComponent(q)}`;
@@ -15854,6 +16388,19 @@
         nameElement.style.fontSize = isMobile ? '1.3em' : '1.0em';
         nameElement.style.fontWeight = 'bold';
         document.getElementById('tooltip-img').src = card.card_images[0].image_url;
+        const betaRowEl = document.getElementById('tooltip-beta-name-row');
+        if (betaRowEl) {
+            if (shouldShowBetaNameInTooltip(card)) {
+                const beta = getCardBetaNameForTooltip(card);
+                betaRowEl.innerHTML = `<span class="tt-beta-name-label">${escapeHtml(T('ui.tooltip_beta_name'))}</span><span class="tt-beta-name-value">${escapeHtml(beta)}</span>`;
+                betaRowEl.style.display = 'block';
+                betaRowEl.setAttribute('aria-hidden', 'false');
+            } else {
+                betaRowEl.innerHTML = '';
+                betaRowEl.style.display = 'none';
+                betaRowEl.setAttribute('aria-hidden', 'true');
+            }
+        }
         const archRowEl = document.getElementById('tooltip-archetype-row');
         const archListTt = getCardArchetypes(card);
         if (archRowEl) {
@@ -15936,8 +16483,8 @@
                             <span style="display:inline-flex; align-items:center; gap:8px; padding:3px 10px; border-radius:999px; border:1px solid ${mdBd}; background:${mdBg};">
                                 <span style="opacity:.9;">MASTER DUEL</span>
                                 <span style="display:inline-flex; align-items:center; gap:6px; background:rgba(0,0,0,0.18); border:1px solid rgba(255,255,255,0.14); padding:2px 8px; border-radius:999px; font-variant-numeric:tabular-nums;">
-                                    <img src="${mdIcon}" alt="${mdRarityTt}" style="width:16px;height:16px;object-fit:contain;vertical-align:-2px;">
-                                    <span>${mdRarityTt}</span>
+                                    <img src="${escAttr(mdIcon)}" alt="${escAttr(mdRarityTt)}" style="width:16px;height:16px;object-fit:contain;vertical-align:-2px;">
+                                    <span>${escapeHtml(mdRarityTt)}</span>
                                 </span>
                             </span>
                         </div>`;
@@ -15948,21 +16495,21 @@
         if (card.attribute || frameTypeIsSpell(ft) || frameTypeIsTrap(ft) || card.type.includes("Spell") || card.type.includes("Trap")) {
             let iconUrl = frameTypeIsSpell(ft) || card.type.includes("Spell") ? "https://static.wikia.nocookie.net/yugioh/images/0/09/SPELL.svg" :
                         frameTypeIsTrap(ft) || card.type.includes("Trap") ? "https://static.wikia.nocookie.net/yugioh/images/2/28/TRAP.svg" :
-                        `https://images.ygoprodeck.com/images/cards/${card.attribute ? card.attribute.toUpperCase() : 'UNKNOWN'}.jpg`;
+                        `https://images.ygoprodeck.com/images/cards/${sanitizeYgoCdnAttribFileSegment(card.attribute)}.jpg`;
             let labelText = frameTypeIsSpell(ft) || card.type.includes("Spell") ? T('ui.spell_attr') : frameTypeIsTrap(ft) || card.type.includes("Trap") ? T('ui.trap_attr') :
                             attrDisplayName(card.attribute ? card.attribute.toUpperCase() : '');
             infoHtml += `<div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
                             <div style="display: flex; align-items: center; gap: 4px; color: #ffffff;">
-                                <img src="${iconUrl}" style="width:20px; height:20px; object-fit:contain;">
-                                <span>${labelText}</span>
+                                <img src="${escAttr(iconUrl)}" style="width:20px; height:20px; object-fit:contain;">
+                                <span>${escapeHtml(labelText)}</span>
                             </div>`;
             if (cardHasPendulumScale(card)) {
                 infoHtml += getPendulumScaleHtml(card.scale, isMobile ? 16 : 15);
             }
             if((card.level || card.rank) && !isLinkTt) {
                 infoHtml += `<div style="display: flex; align-items: center; gap: 4px; color: #ffffff; margin-left: 5px;">
-                                <img src="https://ygoprodeck.com/wp-content/uploads/2017/01/level.png" style="width:16px; height:16px; ${(frameTypeIsXyz(ft) || card.type.toUpperCase().includes('XYZ')) ? 'filter:invert(1) brightness(0.5);' : ''}">
-                                <span>${card.level || card.rank}</span>
+                                <img src="${escAttr('https://ygoprodeck.com/wp-content/uploads/2017/01/level.png')}" style="width:16px; height:16px; ${(frameTypeIsXyz(ft) || card.type.toUpperCase().includes('XYZ')) ? 'filter:invert(1) brightness(0.5);' : ''}">
+                                <span>${escapeHtml(String(card.level != null ? card.level : card.rank != null ? card.rank : ''))}</span>
                             </div>`;
             }
             if (isLinkTt && card.linkmarkers && card.linkmarkers.length) {
@@ -15975,12 +16522,12 @@
         infoHtml += `<div class="card-race-type-row" style="color: #ffffff; font-size: 11px; margin-bottom: 8px;">
                         <span>[</span>
                         <span class="card-race-type-group card-race-type-group--with-slash">
-                        <img src="https://images.ygoprodeck.com/images/cards/icons/race/${encodeURIComponent(card.race || '')}.png" style="width: 14px; height: 14px;" onerror="this.style.display='none'">
-                        <span>${raceTraduzida}</span>
+                        <img src="${escAttr(`https://images.ygoprodeck.com/images/cards/icons/race/${encodeURIComponent(card.race || '')}.png`)}" style="width: 14px; height: 14px;" onerror="this.style.display='none'">
+                        <span>${escapeHtml(String(raceTraduzida ?? ''))}</span>
                         </span>
                         <span class="card-race-type-group">
-                        <img src="https://images.ygoprodeck.com/images/cards/icons/${encodeURIComponent(card.type)}.jpg" style="width: 14px; height: 14px; border-radius: 2px;" onerror="this.style.display='none'">
-                        <span>${tipoTexto}</span>
+                        <img src="${escAttr(`https://images.ygoprodeck.com/images/cards/icons/${encodeURIComponent(card.type)}.jpg`)}" style="width: 14px; height: 14px; border-radius: 2px;" onerror="this.style.display='none'">
+                        <span>${escapeHtml(String(tipoTexto ?? ''))}</span>
                         </span>
                         <span> ]</span>
                     </div>`;
@@ -15990,17 +16537,17 @@
                 <div style="display: flex; align-items: center; gap: 5px;">
                     <i class="fas fa-fist-raised" style="color: #4d94ff;"></i>
                     <span style="color: #4d94ff;">ATK/</span>
-                    <span style="color: #ffffff;">${card.atk}</span>
+                    <span style="color: #ffffff;">${escapeHtml(String(card.atk != null ? card.atk : ''))}</span>
                 </div>
                 ${!isLinkTt ? `
                     <div style="display: flex; align-items: center; gap: 5px;">
                         <i class="fas fa-shield-alt" style="color: #ff4d4d;"></i>
                         <span style="color: #ff4d4d;">DEF/</span>
-                        <span style="color: #ffffff;">${card.def}</span>
+                        <span style="color: #ffffff;">${escapeHtml(String(card.def != null ? card.def : ''))}</span>
                     </div>
                 ` : `
                     <div style="display: flex; align-items: center; gap: 5px; color: #ffffff;">
-                        <span>LINK-${card.linkval}</span>
+                        <span>LINK-${escapeHtml(String(card.linkval != null ? card.linkval : ''))}</span>
                     </div>
                 `}
             </div>`;
@@ -16017,9 +16564,9 @@
         const cardIdDisplay = (card.id !== undefined && card.id !== null) ? String(card.id) : '—';
         const konamiRaw = card.misc_info && card.misc_info[0] && card.misc_info[0].konami_id != null && card.misc_info[0].konami_id !== ''
             ? String(card.misc_info[0].konami_id) : '';
-        const konamiDisplay = konamiRaw ? escAttr(konamiRaw) : '—';
+        const konamiDisplay = konamiRaw ? escapeHtml(konamiRaw) : '—';
         const idHtml = `<div class="tt-card-id-row">
-            <span class="tt-card-id-pair"><span class="tt-card-id-label">ID</span><span class="tt-card-id-value">${cardIdDisplay}</span></span>
+            <span class="tt-card-id-pair"><span class="tt-card-id-label">ID</span><span class="tt-card-id-value">${escapeHtml(String(cardIdDisplay))}</span></span>
             <span class="tt-card-id-pair"><span class="tt-konami-id-label">Konami</span><span class="tt-konami-id-value">${konamiDisplay}</span></span>
         </div>`;
         const gpRaw = (card && card.genesys_points != null) ? card.genesys_points
@@ -16033,19 +16580,40 @@
                    </span>
                </div>`
             : '';
-        const datesHtml = `<div class="tt-tooltip-dates"><span>📅 TCG: ${tcgDate}</span><span>📅 OCG: ${ocgDate}</span></div>`;
+        const rawFormats = (card.misc_info && card.misc_info[0] && Array.isArray(card.misc_info[0].formats))
+            ? card.misc_info[0].formats
+            : (Array.isArray(card.formats) ? card.formats : null);
+        let formatsHtml = '';
+        if (rawFormats && rawFormats.length) {
+            const seen = new Set();
+            const list = [];
+            for (const f of rawFormats) {
+                const s = String(f == null ? '' : f).trim();
+                if (!s || seen.has(s)) continue;
+                seen.add(s);
+                list.push(s);
+            }
+            if (list.length) {
+                const chips = list.map((s, i) => `<span class="tt-format-chip tt-format-chip--c${i % 8}">${escapeHtml(s)}</span>`).join('');
+                formatsHtml = `<div class="tt-tooltip-formats">
+                    <span style="color:var(--accent);font-weight:600;">${escapeHtml(T('ui.tooltip_formats'))}</span>
+                    <div class="tt-formats-badges">${chips}</div>
+                </div>`;
+            }
+        }
+        const datesHtml = `<div class="tt-tooltip-dates"><span>📅 TCG: ${escapeHtml(String(tcgDate))}</span><span>📅 OCG: ${escapeHtml(String(ocgDate))}</span></div>`;
         const separatorHtml = `<hr style="border: 0; border-top: 1px solid #444; margin: 4px 0; opacity: 1;">`;
         const pricesHtml = `<div style="margin-top: 4px; display: flex; flex-wrap: wrap; gap: 8px; font-size: 11px; color: #fff; font-weight: 500;">
-            <span title="TCGPlayer"><i class="fa-solid fa-store" style="color:var(--accent); font-size: 11px;"></i> TCG: ${formatP(p.tcgplayer_price)}</span>
-            <span title="Cardmarket"><i class="fa-solid fa-m" style="color:var(--accent); font-size: 11px;"></i> CM: ${formatP(p.cardmarket_price)}</span>
-            <span title="CoolStuffInc"><i class="fa-solid fa-bag-shopping" style="color:var(--accent); font-size: 11px;"></i> CSI: ${formatP(p.coolstuffinc_price)}</span>
-            <span title="eBay"><i class="fa-brands fa-ebay" style="color:var(--accent); font-size: 14px;"></i> ${formatP(p.ebay_price)}</span>
-            <span title="Amazon"><i class="fa-brands fa-amazon" style="color:var(--accent); font-size: 13px;"></i> ${formatP(p.amazon_price)}</span>
+            <span title="TCGPlayer"><i class="fa-solid fa-store" style="color:var(--accent); font-size: 11px;"></i> TCG: ${escapeHtml(formatP(p.tcgplayer_price))}</span>
+            <span title="Cardmarket"><i class="fa-solid fa-m" style="color:var(--accent); font-size: 11px;"></i> CM: ${escapeHtml(formatP(p.cardmarket_price))}</span>
+            <span title="CoolStuffInc"><i class="fa-solid fa-bag-shopping" style="color:var(--accent); font-size: 11px;"></i> CSI: ${escapeHtml(formatP(p.coolstuffinc_price))}</span>
+            <span title="eBay"><i class="fa-brands fa-ebay" style="color:var(--accent); font-size: 14px;"></i> ${escapeHtml(formatP(p.ebay_price))}</span>
+            <span title="Amazon"><i class="fa-brands fa-amazon" style="color:var(--accent); font-size: 13px;"></i> ${escapeHtml(formatP(p.amazon_price))}</span>
         </div>`;
         const ygoRefUrl = (__tooltipShowYgoprodeckRef ? getYgoprodeckCardUrl(card) : '');
         const ygoRefHtml = ygoRefUrl
             ? `<div style="margin-top: 10px; display:flex; justify-content:flex-end;">
-                    <a href="${escAttr(ygoRefUrl)}" target="_blank" rel="noopener" style="display:inline-flex; align-items:center; gap:8px; font-size:11px; color: var(--accent); text-decoration:none; font-weight:600;">
+                    <a href="${escAttr(ygoRefUrl)}" target="_blank" rel="noopener noreferrer" style="display:inline-flex; align-items:center; gap:8px; font-size:11px; color: var(--accent); text-decoration:none; font-weight:600;">
                         <i class="fa-solid fa-arrow-up-right-from-square"></i>
                         <span>${!siteUiIsPt() ? 'View on YGOPRODeck' : 'Ver no YGOPRODeck'}</span>
                     </a>
@@ -16071,9 +16639,9 @@
                 setsBlock = `<div class="tt-cardsets-block tt-cardsets-block--compact"><div class="tt-cardsets-head"><span style="font-weight:bold;color:var(--accent);"><i class="fa-solid fa-layer-group"></i> ${printsHead}<span style="opacity:0.85;font-weight:600;">(${setsCountLabel})</span></span></div><div class="tt-cardsets-grid" role="list" aria-label="${escAttr(T('ui.csp_prints_aria'))}">${gridInner}</div></div>`;
             }
         }
-        let formattedDescription = description.replace(/\n/g, '<br>');
+        let formattedDescription = escapeHtml(description).replace(/\n/g, '<br>');
         formattedDescription = formattedDescription.replace(/(?:<br\s*\/?>|\s)+$/gi, '');
-        document.getElementById('tooltip-text').innerHTML = `<div class="tt-tooltip-desc" style="word-wrap: break-word;">${formattedDescription}</div>${setsBlock}${idHtml}${genesysHtml}${datesHtml}${separatorHtml}${pricesHtml}${ygoRefHtml}`;
+        document.getElementById('tooltip-text').innerHTML = `<div class="tt-tooltip-desc" style="word-wrap: break-word;">${formattedDescription}</div>${setsBlock}${idHtml}${genesysHtml}${formatsHtml}${datesHtml}${separatorHtml}${pricesHtml}${ygoRefHtml}`;
     }
 
     function moveTooltip(e) {
@@ -17575,8 +18143,8 @@
                     : '';
                 const md = isMasterDuelFormatFiltered() ? pickMasterDuelRarity(card) : null;
                 const mdUrl = md ? masterDuelRarityIconUrl(md) : '';
-                const mdOverlayGrid = mdUrl ? `<span class="card-grid-md-badge" aria-hidden="true"><img class="md-badge-img" src="${mdUrl}" alt="${md}" style="width:18px;height:18px;object-fit:contain;display:block;"></span>` : '';
-                div.innerHTML = `<div class="suggestion-item-grid-artwrap"><img src="${cardImageUrlForMode(imageObj, viewMode, imageObj && imageObj.id)}" style="width: 100%; height: 100%; object-fit: contain; display: block;" loading="lazy" onerror="this.src='https://images.ygoprodeck.com/images/cards/back_high.jpg'" alt="${card.name}">${banOverlayGrid}${mdOverlayGrid}</div>`;
+                const mdOverlayGrid = mdUrl ? `<span class="card-grid-md-badge" aria-hidden="true"><img class="md-badge-img" src="${escAttr(mdUrl)}" alt="${escapeHtml(String(md || ''))}" loading="lazy" decoding="async" style="width:18px;height:18px;object-fit:contain;display:block;"></span>` : '';
+                div.innerHTML = `<div class="suggestion-item-grid-artwrap"><img src="${escAttr(String(cardImageUrlForMode(imageObj, viewMode, imageObj && imageObj.id) || ''))}" style="width: 100%; height: 100%; object-fit: contain; display: block;" loading="lazy" decoding="async" onerror="this.src='https://images.ygoprodeck.com/images/cards/back_high.jpg'" alt="${escapeHtml(String(card.name || 'Card'))}">${banOverlayGrid}${mdOverlayGrid}</div>`;
                 if (card.card_sets && card.card_sets.length) {
                     const fab = document.createElement('button');
                     fab.type = 'button';
@@ -17596,7 +18164,8 @@
                 const attrRaw = card.attribute
                     ? card.attribute.toUpperCase()
                     : (frameTypeIsSpell(ft) ? "SPELL" : frameTypeIsTrap(ft) ? "TRAP" : (card.type.includes("Spell") ? "SPELL" : "TRAP"));
-                const attrIconUrl = card.attribute ? `https://images.ygoprodeck.com/images/cards/${attrRaw}.jpg` : "";
+                const attrSeg = sanitizeYgoCdnAttribFileSegment(card.attribute);
+                const attrIconUrl = card.attribute ? `https://images.ygoprodeck.com/images/cards/${attrSeg}.jpg` : "";
                 const raceIconUrl = `https://images.ygoprodeck.com/images/cards/icons/race/${encodeURIComponent(card.race || '')}.png`;
                 const starIcon = "https://ygoprodeck.com/wp-content/uploads/2017/01/level.png";
                 const raceTraduzida = !siteUiIsPt() ? card.race : (racesTrad[card.race] || card.race);
@@ -17610,37 +18179,37 @@
                     ? getLinkMarkersHtml(card.linkmarkers, 13) : '';
                 div.innerHTML = `
                     <div class="list-card-thumb">
-                    <img src="${cardImageUrlForMode(imageObj, viewMode, imageObj && imageObj.id)}" loading="lazy" onerror="this.src='https://images.ygoprodeck.com/images/cards/back_high.jpg'" alt="${card.name}">
+                    <img src="${escAttr(String(cardImageUrlForMode(imageObj, viewMode, imageObj && imageObj.id) || ''))}" loading="lazy" onerror="this.src='https://images.ygoprodeck.com/images/cards/back_high.jpg'" alt="${escapeHtml(String(card.name || 'Card'))}">
                     </div>
                     <div class="card-info-box">
                         <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
                             ${getBanIcon(card)} 
                             ${getMasterDuelInlineIconForResults(card)}
-                            <b class="card-name" style="margin: 0; line-height: 1.2; color: ${nameColor};">${displayName}</b>
+                            <b class="card-name" style="margin: 0; line-height: 1.2; color: ${nameColor};">${escapeHtml(displayName)}</b>
                         </div>
                         <div class="info-row" style="display: flex; align-items: center; flex-wrap: wrap; gap: 10px; row-gap: 4px; color: ${textColor};">
-                            ${attrIconUrl ? `<div style="display: flex; align-items: center; gap: 4px;"><img src="${attrIconUrl}" style="width: 14px; height: 14px; border-radius: 50%;"><span style="font-size: 10px; color: inherit;">${attrDisplayName(attrRaw)}</span></div>` : ''}
+                            ${attrIconUrl ? `<div style="display: flex; align-items: center; gap: 4px;"><img src="${escAttr(attrIconUrl)}" style="width: 14px; height: 14px; border-radius: 50%;"><span style="font-size: 10px; color: inherit;">${escapeHtml(attrDisplayName(attrRaw))}</span></div>` : ''}
                             ${pendulumHtml}
-                            ${(card.level || card.rank) && !isLinkMonster ? `<div style="display: flex; align-items: center; gap: 2px;"><img src="${starIcon}" style="width: 12px; height: 12px; ${(frameTypeIsXyz(ft) || card.type.toUpperCase().includes('XYZ')) ? 'filter:invert(1) brightness(0.5);' : ''}"><span style="font-size: 10px; color: inherit;">${card.level || card.rank}</span></div>` : ''}
+                            ${(card.level || card.rank) && !isLinkMonster ? `<div style="display: flex; align-items: center; gap: 2px;"><img src="${escAttr(starIcon)}" style="width: 12px; height: 12px; ${(frameTypeIsXyz(ft) || card.type.toUpperCase().includes('XYZ')) ? 'filter:invert(1) brightness(0.5);' : ''}"><span style="font-size: 10px; color: inherit;">${escapeHtml(String(card.level || card.rank))}</span></div>` : ''}
                             ${linkMarkersHtml}
                         </div>
                         <div class="info-row card-race-type-row" style="margin-top: 2px; color: ${textColor};">
                             <span class="card-race-type-group card-race-type-group--with-slash">
-                            <img src="${raceIconUrl}" style="width: 14px; height: 14px;" onerror="this.style.display='none'">
-                            <span style="color: inherit;">${raceTraduzida}</span>
+                            <img src="${escAttr(raceIconUrl)}" style="width: 14px; height: 14px;" onerror="this.style.display='none'">
+                            <span style="color: inherit;">${escapeHtml(String(raceTraduzida ?? ''))}</span>
                             </span>
                             <span class="card-race-type-group">
-                            <img src="${typeIconUrl}" title="Tipo" style="width: 14px; height: 14px; border-radius: 2px;" onerror="this.style.display='none'">
-                            <span style="color: inherit;">${tipoTexto}</span>
+                            <img src="${escAttr(typeIconUrl)}" title="Tipo" style="width: 14px; height: 14px; border-radius: 2px;" onerror="this.style.display='none'">
+                            <span style="color: inherit;">${escapeHtml(String(tipoTexto ?? ''))}</span>
                             </span>
                         </div>
                         ${card.atk !== undefined ? `
                             <div class="info-row atk-def-row" style="border-top: 1px solid ${!hasCustomTheme ? 'rgba(255,255,255,0.1)' : 'var(--border)'};">
-                                <div style="display: flex; align-items: center; gap: 4px;"><i class="fas fa-fist-raised" style="color: #4d94ff; font-size: 10px;"></i><span style="color: #4d94ff; font-weight: bold;">ATK/</span><span style="color: ${textColor};">${card.atk}</span></div>
-                                ${!isLinkMonster ? `<div style="display: flex; align-items: center; gap: 4px;"><i class="fas fa-shield-alt" style="color: #ff4d4d; font-size: 10px;"></i><span style="color: #ff4d4d; font-weight: bold;">DEF/</span><span style="color: ${textColor};">${card.def}</span></div>` 
-                                : `<div style="display: flex; align-items: center; gap: 4px;"><span style="color: ${textColor}; font-weight: bold;">LINK-${card.linkval}</span></div>`}
+                                <div style="display: flex; align-items: center; gap: 4px;"><i class="fas fa-fist-raised" style="color: #4d94ff; font-size: 10px;"></i><span style="color: #4d94ff; font-weight: bold;">ATK/</span><span style="color: ${textColor};">${escapeHtml(String(card.atk != null ? card.atk : ''))}</span></div>
+                                ${!isLinkMonster ? `<div style="display: flex; align-items: center; gap: 4px;"><i class="fas fa-shield-alt" style="color: #ff4d4d; font-size: 10px;"></i><span style="color: #ff4d4d; font-weight: bold;">DEF/</span><span style="color: ${textColor};">${escapeHtml(String(card.def != null ? card.def : ''))}</span></div>` 
+                                : `<div style="display: flex; align-items: center; gap: 4px;"><span style="color: ${textColor}; font-weight: bold;">LINK-${escapeHtml(String(card.linkval != null ? card.linkval : ''))}</span></div>`}
                             </div>` : ''}
-                        ${card.card_sets && card.card_sets.length ? `<button type="button" class="btn-open-card-sets" data-card-id="${card.id}">${T('ui.prints_btn', { n: card.card_sets.length })}</button>` : ''}
+                        ${card.card_sets && card.card_sets.length ? `<button type="button" class="btn-open-card-sets" data-card-id="${escAttr(String(card.id))}">${escapeHtml(T('ui.prints_btn', { n: card.card_sets.length }))}</button>` : ''}
                     </div>`;
             }
             const cardWithSpecificArt = { ...card, card_images: [imageObj] };
@@ -17798,7 +18367,8 @@
         const attrRaw = card.attribute
             ? card.attribute.toUpperCase()
             : (frameTypeIsSpell(ft) ? 'SPELL' : frameTypeIsTrap(ft) ? 'TRAP' : (card.type.includes('Spell') ? 'SPELL' : 'TRAP'));
-        const attrIconUrl = card.attribute ? `https://images.ygoprodeck.com/images/cards/${attrRaw}.jpg` : '';
+        const attrSeg = sanitizeYgoCdnAttribFileSegment(card.attribute);
+        const attrIconUrl = card.attribute ? `https://images.ygoprodeck.com/images/cards/${attrSeg}.jpg` : '';
         const raceIconUrl = `https://images.ygoprodeck.com/images/cards/icons/race/${encodeURIComponent(card.race || '')}.png`;
         const raceTraduzida = !siteUiIsPt() ? (card.race || '') : (RACES_TRAD_DECK[card.race] || card.race || '');
         const tipoTexto = formatCardTypeForUi(card.type);
@@ -17814,28 +18384,28 @@
                             <b class="card-name" style="margin: 0; line-height: 1.2; color: ${nameColor};">${displayNameEscaped}</b>
                         </div>
                         <div class="info-row" style="display: flex; align-items: center; flex-wrap: wrap; gap: 10px; row-gap: 4px; color: ${textColor};">
-                            ${attrIconUrl ? `<div style="display: flex; align-items: center; gap: 4px;"><img src="${attrIconUrl}" style="width: 14px; height: 14px; border-radius: 50%;"><span style="font-size: 10px; color: inherit;">${attrDisplayName(attrRaw)}</span></div>` : ''}
+                            ${attrIconUrl ? `<div style="display: flex; align-items: center; gap: 4px;"><img src="${escAttr(attrIconUrl)}" style="width: 14px; height: 14px; border-radius: 50%;"><span style="font-size: 10px; color: inherit;">${escapeHtml(String(attrDisplayName(attrRaw)))}</span></div>` : ''}
                             ${pendulumHtml}
-                            ${(card.level || card.rank) && !isLinkMonster ? `<div style="display: flex; align-items: center; gap: 2px;"><img src="${starIcon}" style="width: 12px; height: 12px; ${(frameTypeIsXyz(ft) || card.type.toUpperCase().includes('XYZ')) ? 'filter:invert(1) brightness(0.5);' : ''}"><span style="font-size: 10px; color: inherit;">${card.level || card.rank}</span></div>` : ''}
+                            ${(card.level || card.rank) && !isLinkMonster ? `<div style="display: flex; align-items: center; gap: 2px;"><img src="${escAttr(starIcon)}" style="width: 12px; height: 12px; ${(frameTypeIsXyz(ft) || card.type.toUpperCase().includes('XYZ')) ? 'filter:invert(1) brightness(0.5);' : ''}"><span style="font-size: 10px; color: inherit;">${escapeHtml(String(card.level || card.rank))}</span></div>` : ''}
                             ${linkMarkersHtml}
                         </div>
                         <div class="info-row card-race-type-row" style="margin-top: 2px; color: ${textColor};">
                             <span class="card-race-type-group card-race-type-group--with-slash">
-                            <img src="${raceIconUrl}" style="width: 14px; height: 14px;" onerror="this.style.display='none'">
-                            <span style="color: inherit;">${raceTraduzida}</span>
+                            <img src="${escAttr(raceIconUrl)}" style="width: 14px; height: 14px;" onerror="this.style.display='none'">
+                            <span style="color: inherit;">${escapeHtml(String(raceTraduzida ?? ''))}</span>
                             </span>
                             <span class="card-race-type-group">
-                            <img src="${typeIconUrl}" title="Tipo" style="width: 14px; height: 14px; border-radius: 2px;" onerror="this.style.display='none'">
-                            <span style="color: inherit;">${tipoTexto}</span>
+                            <img src="${escAttr(typeIconUrl)}" title="Tipo" style="width: 14px; height: 14px; border-radius: 2px;" onerror="this.style.display='none'">
+                            <span style="color: inherit;">${escapeHtml(String(tipoTexto ?? ''))}</span>
                             </span>
                         </div>
                         ${card.atk !== undefined ? `
                             <div class="info-row atk-def-row" style="border-top: 1px solid ${!hasCustomTheme ? 'rgba(255,255,255,0.1)' : 'var(--border)'};">
-                                <div style="display: flex; align-items: center; gap: 4px;"><i class="fas fa-fist-raised" style="color: #4d94ff; font-size: 10px;"></i><span style="color: #4d94ff; font-weight: bold;">ATK/</span><span style="color: ${textColor};">${card.atk}</span></div>
-                                ${!isLinkMonster ? `<div style="display: flex; align-items: center; gap: 4px;"><i class="fas fa-shield-alt" style="color: #ff4d4d; font-size: 10px;"></i><span style="color: #ff4d4d; font-weight: bold;">DEF/</span><span style="color: ${textColor};">${card.def}</span></div>`
-                : `<div style="display: flex; align-items: center; gap: 4px;"><span style="color: ${textColor}; font-weight: bold;">LINK-${card.linkval}</span></div>`}
+                                <div style="display: flex; align-items: center; gap: 4px;"><i class="fas fa-fist-raised" style="color: #4d94ff; font-size: 10px;"></i><span style="color: #4d94ff; font-weight: bold;">ATK/</span><span style="color: ${textColor};">${escapeHtml(String(card.atk != null ? card.atk : ''))}</span></div>
+                                ${!isLinkMonster ? `<div style="display: flex; align-items: center; gap: 4px;"><i class="fas fa-shield-alt" style="color: #ff4d4d; font-size: 10px;"></i><span style="color: #ff4d4d; font-weight: bold;">DEF/</span><span style="color: ${textColor};">${escapeHtml(String(card.def != null ? card.def : ''))}</span></div>`
+                : `<div style="display: flex; align-items: center; gap: 4px;"><span style="color: ${textColor}; font-weight: bold;">LINK-${escapeHtml(String(card.linkval != null ? card.linkval : ''))}</span></div>`}
                             </div>` : ''}
-                        ${card.card_sets && card.card_sets.length ? `<button type="button" class="btn-open-card-sets" data-card-id="${card.id}">${T('ui.prints_btn', { n: card.card_sets.length })}</button>` : ''}`;
+                        ${card.card_sets && card.card_sets.length ? `<button type="button" class="btn-open-card-sets" data-card-id="${escAttr(String(card.id))}">${escapeHtml(T('ui.prints_btn', { n: card.card_sets.length }))}</button>` : ''}`;
     }
 
     function changeQueueView(view) {
@@ -17943,13 +18513,13 @@
                 row.innerHTML = `
                     <span class="queue-item-qty">${qty}×</span>
                     <div class="list-card-thumb">
-                        <img src="${deckThumbUrl}" loading="lazy" alt="" onerror="this.src='https://images.ygoprodeck.com/images/cards/back_high.jpg'">
+                        <img src="${escAttr(deckThumbUrl)}" loading="lazy" alt="" onerror="this.src='https://images.ygoprodeck.com/images/cards/back_high.jpg'">
                     </div>
                     <div class="card-info-box">${infoInner}</div>
-                    <button type="button" class="queue-item-remove deck-queue-remove-float" data-i18n-title="queue.remove_copies" title="Remover todas as cópias" data-i18n-aria="queue.remove_copies" aria-label="Remover todas as cópias" data-queue-remove="${escapeHtml(stackImgId)}">✖</button>`;
+                    <button type="button" class="queue-item-remove deck-queue-remove-float" data-i18n-title="queue.remove_copies" title="Remover todas as cópias" data-i18n-aria="queue.remove_copies" aria-label="Remover todas as cópias" data-queue-remove="${escAttr(String(stackImgId))}">✖</button>`;
             } else {
                 const setsFab = hasSets
-                    ? `<button type="button" class="card-sets-fab" data-deck-opens-sets="${fullCardData.id}" title="Ver impressões e expansões" aria-label="Ver impressões e expansões"><i class="fa-solid fa-layer-group"></i></button>`
+                    ? `<button type="button" class="card-sets-fab" data-deck-opens-sets="${escAttr(String(fullCardData.id))}" title="Ver impressões e expansões" aria-label="Ver impressões e expansões"><i class="fa-solid fa-layer-group"></i></button>`
                     : '';
                 const banDeckSvg = fullCardData ? getBanIcon(fullCardData, 'grid') : '';
                 const banDeckHtml = banDeckSvg
@@ -17958,17 +18528,17 @@
                 const mdDeck = (isMasterDuelDeckSelected() && fullCardData) ? pickMasterDuelRarity(fullCardData) : null;
                 const mdDeckUrl = mdDeck ? masterDuelRarityIconUrl(mdDeck) : '';
                 const mdDeckHtml = mdDeckUrl
-                    ? `<span class="card-grid-md-badge card-grid-md-badge--deck-thumb" aria-hidden="true"><img class="md-badge-img" src="${mdDeckUrl}" alt="${mdDeck}" style="width:18px;height:18px;object-fit:contain;display:block;"></span>`
+                    ? `<span class="card-grid-md-badge card-grid-md-badge--deck-thumb" aria-hidden="true"><img class="md-badge-img" src="${escAttr(mdDeckUrl)}" alt="${escAttr(String(mdDeck))}" style="width:18px;height:18px;object-fit:contain;display:block;"></span>`
                     : '';
                 row.innerHTML = `
                     <div class="queue-item-thumb-wrap">
                         <span class="queue-item-qty-badge">${qty}×</span>
-                        <img src="${deckThumbUrl}" loading="lazy" alt="" onerror="this.src='https://images.ygoprodeck.com/images/cards/back_high.jpg'">
+                        <img src="${escAttr(deckThumbUrl)}" loading="lazy" alt="" onerror="this.src='https://images.ygoprodeck.com/images/cards/back_high.jpg'">
                         ${banDeckHtml}
                         ${mdDeckHtml}
                         ${setsFab}
                     </div>
-                    <button type="button" class="queue-item-remove" data-i18n-title="queue.remove_copies" title="Remover todas as cópias" data-i18n-aria="queue.remove_copies" aria-label="Remover todas as cópias" data-queue-remove="${escapeHtml(stackImgId)}">✖</button>`;
+                    <button type="button" class="queue-item-remove" data-i18n-title="queue.remove_copies" title="Remover todas as cópias" data-i18n-aria="queue.remove_copies" aria-label="Remover todas as cópias" data-queue-remove="${escAttr(String(stackImgId))}">✖</button>`;
             }
 
             const deckSetsBtn = row.querySelector('[data-deck-opens-sets]');
@@ -18289,10 +18859,151 @@
         return `https://images.ygoprodeck.com/images/cards/${id}.jpg`;
     }
 
+    /**
+     * O CDN images.ygoprodeck.com normalmente **não** expõe CORS; `fetch`/canvas para o URL direto falham.
+     * Em dev, `vite.config.js` proxy em `/__ygo_images__/…` torna o mesmo JPEG **same-origin**, e aí
+     * fetch + export para PDF/PNG/JPG funcionam. Não dependemos de HEAD (frágil): tentamos primeiro o path
+     * local; se der 404 (sem proxy), tenta o URL absoluto do CDN.
+     * Também reconhece porta Vite típica (5173/4173) mesmo com IP da LAN (ex.: `http://192.168.1.5:5173`).
+     */
+    function shouldUseYgoImageProxyRewrite() {
+        if (typeof location === 'undefined') return false;
+        if (location.protocol === 'file:' || !/^https?:$/i.test(String(location.protocol))) return false;
+        const h = String(location.hostname || '').toLowerCase();
+        const port = String(location.port || '');
+        return (
+            h === 'localhost' ||
+            h === '127.0.0.1' ||
+            h === '[::1]' ||
+            port === '5173' ||
+            port === '4173'
+        );
+    }
+
+    function resolveImageUrlForCrossOriginFetch(url) {
+        const s = String(url || '').trim();
+        if (!s) return s;
+        if (!shouldUseYgoImageProxyRewrite()) return s;
+        if (!/images\.ygoprodeck\.com/i.test(s)) return s;
+        try {
+            const u = new URL(s);
+            return `/__ygo_images__${u.pathname}${u.search}${u.hash}`;
+        } catch (_) {
+            return s;
+        }
+    }
+
+    function buildYgoExportImageCandidateUrls(cardUrl) {
+        const direct = String(cardUrl || '').trim();
+        if (!direct) return [];
+        const out = [];
+        const seen = new Set();
+        const pushUrl = (u) => {
+            const s = String(u || '').trim();
+            if (!s || seen.has(s)) return;
+            seen.add(s);
+            out.push(s);
+        };
+        const rewritten = resolveImageUrlForCrossOriginFetch(direct);
+        if (rewritten !== direct) pushUrl(rewritten);
+        pushUrl(direct);
+        try {
+            const parsed = new URL(direct);
+            if (/images\.ygoprodeck\.com/i.test(parsed.hostname)) {
+                const hostAndPath = `${parsed.hostname}${parsed.pathname}${parsed.search || ''}`;
+                // wsrv/images.weserv costumam devolver CORS válido para leitura no canvas.
+                pushUrl(`https://wsrv.nl/?url=${encodeURIComponent(hostAndPath)}&output=jpg`);
+                pushUrl(`https://images.weserv.nl/?url=${encodeURIComponent(hostAndPath)}&output=jpg`);
+            }
+        } catch (_) {}
+        return out;
+    }
+
+    /**
+     * Blob (preferível) ou Image. Com proxy same-origin, fetch devolve blob seguro para canvas/jsPDF.
+     */
+    async function fetchYgoCardImageForExport(cardUrl) {
+        const tryUrls = buildYgoExportImageCandidateUrls(cardUrl);
+        if (!tryUrls.length) return null;
+
+        for (const u of tryUrls) {
+            try {
+                const resp = await fetch(u, { mode: 'cors', credentials: 'omit', cache: 'default' });
+                if (!resp.ok) continue;
+                const ct = String(resp.headers.get('content-type') || '').toLowerCase();
+                if (ct && !ct.startsWith('image/')) continue;
+                const blob = await resp.blob();
+                const bt = String(blob && blob.type ? blob.type : '').toLowerCase();
+                if (blob && blob.size && (!bt || bt.startsWith('image/'))) return { kind: 'blob', blob };
+            } catch (_) {
+                /* próximo URL */
+            }
+        }
+        for (const u of tryUrls) {
+            try {
+                const img = await new Promise((resolve, reject) => {
+                    const im = new Image();
+                    im.crossOrigin = 'anonymous';
+                    im.onload = () => resolve(im);
+                    im.onerror = () => reject(new Error('img_load'));
+                    im.src = u;
+                });
+                return { kind: 'img', img };
+            } catch (_) {
+                /* próximo URL */
+            }
+        }
+        return null;
+    }
+
+    async function normalizeImageSourceToPdfJpegDataUrl(got) {
+        if (!got) return null;
+        if (got.kind === 'blob') {
+            const img = await new Promise((resolve, reject) => {
+                const im = new Image();
+                im.onload = () => resolve(im);
+                im.onerror = () => reject(new Error('blob_img_load'));
+                im.src = URL.createObjectURL(got.blob);
+            }).catch(() => null);
+            if (!img) return null;
+            try {
+                const c = document.createElement('canvas');
+                c.width = Math.max(1, img.naturalWidth || img.width || 1);
+                c.height = Math.max(1, img.naturalHeight || img.height || 1);
+                const cx = c.getContext('2d');
+                if (!cx) return null;
+                cx.drawImage(img, 0, 0);
+                return c.toDataURL('image/jpeg', 0.92);
+            } catch (_) {
+                return null;
+            } finally {
+                try {
+                    URL.revokeObjectURL(img.src);
+                } catch (_) {}
+            }
+        }
+        if (got.kind === 'img') {
+            try {
+                const c = document.createElement('canvas');
+                c.width = Math.max(1, got.img.naturalWidth || got.img.width || 1);
+                c.height = Math.max(1, got.img.naturalHeight || got.img.height || 1);
+                const cx = c.getContext('2d');
+                if (!cx) return null;
+                cx.drawImage(got.img, 0, 0);
+                return c.toDataURL('image/jpeg', 0.92);
+            } catch (_) {
+                return null;
+            }
+        }
+        return null;
+    }
+
     async function generatePdfBlobFromQueue(queue, onProgress) {
         if (!queue || !queue.length) return null;
         const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-        const scale = parseFloat(document.getElementById('print-scale').value) / 100;
+        const scaleEl = document.getElementById('print-scale');
+        const scaleRaw = scaleEl != null && scaleEl.value !== '' ? parseFloat(scaleEl.value) : NaN;
+        const scale = (Number.isFinite(scaleRaw) && scaleRaw > 0 ? scaleRaw : 100) / 100;
         const w = 59 * scale,
             h = 86 * scale,
             gap = 6;
@@ -18320,13 +19031,10 @@
             if (onProgress) onProgress(i + 1, queue.length);
             try {
                 const imgUrl = getCardImageUrlForExport(queue[i]);
-                const resp = await fetch(imgUrl);
-                const blob = await resp.blob();
-                const b64 = await new Promise((r) => {
-                    const rd = new FileReader();
-                    rd.onloadend = () => r(rd.result);
-                    rd.readAsDataURL(blob);
-                });
+                const got = await fetchYgoCardImageForExport(imgUrl);
+                if (!got) throw new Error('no_img');
+                const b64 = await normalizeImageSourceToPdfJpegDataUrl(got);
+                if (!b64 || typeof b64 !== 'string' || !b64.startsWith('data:image/')) throw new Error('img_encode');
                 doc.addImage(b64, 'JPEG', x, y, w, h, undefined, 'NONE');
                 doc.setDrawColor(255);
                 doc.setLineWidth(0.4);
@@ -18725,6 +19433,9 @@
         const a = document.createElement('a');
         a.href = url;
         a.download = filename;
+        try {
+            a.referrerPolicy = 'no-referrer';
+        } catch (_) {}
         a.click();
         setTimeout(() => URL.revokeObjectURL(url), 4000);
     }
@@ -18766,12 +19477,15 @@
         const a = document.createElement('a');
         a.href = url;
         a.download = filename;
+        try {
+            a.referrerPolicy = 'no-referrer';
+        } catch (_) {}
         a.click();
         setTimeout(() => URL.revokeObjectURL(url), 4000);
     }
 
     async function ensureCardCacheForIds(idList) {
-        const ids = [...new Set((idList || []).filter((x) => x != null))];
+        const ids = coerceYuGiOhNumericIds(idList || []);
         if (!ids.length) return;
         const missing = ids.filter((id) => {
             const c = cardCache[id];
@@ -18781,18 +19495,25 @@
         const chunk = 64;
         for (let i = 0; i < missing.length; i += chunk) {
             const part = missing.slice(i, i + chunk);
-            const res = await fetch(`https://db.ygoprodeck.com/api/v7/cardinfo.php?id=${part.join(',')}&misc=yes`);
-            const data = await res.json();
-            if (data.data) {
-                data.data.forEach((card) => {
-                    cardCache[card.id] = card;
-                });
+            try {
+                const res = await deckbuilderPublicApiFetch(
+                    `https://db.ygoprodeck.com/api/v7/cardinfo.php?id=${part.join(',')}&misc=yes`
+                );
+                if (!res.ok) continue;
+                const data = await res.json();
+                if (data.data) {
+                    data.data.forEach((card) => {
+                        cardCache[card.id] = card;
+                    });
+                }
+            } catch (_) {
+                /* Falha transitória ou corpo JSON inválido: mantém cache parcial para não falhar export */
             }
         }
     }
 
     async function ensureGenesysPointsForIds(idList) {
-        const ids = [...new Set((idList || []).filter((x) => x != null))];
+        const ids = coerceYuGiOhNumericIds(idList || []);
         if (!ids.length) return;
         const missing = ids.filter((id) => {
             const c = cardCache[id];
@@ -18802,7 +19523,7 @@
         const chunk = 64;
         for (let i = 0; i < missing.length; i += chunk) {
             const part = missing.slice(i, i + chunk);
-            const res = await fetch(`https://db.ygoprodeck.com/api/v7/cardinfo.php?id=${part.join(',')}&misc=yes&format=genesys`);
+            const res = await deckbuilderPublicApiFetch(`https://db.ygoprodeck.com/api/v7/cardinfo.php?id=${part.join(',')}&misc=yes&format=genesys`);
             const data = await res.json();
             if (data.data) {
                 data.data.forEach((card) => {
@@ -19017,6 +19738,24 @@
         return { fusion, synchro, xyz, link, other };
     }
 
+    function aggregateSideDeckTypes(entries) {
+        let monsters = 0,
+            spells = 0,
+            traps = 0,
+            extra = 0,
+            unknown = 0;
+        for (const entry of entries || []) {
+            const full = cardCache[entry.id];
+            const sec = getQueueCardSection(full);
+            if (sec === 'extra') extra++;
+            else if (sec === 'spells') spells++;
+            else if (sec === 'traps') traps++;
+            else if (sec === 'monsters') monsters++;
+            else unknown++;
+        }
+        return { monsters, spells, traps, extra, unknown };
+    }
+
     function formatExportPriceUsd(n) {
         if (!Number.isFinite(n) || n <= 0) return '—';
         try {
@@ -19103,6 +19842,7 @@
         const { main, extra, side } = splitQueueMainExtraSide(q, qSide);
         const totalSteps = Math.max(1, main.length + extra.length + side.length);
         let step = 0;
+        let drawnCards = 0;
         const bump = () => {
             step++;
             if (onProgress) onProgress(step, totalSteps);
@@ -19163,6 +19903,41 @@
         ctx.textAlign = 'left';
         ctx.textBaseline = 'middle';
         ctx.fillText(String(deckTitle || 'Deck').slice(0, 72), pad + 16, y + titleH / 2);
+
+        const allDeckEntries = [...(main || []), ...(extra || []), ...(side || [])];
+        const allDeckTypeTotals = aggregateSideDeckTypes(allDeckEntries);
+        const allDeckTotal = allDeckEntries.length;
+        const allDeckPrice = sumTcgPriceForEntries(allDeckEntries);
+        let titleChipX = pad + 16 + Math.ceil(ctx.measureText(String(deckTitle || 'Deck').slice(0, 72)).width) + 80;
+        const titleChipY = y + Math.round((titleH - 22) / 2);
+        const titleChipMaxX = pad + innerW - 260;
+        const drawTitleChip = (color, value) => {
+            if (!value || titleChipX > titleChipMaxX) return;
+            titleChipX = drawDeckListChip(ctx, titleChipX, titleChipY, color, value);
+        };
+        drawTitleChip(DECK_LIST_COLORS.monster, allDeckTypeTotals.monsters);
+        drawTitleChip(DECK_LIST_COLORS.spell, allDeckTypeTotals.spells);
+        drawTitleChip(DECK_LIST_COLORS.trap, allDeckTypeTotals.traps);
+        drawTitleChip('#5dade2', allDeckTypeTotals.extra);
+        drawTitleChip('#95a5a6', allDeckTypeTotals.unknown);
+
+        const deckPillW = 42;
+        const deckPillH = 24;
+        const deckPillX = pad + innerW - deckPillW - 118;
+        ctx.fillStyle = 'rgba(70, 80, 100, 0.95)';
+        ctx.beginPath();
+        canvasRoundRectPath(ctx, deckPillX, y + 15, deckPillW, deckPillH, 8);
+        ctx.fill();
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 13px Segoe UI, system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(String(allDeckTotal), deckPillX + deckPillW / 2, y + titleH / 2 + 0.5);
+
+        ctx.textAlign = 'right';
+        ctx.fillStyle = '#aab7c4';
+        ctx.font = '12px Segoe UI, system-ui, sans-serif';
+        ctx.fillText(formatExportPriceUsd(allDeckPrice), pad + innerW - 14, y + titleH / 2 + 0.5);
 
         // Master Duel totals (UR/SR/R/N + gemas) no header da imagem exportada.
         if (isMasterDuelDeckSelected()) {
@@ -19269,6 +20044,13 @@
                 if (m.spells) chipX = drawDeckListChip(ctx, chipX, topY + 11, DECK_LIST_COLORS.spell, m.spells);
                 if (m.traps) chipX = drawDeckListChip(ctx, chipX, topY + 11, DECK_LIST_COLORS.trap, m.traps);
                 if (m.unknown) chipX = drawDeckListChip(ctx, chipX, topY + 11, '#95a5a6', m.unknown);
+            } else if (mode === 'side') {
+                const s = aggregateSideDeckTypes(entries);
+                if (s.monsters) chipX = drawDeckListChip(ctx, chipX, topY + 11, DECK_LIST_COLORS.monster, s.monsters);
+                if (s.spells) chipX = drawDeckListChip(ctx, chipX, topY + 11, DECK_LIST_COLORS.spell, s.spells);
+                if (s.traps) chipX = drawDeckListChip(ctx, chipX, topY + 11, DECK_LIST_COLORS.trap, s.traps);
+                if (s.extra) chipX = drawDeckListChip(ctx, chipX, topY + 11, '#5dade2', s.extra);
+                if (s.unknown) chipX = drawDeckListChip(ctx, chipX, topY + 11, '#95a5a6', s.unknown);
             }
 
             const gridTop = topY + secHeadH + 8;
@@ -19290,31 +20072,37 @@
                     bump();
                     try {
                         const imgUrl = getCardImageUrlForExport(entries[i]);
-                        const resp = await fetch(imgUrl, { mode: 'cors', credentials: 'omit' });
-                        if (!resp.ok) throw new Error('img_http');
-                        const blob = await resp.blob();
+                        const got = await fetchYgoCardImageForExport(imgUrl);
+                        if (!got) throw new Error('no_img');
                         const tw = Math.max(2, Math.round(cw * listExportDpr));
                         const th = Math.max(2, Math.round(ch * listExportDpr));
-                        let bmp;
-                        let bmpNeedsSmooth = false;
-                        try {
-                            bmp = await createImageBitmap(blob, {
-                                resizeWidth: tw,
-                                resizeHeight: th,
-                                resizeQuality: 'high'
-                            });
-                        } catch (eBmp) {
-                            bmp = await createImageBitmap(blob);
-                            bmpNeedsSmooth = true;
-                        }
                         ctx.save();
                         ctx.beginPath();
                         canvasRoundRectPath(ctx, cx, cy, cw, ch, 4);
                         ctx.clip();
-                        const prevSmooth = ctx.imageSmoothingEnabled;
-                        ctx.imageSmoothingEnabled = bmpNeedsSmooth;
-                        ctx.drawImage(bmp, cx, cy, cw, ch);
-                        ctx.imageSmoothingEnabled = prevSmooth;
+                        if (got.kind === 'blob') {
+                            let bmp;
+                            let bmpNeedsSmooth = false;
+                            try {
+                                bmp = await createImageBitmap(got.blob, {
+                                    resizeWidth: tw,
+                                    resizeHeight: th,
+                                    resizeQuality: 'high'
+                                });
+                            } catch (eBmp) {
+                                bmp = await createImageBitmap(got.blob);
+                                bmpNeedsSmooth = true;
+                            }
+                            const prevSmooth = ctx.imageSmoothingEnabled;
+                            ctx.imageSmoothingEnabled = bmpNeedsSmooth;
+                            ctx.drawImage(bmp, cx, cy, cw, ch);
+                            ctx.imageSmoothingEnabled = prevSmooth;
+                            bmp.close();
+                        } else {
+                            ctx.imageSmoothingEnabled = true;
+                            ctx.drawImage(got.img, cx, cy, cw, ch);
+                        }
+                        drawnCards++;
                         ctx.restore();
                         ctx.strokeStyle = 'rgba(255,255,255,0.1)';
                         ctx.lineWidth = 1;
@@ -19323,7 +20111,6 @@
                         ctx.stroke();
                         drawDeckListBanBadgeOnCtx(ctx, cx, cy, cw, ch, cardCache[entries[i].id]);
                         await drawDeckListMdRarityBadgeOnCtx(ctx, cx, cy, cw, ch, cardCache[entries[i].id]);
-                        bmp.close();
                     } catch (e) {}
                     col++;
                     if (col >= cols) {
@@ -19338,6 +20125,10 @@
         await drawOneSection(T('ui.deck_section_main'), main, layM, 'main');
         await drawOneSection(T('ui.deck_section_extra'), extra, layE, 'extra');
         await drawOneSection(T('ui.deck_section_side'), side, layS, 'side');
+
+        if ((main.length + extra.length + side.length) > 0 && drawnCards === 0) {
+            throw new Error('export_cards_not_drawn');
+        }
 
         return canvas;
     }
@@ -19613,7 +20404,7 @@
                         if (blob) {
                             downloadBlob(blob, sanitizeExportFilename(getCurrentDeckExportBasename()) + `_lista_deck.${ext}`);
                             showToast(T('toast.img_list_saved'));
-                        } else showToast(T('toast.img_fail'));
+                        } else showToast(T('toast.img_fail'), { variant: 'error' });
                     }
                     );
                     return;
@@ -19688,7 +20479,7 @@
                             mime === 'image/jpeg' ? 0.92 : undefined
                         );
                         if (blob) await copyRasterBlobToClipboard(blob, mime);
-                        else showToast(T('toast.img_fail'));
+                        else showToast(T('toast.img_fail'), { variant: 'error' });
                     });
                     return;
                 }
@@ -19714,12 +20505,12 @@
                         mime === 'image/jpeg' ? 0.92 : undefined
                     );
                     if (blob) await copyRasterBlobToClipboard(blob, mime);
-                    else showToast(T('toast.img_fail'));
+                    else showToast(T('toast.img_fail'), { variant: 'error' });
                 });
                 return;
             }
         } catch (e) {
-            showToast(T('toast.export_fail'));
+            showToast(T('toast.export_fail'), { variant: 'error' });
         }
     }
 
@@ -19886,7 +20677,7 @@
         const orderedBuild = [...mainIds, ...extraIds];
         if (!orderedBuild.length && !sideIds.length) throw new Error('YDK sem IDs numéricos.');
         const uniq = [...new Set([...orderedBuild, ...sideIds])];
-        const res = await fetch(`https://db.ygoprodeck.com/api/v7/cardinfo.php?id=${uniq.join(',')}&misc=yes`);
+        const res = await deckbuilderPublicApiFetch(`https://db.ygoprodeck.com/api/v7/cardinfo.php?id=${uniq.join(',')}&misc=yes`);
         const data = await res.json();
         if (!data.data) throw new Error('API não devolveu dados para estes IDs.');
         const cardById = {};
@@ -19956,7 +20747,7 @@
             }
         }
         const uniq = [...new Set([...orderedMainExtra, ...orderedSideCsv])];
-        const res = await fetch(`https://db.ygoprodeck.com/api/v7/cardinfo.php?id=${uniq.join(',')}&misc=yes`);
+        const res = await deckbuilderPublicApiFetch(`https://db.ygoprodeck.com/api/v7/cardinfo.php?id=${uniq.join(',')}&misc=yes`);
         const data = await res.json();
         if (!data.data) throw new Error('API não devolveu dados para estes passcodes.');
         const cardById = {};
@@ -20322,13 +21113,14 @@ function fnameTokensForApi(name) {
 }
 
 async function fetchCardDataByFname(fnameToken, lang) {
-    if (!fnameToken || fnameToken.length < 3) return [];
-    const ck = `${fnameToken}|${lang || "def"}`;
+    const ft = stripSqlDangerousSequences(stripDangerousUnicodeAndControls(String(fnameToken || ''))).trim();
+    if (!ft || ft.length < 3) return [];
+    const ck = `${ft}|${lang || "def"}`;
     if (fnameRawCache.has(ck)) return fnameRawCache.get(ck);
     try {
-        let url = `https://db.ygoprodeck.com/api/v7/cardinfo.php?fname=${encodeURIComponent(fnameToken)}&misc=yes`;
+        let url = `https://db.ygoprodeck.com/api/v7/cardinfo.php?fname=${encodeURIComponent(ft)}&misc=yes`;
         if (lang && CARDINFO_LANGUAGE_PARAMS.has(String(lang))) url += `&language=${lang}`;
-        const r = await fetch(url);
+        const r = await deckbuilderPublicApiFetch(url);
         if (!r.ok) {
             fnameRawCache.set(ck, []);
             if (fnameRawCache.size > FNAME_RAW_CACHE_MAX) fnameRawCache.delete(fnameRawCache.keys().next().value);
@@ -20364,6 +21156,11 @@ function scoreCardAgainstOcr(card, ocrNormLower) {
     if (card.name_pt) cNorms.push(normalizeForSim(card.name_pt).toLowerCase());
     if (card.name) cNorms.push(normalizeForSim(card.name).toLowerCase());
     if (card.name_en) cNorms.push(normalizeForSim(card.name_en).toLowerCase());
+    const mx = card.misc_info && card.misc_info[0];
+    if (card.beta_name) cNorms.push(normalizeForSim(card.beta_name).toLowerCase());
+    if (card.treated_as) cNorms.push(normalizeForSim(card.treated_as).toLowerCase());
+    if (mx && mx.beta_name) cNorms.push(normalizeForSim(mx.beta_name).toLowerCase());
+    if (mx && mx.treated_as) cNorms.push(normalizeForSim(mx.treated_as).toLowerCase());
     const uniq = [...new Set(cNorms.filter(Boolean))];
     let score = 0;
     for (const cNorm of uniq) {
@@ -20539,6 +21336,11 @@ function cardNormalizedNames(card) {
     if (card?.name_pt) out.push(normalizeForSim(card.name_pt));
     if (card?.name) out.push(normalizeForSim(card.name));
     if (card?.name_en) out.push(normalizeForSim(card.name_en));
+    const mx = card.misc_info && card.misc_info[0];
+    if (card?.beta_name) out.push(normalizeForSim(card.beta_name));
+    if (card?.treated_as) out.push(normalizeForSim(card.treated_as));
+    if (mx?.beta_name) out.push(normalizeForSim(mx.beta_name));
+    if (mx?.treated_as) out.push(normalizeForSim(mx.treated_as));
     return [...new Set(out.filter(Boolean))];
 }
 
@@ -20633,6 +21435,9 @@ function downloadTextFile(filename, text, mime = 'text/plain') {
     const a = document.createElement('a');
     a.href = url;
     a.download = filename;
+    try {
+        a.referrerPolicy = 'no-referrer';
+    } catch (_) {}
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 2000);
 }
@@ -20656,7 +21461,7 @@ function showScannerToast(cardName) {
         font-weight: bold; z-index: 1000003; font-size: 12px;
         animation: fadeIn 0.2s;
     `;
-    toast.innerHTML = `<i class="fas fa-check-circle"></i> ${cardName}`;
+    toast.innerHTML = `<i class="fas fa-check-circle"></i> ${escapeHtml(cardName)}`;
     document.body.appendChild(toast);
     setTimeout(() => {
         toast.style.opacity = "0";
@@ -20672,19 +21477,22 @@ function updateScannerResultsUI() {
     }
     scannerFoundCards.forEach(card => {
         const cardName = displayNameForApiCard(card);
+        const cidNum = sanitizeYuGiOhCardId(card.id);
+        if (cidNum == null) return;
         const usdOcr = getTcgplayerPriceUsd(card);
         const priceOcrStr = usdOcr > 0 ? `$${usdOcr.toFixed(2)}` : 'N/A';
+        const smallUrl = String(card.card_images[0].image_url_small || '').trim().slice(0, 2048);
         const div = document.createElement('div');
         div.className = 'suggestion-item';
         div.style.borderLeft = '3px solid #2ecc71';
         div.style.marginBottom = '8px';
         div.style.padding = '8px';
         div.innerHTML = `
-            <img src="${card.card_images[0].image_url_small}" style="width: 60px;">
+            <img src="${escAttr(smallUrl)}" style="width: 60px;">
             <div class="card-info-box">
-                <div class="card-name" style="color:#2ecc71; font-size:14px;">${cardName}</div>
-                <div class="info-row" style="font-size:11px;">💰 ${priceOcrStr}</div>
-                <button onclick="forceAddToQueue('${card.id}')" style="background:#2ecc71; color:#000; border:none; border-radius:4px; padding:4px 12px; margin-top:6px; cursor:pointer; font-weight:bold;">${T('ui.queue_add_ocr')}</button>
+                <div class="card-name" style="color:#2ecc71; font-size:14px;">${escapeHtml(cardName)}</div>
+                <div class="info-row" style="font-size:11px;">💰 ${escapeHtml(priceOcrStr)}</div>
+                <button type="button" onclick="forceAddToQueue(${cidNum})" style="background:#2ecc71; color:#000; border:none; border-radius:4px; padding:4px 12px; margin-top:6px; cursor:pointer; font-weight:bold;">${escapeHtml(T('ui.queue_add_ocr'))}</button>
             </div>
         `;
         bindSuggestionItemDnD(div, { id: card.id, imgId: card.card_images[0].id, name: cardName });
@@ -21207,6 +22015,9 @@ window.takeScreenshot = () => {
     const link = document.createElement('a');
     link.download = `ocr_${Date.now()}.png`;
     link.href = canvas.toDataURL('image/png');
+    try {
+        link.referrerPolicy = 'no-referrer';
+    } catch (_) {}
     link.click();
     // Também exporta o JSON junto (mais útil pra análise)
     window.exportOcrDebug?.();
@@ -21396,7 +22207,8 @@ class OCRCalibrator {
         }
         const saved = localStorage.getItem('ocr_calibrations');
         if (saved) {
-            try { return JSON.parse(saved); } catch(e) {}
+            const o = safeJsonParse(saved, null);
+            if (o && typeof o === 'object' && !Array.isArray(o)) return o;
         }
         return {};
     }
