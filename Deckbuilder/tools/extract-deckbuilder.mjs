@@ -1,0 +1,60 @@
+import fs from 'node:fs';
+import path from 'node:path';
+
+const ROOT = process.cwd();
+const INPUT = path.join(ROOT, 'Deckbuilder_cursor.html');
+const OUT_HTML = path.join(ROOT, 'index.html');
+const OUT_CSS = path.join(ROOT, 'src', 'style.css');
+const OUT_JS = path.join(ROOT, 'src', 'main.js');
+
+function ensureDir(dir) {
+  fs.mkdirSync(dir, { recursive: true });
+}
+
+function fail(msg) {
+  console.error(`[extract] ${msg}`);
+  process.exit(1);
+}
+
+if (!fs.existsSync(INPUT)) {
+  fail(`Arquivo não encontrado: ${INPUT}`);
+}
+
+const input = fs.readFileSync(INPUT, 'utf8');
+
+const styleOpen = input.indexOf('<style>');
+const styleClose = input.indexOf('</style>');
+if (styleOpen < 0 || styleClose < 0 || styleClose <= styleOpen) {
+  fail('Não encontrei bloco <style>...</style> no HTML.');
+}
+
+const scriptOpen = input.indexOf('<script>', styleClose);
+const scriptClose = input.indexOf('</script>', scriptOpen);
+if (scriptOpen < 0 || scriptClose < 0 || scriptClose <= scriptOpen) {
+  fail('Não encontrei bloco <script>...</script> principal no HTML.');
+}
+
+const css = input.slice(styleOpen + '<style>'.length, styleClose).trimStart();
+const js = input.slice(scriptOpen + '<script>'.length, scriptClose).trimStart();
+
+// Substitui o <style>...</style> por um link para CSS local.
+let html = input.slice(0, styleOpen);
+html += '    <link rel="stylesheet" href="/src/style.css">';
+html += input.slice(styleClose + '</style>'.length, scriptOpen);
+// Substitui o <script>...</script> por import module.
+html += '    <script type="module" src="/src/main.js"></script>\n';
+html += input.slice(scriptClose + '</script>'.length);
+
+// Garante que o output tenha <head> válido (inserção pode quebrar indentação)
+ensureDir(path.dirname(OUT_CSS));
+ensureDir(path.dirname(OUT_JS));
+
+fs.writeFileSync(OUT_CSS, css, 'utf8');
+fs.writeFileSync(OUT_JS, js, 'utf8');
+fs.writeFileSync(OUT_HTML, html, 'utf8');
+
+console.log('[extract] OK');
+console.log(`[extract] index.html: ${path.relative(ROOT, OUT_HTML)}`);
+console.log(`[extract] CSS: ${path.relative(ROOT, OUT_CSS)}`);
+console.log(`[extract] JS: ${path.relative(ROOT, OUT_JS)}`);
+

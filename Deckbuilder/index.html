@@ -1,0 +1,3059 @@
+<!doctype html>
+<html lang="pt-br">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DeckBuilder GiuBravo</title>
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20viewBox%3D%270%200%2064%2064%27%3E%3Cdefs%3E%3ClinearGradient%20id%3D%27shine%27%20x1%3D%270%27%20y1%3D%270%27%20x2%3D%271%27%20y2%3D%271%27%3E%3Cstop%20offset%3D%270%27%20stop-color%3D%27%23ffffff%27%20stop-opacity%3D%270%27/%3E%3Cstop%20offset%3D%270.48%27%20stop-color%3D%27%23ffffff%27%20stop-opacity%3D%270.22%27/%3E%3Cstop%20offset%3D%271%27%20stop-color%3D%27%23ffffff%27%20stop-opacity%3D%270%27/%3E%3C/linearGradient%3E%3CradialGradient%20id%3D%27oval%27%20cx%3D%270.45%27%20cy%3D%270.35%27%20r%3D%270.8%27%3E%3Cstop%20offset%3D%270%27%20stop-color%3D%27%233b3b3b%27/%3E%3Cstop%20offset%3D%270.65%27%20stop-color%3D%27%23131313%27/%3E%3Cstop%20offset%3D%271%27%20stop-color%3D%27%23060606%27/%3E%3C/radialGradient%3E%3C/defs%3E%3Crect%20x%3D%276%27%20y%3D%274%27%20width%3D%2752%27%20height%3D%2756%27%20rx%3D%274%27%20fill%3D%27%23ffffff%27/%3E%3Crect%20x%3D%278%27%20y%3D%276%27%20width%3D%2748%27%20height%3D%2752%27%20rx%3D%273%27%20fill%3D%27%23c68635%27/%3E%3Crect%20x%3D%2711%27%20y%3D%279%27%20width%3D%2742%27%20height%3D%2746%27%20rx%3D%272%27%20fill%3D%27%23724b1a%27/%3E%3Crect%20x%3D%2714%27%20y%3D%2712%27%20width%3D%2736%27%20height%3D%2740%27%20rx%3D%272%27%20fill%3D%27%23805822%27/%3E%3Cpath%20d%3D%27M14%2012%20L50%2052%20L50%2012%20Z%27%20fill%3D%27url(%23shine)%27/%3E%3Cellipse%20cx%3D%2732%27%20cy%3D%2734%27%20rx%3D%2712%27%20ry%3D%2717.5%27%20fill%3D%27url(%23oval)%27/%3E%3C/svg%3E"
+    />
+    <meta name="theme-color" content="#0c0c0c" />
+    <!-- Camada de segurança sem hospedagem: políticas só no documento + SRI nos CDNs públicos -->
+    <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <meta
+      http-equiv="Permissions-Policy"
+      content="camera=(self), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()"
+    />
+    <!-- Ajustar listas quando hospedar ou adicionar origens novas -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' https://cdnjs.cloudflare.com https://unpkg.com blob:; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; img-src 'self' https: data: blob:; font-src https://cdnjs.cloudflare.com https://fonts.gstatic.com data:; connect-src 'self' https://db.ygoprodeck.com https://ygoprodeck.com https://www.ygoprodeck.com https://images.ygoprodeck.com https://cdnjs.cloudflare.com https://unpkg.com https://ms.yugipedia.com https://static.wikia.nocookie.net https://fonts.googleapis.com https://fonts.gstatic.com; worker-src 'self' blob: https://unpkg.com https://cdnjs.cloudflare.com; frame-src 'self' blob: data:; media-src blob: https: data:; object-src 'none';"
+    />
+    <!-- Integrity SRI omitido: cdnjs pode servir variantes diferentes (gzip/brotli) e hashes calculados falham em alguns proxies de dev -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://unpkg.com/tesseract.js@v4.0.1/dist/tesseract.min.js"></script>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bitter:ital,wght@0,400;0,600;0,700;1,400&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div id="card-tooltip" style="display: none">
+      <div class="tt-container">
+        <img id="tooltip-img" src="" alt="Carta" data-i18n-alt="ui.card_alt" />
+        <div class="tt-details">
+          <h3 id="tooltip-name" style="margin-top: 0; margin-bottom: 10px"></h3>
+          <div id="tooltip-beta-name-row" aria-hidden="true"></div>
+          <div
+            id="tooltip-archetype-row"
+            style="
+              display: none;
+              margin: 0 0 8px 0;
+              font-size: 11px;
+              color: #e5e7eb;
+              line-height: 1.4;
+            "
+          ></div>
+          <div id="tooltip-info-rows"></div>
+          <div id="tooltip-text" style="font-size: 13px; color: #fff"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tooltip de validação do deck no body: z-index acima do #card-tooltip (fixo), para não ficar sob o preview da carta. -->
+    <div
+      class="deck-validity-tooltip is-off"
+      id="deck-validity-tooltip"
+      role="tooltip"
+      aria-hidden="true"
+    >
+      <div id="deck-validity-tooltip-body"></div>
+    </div>
+
+    <!-- Tooltip dos totais (cartas por categoria na barra de estatísticas) -->
+    <div class="deck-stat-tooltip" id="deck-stat-tooltip" role="tooltip" aria-hidden="true">
+      <div id="deck-stat-tooltip-body"></div>
+    </div>
+
+    <div
+      id="card-sets-panel"
+      class="card-sets-panel"
+      aria-hidden="true"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="card-sets-panel-title"
+    >
+      <div class="csp-backdrop" id="card-sets-panel-backdrop"></div>
+      <div class="csp-dialog">
+        <div class="csp-header">
+          <h2 id="card-sets-panel-title" class="csp-title"></h2>
+          <button
+            type="button"
+            class="csp-close"
+            id="card-sets-panel-close"
+            data-i18n-aria="ui.csp_close_aria"
+            aria-label="Fechar painel de impressões"
+          >
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div id="card-sets-panel-body" class="csp-body"></div>
+      </div>
+    </div>
+
+    <div id="toast-container"></div>
+
+    <div id="deck-name-modal" class="deck-name-modal" aria-hidden="true">
+      <div class="deck-name-modal-backdrop" id="deck-name-modal-backdrop"></div>
+      <div
+        class="deck-name-modal-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="deck-name-modal-title"
+      >
+        <h3 id="deck-name-modal-title" data-i18n="ui.modal_deck_name">Nome do deck</h3>
+        <input type="text" id="deck-name-modal-input" maxlength="64" autocomplete="off" />
+        <div class="deck-name-modal-actions">
+          <div class="icon-btn-stack">
+            <label class="theme-row-label" for="deck-name-modal-cancel" data-i18n="ui.cancel"
+              >Cancelar</label
+            >
+            <button
+              type="button"
+              class="btn-view btn-icon-tool"
+              id="deck-name-modal-cancel"
+              data-i18n-title="ui.cancel"
+              data-i18n-aria="ui.cancel"
+              title=""
+              aria-label=""
+            >
+              <i class="fas fa-times" aria-hidden="true"></i>
+            </button>
+          </div>
+          <div class="icon-btn-stack">
+            <label class="theme-row-label" for="deck-name-modal-ok" data-i18n="ui.ok">OK</label>
+            <button
+              type="button"
+              class="btn-view active btn-icon-tool"
+              id="deck-name-modal-ok"
+              data-i18n-title="ui.ok"
+              data-i18n-aria="ui.ok"
+              title=""
+              aria-label=""
+            >
+              <i class="fas fa-check" aria-hidden="true"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="deck-swap-modal" class="deck-name-modal" aria-hidden="true">
+      <div class="deck-name-modal-backdrop" id="deck-swap-modal-backdrop"></div>
+      <div
+        class="deck-name-modal-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="deck-swap-modal-title"
+      >
+        <h3 id="deck-swap-modal-title">Trocar carta</h3>
+        <div id="deck-swap-modal-list" class="deck-swap-modal-list"></div>
+        <div class="deck-name-modal-actions">
+          <div class="icon-btn-stack">
+            <label class="theme-row-label" for="deck-swap-modal-cancel" data-i18n="ui.cancel"
+              >Cancelar</label
+            >
+            <button
+              type="button"
+              class="btn-view btn-icon-tool"
+              id="deck-swap-modal-cancel"
+              data-i18n-title="ui.cancel"
+              data-i18n-aria="ui.cancel"
+              title=""
+              aria-label=""
+            >
+              <i class="fas fa-times" aria-hidden="true"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="random-main-modal" class="deck-name-modal" aria-hidden="true">
+      <div class="deck-name-modal-backdrop" id="random-main-modal-backdrop"></div>
+      <div
+        class="deck-name-modal-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="random-main-modal-title"
+      >
+        <h3 id="random-main-modal-title" data-i18n="ui.random_main_title">Cartas aleatórias</h3>
+        <div class="random-main-modal-toolbar">
+          <div class="random-main-modal-left">
+            <div class="icon-btn-stack icon-btn-stack--tool">
+              <label
+                class="theme-row-label"
+                for="btn-random-main-toggle-view"
+                id="label-random-main-toggle-view"
+                data-i18n="ui.grid_label"
+                >Grade</label
+              >
+              <button
+                type="button"
+                class="btn-view btn-icon-tool"
+                id="btn-random-main-toggle-view"
+                data-i18n-title="ui.random_main_grid_title"
+                data-i18n-aria="ui.random_main_grid_title"
+                title=""
+                aria-label=""
+              >
+                <i class="fas fa-th-large" id="icon-random-main-toggle-view" aria-hidden="true"></i>
+              </button>
+            </div>
+            <div class="icon-btn-stack icon-btn-stack--tool">
+              <label
+                class="theme-row-label"
+                for="random-main-reroll"
+                data-i18n="ui.random_main_reroll_label"
+                >Sortear</label
+              >
+              <button
+                type="button"
+                class="btn-view btn-icon-tool"
+                id="random-main-reroll"
+                data-i18n-title="ui.random_main_reroll_title"
+                data-i18n-aria="ui.random_main_reroll_title"
+                title=""
+                aria-label=""
+              >
+                <i class="fas fa-shuffle" aria-hidden="true"></i>
+              </button>
+            </div>
+          </div>
+          <div class="random-main-modal-right">
+            <div class="icon-btn-stack">
+              <label class="theme-row-label" for="random-main-close">Fechar</label>
+              <button
+                type="button"
+                class="btn-view btn-icon-tool"
+                id="random-main-close"
+                title="Fechar"
+                aria-label="Fechar"
+              >
+                <i class="fas fa-times" aria-hidden="true"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="random-main-modal-body">
+          <div id="random-main-cards" class="results-view grid-mode" aria-live="polite"></div>
+          <div id="random-main-empty" class="random-main-modal-empty" style="display: none"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="help-mouse-modal" class="deck-name-modal" aria-hidden="true">
+      <div class="deck-name-modal-backdrop" id="help-mouse-modal-backdrop"></div>
+      <div
+        class="deck-name-modal-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="help-mouse-modal-title"
+      >
+        <div class="help-mouse-modal-header">
+          <h3 id="help-mouse-modal-title" data-i18n="ui.help_mouse_title">
+            Como interagir com as cartas
+          </h3>
+          <button
+            type="button"
+            class="btn-view btn-icon-tool help-mouse-modal-close-top"
+            id="help-mouse-modal-close"
+            data-i18n-aria="ui.close"
+            title=""
+            aria-label=""
+          >
+            <i class="fas fa-times" aria-hidden="true"></i>
+          </button>
+        </div>
+        <div
+          id="help-mouse-modal-body"
+          style="font-size: 12px; line-height: 1.35"
+          data-i18n-html="ui.help_mouse_body"
+        >
+          <div style="display: flex; flex-direction: column; gap: 10px">
+            <div><strong>Esquerdo</strong>: adiciona ao Main Deck (usa Quantidade).</div>
+            <div><strong>Direito</strong>: adiciona ao Side Deck.</div>
+            <div><strong>Scroll</strong> (clique na roda): abre Detalhes da carta.</div>
+            <div>
+              <strong>Rolar a roda</strong> na lista de resultados: página
+              <strong>anterior</strong> (para cima) / <strong>próxima</strong> (para baixo).
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="credits-modal" class="deck-name-modal" aria-hidden="true">
+      <div class="deck-name-modal-backdrop" id="credits-modal-backdrop"></div>
+      <div
+        class="deck-name-modal-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="credits-modal-title"
+      >
+        <div class="credits-modal-header">
+          <h3 id="credits-modal-title">Créditos</h3>
+          <button
+            type="button"
+            class="btn-view btn-icon-tool credits-modal-close-top"
+            id="credits-modal-close"
+            title="Fechar"
+            aria-label="Fechar"
+          >
+            <i class="fas fa-times" aria-hidden="true"></i>
+          </button>
+        </div>
+        <div class="credits-body">
+          <div class="credits-head">
+            <div class="credits-head-left">
+              <div>
+                <strong>Desenvolvedor:</strong><br />
+                Giovanni Viol Assis<br />
+              </div>
+              <div style="margin-top: 10px">
+                <strong>Email e chave PIX:</strong><br />
+                <span style="word-break: break-all">giubravo@yahoo.com.br</span>
+              </div>
+            </div>
+            <div class="credits-head-right" aria-hidden="true">
+              <div class="credits-brand-stack">
+                <img
+                  class="credits-yugioh-logo"
+                  alt="Yu-Gi-Oh!"
+                  loading="lazy"
+                  src="assets/yugioh-logo.png"
+                />
+                <img
+                  class="credits-konami-logo"
+                  alt="KONAMI"
+                  loading="lazy"
+                  src="assets/konami.png"
+                />
+              </div>
+            </div>
+          </div>
+          <div class="credits-qr-row" aria-label="QR Code do PIX">
+            <div class="credits-pix-logo-box" aria-label="Logo do PIX">
+              <img
+                class="credits-pix-logo-hero"
+                alt="PIX"
+                loading="lazy"
+                src="assets/pix-logo.png"
+              />
+            </div>
+            <div class="credits-qr">
+              <img alt="QR Code PIX" loading="lazy" src="assets/pix-qr.png" />
+            </div>
+          </div>
+          <div class="credits-api">
+            <div class="credits-api-line"><strong>API:</strong> ygoprodeck</div>
+            <img
+              class="credits-api-logo"
+              alt="YGOPRODeck"
+              loading="lazy"
+              src="assets/ygoprodeck.png"
+            />
+          </div>
+          <div>
+            Mais de <strong>25 mil linhas</strong> de código em meses de dedicação!<br />
+            Você pode me ajudar me pagando um lanche. Obrigado.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="tooltip-details-modal" class="tooltip-details-modal" aria-hidden="true">
+      <div class="tooltip-details-modal-backdrop" id="tooltip-details-modal-backdrop"></div>
+      <div
+        class="tooltip-details-modal-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="tooltip-details-modal-title"
+      >
+        <div class="tooltip-details-modal-header">
+          <h3
+            class="tooltip-details-modal-title"
+            id="tooltip-details-modal-title"
+            data-i18n="ui.details_title"
+          >
+            Detalhes da carta
+          </h3>
+          <div class="icon-btn-stack">
+            <span class="theme-row-label" data-i18n="ui.export_close_label">Fechar</span>
+            <button
+              type="button"
+              class="tooltip-details-modal-close btn-icon-tool"
+              id="tooltip-details-modal-close"
+              data-i18n-title="ui.close_details_aria"
+              data-i18n-aria="ui.close_details_aria"
+              title=""
+              aria-label=""
+            >
+              <i class="fas fa-times" aria-hidden="true"></i>
+            </button>
+          </div>
+        </div>
+        <div class="tooltip-details-modal-body" id="tooltip-details-modal-body"></div>
+      </div>
+    </div>
+
+    <div class="app-container empty-queue deck-col-hidden" id="app-layout">
+      <div class="col" id="col-filters">
+        <div class="col-header col-header-filters-toolbar">
+          <span class="col-header-filters-title" data-i18n="ui.filters_title">Filtros</span>
+          <div class="icon-btn-stack">
+            <label class="theme-row-label" for="btn-reset-filters" data-i18n="ui.filters_reset"
+              >Resetar</label
+            >
+            <button
+              type="button"
+              id="btn-reset-filters"
+              class="btn-view btn-icon-tool"
+              onclick="resetFilters()"
+              data-i18n-title="ui.filters_reset"
+              data-i18n-aria="ui.filters_reset"
+              title=""
+              aria-label=""
+            >
+              <i class="fas fa-rotate-left" aria-hidden="true"></i>
+            </button>
+          </div>
+        </div>
+        <div class="sidebar-content">
+          <div class="filter-group">
+            <label data-i18n="filter.type_label">Tipo de carta</label>
+            <p class="cardset-hint" data-i18n-html="filter.type_hint">
+              Monstro, Magia ou Armadilha. Um por vez; Enter ou Adicionar.
+            </p>
+            <div class="filter-action-row">
+              <input
+                type="text"
+                id="filter-type-input"
+                list="datalist-filter-type"
+                data-i18n-placeholder="filter.type_ph"
+                placeholder="Ex.: Monstro…"
+                autocomplete="off"
+                style="flex: 1"
+              />
+              <div class="icon-btn-stack icon-btn-stack--tool">
+                <span class="theme-row-label" data-i18n="filter.add">Adicionar</span>
+
+                <button
+                  type="button"
+                  id="filter-type-add"
+                  class="btn-secondary btn-icon-tool"
+                  data-i18n-title="filter.add"
+                  data-i18n-aria="filter.add"
+                  title=""
+                  aria-label=""
+                >
+                  <i class="fas fa-plus" aria-hidden="true"></i>
+                </button>
+              </div>
+            </div>
+            <datalist id="datalist-filter-type"></datalist>
+            <div id="filter-type-chips" class="cardset-chips"></div>
+            <div class="filter-clear-stack">
+              <span class="theme-row-label" data-i18n="filter.type_clear"></span>
+              <button
+                type="button"
+                id="filter-type-clear"
+                class="btn-secondary btn-icon-tool"
+                data-i18n-title="filter.type_clear"
+                data-i18n-aria="filter.type_clear"
+                title=""
+                aria-label=""
+              >
+                <i class="fas fa-eraser" aria-hidden="true"></i>
+              </button>
+            </div>
+          </div>
+          <div class="filter-group">
+            <label data-i18n="filter.desc_label">Descrição/Efeito</label>
+            <p class="cardset-hint" data-i18n-html="filter.desc_hint">
+              Enquanto digita (≥3 letras), busca fuzzy automática. <strong>Adicionar</strong> guarda
+              termos extras — resultados = união (qualquer termo). Enter também adiciona.
+            </p>
+            <div class="filter-action-row">
+              <input
+                type="text"
+                id="filter-desc"
+                data-i18n-placeholder="filter.desc_ph"
+                placeholder="Ex: 'banir', 'cemitério'..."
+                autocomplete="off"
+                style="flex: 1"
+              />
+              <div class="icon-btn-stack icon-btn-stack--tool">
+                <span class="theme-row-label" data-i18n="filter.add">Adicionar</span>
+
+                <button
+                  type="button"
+                  id="filter-desc-add-chip"
+                  class="btn-secondary btn-icon-tool"
+                  data-i18n-title="filter.add"
+                  data-i18n-aria="filter.add"
+                  title=""
+                  aria-label=""
+                >
+                  <i class="fas fa-plus" aria-hidden="true"></i>
+                </button>
+              </div>
+            </div>
+            <div id="filter-desc-chips" class="cardset-chips"></div>
+            <div class="filter-clear-stack">
+              <span class="theme-row-label" data-i18n="filter.desc_clear"></span>
+              <button
+                type="button"
+                id="filter-desc-clear-chips"
+                class="btn-secondary btn-icon-tool"
+                data-i18n-title="filter.desc_clear"
+                data-i18n-aria="filter.desc_clear"
+                title=""
+                aria-label=""
+              >
+                <i class="fas fa-eraser" aria-hidden="true"></i>
+              </button>
+            </div>
+          </div>
+          <div class="filter-group">
+            <label data-i18n="filter.arch_label">Arquétipo</label>
+            <p class="cardset-hint" data-i18n-html="filter.arch_hint">
+              Nomes oficiais (inglês), lista YGOPRODeck. Um ou vários chips: união (carta em
+              <strong>qualquer</strong> arquétipo). No tooltip, todas as entradas conhecidas da
+              carta.
+            </p>
+            <div class="filter-action-row">
+              <input
+                type="text"
+                id="filter-archetype-input"
+                list="datalist-filter-archetype"
+                data-i18n-placeholder="filter.arch_ph"
+                placeholder="Ex.: Branded, Blue-Eyes…"
+                autocomplete="off"
+                style="flex: 1"
+              />
+              <div class="icon-btn-stack icon-btn-stack--tool">
+                <span class="theme-row-label" data-i18n="filter.add">Adicionar</span>
+
+                <button
+                  type="button"
+                  id="filter-archetype-add"
+                  class="btn-secondary btn-icon-tool"
+                  data-i18n-title="filter.add"
+                  data-i18n-aria="filter.add"
+                  title=""
+                  aria-label=""
+                >
+                  <i class="fas fa-plus" aria-hidden="true"></i>
+                </button>
+              </div>
+            </div>
+            <datalist id="datalist-filter-archetype"></datalist>
+            <div id="filter-archetype-chips" class="cardset-chips"></div>
+            <div class="filter-clear-stack">
+              <span class="theme-row-label" data-i18n="filter.arch_clear"></span>
+              <button
+                type="button"
+                id="filter-archetype-clear"
+                class="btn-secondary btn-icon-tool"
+                data-i18n-title="filter.arch_clear"
+                data-i18n-aria="filter.arch_clear"
+                title=""
+                aria-label=""
+              >
+                <i class="fas fa-eraser" aria-hidden="true"></i>
+              </button>
+            </div>
+          </div>
+          <div id="group-subtype" class="filter-group" style="display: none">
+            <label data-i18n="filter.subtype_label">Categoria (subtipo)</label>
+            <p class="cardset-hint" data-i18n-html="filter.subtype_hint">
+              Apenas com “Monstro” selecionado. Um subtipo por vez.
+            </p>
+            <div class="filter-action-row">
+              <input
+                type="text"
+                id="filter-subtype-input"
+                list="datalist-filter-subtype"
+                data-i18n-placeholder="filter.subtype_ph"
+                placeholder="Ex.: Monstro Pêndulo de efeito…"
+                autocomplete="off"
+                style="flex: 1"
+              />
+              <div class="icon-btn-stack icon-btn-stack--tool">
+                <span class="theme-row-label" data-i18n="filter.add">Adicionar</span>
+
+                <button
+                  type="button"
+                  id="filter-subtype-add"
+                  class="btn-secondary btn-icon-tool"
+                  data-i18n-title="filter.add"
+                  data-i18n-aria="filter.add"
+                  title=""
+                  aria-label=""
+                >
+                  <i class="fas fa-plus" aria-hidden="true"></i>
+                </button>
+              </div>
+            </div>
+            <datalist id="datalist-filter-subtype"></datalist>
+            <div id="filter-subtype-chips" class="cardset-chips"></div>
+            <div class="filter-clear-stack">
+              <span class="theme-row-label" data-i18n="filter.subtype_clear"></span>
+              <button
+                type="button"
+                id="filter-subtype-clear"
+                class="btn-secondary btn-icon-tool"
+                data-i18n-title="filter.subtype_clear"
+                data-i18n-aria="filter.subtype_clear"
+                title=""
+                aria-label=""
+              >
+                <i class="fas fa-eraser" aria-hidden="true"></i>
+              </button>
+            </div>
+          </div>
+          <div id="group-race" class="filter-group" style="display: none">
+            <label data-i18n="filter.race_label">Raça / tipo de magia ou armadilha</label>
+            <p class="cardset-hint" data-i18n-html="filter.race_hint">
+              Um ou vários (API: vírgula). Sugestões mudam conforme o tipo de carta.
+            </p>
+            <div class="filter-action-row">
+              <input
+                type="text"
+                id="filter-race-input"
+                list="datalist-filter-race"
+                data-i18n-placeholder="filter.race_ph"
+                placeholder="Ex.: Dragão…"
+                autocomplete="off"
+                style="flex: 1"
+              />
+              <div class="icon-btn-stack icon-btn-stack--tool">
+                <span class="theme-row-label" data-i18n="filter.add">Adicionar</span>
+
+                <button
+                  type="button"
+                  id="filter-race-add"
+                  class="btn-secondary btn-icon-tool"
+                  data-i18n-title="filter.add"
+                  data-i18n-aria="filter.add"
+                  title=""
+                  aria-label=""
+                >
+                  <i class="fas fa-plus" aria-hidden="true"></i>
+                </button>
+              </div>
+            </div>
+            <datalist id="datalist-filter-race"></datalist>
+            <div id="filter-race-chips" class="cardset-chips"></div>
+            <div class="filter-clear-stack">
+              <span class="theme-row-label" data-i18n="filter.race_clear"></span>
+              <button
+                type="button"
+                id="filter-race-clear"
+                class="btn-secondary btn-icon-tool"
+                data-i18n-title="filter.race_clear"
+                data-i18n-aria="filter.race_clear"
+                title=""
+                aria-label=""
+              >
+                <i class="fas fa-eraser" aria-hidden="true"></i>
+              </button>
+            </div>
+          </div>
+          <div id="monster-extras" style="display: none">
+            <div class="filter-group">
+              <label data-i18n="filter.attr_label">Atributo</label>
+              <p class="cardset-hint" data-i18n-html="filter.attr_hint">
+                Um ou vários (Trevas, Luz…). Valores da API em inglês.
+              </p>
+              <div class="filter-action-row">
+                <input
+                  type="text"
+                  id="filter-attribute-input"
+                  list="datalist-filter-attribute"
+                  data-i18n-placeholder="filter.attr_ph"
+                  placeholder="Ex.: Trevas"
+                  autocomplete="off"
+                  style="flex: 1"
+                />
+                <div class="icon-btn-stack icon-btn-stack--tool">
+                  <span class="theme-row-label" data-i18n="filter.add">Adicionar</span>
+
+                  <button
+                    type="button"
+                    id="filter-attribute-add"
+                    class="btn-secondary btn-icon-tool"
+                    data-i18n-title="filter.add"
+                    data-i18n-aria="filter.add"
+                    title=""
+                    aria-label=""
+                  >
+                    <i class="fas fa-plus" aria-hidden="true"></i>
+                  </button>
+                </div>
+              </div>
+              <datalist id="datalist-filter-attribute"></datalist>
+              <div id="filter-attribute-chips" class="cardset-chips"></div>
+              <div class="filter-clear-stack">
+                <span class="theme-row-label" data-i18n="filter.attr_clear"></span>
+                <button
+                  type="button"
+                  id="filter-attribute-clear"
+                  class="btn-secondary btn-icon-tool"
+                  data-i18n-title="filter.attr_clear"
+                  data-i18n-aria="filter.attr_clear"
+                  title=""
+                  aria-label=""
+                >
+                  <i class="fas fa-eraser" aria-hidden="true"></i>
+                </button>
+              </div>
+            </div>
+            <div class="filter-group">
+              <label data-i18n="filter.level_label">Nível</label>
+              <p class="cardset-hint" data-i18n-html="filter.level_hint">
+                0 a 13. Um nível por vez.
+              </p>
+              <div class="filter-action-row">
+                <select id="filter-level-op" class="num-op" aria-label="Operador do nível">
+                  <option value="eq" selected>=</option>
+                  <option value="lt">&lt;</option>
+                  <option value="lte">&lt;=</option>
+                  <option value="gt">&gt;</option>
+                  <option value="gte">&gt;=</option>
+                </select>
+                <input
+                  type="text"
+                  id="filter-level-input"
+                  list="datalist-filter-level"
+                  data-i18n-placeholder="filter.level_ph"
+                  placeholder="Ex.: 4"
+                  autocomplete="off"
+                  style="flex: 1"
+                />
+                <div class="icon-btn-stack icon-btn-stack--tool">
+                  <span class="theme-row-label" data-i18n="filter.add">Adicionar</span>
+
+                  <button
+                    type="button"
+                    id="filter-level-add"
+                    class="btn-secondary btn-icon-tool"
+                    data-i18n-title="filter.add"
+                    data-i18n-aria="filter.add"
+                    title=""
+                    aria-label=""
+                  >
+                    <i class="fas fa-plus" aria-hidden="true"></i>
+                  </button>
+                </div>
+              </div>
+              <datalist id="datalist-filter-level"></datalist>
+              <div id="filter-level-chips" class="cardset-chips"></div>
+              <div class="filter-clear-stack">
+                <span class="theme-row-label" data-i18n="filter.level_clear"></span>
+                <button
+                  type="button"
+                  id="filter-level-clear"
+                  class="btn-secondary btn-icon-tool"
+                  data-i18n-title="filter.level_clear"
+                  data-i18n-aria="filter.level_clear"
+                  title=""
+                  aria-label=""
+                >
+                  <i class="fas fa-eraser" aria-hidden="true"></i>
+                </button>
+              </div>
+            </div>
+            <div class="filter-group">
+              <label>ATK</label>
+              <p class="cardset-hint" data-i18n-html="filter.atk_hint">
+                Valor atual + Adicionar = mais buscas em união. O campo continua filtrando em tempo
+                real.
+              </p>
+              <div class="stepper">
+                <button type="button" onclick="adjustVal('filter-atk', -50)" aria-label="−50">
+                  <i class="fas fa-minus" aria-hidden="true"></i>
+                </button>
+                <select id="filter-atk-op" class="num-op" aria-label="Operador do ATK">
+                  <option value="eq" selected>=</option>
+                  <option value="lt">&lt;</option>
+                  <option value="lte">&lt;=</option>
+                  <option value="gt">&gt;</option>
+                  <option value="gte">&gt;=</option>
+                </select>
+                <input type="number" id="filter-atk" placeholder="---" />
+                <button type="button" onclick="adjustVal('filter-atk', 50)" aria-label="+50">
+                  <i class="fas fa-plus" aria-hidden="true"></i>
+                </button>
+              </div>
+              <div class="filter-full-add-stack">
+                <span class="theme-row-label" data-i18n="filter.atk_add"
+                  >Adicionar ATK à busca</span
+                >
+                <button
+                  type="button"
+                  id="filter-atk-add-chip"
+                  class="btn-secondary btn-icon-tool btn-icon-tool--block"
+                  data-i18n-title="filter.atk_add"
+                  data-i18n-aria="filter.atk_add"
+                  title=""
+                  aria-label=""
+                >
+                  <i class="fas fa-plus" aria-hidden="true"></i>
+                </button>
+              </div>
+              <div id="filter-atk-chips" class="cardset-chips"></div>
+              <div class="filter-clear-stack">
+                <span class="theme-row-label" data-i18n="filter.atk_clear"></span>
+                <button
+                  type="button"
+                  id="filter-atk-clear-chips"
+                  class="btn-secondary btn-icon-tool"
+                  data-i18n-title="filter.atk_clear"
+                  data-i18n-aria="filter.atk_clear"
+                  title=""
+                  aria-label=""
+                >
+                  <i class="fas fa-eraser" aria-hidden="true"></i>
+                </button>
+              </div>
+            </div>
+            <div class="filter-group">
+              <label>DEF</label>
+              <p class="cardset-hint" data-i18n-html="filter.def_hint">
+                Igual ao ATK: chips em união com o valor do campo.
+              </p>
+              <div class="stepper">
+                <button type="button" onclick="adjustVal('filter-def', -50)" aria-label="−50">
+                  <i class="fas fa-minus" aria-hidden="true"></i>
+                </button>
+                <select id="filter-def-op" class="num-op" aria-label="Operador do DEF">
+                  <option value="eq" selected>=</option>
+                  <option value="lt">&lt;</option>
+                  <option value="lte">&lt;=</option>
+                  <option value="gt">&gt;</option>
+                  <option value="gte">&gt;=</option>
+                </select>
+                <input type="number" id="filter-def" placeholder="---" />
+                <button type="button" onclick="adjustVal('filter-def', 50)" aria-label="+50">
+                  <i class="fas fa-plus" aria-hidden="true"></i>
+                </button>
+              </div>
+              <div class="filter-full-add-stack">
+                <span class="theme-row-label" data-i18n="filter.def_add"
+                  >Adicionar DEF à busca</span
+                >
+                <button
+                  type="button"
+                  id="filter-def-add-chip"
+                  class="btn-secondary btn-icon-tool btn-icon-tool--block"
+                  data-i18n-title="filter.def_add"
+                  data-i18n-aria="filter.def_add"
+                  title=""
+                  aria-label=""
+                >
+                  <i class="fas fa-plus" aria-hidden="true"></i>
+                </button>
+              </div>
+              <div id="filter-def-chips" class="cardset-chips"></div>
+              <div class="filter-clear-stack">
+                <span class="theme-row-label" data-i18n="filter.def_clear"></span>
+                <button
+                  type="button"
+                  id="filter-def-clear-chips"
+                  class="btn-secondary btn-icon-tool"
+                  data-i18n-title="filter.def_clear"
+                  data-i18n-aria="filter.def_clear"
+                  title=""
+                  aria-label=""
+                >
+                  <i class="fas fa-eraser" aria-hidden="true"></i>
+                </button>
+              </div>
+            </div>
+            <div class="filter-group">
+              <label data-i18n="filter.linkval_label">Link</label>
+              <p class="cardset-hint" data-i18n-html="filter.linkval_hint">
+                Filtra monstros Link pelo número (API: <code>link</code>). Pode adicionar mais de um
+                (união OR).
+              </p>
+              <div class="filter-action-row">
+                <input
+                  type="text"
+                  id="filter-linkval-input"
+                  list="datalist-filter-linkval"
+                  data-i18n-placeholder="filter.linkval_ph"
+                  placeholder="Ex.: 2"
+                  autocomplete="off"
+                  style="flex: 1"
+                />
+                <div class="icon-btn-stack icon-btn-stack--tool">
+                  <span class="theme-row-label" data-i18n="filter.add">Adicionar</span>
+                  <button
+                    type="button"
+                    id="filter-linkval-add"
+                    class="btn-secondary btn-icon-tool"
+                    data-i18n-title="filter.add"
+                    data-i18n-aria="filter.add"
+                    title=""
+                    aria-label=""
+                  >
+                    <i class="fas fa-plus" aria-hidden="true"></i>
+                  </button>
+                </div>
+              </div>
+              <datalist id="datalist-filter-linkval"></datalist>
+              <div id="filter-linkval-chips" class="cardset-chips"></div>
+              <div class="filter-clear-stack">
+                <span class="theme-row-label" data-i18n="filter.linkval_clear">Limpar links</span>
+                <button
+                  type="button"
+                  id="filter-linkval-clear"
+                  class="btn-secondary btn-icon-tool"
+                  data-i18n-title="filter.linkval_clear"
+                  data-i18n-aria="filter.linkval_clear"
+                  title=""
+                  aria-label=""
+                >
+                  <i class="fas fa-eraser" aria-hidden="true"></i>
+                </button>
+              </div>
+            </div>
+            <div class="filter-group">
+              <label data-i18n="filter.linkmarker_label">Setas (Link Markers)</label>
+              <p class="cardset-hint" data-i18n-html="filter.linkmarker_hint">
+                Adicionar setas (API: <code>linkmarker</code>). Vários chips = união OR.
+              </p>
+              <div class="filter-action-row">
+                <input
+                  type="text"
+                  id="filter-linkmarker-input"
+                  list="datalist-filter-linkmarker"
+                  data-i18n-placeholder="filter.linkmarker_ph"
+                  placeholder="Ex.: Top, Bottom-Left…"
+                  autocomplete="off"
+                  style="flex: 1"
+                />
+                <div class="icon-btn-stack icon-btn-stack--tool">
+                  <span class="theme-row-label" data-i18n="filter.add">Adicionar</span>
+                  <button
+                    type="button"
+                    id="filter-linkmarker-add"
+                    class="btn-secondary btn-icon-tool"
+                    data-i18n-title="filter.add"
+                    data-i18n-aria="filter.add"
+                    title=""
+                    aria-label=""
+                  >
+                    <i class="fas fa-plus" aria-hidden="true"></i>
+                  </button>
+                </div>
+              </div>
+              <datalist id="datalist-filter-linkmarker"></datalist>
+              <div id="filter-linkmarker-chips" class="cardset-chips"></div>
+              <div class="filter-clear-stack">
+                <span class="theme-row-label" data-i18n="filter.linkmarker_clear"
+                  >Limpar setas</span
+                >
+                <button
+                  type="button"
+                  id="filter-linkmarker-clear"
+                  class="btn-secondary btn-icon-tool"
+                  data-i18n-title="filter.linkmarker_clear"
+                  data-i18n-aria="filter.linkmarker_clear"
+                  title=""
+                  aria-label=""
+                >
+                  <i class="fas fa-eraser" aria-hidden="true"></i>
+                </button>
+              </div>
+            </div>
+            <div class="filter-group">
+              <label data-i18n="filter.pend_scale_label">Escala (Pêndulo)</label>
+              <p class="cardset-hint" data-i18n-html="filter.pend_scale_hint">
+                Filtra monstros Pêndulo pela escala (API: <code>scale</code>). Pode adicionar mais
+                de uma (união OR).
+              </p>
+              <div class="filter-action-row">
+                <input
+                  type="text"
+                  id="filter-scale-input"
+                  list="datalist-filter-scale"
+                  data-i18n-placeholder="filter.pend_scale_ph"
+                  placeholder="Ex.: 1"
+                  autocomplete="off"
+                  style="flex: 1"
+                />
+                <div class="icon-btn-stack icon-btn-stack--tool">
+                  <span class="theme-row-label" data-i18n="filter.add">Adicionar</span>
+                  <button
+                    type="button"
+                    id="filter-scale-add"
+                    class="btn-secondary btn-icon-tool"
+                    data-i18n-title="filter.add"
+                    data-i18n-aria="filter.add"
+                    title=""
+                    aria-label=""
+                  >
+                    <i class="fas fa-plus" aria-hidden="true"></i>
+                  </button>
+                </div>
+              </div>
+              <datalist id="datalist-filter-scale"></datalist>
+              <div id="filter-scale-chips" class="cardset-chips"></div>
+              <div class="filter-clear-stack">
+                <span class="theme-row-label" data-i18n="filter.pend_scale_clear"
+                  >Limpar escalas</span
+                >
+                <button
+                  type="button"
+                  id="filter-scale-clear"
+                  class="btn-secondary btn-icon-tool"
+                  data-i18n-title="filter.pend_scale_clear"
+                  data-i18n-aria="filter.pend_scale_clear"
+                  title=""
+                  aria-label=""
+                >
+                  <i class="fas fa-eraser" aria-hidden="true"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="filter-group">
+            <label data-i18n="filter.era_label">Era Yu-Gi-Oh!</label>
+            <p class="cardset-hint" data-i18n-html="filter.era_hint">
+              Preenche o intervalo de datas. Uma era por vez; limpar deixa só o período manual.
+            </p>
+            <div class="filter-action-row">
+              <input
+                type="text"
+                id="filter-era-input"
+                list="datalist-filter-era"
+                data-i18n-placeholder="filter.era_ph"
+                placeholder="Ex.: GX, Zexal…"
+                autocomplete="off"
+                style="flex: 1"
+              />
+              <div class="icon-btn-stack icon-btn-stack--tool">
+                <span class="theme-row-label" data-i18n="filter.add">Adicionar</span>
+
+                <button
+                  type="button"
+                  id="filter-era-add"
+                  class="btn-secondary btn-icon-tool"
+                  data-i18n-title="filter.add"
+                  data-i18n-aria="filter.add"
+                  title=""
+                  aria-label=""
+                >
+                  <i class="fas fa-plus" aria-hidden="true"></i>
+                </button>
+              </div>
+            </div>
+            <datalist id="datalist-filter-era"></datalist>
+            <div id="filter-era-chips" class="cardset-chips"></div>
+            <div class="filter-clear-stack">
+              <span class="theme-row-label" data-i18n="filter.era_clear"></span>
+              <button
+                type="button"
+                id="filter-era-clear"
+                class="btn-secondary btn-icon-tool"
+                data-i18n-title="filter.era_clear"
+                data-i18n-aria="filter.era_clear"
+                title=""
+                aria-label=""
+              >
+                <i class="fas fa-eraser" aria-hidden="true"></i>
+              </button>
+            </div>
+          </div>
+          <div class="filter-group">
+            <label data-i18n="filter.region_label">Filtrar por data de lançamento</label>
+            <p class="cardset-hint" data-i18n-html="filter.region_hint">
+              Adicione <strong>TCG</strong> ou <strong>OCG</strong> para filtrar por lançamento; o
+              período aparece abaixo.
+            </p>
+            <div class="filter-action-row">
+              <input
+                type="text"
+                id="filter-date-region-input"
+                list="datalist-date-region"
+                data-i18n-placeholder="filter.region_ph"
+                placeholder="Ex.: TCG — lançamento ocidental"
+                autocomplete="off"
+                style="flex: 1"
+              />
+              <div class="icon-btn-stack icon-btn-stack--tool">
+                <span class="theme-row-label" data-i18n="filter.add">Adicionar</span>
+
+                <button
+                  type="button"
+                  id="filter-date-region-add"
+                  class="btn-secondary btn-icon-tool"
+                  data-i18n-title="filter.add"
+                  data-i18n-aria="filter.add"
+                  title=""
+                  aria-label=""
+                >
+                  <i class="fas fa-plus" aria-hidden="true"></i>
+                </button>
+              </div>
+            </div>
+            <datalist id="datalist-date-region"></datalist>
+            <div id="filter-date-region-chips" class="cardset-chips"></div>
+            <div class="filter-clear-stack">
+              <span class="theme-row-label" data-i18n="filter.region_clear"></span>
+              <button
+                type="button"
+                id="filter-date-region-clear"
+                class="btn-secondary btn-icon-tool"
+                data-i18n-title="filter.region_clear"
+                data-i18n-aria="filter.region_clear"
+                title=""
+                aria-label=""
+              >
+                <i class="fas fa-eraser" aria-hidden="true"></i>
+              </button>
+            </div>
+          </div>
+          <div id="date-period-group" class="filter-group" style="display: none">
+            <label data-i18n="filter.period_label">Período (De -> Até)</label>
+            <div style="display: flex; gap: 5px">
+              <input type="date" id="date-start" value="1999-02-04" style="flex: 1" />
+              <input type="date" id="date-end" style="flex: 1" />
+            </div>
+          </div>
+          <div class="filter-group">
+            <label data-i18n="filter.ban_label">Formato / Banlist</label>
+            <p class="cardset-hint" data-i18n-html="filter.ban_hint">
+              Sugestões em português. Para remover o formato, use o botão
+              <strong>Limpar formato</strong> abaixo. Uma opção por vez.
+            </p>
+            <div class="filter-action-row">
+              <input
+                type="text"
+                id="filter-banlist-input"
+                list="datalist-filter-banlist"
+                data-i18n-placeholder="filter.ban_ph"
+                placeholder="Ex.: Formato TCG (principal)"
+                autocomplete="off"
+                style="flex: 1"
+              />
+              <div class="icon-btn-stack icon-btn-stack--tool">
+                <span class="theme-row-label" data-i18n="filter.add">Adicionar</span>
+
+                <button
+                  type="button"
+                  id="filter-banlist-add"
+                  class="btn-secondary btn-icon-tool"
+                  data-i18n-title="filter.add"
+                  data-i18n-aria="filter.add"
+                  title=""
+                  aria-label=""
+                >
+                  <i class="fas fa-plus" aria-hidden="true"></i>
+                </button>
+              </div>
+            </div>
+            <datalist id="datalist-filter-banlist"></datalist>
+            <div id="filter-banlist-chips" class="cardset-chips"></div>
+            <div class="filter-clear-stack">
+              <span class="theme-row-label" data-i18n="filter.ban_clear"></span>
+              <button
+                type="button"
+                id="filter-banlist-clear"
+                class="btn-secondary btn-icon-tool"
+                data-i18n-title="filter.ban_clear"
+                data-i18n-aria="filter.ban_clear"
+                title=""
+                aria-label=""
+              >
+                <i class="fas fa-eraser" aria-hidden="true"></i>
+              </button>
+            </div>
+          </div>
+          <div id="banlist-only-container" class="filter-group">
+            <label
+              style="
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                cursor: pointer;
+                font-size: 11px;
+                color: var(--accent);
+              "
+            >
+              <input
+                type="checkbox"
+                id="enable-banlist-only"
+                style="width: auto"
+                onchange="performSearch()"
+              />
+              <span data-i18n="filter.banlist_only">Exibir somente cartas da Banlist</span>
+            </label>
+          </div>
+          <div class="filter-group">
+            <label data-i18n="filter.staple_label">Staple</label>
+            <p class="cardset-hint" data-i18n-html="filter.staple_hint">
+              API: <code>staple=yes</code> para staples. “Não é Staple” combina com outros filtros —
+              o servidor não aceita <code>staple=no</code>; aplicamos no resultado
+              (<code>misc_info.staple</code>).
+            </p>
+            <div class="filter-action-row">
+              <input
+                type="text"
+                id="filter-staple-input"
+                list="datalist-filter-staple"
+                data-i18n-placeholder="filter.staple_ph"
+                placeholder="É Staple ou Não é Staple…"
+                autocomplete="off"
+                style="flex: 1"
+              />
+              <div class="icon-btn-stack icon-btn-stack--tool">
+                <span class="theme-row-label" data-i18n="filter.add">Adicionar</span>
+                <button
+                  type="button"
+                  id="filter-staple-add"
+                  class="btn-secondary btn-icon-tool"
+                  data-i18n-title="filter.add"
+                  data-i18n-aria="filter.add"
+                  title=""
+                  aria-label=""
+                >
+                  <i class="fas fa-plus" aria-hidden="true"></i>
+                </button>
+              </div>
+            </div>
+            <datalist id="datalist-filter-staple"></datalist>
+            <div id="filter-staple-chips" class="cardset-chips"></div>
+            <div class="filter-clear-stack">
+              <span class="theme-row-label" data-i18n="filter.staple_clear"></span>
+              <button
+                type="button"
+                id="filter-staple-clear"
+                class="btn-secondary btn-icon-tool"
+                data-i18n-title="filter.staple_clear"
+                data-i18n-aria="filter.staple_clear"
+                title=""
+                aria-label=""
+              >
+                <i class="fas fa-eraser" aria-hidden="true"></i>
+              </button>
+            </div>
+          </div>
+          <div class="filter-group" id="filter-haseffect-group">
+            <label data-i18n="filter.haseffect_label">Possui efeito</label>
+            <p class="cardset-hint" data-i18n-html="filter.haseffect_hint">
+              Se a carta tem efeito de jogo de verdade (API: <code>has_effect</code> +
+              <code>misc</code>).
+            </p>
+            <div class="filter-action-row">
+              <input
+                type="text"
+                id="filter-haseffect-input"
+                list="datalist-filter-haseffect"
+                data-i18n-placeholder="filter.haseffect_ph"
+                placeholder="Possui efeito ou Não possui efeito…"
+                autocomplete="off"
+                style="flex: 1"
+              />
+              <div class="icon-btn-stack icon-btn-stack--tool">
+                <span class="theme-row-label" data-i18n="filter.add">Adicionar</span>
+                <button
+                  type="button"
+                  id="filter-haseffect-add"
+                  class="btn-secondary btn-icon-tool"
+                  data-i18n-title="filter.add"
+                  data-i18n-aria="filter.add"
+                  title=""
+                  aria-label=""
+                >
+                  <i class="fas fa-plus" aria-hidden="true"></i>
+                </button>
+              </div>
+            </div>
+            <datalist id="datalist-filter-haseffect"></datalist>
+            <div id="filter-haseffect-chips" class="cardset-chips"></div>
+            <div class="filter-clear-stack">
+              <span class="theme-row-label" data-i18n="filter.haseffect_clear"></span>
+              <button
+                type="button"
+                id="filter-haseffect-clear"
+                class="btn-secondary btn-icon-tool"
+                data-i18n-title="filter.haseffect_clear"
+                data-i18n-aria="filter.haseffect_clear"
+                title=""
+                aria-label=""
+              >
+                <i class="fas fa-eraser" aria-hidden="true"></i>
+              </button>
+            </div>
+          </div>
+          <div class="filter-group filter-group--price">
+            <label
+              ><i class="fa-solid fa-dollar-sign" aria-hidden="true"></i>
+              <span data-i18n="filter.price_label">Faixa de Preço (USD)</span></label
+            >
+            <p class="cardset-hint" data-i18n-html="filter.price_hint">
+              Sem faixas salvas: um intervalo (min/max) filtra como antes. Com
+              <strong>Adicionar faixa</strong>: várias faixas em união (carta em qualquer uma).
+            </p>
+            <div style="display: flex; gap: 5px">
+              <input
+                type="number"
+                id="filter-price-min"
+                data-i18n-placeholder="filter.price_min_ph"
+                placeholder="Valor Mínimo"
+                step="0.1"
+                style="width: 50%"
+              />
+              <input
+                type="number"
+                id="filter-price-max"
+                data-i18n-placeholder="filter.price_max_ph"
+                placeholder="Valor Máximo"
+                step="0.1"
+                style="width: 50%"
+              />
+            </div>
+            <div class="filter-full-add-stack">
+              <span class="theme-row-label" data-i18n="filter.price_add">Adicionar faixa</span>
+              <button
+                type="button"
+                id="filter-price-add-chip"
+                class="btn-secondary btn-icon-tool btn-icon-tool--block"
+                data-i18n-title="filter.price_add"
+                data-i18n-aria="filter.price_add"
+                title=""
+                aria-label=""
+              >
+                <i class="fas fa-plus" aria-hidden="true"></i>
+              </button>
+            </div>
+            <div id="filter-price-chips" class="cardset-chips"></div>
+            <div class="filter-clear-stack">
+              <span class="theme-row-label" data-i18n="filter.price_clear"></span>
+              <button
+                type="button"
+                id="filter-price-clear-chips"
+                class="btn-secondary btn-icon-tool"
+                data-i18n-title="filter.price_clear"
+                data-i18n-aria="filter.price_clear"
+                title=""
+                aria-label=""
+              >
+                <i class="fas fa-eraser" aria-hidden="true"></i>
+              </button>
+            </div>
+          </div>
+          <div class="filter-group">
+            <label data-i18n="filter.set_label">Expansão (set)</label>
+            <p class="cardset-hint" data-i18n-html="filter.set_hint">
+              Lista oficial YGOPRODeck (nomes de produtos em inglês, como no catálogo). Digite para
+              filtrar sugestões; Enter ou “Adicionar” inclui o set. Nenhum, um ou vários: a busca
+              mostra cartas que aparecem em <strong>qualquer</strong> set selecionado.
+            </p>
+            <div class="filter-action-row">
+              <input
+                type="text"
+                id="filter-cardset-input"
+                list="cardsets-datalist"
+                data-i18n-placeholder="filter.set_ph"
+                placeholder="Ex.: Metal Raiders…"
+                autocomplete="off"
+                style="flex: 1"
+              />
+              <div class="icon-btn-stack icon-btn-stack--tool">
+                <span class="theme-row-label" data-i18n="filter.add">Adicionar</span>
+
+                <button
+                  type="button"
+                  id="filter-cardset-add"
+                  class="btn-secondary btn-icon-tool"
+                  data-i18n-title="filter.add"
+                  data-i18n-aria="filter.add"
+                  title=""
+                  aria-label=""
+                >
+                  <i class="fas fa-plus" aria-hidden="true"></i>
+                </button>
+              </div>
+            </div>
+            <datalist id="cardsets-datalist"></datalist>
+            <div id="filter-cardset-chips" class="cardset-chips" aria-live="polite"></div>
+            <div class="filter-clear-stack">
+              <span class="theme-row-label" data-i18n="filter.set_clear"></span>
+              <button
+                type="button"
+                id="filter-cardset-clear"
+                class="btn-secondary btn-icon-tool"
+                data-i18n-title="filter.set_clear"
+                data-i18n-aria="filter.set_clear"
+                title=""
+                aria-label=""
+              >
+                <i class="fas fa-eraser" aria-hidden="true"></i>
+              </button>
+            </div>
+          </div>
+          <div class="filter-group">
+            <label data-i18n="filter.setcode_label">Código do set (setcode)</label>
+            <p class="cardset-hint" data-i18n-html="filter.setcode_hint">
+              Código da impressão (ex.: <strong>LOB-EN001</strong>). Sugestões vêm do catálogo
+              <code>cardinfo</code> (todos os <code>set_code</code> conhecidos; carrega em segundo
+              plano). Se escrever <strong>LOB-001</strong>, tentamos também
+              <strong>LOB-EN001</strong>. Vários chips = união.
+            </p>
+            <div class="filter-action-row">
+              <input
+                type="text"
+                id="filter-setcode-input"
+                list="datalist-setcodes"
+                data-i18n-placeholder="filter.setcode_ph"
+                placeholder="Ex.: LOB-EN001 ou LOB"
+                autocomplete="off"
+                style="flex: 1"
+              />
+              <div class="icon-btn-stack icon-btn-stack--tool">
+                <span class="theme-row-label" data-i18n="filter.add">Adicionar</span>
+
+                <button
+                  type="button"
+                  id="filter-setcode-add"
+                  class="btn-secondary btn-icon-tool"
+                  data-i18n-title="filter.add"
+                  data-i18n-aria="filter.add"
+                  title=""
+                  aria-label=""
+                >
+                  <i class="fas fa-plus" aria-hidden="true"></i>
+                </button>
+              </div>
+            </div>
+            <datalist id="datalist-setcodes"></datalist>
+            <div id="filter-setcode-chips" class="cardset-chips" aria-live="polite"></div>
+            <div class="filter-clear-stack">
+              <span class="theme-row-label" data-i18n="filter.setcode_clear"></span>
+              <button
+                type="button"
+                id="filter-setcode-clear"
+                class="btn-secondary btn-icon-tool"
+                data-i18n-title="filter.setcode_clear"
+                data-i18n-aria="filter.setcode_clear"
+                title=""
+                aria-label=""
+              >
+                <i class="fas fa-eraser" aria-hidden="true"></i>
+              </button>
+            </div>
+          </div>
+          <div class="filter-group">
+            <label data-i18n="filter.rarity_label">Raridade (impressão)</label>
+            <p class="cardset-hint" data-i18n-html="filter.rarity_hint">
+              Nome em inglês como no banco (ex.: Ultra Rare). Sugestões vêm do mesmo scan de
+              <code>cardinfo</code> que set codes / tipos / raças (pode demorar na 1ª carga). Só
+              raridade: percorre o catálogo completo. Com outros filtros, aplica-se só ao resultado
+              já carregado.
+            </p>
+            <div class="filter-action-row">
+              <input
+                type="text"
+                id="filter-rarity-input"
+                list="datalist-rarities"
+                data-i18n-placeholder="filter.rarity_ph"
+                placeholder="Ex.: Secret Rare"
+                autocomplete="off"
+                style="flex: 1"
+              />
+              <div class="icon-btn-stack icon-btn-stack--tool">
+                <span class="theme-row-label" data-i18n="filter.add">Adicionar</span>
+
+                <button
+                  type="button"
+                  id="filter-rarity-add"
+                  class="btn-secondary btn-icon-tool"
+                  data-i18n-title="filter.add"
+                  data-i18n-aria="filter.add"
+                  title=""
+                  aria-label=""
+                >
+                  <i class="fas fa-plus" aria-hidden="true"></i>
+                </button>
+              </div>
+            </div>
+            <datalist id="datalist-rarities"></datalist>
+            <div id="filter-rarity-chips" class="cardset-chips" aria-live="polite"></div>
+            <div class="filter-clear-stack">
+              <span class="theme-row-label" data-i18n="filter.rarity_clear"></span>
+              <button
+                type="button"
+                id="filter-rarity-clear"
+                class="btn-secondary btn-icon-tool"
+                data-i18n-title="filter.rarity_clear"
+                data-i18n-aria="filter.rarity_clear"
+                title=""
+                aria-label=""
+              >
+                <i class="fas fa-eraser" aria-hidden="true"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col" id="col-results">
+        <div class="search-area">
+          <div style="display: flex; gap: 10px; align-items: flex-end">
+            <div class="icon-btn-stack icon-btn-stack--tool icon-btn-stack--tool-wide">
+              <span class="theme-row-label" data-i18n="ui.scan_card_ocr">Escanear Carta (OCR)</span>
+              <button
+                type="button"
+                id="btn-open-scanner"
+                class="btn-secondary btn-icon-tool"
+                data-i18n-title="ui.scan_card_ocr"
+                data-i18n-aria="ui.scan_card_ocr"
+                title=""
+                aria-label=""
+              >
+                <i class="fa-solid fa-camera" aria-hidden="true"></i>
+              </button>
+            </div>
+            <div style="flex: 1; display: flex; gap: 8px; min-width: 0; align-items: flex-end">
+              <div class="label-width-stack" style="flex: 1; min-width: 0">
+                <label class="theme-row-label" for="search-input" data-i18n="ui.search_name_label"
+                  >Nome</label
+                >
+                <p
+                  class="cardset-hint help-hide-when-deck-visible"
+                  style="margin: 2px 0 4px 0; font-size: 10px"
+                  data-i18n-html="ui.search_fname_hint"
+                >
+                  ≥3 letras: busca enquanto digita. Use <strong>Adicionar</strong> para guardar
+                  termos extras (união OR com o que ainda estiver no campo).
+                </p>
+                <input
+                  type="text"
+                  id="search-input"
+                  data-i18n-placeholder="ui.search_placeholder"
+                  placeholder="Buscar pelo nome..."
+                  autocomplete="off"
+                  style="width: 100%"
+                />
+              </div>
+              <div class="icon-btn-stack icon-btn-stack--tool">
+                <span class="theme-row-label" data-i18n="filter.add">Adicionar</span>
+                <button
+                  type="button"
+                  id="filter-fname-add-chip"
+                  class="btn-secondary btn-icon-tool"
+                  data-i18n-title="filter.add"
+                  data-i18n-aria="filter.add"
+                  title=""
+                  aria-label=""
+                >
+                  <i class="fas fa-plus" aria-hidden="true"></i>
+                </button>
+              </div>
+              <div
+                class="icon-btn-stack icon-btn-stack--tool filter-clear-stack filter-clear-stack--tight"
+              >
+                <span class="theme-row-label" data-i18n="ui.search_fname_clear"></span>
+                <button
+                  type="button"
+                  id="filter-fname-clear-chips"
+                  class="btn-secondary btn-icon-tool"
+                  data-i18n-title="ui.search_fname_clear"
+                  data-i18n-aria="ui.search_fname_clear"
+                  title=""
+                  aria-label=""
+                >
+                  <i class="fas fa-eraser" aria-hidden="true"></i>
+                </button>
+              </div>
+            </div>
+            <div
+              class="icon-btn-stack icon-btn-stack--tool icon-btn-stack--tool-wide search-qty-stack"
+            >
+              <span class="theme-row-label" data-i18n="ui.search_qty_label">Quantidade</span>
+              <div class="ui-help-hint help-hide-when-deck-visible" data-i18n="ui.help_qty_hint">
+                Define quantas cópias serão adicionadas ao clicar em uma carta.
+              </div>
+              <div class="stepper stepper--compact">
+                <button
+                  type="button"
+                  onclick="document.getElementById('search-qty').stepDown()"
+                  aria-label="−"
+                >
+                  <i class="fas fa-minus" aria-hidden="true"></i>
+                </button>
+                <input type="number" id="search-qty" value="1" min="1" readonly />
+                <button
+                  type="button"
+                  onclick="document.getElementById('search-qty').stepUp()"
+                  aria-label="+"
+                >
+                  <i class="fas fa-plus" aria-hidden="true"></i>
+                </button>
+              </div>
+            </div>
+            <div class="icon-btn-stack--tool icon-btn-stack--tool-wide">
+              <div
+                class="help-controls"
+                role="group"
+                data-i18n-aria="ui.help_group_aria"
+                aria-label="Ajuda"
+              >
+                <div class="icon-btn-stack icon-btn-stack--tool">
+                  <span class="theme-row-label" data-i18n="ui.help_label">Ajuda</span>
+                  <button
+                    type="button"
+                    id="btn-help-toggle"
+                    class="btn-secondary btn-icon-tool"
+                    data-i18n-aria="ui.help_toggle_off"
+                    title=""
+                    aria-label=""
+                    aria-pressed="false"
+                  >
+                    <i class="fas fa-circle-question" aria-hidden="true"></i>
+                  </button>
+                </div>
+                <div class="icon-btn-stack icon-btn-stack--tool">
+                  <span class="theme-row-label" data-i18n="ui.help_mouse_btn">Mouse</span>
+                  <button
+                    type="button"
+                    id="btn-help-mouse"
+                    class="btn-secondary btn-icon-tool"
+                    data-i18n-aria="ui.help_mouse_btn"
+                    title=""
+                    aria-label=""
+                  >
+                    <i class="fas fa-mouse" aria-hidden="true"></i>
+                  </button>
+                </div>
+                <div class="icon-btn-stack icon-btn-stack--tool">
+                  <span class="theme-row-label">Créditos</span>
+                  <button
+                    type="button"
+                    id="btn-credits"
+                    class="btn-secondary btn-icon-tool"
+                    title="Créditos"
+                    aria-label="Créditos"
+                  >
+                    <i class="fas fa-heart" aria-hidden="true"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="icon-btn-stack icon-btn-stack--tool">
+              <label class="theme-row-label" for="select-api-card-lang" data-i18n="lang.label"
+                >Idioma</label
+              >
+              <div
+                class="lang-switch"
+                role="group"
+                data-i18n-aria="lang.switch_aria"
+                aria-label="Idioma das cartas (API)"
+              >
+                <select
+                  id="select-api-card-lang"
+                  class="lang-api-select lang-api-select--flags"
+                  title=""
+                  aria-label=""
+                >
+                  <option value="en">&#x1F1FA;&#x1F1F8;</option>
+                  <option value="pt">&#x1F1E7;&#x1F1F7;</option>
+                  <option value="fr">&#x1F1EB;&#x1F1F7;</option>
+                  <option value="de">&#x1F1E9;&#x1F1EA;</option>
+                  <option value="it">&#x1F1EE;&#x1F1F9;</option>
+                </select>
+              </div>
+            </div>
+            <div class="icon-btn-stack icon-btn-stack--tool">
+              <label class="theme-row-label" for="btn-toggle-fullscreen" data-i18n="ui.screen_label"
+                >Tela</label
+              >
+              <button
+                type="button"
+                id="btn-toggle-fullscreen"
+                class="btn-view"
+                data-i18n-title="ui.screen_title"
+                title="Tela inteira (como F11)"
+                aria-pressed="false"
+                data-i18n-aria="ui.screen_aria"
+                aria-label="Entrar em tela inteira"
+                onclick="togglePageFullscreen()"
+                style="
+                  min-width: 38px;
+                  height: 35px;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                "
+              >
+                <i
+                  class="fas fa-expand"
+                  id="icon-toggle-fullscreen"
+                  style="font-size: 14px"
+                  aria-hidden="true"
+                ></i>
+              </button>
+            </div>
+          </div>
+          <div id="filter-fname-chips" class="cardset-chips" style="margin-top: 4px"></div>
+        </div>
+        <div class="view-controls">
+          <div class="result-info-row" id="result-info-row">
+            <span id="result-info" style="color: #888">Carregando…</span>
+            <div
+              class="result-db-version-wrap"
+              id="result-db-version-wrap"
+              role="group"
+              data-i18n-aria="ui.result_db_aria"
+              aria-label="Versão do banco de dados YGOPRODeck"
+              style="display: none"
+            >
+              <span
+                class="result-db-version-label"
+                id="result-db-version-label"
+                data-i18n="ui.result_db_label"
+                >Versão do banco YGOPRODeck</span
+              >
+              <span
+                id="result-db-version"
+                class="result-db-version"
+                title=""
+                aria-live="polite"
+              ></span>
+            </div>
+          </div>
+          <div
+            class="view-controls-toolbar-row"
+            style="display: flex; gap: 15px; align-items: flex-start"
+          >
+            <div class="filter-group filter-theme-random-wrap">
+              <div class="theme-select-stack">
+                <label class="theme-row-label" for="theme-selector" data-i18n="ui.theme_label"
+                  >Tema do sistema</label
+                >
+                <select id="theme-selector">
+                  <option value="" data-i18n-opt="opt.theme.default">Padrão (Dark)</option>
+                  <option value="theme-white" data-i18n-opt="opt.theme.white">Todo Branco</option>
+                  <option value="theme-black" data-i18n-opt="opt.theme.black">Todo Preto</option>
+                  <option value="theme-kaiba" data-i18n-opt="opt.theme.kaiba">Kaiba Corp</option>
+                  <option value="theme-yugi" data-i18n-opt="opt.theme.yugi">Yugi (DM)</option>
+                  <option value="theme-joey" data-i18n-opt="opt.theme.joey">Joey (DM)</option>
+                  <option value="theme-anzu" data-i18n-opt="opt.theme.anzu">Anzu/Tea (DM)</option>
+                  <option value="theme-honda" data-i18n-opt="opt.theme.honda">
+                    Honda/Tristan (DM)
+                  </option>
+                  <option value="theme-mai" data-i18n-opt="opt.theme.mai">Mai (DM)</option>
+                  <option value="theme-bakura" data-i18n-opt="opt.theme.bakura">Bakura (DM)</option>
+                  <option value="theme-pegasus" data-i18n-opt="opt.theme.pegasus">
+                    Pegasus (DM)
+                  </option>
+                  <option value="theme-marik" data-i18n-opt="opt.theme.marik">Marik (DM)</option>
+                  <option value="theme-exodia" data-i18n-opt="opt.theme.exodia">Exodia</option>
+                  <option value="theme-egyptian-gods" data-i18n-opt="opt.theme.egypt">
+                    Deuses do Egito
+                  </option>
+                </select>
+              </div>
+            </div>
+            <div class="filter-group view-controls-sort-tight">
+              <label for="sort-by" class="sort-label" data-i18n="ui.sort_results">Ordenar</label>
+              <div class="sort-controls">
+                <select id="sort-by">
+                  <option data-i18n-opt="opt.sort.name" value="name">Nome</option>
+                  <option data-i18n-opt="opt.sort.atk" value="atk">Ataque</option>
+                  <option data-i18n-opt="opt.sort.def" value="def">Defesa</option>
+                  <option data-i18n-opt="opt.sort.level" value="level">Level/Rank</option>
+                  <option data-i18n-opt="opt.sort.link" value="link">Link</option>
+                  <option data-i18n-opt="opt.sort.linkmarkers" value="link_markers">
+                    Setas (Link Markers)
+                  </option>
+                  <option data-i18n-opt="opt.sort.pendscale" value="pend_scale">
+                    Escala (Pêndulo)
+                  </option>
+                  <option data-i18n-opt="opt.sort.tcg" value="tcg_date">Data TCG</option>
+                  <option data-i18n-opt="opt.sort.ocg" value="ocg_date">Data OCG</option>
+                  <option data-i18n-opt="opt.sort.md_rarity" value="md_rarity">
+                    Raridade (Master Duel)
+                  </option>
+                  <option data-i18n-opt="opt.sort.print_rarity" value="print_rarity">
+                    Raridade (impressão)
+                  </option>
+                  <option data-i18n-opt="opt.sort.views" value="views">
+                    Popular (visualizações)
+                  </option>
+                  <option data-i18n-opt="opt.sort.viewsweek" value="viewsweek">
+                    Popular (visualizações na semana)
+                  </option>
+                  <option data-i18n-opt="opt.sort.upvotes" value="upvotes">Votos positivos</option>
+                  <option data-i18n-opt="opt.sort.downvotes" value="downvotes">
+                    Votos negativos
+                  </option>
+                  <option data-i18n-opt="opt.sort.price" value="price">Preço</option>
+                  <option data-i18n-opt="opt.sort.genesys_points" value="genesys_points">
+                    Pontos Genesys
+                  </option>
+                  <option data-i18n-opt="opt.sort.banlist" value="banlist">Banlist</option>
+                  <option data-i18n-opt="opt.sort.random" value="random">Aleatório</option>
+                </select>
+                <div class="icon-btn-stack">
+                  <label class="theme-row-label" for="btn-order" data-i18n="ui.sort_order_label"
+                    >Ordem</label
+                  >
+                  <button
+                    type="button"
+                    id="btn-order"
+                    class="btn-view"
+                    onclick="toggleOrder()"
+                    data-i18n-title="ui.results_order_title"
+                    title=""
+                    style="
+                      height: 35px;
+                      min-width: 35px;
+                      display: flex;
+                      align-items: center;
+                      justify-content: center;
+                    "
+                  >
+                    <i id="order-icon" class="fas fa-arrow-down" aria-hidden="true"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="icon-btn-row">
+              <div class="icon-btn-stack">
+                <label
+                  class="theme-row-label"
+                  for="btn-random-filter-card"
+                  data-i18n="ui.random_label"
+                  >Aleatório</label
+                >
+                <button
+                  type="button"
+                  id="btn-random-filter-card"
+                  class="btn-view"
+                  data-i18n-title="ui.random_title"
+                  title="Sorteia uma carta aleatória da lista atual; clique de novo para desfazer"
+                  style="
+                    min-width: 38px;
+                    height: 35px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                  "
+                >
+                  <i class="fa-solid fa-dice" style="font-size: 16px" aria-hidden="true"></i>
+                </button>
+              </div>
+
+              <div class="icon-btn-stack">
+                <label class="theme-row-label" for="btn-toggle-tooltip" data-i18n="ui.tooltip_label"
+                  >Tooltip</label
+                >
+                <button
+                  type="button"
+                  id="btn-toggle-tooltip"
+                  class="btn-view active"
+                  data-i18n-title="ui.tooltip_title_on"
+                  title="Tooltip ao passar o rato: ligado (clique para desligar)"
+                  aria-pressed="true"
+                  data-i18n-aria="ui.tooltip_aria"
+                  aria-label="Alternar tooltip"
+                  onclick="toggleTooltipButton()"
+                  style="
+                    min-width: 38px;
+                    height: 35px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                  "
+                >
+                  <i class="fas fa-comment-alt" style="font-size: 15px" aria-hidden="true"></i>
+                </button>
+              </div>
+
+              <div class="icon-btn-stack">
+                <label
+                  class="theme-row-label"
+                  for="btn-toggle-filters-column"
+                  data-i18n="ui.filters_toggle_label"
+                  >Filtros</label
+                >
+                <button
+                  type="button"
+                  id="btn-toggle-filters-column"
+                  class="btn-view active"
+                  data-i18n-title="ui.filters_toggle_title_on"
+                  title="Ocultar coluna de filtros"
+                  aria-pressed="true"
+                  data-i18n-aria="ui.filters_toggle_aria"
+                  aria-label="Ocultar/mostrar coluna de filtros"
+                  style="
+                    min-width: 38px;
+                    height: 35px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                  "
+                >
+                  <i
+                    class="fas fa-filter"
+                    id="icon-toggle-filters-column"
+                    style="font-size: 14px"
+                    aria-hidden="true"
+                  ></i>
+                </button>
+              </div>
+
+              <div class="icon-btn-stack">
+                <label
+                  class="theme-row-label"
+                  for="btn-toggle-results-view"
+                  id="label-toggle-results-view"
+                  >Grade</label
+                >
+                <button
+                  type="button"
+                  id="btn-toggle-results-view"
+                  class="btn-view"
+                  title="Visualização em Grade"
+                  onclick="toggleResultsView()"
+                  style="
+                    font-size: 18px;
+                    min-width: 38px;
+                    height: 35px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                  "
+                  aria-label="Visualização em Grade"
+                >
+                  <i class="fas fa-th-large" id="icon-toggle-results-view" aria-hidden="true"></i>
+                </button>
+              </div>
+
+              <div class="icon-btn-stack">
+                <label
+                  class="theme-row-label"
+                  for="btn-toggle-deck-column"
+                  data-i18n="ui.deck_col_label"
+                  >Deck</label
+                >
+                <button
+                  type="button"
+                  id="btn-toggle-deck-column"
+                  class="btn-view"
+                  data-i18n-title="ui.deck_col_title"
+                  title="Coluna do deck: ocultar / normal / ampliada"
+                  style="
+                    font-size: 16px;
+                    min-width: 38px;
+                    height: 35px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                  "
+                  data-i18n-aria="ui.deck_col_aria"
+                  aria-label="Alternar coluna do deck: ocultar, normal ou ampliada"
+                >
+                  <i class="fas fa-columns" id="icon-toggle-deck-column" aria-hidden="true"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div id="results-view" class="results-view list-mode"></div>
+        <div class="pagination-bar">
+          <div class="icon-btn-stack">
+            <span class="theme-row-label" data-i18n="ui.pagination_prev">Anterior</span>
+            <button
+              type="button"
+              class="btn-view btn-icon-tool"
+              onclick="changePage(-1)"
+              data-i18n-title="ui.pagination_prev"
+              data-i18n-aria="ui.pagination_prev"
+              title=""
+              aria-label=""
+            >
+              <i class="fas fa-chevron-left" aria-hidden="true"></i>
+            </button>
+          </div>
+          <div class="pagination-page-wrap">
+            <span class="theme-row-label" data-i18n="ui.pagination_page_label">Página</span>
+            <div style="display: flex; align-items: center; gap: 5px">
+              <input
+                type="number"
+                id="page-jump"
+                class="page-input"
+                value="1"
+                min="1"
+                onchange="jumpToPage(this.value)"
+              />
+              <span id="page-total" style="font-size: 11px; color: #888">/ 1</span>
+            </div>
+          </div>
+          <div class="icon-btn-stack">
+            <span class="theme-row-label" data-i18n="ui.pagination_next">Próximo</span>
+            <button
+              type="button"
+              class="btn-view btn-icon-tool"
+              onclick="changePage(1)"
+              data-i18n-title="ui.pagination_next"
+              data-i18n-aria="ui.pagination_next"
+              title=""
+              aria-label=""
+            >
+              <i class="fas fa-chevron-right" aria-hidden="true"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="col" id="col-preview">
+        <div class="col-header queue-col-header">
+          <span class="queue-col-title" data-i18n="ui.deck_header">Deck</span>
+          <div class="queue-col-toolbar">
+            <div class="queue-deck-toolbar-line" aria-label="Deck salvo e banlist">
+              <div class="deck-validate-controls" aria-label="Validação do deck">
+                <div class="queue-toolbar-select-stack">
+                  <label
+                    class="theme-row-label"
+                    for="deck-banlist-select"
+                    data-i18n="ui.deck_banlist_select_label"
+                    >Banlist</label
+                  >
+                  <select
+                    id="deck-banlist-select"
+                    class="deck-validate-select"
+                    data-i18n-title="ui.deck_banlist_title"
+                    title=""
+                  >
+                    <option value="" data-i18n-opt="ui.deck_banlist_none">
+                      Sem banlist (regras padrão)
+                    </option>
+                  </select>
+                </div>
+              </div>
+              <div class="queue-saved-decks">
+                <div class="queue-toolbar-select-stack">
+                  <label
+                    class="theme-row-label"
+                    for="saved-decks-select"
+                    data-i18n="ui.saved_deck_select_label"
+                    >Deck salvo</label
+                  >
+                  <select
+                    id="saved-decks-select"
+                    class="saved-decks-select"
+                    data-i18n-title="ui.saved_deck_title"
+                    title="Novo deck (rascunho) ou deck salvo"
+                    data-i18n-aria="ui.saved_deck_aria"
+                    aria-label="Decks salvos"
+                  >
+                    <option value="" data-i18n-opt="ui.saved_deck_new">Novo Deck</option>
+                  </select>
+                </div>
+                <div class="icon-btn-stack icon-btn-stack--tool">
+                  <label class="theme-row-label" for="btn-deck-save" data-i18n="ui.save_deck"
+                    >Salvar</label
+                  >
+                  <button
+                    type="button"
+                    id="btn-deck-save"
+                    class="btn-view btn-icon-tool"
+                    data-i18n-title="ui.save_deck_title"
+                    data-i18n-aria="ui.save_deck"
+                    title=""
+                    aria-label=""
+                  >
+                    <i class="fas fa-floppy-disk" aria-hidden="true"></i>
+                  </button>
+                </div>
+                <div class="icon-btn-stack icon-btn-stack--tool">
+                  <label
+                    class="theme-row-label"
+                    for="btn-deck-rename"
+                    data-i18n="ui.rename_deck_label"
+                    >Renomear</label
+                  >
+                  <button
+                    type="button"
+                    id="btn-deck-rename"
+                    class="btn-view btn-icon-tool"
+                    data-i18n-title="ui.rename_deck_title"
+                    data-i18n-aria="ui.rename_deck_aria"
+                    title=""
+                    aria-label=""
+                  >
+                    <i class="fas fa-pen" aria-hidden="true"></i>
+                  </button>
+                </div>
+                <div class="icon-btn-stack icon-btn-stack--tool">
+                  <label
+                    class="theme-row-label"
+                    for="btn-deck-delete-saved"
+                    data-i18n="ui.delete_deck_label"
+                    >Apagar</label
+                  >
+                  <button
+                    type="button"
+                    id="btn-deck-delete-saved"
+                    class="btn-view btn-icon-tool"
+                    data-i18n-title="ui.delete_deck_title"
+                    data-i18n-aria="ui.delete_deck_aria"
+                    title=""
+                    aria-label=""
+                  >
+                    <i class="fas fa-trash-alt" aria-hidden="true"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="queue-deck-toolbar-line" aria-label="Ferramentas do deck">
+              <div class="queue-col-controls">
+                <div class="icon-btn-stack icon-btn-stack--tool">
+                  <span class="theme-row-label" data-i18n="ui.deck_pdf_label">PDF</span>
+                  <button
+                    type="button"
+                    id="btn-toggle-pdf-preview"
+                    class="btn-view btn-icon-tool active"
+                    data-i18n-title="ui.pdf_preview_title_on"
+                    title="Ocultar pré-visualização do PDF"
+                  >
+                    <i class="fas fa-file-pdf" id="icon-pdf-preview" aria-hidden="true"></i>
+                  </button>
+                </div>
+                <div class="icon-btn-stack icon-btn-stack--tool">
+                  <label
+                    class="theme-row-label"
+                    for="btn-toggle-queue-view"
+                    id="label-toggle-queue-view"
+                    >Grade</label
+                  >
+                  <button
+                    type="button"
+                    id="btn-toggle-queue-view"
+                    class="btn-view btn-icon-tool"
+                    title="Deck em grade"
+                    onclick="toggleQueueView()"
+                    aria-label="Deck em grade"
+                  >
+                    <i class="fas fa-th-large" id="icon-toggle-queue-view" aria-hidden="true"></i>
+                  </button>
+                </div>
+                <div class="icon-btn-stack icon-btn-stack--tool">
+                  <label
+                    class="theme-row-label"
+                    for="btn-deck-random-main"
+                    data-i18n="ui.random_main_btn_label"
+                    >Aleatórias</label
+                  >
+                  <button
+                    type="button"
+                    id="btn-deck-random-main"
+                    class="btn-view btn-icon-tool"
+                    data-i18n-title="ui.random_main_btn_title"
+                    title=""
+                    data-i18n-aria="ui.random_main_btn_aria"
+                    aria-label=""
+                  >
+                    <i class="fas fa-dice-five" aria-hidden="true"></i>
+                  </button>
+                </div>
+                <div class="icon-btn-stack icon-btn-stack--tool">
+                  <span class="theme-row-label" data-i18n="ui.clear_queue">Limpar</span>
+                  <button
+                    type="button"
+                    class="btn-view btn-icon-tool"
+                    onclick="clearQueue()"
+                    data-i18n-title="ui.clear_queue"
+                    data-i18n-aria="ui.clear_queue"
+                    title=""
+                    aria-label=""
+                  >
+                    <i class="fas fa-broom" aria-hidden="true"></i>
+                  </button>
+                </div>
+              </div>
+              <div class="queue-toolbar-extras">
+                <div class="label-width-stack" style="margin-top: 0">
+                  <span class="theme-row-label" data-i18n="ui.import_deck">Importar</span>
+                  <label class="btn-secondary btn-icon-tool" style="cursor: pointer; margin: 0">
+                    <i class="fas fa-file-import" aria-hidden="true"></i>
+                    <input
+                      type="file"
+                      id="file-deck-import"
+                      accept=".ydk,.csv,.pdf,.zip,.png,.jpg,.jpeg,application/pdf,application/zip,image/png,image/jpeg"
+                      style="display: none"
+                      onchange="importDeckFile(this)"
+                    />
+                  </label>
+                </div>
+                <div class="filter-group filter-pdf-scale label-width-stack">
+                  <label class="theme-row-label" data-i18n="ui.pdf_scale">Escala do PDF (%)</label>
+                  <div class="stepper">
+                    <button
+                      type="button"
+                      onclick="adjustScale(-0.1)"
+                      data-i18n-title="ui.pdf_scale"
+                      title=""
+                    >
+                      <i class="fas fa-minus" aria-hidden="true"></i>
+                    </button>
+                    <input type="number" id="print-scale" value="100.0" readonly />
+                    <button
+                      type="button"
+                      onclick="adjustScale(0.1)"
+                      data-i18n-title="ui.pdf_scale"
+                      title=""
+                    >
+                      <i class="fas fa-plus" aria-hidden="true"></i>
+                    </button>
+                  </div>
+                </div>
+                <div class="icon-btn-stack icon-btn-stack--export label-width-stack">
+                  <span class="theme-row-label" data-i18n="ui.export_action_label">Exportar</span>
+                  <button
+                    type="button"
+                    class="btn-accent"
+                    id="btn-open-export-menu"
+                    data-i18n-title="ui.export_btn"
+                    data-i18n-aria="ui.export_btn"
+                    title=""
+                    aria-label=""
+                  >
+                    <i class="fas fa-file-export" aria-hidden="true"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div
+          id="deck-stats-bar"
+          class="deck-stats-bar"
+          role="region"
+          data-i18n-aria="ui.deck_stats_aria"
+          aria-label="Totais do deck"
+        >
+          <div class="deck-stats-bar-inner">
+            <span
+              class="deck-stat-block deck-stat-total-wrap"
+              data-i18n-title="ui.deck_stat_total_title"
+              title="Total de cartas (cópias)"
+            >
+              <span id="deck-stat-total" class="deck-stat-total-num">0</span>
+              <span class="deck-stat-total-label" data-i18n="ui.deck_stat_cards">cartas</span>
+            </span>
+            <span class="deck-stat-chips" aria-hidden="false">
+              <span
+                class="deck-stat-chip-wrap"
+                data-deck-stat="monsters"
+                tabindex="0"
+                data-i18n-aria="ui.deck_stat_monsters"
+                aria-label=""
+              >
+                <span class="deck-stat-chip deck-stat-chip--monster"
+                  ><i class="fas fa-dragon"></i><span id="deck-stat-monsters">0</span></span
+                >
+              </span>
+              <span
+                class="deck-stat-chip-wrap"
+                data-deck-stat="spells"
+                tabindex="0"
+                data-i18n-aria="ui.deck_stat_spells"
+                aria-label=""
+              >
+                <span class="deck-stat-chip deck-stat-chip--spell"
+                  ><i class="fas fa-scroll"></i><span id="deck-stat-spells">0</span></span
+                >
+              </span>
+              <span
+                class="deck-stat-chip-wrap"
+                data-deck-stat="traps"
+                tabindex="0"
+                data-i18n-aria="ui.deck_stat_traps"
+                aria-label=""
+              >
+                <span class="deck-stat-chip deck-stat-chip--trap"
+                  ><i class="fas fa-skull"></i><span id="deck-stat-traps">0</span></span
+                >
+              </span>
+              <span
+                class="deck-stat-chip-wrap"
+                data-deck-stat="extra"
+                tabindex="0"
+                data-i18n-aria="ui.deck_stat_extra"
+                aria-label=""
+              >
+                <span class="deck-stat-chip deck-stat-chip--extra"
+                  ><i class="fas fa-layer-group"></i><span id="deck-stat-extra">0</span></span
+                >
+              </span>
+            </span>
+            <span
+              class="deck-stat-price-wrap"
+              data-i18n-title="ui.deck_stat_price_title"
+              title="Soma TCGPlayer (USD) por cópia no deck"
+            >
+              <span class="deck-stat-price-label" data-i18n="ui.deck_stat_total_usd">Total</span>
+              <span id="deck-stat-price" class="deck-stat-price-val">—</span>
+            </span>
+            <span
+              id="deck-stat-md-wrap"
+              class="deck-stat-md-wrap"
+              data-i18n-title="ui.deck_stat_md_title"
+              title="Master Duel: total por raridade e gemas"
+              style="display: none"
+            >
+              <span class="deck-stat-md-badges" aria-label="Master Duel rarities">
+                <span
+                  class="deck-stat-chip-wrap deck-stat-md-badge deck-stat-md-badge--ur"
+                  data-deck-stat="md_ur"
+                  tabindex="0"
+                  title="UR"
+                >
+                  <img
+                    class="deck-stat-md-icon"
+                    alt="UR"
+                    src="https://ms.yugipedia.com//c/c3/CraftPoints_UR_MD.png"
+                    loading="lazy"
+                  />
+                  <span id="deck-stat-md-ur">0</span>
+                  <span class="deck-stat-md-gems" aria-label="Gemas UR">
+                    <img
+                      class="deck-stat-md-gem-icon"
+                      alt="Gemas"
+                      src="https://ms.yugipedia.com//5/5d/Gem-Master_Duel.png"
+                      loading="lazy"
+                    />
+                    <span id="deck-stat-md-ur-gems">0</span>
+                  </span>
+                </span>
+                <span
+                  class="deck-stat-chip-wrap deck-stat-md-badge deck-stat-md-badge--sr"
+                  data-deck-stat="md_sr"
+                  tabindex="0"
+                  title="SR"
+                >
+                  <img
+                    class="deck-stat-md-icon"
+                    alt="SR"
+                    src="https://ms.yugipedia.com//f/fb/CraftPoints_SR_MD.png"
+                    loading="lazy"
+                  />
+                  <span id="deck-stat-md-sr">0</span>
+                  <span class="deck-stat-md-gems" aria-label="Gemas SR">
+                    <img
+                      class="deck-stat-md-gem-icon"
+                      alt="Gemas"
+                      src="https://ms.yugipedia.com//5/5d/Gem-Master_Duel.png"
+                      loading="lazy"
+                    />
+                    <span id="deck-stat-md-sr-gems">0</span>
+                  </span>
+                </span>
+                <span
+                  class="deck-stat-chip-wrap deck-stat-md-badge deck-stat-md-badge--r"
+                  data-deck-stat="md_r"
+                  tabindex="0"
+                  title="R"
+                >
+                  <img
+                    class="deck-stat-md-icon"
+                    alt="R"
+                    src="https://ms.yugipedia.com//3/3e/CraftPoints_R_MD.png"
+                    loading="lazy"
+                  />
+                  <span id="deck-stat-md-r">0</span>
+                  <span class="deck-stat-md-gems" aria-label="Gemas R">
+                    <img
+                      class="deck-stat-md-gem-icon"
+                      alt="Gemas"
+                      src="https://ms.yugipedia.com//5/5d/Gem-Master_Duel.png"
+                      loading="lazy"
+                    />
+                    <span id="deck-stat-md-r-gems">0</span>
+                  </span>
+                </span>
+                <span
+                  class="deck-stat-chip-wrap deck-stat-md-badge deck-stat-md-badge--n"
+                  data-deck-stat="md_n"
+                  tabindex="0"
+                  title="N"
+                >
+                  <img
+                    class="deck-stat-md-icon"
+                    alt="N"
+                    src="https://ms.yugipedia.com//3/3b/CraftPoints_N_MD.png"
+                    loading="lazy"
+                  />
+                  <span id="deck-stat-md-n">0</span>
+                  <span class="deck-stat-md-gems" aria-label="Gemas N">
+                    <img
+                      class="deck-stat-md-gem-icon"
+                      alt="Gemas"
+                      src="https://ms.yugipedia.com//5/5d/Gem-Master_Duel.png"
+                      loading="lazy"
+                    />
+                    <span id="deck-stat-md-n-gems">0</span>
+                  </span>
+                </span>
+              </span>
+              <!-- total geral (gemas) removido a pedido -->
+            </span>
+            <span
+              id="deck-stat-genesys-wrap"
+              class="deck-stat-genesys-wrap"
+              data-i18n-title="ui.deck_stat_genesys_title"
+              title="Pontos Genesys do deck (Main+Extra+Side)"
+              style="display: none"
+            >
+              <span class="deck-stat-genesys-label" data-i18n="ui.deck_stat_genesys_label"
+                >Genesys</span
+              >
+              <span id="deck-stat-genesys" class="deck-stat-genesys-val">—</span>
+            </span>
+            <span class="deck-stats-right">
+              <span class="deck-validity-wrap">
+                <span id="deck-validity-flag" class="deck-validity-flag is-off" tabindex="0">
+                  <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
+                  <span id="deck-validity-text">Validação OFF</span>
+                </span>
+              </span>
+              <div class="deck-validate-toggle-stack">
+                <span
+                  class="theme-row-label"
+                  id="btn-deck-validate-toggle-label"
+                  data-i18n="ui.deck_validate_label_on"
+                  >Validar</span
+                >
+                <button
+                  type="button"
+                  id="btn-deck-validate-toggle"
+                  class="btn-view btn-icon-tool"
+                  data-i18n-title="ui.deck_validate_label_on"
+                  title=""
+                >
+                  <i
+                    class="fas fa-clipboard-check"
+                    id="btn-deck-validate-toggle-icon"
+                    aria-hidden="true"
+                  ></i>
+                </button>
+              </div>
+              <div
+                class="deck-sort-bar"
+                role="group"
+                data-i18n-aria="ui.deck_sort_bar_aria"
+                aria-label="Ordenação do deck"
+              >
+                <div class="deck-sort-bar-field">
+                  <div class="sort-controls">
+                    <div class="queue-toolbar-select-stack" style="flex: 1; min-width: 0">
+                      <label
+                        for="deck-sort-by"
+                        class="theme-row-label"
+                        data-i18n="ui.deck_sort_label"
+                        >Ordenar deck</label
+                      >
+                      <select id="deck-sort-by" style="flex: 1">
+                        <option data-i18n-opt="opt.sort.custom" value="custom" selected>
+                          Personalizado
+                        </option>
+                        <option data-i18n-opt="opt.sort.name" value="name">Nome</option>
+                        <option data-i18n-opt="opt.sort.atk" value="atk">Ataque</option>
+                        <option data-i18n-opt="opt.sort.def" value="def">Defesa</option>
+                        <option data-i18n-opt="opt.sort.level" value="level">Level/Rank</option>
+                        <option data-i18n-opt="opt.sort.tcg" value="tcg_date">Data TCG</option>
+                        <option data-i18n-opt="opt.sort.ocg" value="ocg_date">Data OCG</option>
+                        <option data-i18n-opt="opt.sort.md_rarity" value="md_rarity">
+                          Raridade (Master Duel)
+                        </option>
+                        <option data-i18n-opt="opt.sort.print_rarity" value="print_rarity">
+                          Raridade (impressão)
+                        </option>
+                        <option data-i18n-opt="opt.sort.price" value="price">Preço</option>
+                        <option data-i18n-opt="opt.sort.genesys_points" value="genesys_points">
+                          Pontos Genesys
+                        </option>
+                        <option data-i18n-opt="opt.sort.banlist" value="banlist">Banlist</option>
+                        <option data-i18n-opt="opt.sort.random" value="random">Aleatório</option>
+                      </select>
+                    </div>
+                    <div class="icon-btn-stack">
+                      <label
+                        class="theme-row-label"
+                        for="btn-deck-order"
+                        data-i18n="ui.deck_sort_order_label"
+                        >Ordem</label
+                      >
+                      <button
+                        type="button"
+                        id="btn-deck-order"
+                        class="btn-view"
+                        onclick="void toggleDeckOrder()"
+                        data-i18n-title="ui.deck_order_title"
+                        title="Inverter ordem"
+                        style="
+                          height: 35px;
+                          min-width: 35px;
+                          display: flex;
+                          align-items: center;
+                          justify-content: center;
+                        "
+                      >
+                        <i id="deck-order-icon" class="fas fa-arrow-up" aria-hidden="true"></i>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </span>
+          </div>
+          <div id="deck-queue-pane" class="deck-queue-pane">
+            <div class="deck-list deck-queue-view list-mode" id="deck-items"></div>
+            <div
+              id="deck-import-overlay"
+              class="deck-import-overlay"
+              role="status"
+              aria-live="polite"
+              aria-busy="false"
+            >
+              <span
+                id="deck-import-overlay-label"
+                class="deck-import-overlay-label"
+                data-i18n="ui.import_overlay"
+                >A importar…</span
+              >
+              <span
+                id="deck-import-overlay-sub"
+                class="deck-import-overlay-sub"
+                style="display: none"
+              ></span>
+              <div class="deck-import-overlay-track" aria-hidden="true">
+                <div id="deck-import-overlay-bar" class="deck-import-overlay-bar"></div>
+              </div>
+            </div>
+          </div>
+          <div class="pdf-preview-container">
+            <div
+              id="import-overlay"
+              style="
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.8);
+                display: none;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                z-index: 10;
+              "
+            >
+              <span
+                id="import-overlay-label"
+                style="color: var(--accent); font-size: 11px"
+                data-i18n="ui.generating_pdf"
+                >GERANDO PDF...</span
+              >
+              <div style="width: 80%; height: 4px; background: #333; margin-top: 10px">
+                <div
+                  id="progress-bar"
+                  style="width: 0; height: 100%; background: var(--accent)"
+                ></div>
+              </div>
+            </div>
+            <iframe id="preview-frame"></iframe>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div
+      id="export-menu-overlay"
+      class="export-menu-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="export-menu-title-text"
+    >
+      <div class="export-menu-panel" id="export-menu-panel">
+        <div class="export-menu-header">
+          <div class="export-menu-back-wrap export-menu-header-side" id="export-menu-back-wrap">
+            <div class="icon-btn-stack">
+              <span class="theme-row-label" data-i18n="ui.export_back_label">Voltar</span>
+              <button
+                type="button"
+                class="export-menu-back btn-view btn-icon-tool"
+                id="export-menu-back"
+                data-i18n-title="ui.export_back"
+                data-i18n-aria="ui.export_back"
+                title=""
+                aria-label=""
+              >
+                <i class="fas fa-arrow-left" aria-hidden="true"></i>
+              </button>
+            </div>
+          </div>
+          <span id="export-menu-title-text" class="export-menu-title" data-i18n="ui.export_title"
+            >Exportar para…</span
+          >
+          <div class="icon-btn-stack export-menu-header-side">
+            <span class="theme-row-label" data-i18n="ui.export_close_label">Fechar</span>
+            <button
+              type="button"
+              class="export-menu-close"
+              id="export-menu-close"
+              data-i18n-title="ui.export_close_title"
+              data-i18n-aria="ui.export_close_aria"
+              title=""
+              aria-label=""
+            >
+              <i class="fas fa-times" aria-hidden="true"></i>
+            </button>
+          </div>
+        </div>
+        <div class="export-menu-body" id="export-menu-step-root">
+          <div class="export-menu-option">
+            <span class="theme-row-label" data-i18n="ui.export_scope_current">Este deck</span>
+            <button
+              type="button"
+              class="btn-secondary export-scope-btn"
+              data-scope="current"
+              data-i18n-title="ui.export_scope_current"
+              data-i18n-aria="ui.export_scope_current"
+              title=""
+              aria-label=""
+            >
+              <i class="fas fa-id-card" aria-hidden="true"></i>
+            </button>
+          </div>
+          <div class="export-menu-option">
+            <span class="theme-row-label" data-i18n="ui.export_scope_all">Todos os Decks</span>
+            <button
+              type="button"
+              class="btn-secondary export-scope-btn"
+              data-scope="all"
+              data-i18n-title="ui.export_scope_all"
+              data-i18n-aria="ui.export_scope_all"
+              title=""
+              aria-label=""
+            >
+              <i class="fas fa-layer-group" aria-hidden="true"></i>
+            </button>
+          </div>
+        </div>
+        <div class="export-menu-body" id="export-menu-step-formats" style="display: none">
+          <div class="export-menu-option">
+            <span class="theme-row-label" data-i18n="ui.export_fmt_pdf">PDF Proxies Cards</span>
+            <button
+              type="button"
+              class="btn-secondary export-format-btn"
+              data-format="pdf"
+              data-i18n-title="ui.export_fmt_pdf"
+              data-i18n-aria="ui.export_fmt_pdf"
+              title=""
+              aria-label=""
+            >
+              <i class="fas fa-file-pdf" aria-hidden="true"></i>
+            </button>
+          </div>
+          <div class="export-menu-option">
+            <span class="theme-row-label" data-i18n="ui.export_fmt_ydk">YDK</span>
+            <button
+              type="button"
+              class="btn-secondary export-format-btn"
+              data-format="ydk"
+              data-i18n-title="ui.export_fmt_ydk"
+              data-i18n-aria="ui.export_fmt_ydk"
+              title=""
+              aria-label=""
+            >
+              <i class="fas fa-file-code" aria-hidden="true"></i>
+            </button>
+          </div>
+          <div class="export-menu-option">
+            <span class="theme-row-label" data-i18n="ui.export_fmt_ydk_clip"
+              >YDK → Área de transferência</span
+            >
+            <button
+              type="button"
+              class="btn-secondary export-format-btn"
+              data-format="ydk-clip"
+              data-i18n-title="ui.export_fmt_ydk_clip"
+              data-i18n-aria="ui.export_fmt_ydk_clip"
+              title=""
+              aria-label=""
+            >
+              <i class="fas fa-copy" aria-hidden="true"></i>
+            </button>
+          </div>
+          <div class="export-menu-option">
+            <span class="theme-row-label" data-i18n="ui.export_fmt_csv">CSV</span>
+            <button
+              type="button"
+              class="btn-secondary export-format-btn"
+              data-format="csv"
+              data-i18n-title="ui.export_fmt_csv"
+              data-i18n-aria="ui.export_fmt_csv"
+              title=""
+              aria-label=""
+            >
+              <i class="fas fa-file-csv" aria-hidden="true"></i>
+            </button>
+          </div>
+          <div class="export-menu-option">
+            <span class="theme-row-label" data-i18n="ui.export_fmt_png">PNG</span>
+            <button
+              type="button"
+              class="btn-secondary export-format-btn"
+              data-format="png"
+              data-i18n-title="ui.export_fmt_png"
+              data-i18n-aria="ui.export_fmt_png"
+              title=""
+              aria-label=""
+            >
+              <i class="fas fa-file-image" aria-hidden="true"></i>
+            </button>
+          </div>
+          <div class="export-menu-option">
+            <span class="theme-row-label" data-i18n="ui.export_fmt_jpg">JPG</span>
+            <button
+              type="button"
+              class="btn-secondary export-format-btn"
+              data-format="jpg"
+              data-i18n-title="ui.export_fmt_jpg"
+              data-i18n-aria="ui.export_fmt_jpg"
+              title=""
+              aria-label=""
+            >
+              <i class="fas fa-file-image" aria-hidden="true"></i>
+            </button>
+          </div>
+          <div class="export-menu-option">
+            <span class="theme-row-label" data-i18n="ui.export_fmt_png_clip"
+              >PNG → Área de transferência</span
+            >
+            <button
+              type="button"
+              class="btn-secondary export-format-btn"
+              data-format="png-clip"
+              data-i18n-title="ui.export_fmt_png_clip"
+              data-i18n-aria="ui.export_fmt_png_clip"
+              title=""
+              aria-label=""
+            >
+              <i class="fas fa-paste" aria-hidden="true"></i>
+            </button>
+          </div>
+          <div class="export-menu-option">
+            <span class="theme-row-label" data-i18n="ui.export_fmt_jpg_clip"
+              >JPG → Área de transferência</span
+            >
+            <button
+              type="button"
+              class="btn-secondary export-format-btn"
+              data-format="jpg-clip"
+              data-i18n-title="ui.export_fmt_jpg_clip"
+              data-i18n-aria="ui.export_fmt_jpg_clip"
+              title=""
+              aria-label=""
+            >
+              <i class="fas fa-paste" aria-hidden="true"></i>
+            </button>
+          </div>
+        </div>
+        <p class="export-menu-foot" data-i18n-html="ui.export_foot"></p>
+      </div>
+    </div>
+
+    <div
+      id="global-export-overlay"
+      class="global-export-overlay"
+      role="alertdialog"
+      aria-modal="true"
+      aria-live="polite"
+      aria-labelledby="global-export-overlay-label"
+    >
+      <div class="global-export-overlay-card">
+        <div class="global-export-spinner" aria-hidden="true"></div>
+        <p
+          id="global-export-overlay-label"
+          class="global-export-overlay-title"
+          data-i18n="ui.export_busy"
+        >
+          A processar…
+        </p>
+        <p id="global-export-overlay-sub" class="global-export-overlay-sub"></p>
+        <div class="global-export-progress-track">
+          <div id="global-export-progress-bar" class="global-export-progress-bar"></div>
+        </div>
+      </div>
+    </div>
+
+    <script src="/src/main.js"></script>
+
+    <div
+      id="ocr-container"
+      style="
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 999999;
+        background: #000;
+      "
+    >
+      <video
+        id="ocr-video"
+        style="position: absolute; width: 100%; height: 100%; object-fit: cover; opacity: 0.8"
+        autoplay
+        playsinline
+      ></video>
+      <div
+        style="
+          position: absolute;
+          top: 10px;
+          left: 50%;
+          transform: translateX(-50%);
+          width: 90%;
+          z-index: 1000001;
+        "
+      >
+        <canvas
+          id="preview-canvas"
+          style="width: 100%; height: 80px; border: 2px solid #0f0; background: #000"
+        ></canvas>
+        <div
+          id="vision-label"
+          style="
+            color: #0f0;
+            font-size: 11px;
+            text-align: center;
+            font-family: monospace;
+            margin-top: 5px;
+            background: rgba(0, 0, 0, 0.5);
+          "
+        >
+          STATUS: ANALYZING...
+        </div>
+      </div>
+      <div
+        id="scanner-visual"
+        style="
+          position: absolute;
+          top: 22%;
+          left: 50%;
+          transform: translateX(-50%);
+          width: 55%;
+          height: 42px;
+          border: 3px solid #2ecc71;
+          border-radius: 8px;
+          z-index: 10;
+          pointer-events: none;
+          background: rgba(46, 204, 113, 0.2);
+        "
+      >
+        <div
+          style="
+            position: absolute;
+            top: -28px;
+            width: 100%;
+            text-align: center;
+            color: #2ecc71;
+            font-size: 11px;
+            font-weight: bold;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 3px 10px;
+            border-radius: 20px;
+            white-space: nowrap;
+          "
+        >
+          <span data-i18n="ocr.crosshair">🎯 MIRA NO NOME DA CARTA</span>
+        </div>
+      </div>
+      <div
+        style="
+          position: absolute;
+          top: 30%;
+          left: 50%;
+          transform: translateX(-50%);
+          width: 80%;
+          z-index: 1000002;
+          background: rgba(0, 0, 0, 0.8);
+          padding: 10px;
+          border-radius: 8px;
+          text-align: center;
+        "
+      >
+        <div
+          style="color: #2ecc71; font-size: 12px; margin-bottom: 5px"
+          data-i18n="ocr.manual.title"
+        >
+          ⚙️ Configuração Manual
+        </div>
+        <select
+          id="manual-card-type"
+          style="
+            width: 100%;
+            padding: 6px;
+            margin-bottom: 8px;
+            background: #111;
+            color: #fff;
+            border: 1px solid #2ecc71;
+          "
+        >
+          <option value="AUTO" selected data-i18n-opt="ocr.manual.auto">Auto (detectar)</option>
+          <option value="Magia" data-i18n-opt="ocr.type.spell">Magia</option>
+          <option value="Armadilha" data-i18n-opt="ocr.type.trap">Armadilha</option>
+          <option value="Monstro Normal" data-i18n-opt="ocr.type.normal">Monstro Normal</option>
+          <option value="Monstro Efeito" data-i18n-opt="ocr.type.effect">Monstro Efeito</option>
+          <option value="Monstro Sincro" data-i18n-opt="ocr.type.synchro">Monstro Sincro</option>
+          <option value="Monstro Xyz" data-i18n-opt="ocr.type.xyz">Monstro Xyz</option>
+          <option value="Monstro Link" data-i18n-opt="ocr.type.link">Monstro Link</option>
+          <option value="Monstro Fusão" data-i18n-opt="ocr.type.fusion">Monstro Fusão</option>
+          <option value="Monstro Ritual" data-i18n-opt="ocr.type.ritual">Monstro Ritual</option>
+          <option value="Monstro Pêndulo" data-i18n-opt="ocr.type.pendulum">Monstro Pêndulo</option>
+          <option value="Ficha" data-i18n-opt="ocr.type.token">Ficha</option>
+        </select>
+        <select
+          id="manual-rarity"
+          style="
+            width: 100%;
+            padding: 6px;
+            background: #111;
+            color: #fff;
+            border: 1px solid #2ecc71;
+          "
+        >
+          <option value="Comum" data-i18n-opt="ocr.rarity.common">Comum</option>
+          <option value="Rara" data-i18n-opt="ocr.rarity.rare">Rara</option>
+          <option value="Super Rara" data-i18n-opt="ocr.rarity.super">Super Rara</option>
+          <option value="Ultra Rara" data-i18n-opt="ocr.rarity.ultra">Ultra Rara</option>
+          <option value="Secreta" data-i18n-opt="ocr.rarity.secret">Secreta</option>
+        </select>
+      </div>
+      <div
+        style="
+          position: absolute;
+          top: 400px;
+          right: 10px;
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+          z-index: 1000002;
+        "
+      >
+        <button
+          onclick="copyLogs()"
+          style="
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 5px;
+            font-weight: bold;
+          "
+          data-i18n="ocr.btn.copy_logs"
+        >
+          COPIAR LOGS
+        </button>
+        <button
+          onclick="exportOcrDebug()"
+          style="
+            background: #2c3e50;
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 5px;
+            font-weight: bold;
+          "
+          data-i18n="ocr.btn.debug"
+        >
+          EXPORTAR DEBUG (JSON)
+        </button>
+        <button
+          onclick="takeScreenshot()"
+          style="
+            background: #f1c40f;
+            color: black;
+            border: none;
+            padding: 12px;
+            border-radius: 5px;
+            font-weight: bold;
+          "
+          data-i18n="ocr.btn.printbot"
+        >
+          PRINT ROBÔ
+        </button>
+        <button
+          id="btn-open-calibrator"
+          style="
+            background: #9b59b6;
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 5px;
+            font-weight: bold;
+          "
+        >
+          <i class="fas fa-sliders-h"></i> <span data-i18n="ocr.btn.calibrate">CALIBRAR OCR</span>
+        </button>
+        <button
+          id="btn-close-ocr"
+          style="
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 5px;
+            font-weight: bold;
+          "
+          data-i18n="ocr.btn.close"
+        >
+          FECHAR
+        </button>
+      </div>
+      <div
+        id="ocr-log"
+        style="
+          position: absolute;
+          bottom: 0;
+          left: 0;
+          width: 100%;
+          height: 150px;
+          background: rgba(0, 0, 0, 0.9);
+          color: #2ecc71;
+          font-family: monospace;
+          font-size: 11px;
+          overflow-y: auto;
+          padding: 10px;
+          z-index: 20;
+          border-top: 1px solid #2ecc71;
+        "
+      >
+        > Engine Standby...
+      </div>
+      <canvas id="ocr-canvas-internal" style="display: none"></canvas>
+    </div>
+  </body>
+</html>

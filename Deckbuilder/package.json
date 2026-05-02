@@ -1,0 +1,19 @@
+{
+  "name": "deckbuilder-giubravo",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "build:monolith": "node scripts/build-monolith.mjs",
+    "build:all": "npm run build && npm run build:monolith",
+    "test": "node --check src/main.js && node scripts/catalog-cache-spec.mjs && node scripts/card-text-cache-spec.mjs && npm run build --silent && npm run build:monolith --silent",
+    "format": "prettier -w index.html src/main.js src/style.css vite.config.js"
+  },
+  "devDependencies": {
+    "prettier": "^3.6.2",
+    "vite": "^7.1.3"
+  }
+}
+
