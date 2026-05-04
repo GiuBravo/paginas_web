@@ -1,8 +1,12 @@
 /**
+ * @fileoverview Testes em Node do agregado cardinfo (espelho de `src/main.js`).
+ *
  * Especificações em Node para o ingest de metadados agregados do catálogo cardinfo.
  *
  * A função `ingestCardinfoRowsIntoAggSets` aqui deve espelhar a mesma lógica da função
  * homônima em `src/main.js`. Qualquer divergência indica regressão na persistência/cache.
+ *
+ * Execução: invocado por `npm run test` (após `node --check src/main.js`).
  */
 
 /**

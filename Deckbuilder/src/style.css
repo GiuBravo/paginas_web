@@ -1,3 +1,43 @@
+/*
+ * DeckBuilder GiuBravo — src/style.css
+ *
+ * Folha única (sem Sass/Less): ordem de cascata e especificidade importam. Tokens de cor em
+ * `:root`; temas escuros alternativos em `html.theme-*`; tema claro em `.theme-white` no `<html>`.
+ * Markup: `index.html` (catálogo de `id`: `npm run doc:refresh-index-ids`). Lógica e classes
+ * dinâmicas: `src/main.js`. Monólito: `npm run build:monolith` inlines este ficheiro.
+ *
+ * ÍNDICE DE SECÇÕES (linhas aproximadas; use Ctrl+F por selector ou comentário)
+ * ─────────────────────────────────────────────────────────────────────────────
+ *   48–57   :root — variáveis CSS globais (tema “default” escuro).
+ *   59–223  Tema claro `.theme-white` (blocos 1.–10.: fundo, filtros, tooltip, inputs, colunas, …).
+ *  224–418  Temas `html` alternativos (.theme-black, .theme-kaiba, .theme-yugi, .theme-joey, …).
+ *  420–675  @font-face Matrix Book; `body`/`html`; `#card-tooltip`; resets de input numérico.
+ *  676+     Grelha `.app-container` (= `#app-layout` no HTML): colunas, sidebar, filtros, resultados,
+ *            deck, toolbars, chips, modais, export (milhares de linhas — explorar por classe).
+ *  850+     Primeiros `@media (min-width: 901px)` — há vários blocos 901px no ficheiro (buscar).
+ * 2190+    `@media (min-width: 860px)` e 1280px — modais / export.
+ * 2638+    `@media (max-width: 900px)` — modal detalhe tooltip.
+ * 2753+    `(hover: none)` vs `(hover: hover)`.
+ * 3384+    Desktop: lista/grelha sugestões, alturas.
+ * 4729+    Deck, PDF, animações `.card-surface-enter`, `#app-layout.layout-sfc-pulse-*`.
+ * 6022+    Bloco “RESPONSIVIDADE MOBILE” `@media (max-width: 900px)` — layout empilhado, tooltip fullscreen.
+ * 6215+    `@keyframes fadeInPage` e entrada `.results-view`.
+ *
+ * Classes frequentes ligadas ao JS
+ * ─────────────────────────────────
+ *   .app-container + .deck-col-hidden | .deck-col-wide | .filters-col-hidden | .empty-queue |
+ *   .pdf-preview-hidden — largura das colunas e visibilidade.
+ *   html.help-enabled — modo ajuda (hints, botões extra).
+ *   html.has-monster-type — mostra grupo “possui efeito” / extras de monstro.
+ *   .results-view.list-mode | .grid-mode — vista de sugestões.
+ *   .queue-item, .deck-section-*, .suggestion-item — fila e lista.
+ *   #app-layout.layout-sfc-pulse-* — feedback visual após ações (pulso filtros/deck/fullscreen/PDF).
+ *
+ * Manutenção: novos temas — copiar bloco `html.theme-nome { --bg-dark; … }`; novo modal — seguir
+ * `.deck-name-modal` / `.tooltip-details-modal`. Evitar novos `style=""` no HTML; preferir classe
+ * aqui. `npm run format` (Prettier) é a referência de formatação.
+ */
+
 :root {
   --bg-dark: #0c0c0c;
   --panel-bg: #1a1a1a;
@@ -373,6 +413,7 @@
   border-bottom-color: rgba(250, 204, 21, 0.35) !important;
 }
 
+/* ========== Tipografia (@font-face Matrix Book) + base body/html ========== */
 /*
          * Fonte das cartas (TCG em inglês): Matrix Book.
          * Se Matrix estiver instalada (ex.: licença Adobe/Emigre), o navegador usa automaticamente.
@@ -411,6 +452,7 @@ html {
   background-color: var(--bg-dark);
 }
 
+/* ========== Tooltip flutuante da carta (#card-tooltip e filhos) ========== */
 #card-tooltip {
   display: none;
   position: fixed;
@@ -627,6 +669,7 @@ input[type='number'] {
   appearance: textfield;
 }
 
+/* ========== Grelha principal (.app-container = #app-layout no index.html) ========== */
 .app-container {
   display: grid;
   grid-template-columns: 300px 1fr 450px;
@@ -5976,7 +6019,10 @@ html.theme-white .toast.toast-error {
   }
 }
 
-/* --- RESPONSIVIDADE MOBILE --- */
+/* ========== RESPONSIVIDADE MOBILE (@media max-width: 900px) ==========
+ * Colunas em bloco, scroll no body, tooltip #card-tooltip fullscreen, grelha 2 colunas em sugestões.
+ * Sobrepõe grande parte do layout desktop acima; testar sempre em viewport estreita.
+ */
 @media (max-width: 900px) {
   body {
     overflow-y: auto !important;

@@ -1,5 +1,5 @@
 /**
- * Configuração do Vite para o DeckBuilder.
+ * @fileoverview Configuração do Vite para o DeckBuilder GiuBravo.
  *
  * Em desenvolvimento (`npx vite . --port 5173` ou `npm run dev`), define um proxy
  * same-origin sob o prefixo `/__ygo_images__/`, que encaminha para o CDN oficial

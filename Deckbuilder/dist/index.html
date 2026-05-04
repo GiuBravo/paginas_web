@@ -1,4 +1,305 @@
 <!doctype html>
+<!--
+  DeckBuilder GiuBravo — documento HTML principal (fonte de verdade em desenvolvimento).
+
+  Conteúdo em ordem aproximada:
+  1) <head> — meta (CSP, Permissions-Policy, theme-color), CDNs globais (jsPDF, JSZip, Tesseract,
+     Font Awesome, Google Fonts) e /src/style.css. Qualquer nova origem de script/font/imagem/API
+     deve refletir-se no meta Content-Security-Policy (ver também docs/DOCUMENTACAO.md e docs/INDEX_HTML.md).
+  2) Corpo inicial — overlays e diálogos fora de #app-layout: #card-tooltip, tooltips de validação/
+     estatísticas, #card-sets-panel, #toast-container, modais (#deck-name-modal, #deck-swap-modal,
+     #random-main-modal, #help-mouse-modal, #credits-modal, #tooltip-details-modal).
+  3) #app-layout — grelha principal: #col-filters (filtros), #col-results (busca + #results-view),
+     #col-preview (fila do deck, #deck-items, exportação, PDF, etc.).
+  4) <script src="/src/main.js"> — lógica monolítica global (handlers onclick="…" no markup).
+  5) #ocr-container e nós associados — UI fullscreen do scanner/OCR (após o script por legado;
+     o mesmo nó é referido em main.js).
+
+  Ordem de leitura da documentação: README.md (raiz) → docs/DOCUMENTACAO.md → docs/MAIN_JS.md → …
+  Mapa de secções e IDs notáveis: docs/INDEX_HTML.md
+  ── Catálogo de ids (gerado: consulte scripts/generate-index-html-id-catalog-comment.mjs) ──
+  Total: 277 ids. Ordem alfabética; descrições em PT-BR para navegação humana.
+
+  • app-layout — Raiz do layout em 3 colunas; classes alternam deck/filtros visíveis.
+  • banlist-only-container — Checkbox “só banlist”.
+  • btn-close-ocr — Fechar scanner OCR.
+  • btn-credits — Abre modal de créditos.
+  • btn-deck-delete-saved — Apagar deck guardado selecionado.
+  • btn-deck-order — Ordenar deck pelo critério selecionado.
+  • btn-deck-random-main — Abre modal de amostra aleatória do main.
+  • btn-deck-rename — Renomear deck guardado selecionado.
+  • btn-deck-save — Guardar deck atual nos guardados.
+  • btn-deck-validate-toggle — Alterna validação do deck ligada/desligada.
+  • btn-deck-validate-toggle-icon — Ícone (validação ligada = clipboard / desligada = ban).
+  • btn-deck-validate-toggle-label — Texto do botão de validação (stack label + ícone).
+  • btn-help-mouse — Abre modal ajuda rato/teclado.
+  • btn-help-toggle — Modo ajuda (rótulos guia).
+  • btn-open-calibrator — Abre calibrador OCR.
+  • btn-open-export-menu — Abre menu de exportações.
+  • btn-open-scanner — Abre fluxo OCR / câmara.
+  • btn-order — Inverte ordenação ou embaralha se critério = aleatório.
+  • btn-random-filter-card — Carta aleatória respeitando filtros atuais.
+  • btn-random-main-toggle-view — Alterna modo de vista no modal aleatório.
+  • btn-reset-filters — Chama resetFilters() — limpa filtros e chips.
+  • btn-toggle-deck-column — Ciclo largura coluna deck (normal/wide/oculto).
+  • btn-toggle-filters-column — Mostra/oculta coluna de filtros.
+  • btn-toggle-fullscreen — Fullscreen da app.
+  • btn-toggle-pdf-preview — Mostra/oculta pré-visualização PDF.
+  • btn-toggle-queue-view — Alterna vista da fila do deck.
+  • btn-toggle-results-view — Alterna lista/grelha dos resultados.
+  • btn-toggle-tooltip — Modo tooltip compacto/expandido.
+  • card-sets-panel — Painel lateral impressões/expansões da carta.
+  • card-sets-panel-backdrop — Backdrop do painel de sets.
+  • card-sets-panel-body — Corpo HTML listagem de sets.
+  • card-sets-panel-close — Fechar painel de sets.
+  • card-sets-panel-title — Título do painel de sets.
+  • card-tooltip — Tooltip flutuante da carta (hover).
+  • cardsets-datalist — Datalist nomes de expansões (cardset).
+  • col-filters — Coluna esquerda: filtros e ferramentas da coluna.
+  • col-preview — Coluna direita: deck, estatísticas, import/export, PDF.
+  • col-results — Coluna central: busca, toolbar e lista/grelha de resultados.
+  • credits-modal — Modal créditos.
+  • credits-modal-backdrop — Backdrop créditos.
+  • credits-modal-close — Fechar créditos.
+  • credits-modal-title — Título créditos.
+  • datalist-date-region — Datalist região de data (OCG/TCG/…).
+  • datalist-filter-archetype — Datalist de sugestões: arquétipo.
+  • datalist-filter-attribute — Datalist de sugestões: atributo.
+  • datalist-filter-banlist — Datalist de sugestões: banlist (filtro busca).
+  • datalist-filter-era — Datalist de sugestões: era.
+  • datalist-filter-haseffect — Datalist de sugestões: tem descrição.
+  • datalist-filter-level — Datalist de sugestões: nível.
+  • datalist-filter-linkmarker — Datalist de sugestões: marcador Link.
+  • datalist-filter-linkval — Datalist de sugestões: valor Link.
+  • datalist-filter-race — Datalist de sugestões: raça.
+  • datalist-filter-scale — Datalist de sugestões: escala Pêndulo.
+  • datalist-filter-staple — Datalist de sugestões: staple.
+  • datalist-filter-subtype — Datalist de sugestões: subtipo.
+  • datalist-filter-type — Datalist de sugestões: tipo de carta.
+  • datalist-rarities — Datalist raridades.
+  • datalist-setcodes — Datalist códigos set.
+  • date-end — Data final filtro lançamento.
+  • date-period-group — Grupo inputs de período (mostrado conforme filtro era).
+  • date-start — Data inicial filtro lançamento.
+  • deck-banlist-select — Formato de banlist para validação do deck.
+  • deck-import-overlay — Overlay de progresso importação deck.
+  • deck-import-overlay-bar — Barra de progresso import deck.
+  • deck-import-overlay-label — Título overlay import deck.
+  • deck-import-overlay-sub — Subtexto (passo atual).
+  • deck-items — Zonas principal/extra/side: filas de cartas (queue-item).
+  • deck-name-modal — Modal pedir nome deck.
+  • deck-name-modal-backdrop — Backdrop modal nome.
+  • deck-name-modal-cancel — Cancelar modal nome.
+  • deck-name-modal-input — Input texto nome.
+  • deck-name-modal-ok — Confirmar modal nome.
+  • deck-name-modal-title — Título modal nome.
+  • deck-order-icon — Ícone do critério de ordenação do deck.
+  • deck-queue-pane — Painel scrollável da fila do deck.
+  • deck-sort-by — Critério de ordenação das pilhas do deck.
+  • deck-stat-extra — Contagem extra deck.
+  • deck-stat-genesys — Valor pontos Genesys.
+  • deck-stat-genesys-wrap — Área pontos Genesys.
+  • deck-stat-md-n — Contagem N MD.
+  • deck-stat-md-n-gems — Gemas N MD.
+  • deck-stat-md-r — Contagem R MD.
+  • deck-stat-md-r-gems — Gemas R MD.
+  • deck-stat-md-sr — Contagem SR MD.
+  • deck-stat-md-sr-gems — Gemas SR MD.
+  • deck-stat-md-ur — Contagem UR MD.
+  • deck-stat-md-ur-gems — Gemas UR MD.
+  • deck-stat-md-wrap — Área estatísticas Master Duel (gems).
+  • deck-stat-monsters — Contagem monstros.
+  • deck-stat-price — Soma preço estimado.
+  • deck-stat-spells — Contagem magias.
+  • deck-stat-tooltip — Tooltip totais por categoria na barra stats.
+  • deck-stat-tooltip-body — Corpo do tooltip de stats.
+  • deck-stat-total — Número total de cartas no deck.
+  • deck-stat-traps — Contagem armadilhas.
+  • deck-stats-bar — Barra de totais (monstros/magias/armadilhas/extra/preço/MD/G).
+  • deck-swap-modal — Modal escolher pilha para troca.
+  • deck-swap-modal-backdrop — Backdrop swap.
+  • deck-swap-modal-cancel — Cancelar swap.
+  • deck-swap-modal-list — Lista botões pilhas.
+  • deck-swap-modal-title — Título swap.
+  • deck-validity-flag — Indicador visual válido/inválido.
+  • deck-validity-text — Texto curto estado validação.
+  • deck-validity-tooltip — Tooltip flutuante regras validação deck.
+  • deck-validity-tooltip-body — Corpo HTML do tooltip de validação.
+  • enable-banlist-only — Input checkbox banlist-only.
+  • export-menu-back — Voltar um passo no menu export.
+  • export-menu-back-wrap — Área botão voltar no menu export.
+  • export-menu-close — Fechar menu export.
+  • export-menu-overlay — Backdrop do menu export.
+  • export-menu-panel — Painel do menu export.
+  • export-menu-step-formats — Passo formatos export.
+  • export-menu-step-root — Passo raiz do assistente export.
+  • export-menu-title-text — Título do menu export.
+  • file-deck-import — Input ficheiro importação deck (ZIP/CSV/YDK).
+  • filter-archetype-add — Botão adicionar chip: arquétipo.
+  • filter-archetype-chips — Chips selecionados: arquétipo.
+  • filter-archetype-clear — Limpar chips: arquétipo.
+  • filter-archetype-input — Campo do filtro: arquétipo.
+  • filter-atk — Valor numérico ATK.
+  • filter-atk-add-chip — Botão adicionar chip: ATK.
+  • filter-atk-chips — Chips selecionados: ATK.
+  • filter-atk-clear-chips — Chips selecionados: atk-clear.
+  • filter-atk-op — Operador comparativo (nível/ATK/DEF): ATK.
+  • filter-attribute-add — Botão adicionar chip: atributo.
+  • filter-attribute-chips — Chips selecionados: atributo.
+  • filter-attribute-clear — Limpar chips: atributo.
+  • filter-attribute-input — Campo do filtro: atributo.
+  • filter-banlist-add — Botão adicionar chip: banlist (filtro busca).
+  • filter-banlist-chips — Chips selecionados: banlist (filtro busca).
+  • filter-banlist-clear — Limpar chips: banlist (filtro busca).
+  • filter-banlist-input — Campo do filtro: banlist (filtro busca).
+  • filter-cardset-add — Botão adicionar chip: nome da expansão.
+  • filter-cardset-chips — Chips selecionados: nome da expansão.
+  • filter-cardset-clear — Limpar chips: nome da expansão.
+  • filter-cardset-input — Campo do filtro: nome da expansão.
+  • filter-date-region-add — Botão adicionar chip: região de data.
+  • filter-date-region-chips — Chips selecionados: região de data.
+  • filter-date-region-clear — Limpar chips: região de data.
+  • filter-date-region-input — Campo do filtro: região de data.
+  • filter-def — Valor numérico DEF.
+  • filter-def-add-chip — Botão adicionar chip: DEF.
+  • filter-def-chips — Chips selecionados: DEF.
+  • filter-def-clear-chips — Chips selecionados: def-clear.
+  • filter-def-op — Operador comparativo (nível/ATK/DEF): DEF.
+  • filter-desc — Campo texto descrição/efeito (busca fuzzy).
+  • filter-desc-add-chip — Botão adicionar chip: descrição/efeito.
+  • filter-desc-chips — Chips selecionados: descrição/efeito.
+  • filter-desc-clear-chips — Chips selecionados: desc-clear.
+  • filter-era-add — Botão adicionar chip: era.
+  • filter-era-chips — Chips selecionados: era.
+  • filter-era-clear — Limpar chips: era.
+  • filter-era-input — Campo do filtro: era.
+  • filter-fname-add-chip — Botão adicionar chip: nome (multi).
+  • filter-fname-chips — Chips selecionados: nome (multi).
+  • filter-fname-clear-chips — Chips selecionados: fname-clear.
+  • filter-haseffect-add — Botão adicionar chip: tem descrição.
+  • filter-haseffect-chips — Chips selecionados: tem descrição.
+  • filter-haseffect-clear — Limpar chips: tem descrição.
+  • filter-haseffect-group — Grupo filtro “tem descrição”.
+  • filter-haseffect-input — Campo do filtro: tem descrição.
+  • filter-level-add — Botão adicionar chip: nível.
+  • filter-level-chips — Chips selecionados: nível.
+  • filter-level-clear — Limpar chips: nível.
+  • filter-level-input — Campo do filtro: nível.
+  • filter-level-op — Operador comparativo (nível/ATK/DEF): nível.
+  • filter-linkmarker-add — Botão adicionar chip: marcador Link.
+  • filter-linkmarker-chips — Chips selecionados: marcador Link.
+  • filter-linkmarker-clear — Limpar chips: marcador Link.
+  • filter-linkmarker-input — Campo do filtro: marcador Link.
+  • filter-linkval-add — Botão adicionar chip: valor Link.
+  • filter-linkval-chips — Chips selecionados: valor Link.
+  • filter-linkval-clear — Limpar chips: valor Link.
+  • filter-linkval-input — Campo do filtro: valor Link.
+  • filter-price-add-chip — Botão adicionar chip: preço TCGPlayer.
+  • filter-price-chips — Chips selecionados: preço TCGPlayer.
+  • filter-price-clear-chips — Chips selecionados: price-clear.
+  • filter-price-max — Limite máx preço TCGPlayer.
+  • filter-price-min — Limite mín preço TCGPlayer.
+  • filter-race-add — Botão adicionar chip: raça.
+  • filter-race-chips — Chips selecionados: raça.
+  • filter-race-clear — Limpar chips: raça.
+  • filter-race-input — Campo do filtro: raça.
+  • filter-rarity-add — Botão adicionar chip: raridade.
+  • filter-rarity-chips — Chips selecionados: raridade.
+  • filter-rarity-clear — Limpar chips: raridade.
+  • filter-rarity-input — Campo do filtro: raridade.
+  • filter-scale-add — Botão adicionar chip: escala Pêndulo.
+  • filter-scale-chips — Chips selecionados: escala Pêndulo.
+  • filter-scale-clear — Limpar chips: escala Pêndulo.
+  • filter-scale-input — Campo do filtro: escala Pêndulo.
+  • filter-setcode-add — Botão adicionar chip: código da expansão.
+  • filter-setcode-chips — Chips selecionados: código da expansão.
+  • filter-setcode-clear — Limpar chips: código da expansão.
+  • filter-setcode-input — Campo do filtro: código da expansão.
+  • filter-staple-add — Botão adicionar chip: staple.
+  • filter-staple-chips — Chips selecionados: staple.
+  • filter-staple-clear — Limpar chips: staple.
+  • filter-staple-input — Campo do filtro: staple.
+  • filter-subtype-add — Botão adicionar chip: subtipo.
+  • filter-subtype-chips — Chips selecionados: subtipo.
+  • filter-subtype-clear — Limpar chips: subtipo.
+  • filter-subtype-input — Campo do filtro: subtipo.
+  • filter-type-add — Botão adicionar chip: tipo de carta.
+  • filter-type-chips — Chips selecionados: tipo de carta.
+  • filter-type-clear — Limpar chips: tipo de carta.
+  • filter-type-input — Campo do filtro: tipo de carta.
+  • global-export-overlay — Overlay de progresso exportação global.
+  • global-export-overlay-label — Título export global.
+  • global-export-overlay-sub — Subtexto export global.
+  • global-export-progress-bar — Barra de progresso export global.
+  • group-race — Grupo raça (visível após tipo monstro).
+  • group-subtype — Grupo subtipo (visível após tipo monstro).
+  • help-mouse-modal — Modal ajuda rato/teclado.
+  • help-mouse-modal-backdrop — Backdrop ajuda rato.
+  • help-mouse-modal-body — Corpo texto ajuda rato.
+  • help-mouse-modal-close — Fechar ajuda rato.
+  • help-mouse-modal-title — Título ajuda rato.
+  • icon-pdf-preview — Ícone decorativo/estado: pdf preview.
+  • icon-random-main-toggle-view — Ícone do toggle de vista (modal aleatório).
+  • icon-toggle-deck-column — Ícone decorativo/estado: toggle deck column.
+  • icon-toggle-filters-column — Ícone decorativo/estado: toggle filters column.
+  • icon-toggle-fullscreen — Ícone decorativo/estado: toggle fullscreen.
+  • icon-toggle-queue-view — Ícone decorativo/estado: toggle queue view.
+  • icon-toggle-results-view — Ícone decorativo/estado: toggle results view.
+  • import-overlay — Overlay genérico de importação (ficheiro).
+  • import-overlay-label — Título do overlay de import.
+  • label-random-main-toggle-view — Label acessível para o toggle de vista.
+  • label-toggle-queue-view — Label acessível associado a um botão: toggle queue view.
+  • label-toggle-results-view — Label acessível associado a um botão: toggle results view.
+  • manual-card-type — Select tipo manual OCR (AUTO, …).
+  • manual-rarity — Select raridade manual OCR.
+  • monster-extras — Grupo atributo/nível/link/escala (monstro).
+  • ocr-canvas-internal — Canvas interno processamento (oculto).
+  • ocr-container — Fullscreen scanner/OCR.
+  • ocr-log — Consola de log OCR.
+  • ocr-video — Elemento vídeo câmara.
+  • order-icon — Ícone seta ordenação.
+  • page-jump — Input ir para página N.
+  • page-total — Texto “/ total” da paginação.
+  • preview-canvas — Canvas pré-visualização recorte OCR.
+  • preview-frame — iframe da pré-visualização PDF (blob URL).
+  • print-scale — Escala percentual do PDF (readonly + ajuste por código).
+  • progress-bar — Barra de progresso genérica (import/export).
+  • random-main-cards — Grelha/lista de cartas no modal aleatório.
+  • random-main-close — Fecha modal aleatório.
+  • random-main-empty — Mensagem quando não há cartas no modal.
+  • random-main-modal — Modal amostra aleatória main.
+  • random-main-modal-backdrop — Backdrop modal aleatório.
+  • random-main-modal-title — Título modal aleatório.
+  • random-main-reroll — Nova amostra aleatória.
+  • result-db-version — Valor da versão DB exibida.
+  • result-db-version-label — Label da versão DB.
+  • result-db-version-wrap — Contentor da versão da API/cardinfo.
+  • result-info — Texto “N resultados” / estado.
+  • result-info-row — Linha com contagem de resultados e versão DB.
+  • results-view — Lista ou grelha de cartas sugeridas pela busca.
+  • saved-decks-select — Deck guardado a carregar.
+  • scanner-visual — Moldura visual região de scan.
+  • search-input — Campo principal de busca por nome (fname).
+  • search-qty — Quantidade a adicionar ao deck por clique.
+  • select-api-card-lang — Idioma dos dados de carta na API.
+  • sort-by — Critério de ordenação dos resultados.
+  • theme-selector — Tema claro/escuro.
+  • toast-container — Contentor de toasts.
+  • tooltip-archetype-row — Linha arquétipo no tooltip.
+  • tooltip-beta-name-row — Linha nome beta (EN).
+  • tooltip-details-modal — Modal detalhe expandido do tooltip.
+  • tooltip-details-modal-backdrop — Backdrop modal detalhe.
+  • tooltip-details-modal-body — Corpo: recebe nó #card-tooltip reparentado.
+  • tooltip-details-modal-close — Fechar modal detalhe.
+  • tooltip-details-modal-title — Título modal detalhe.
+  • tooltip-img — Imagem no tooltip.
+  • tooltip-info-rows — Linhas ATK/DEF/tipo no tooltip.
+  • tooltip-name — Nome no tooltip.
+  • tooltip-text — Texto de efeito no tooltip.
+  • vision-label — Texto de estado visão/OCR.
+
+  Fim do catálogo de ids.
+-->
 <html lang="pt-br">
   <head>
     <meta charset="UTF-8" />
@@ -39,6 +340,7 @@
     <link rel="stylesheet" crossorigin href="/assets/index-CKkEw_7o.css">
   </head>
   <body>
+    <!-- === Tooltip flutuante da carta (hover na lista / deck); reparentado ao abrir detalhes === -->
     <div id="card-tooltip" style="display: none">
       <div class="tt-container">
         <img id="tooltip-img" src="" alt="Carta" data-i18n-alt="ui.card_alt" />
@@ -408,6 +710,7 @@
       </div>
     </div>
 
+    <!-- === Layout principal: três colunas (filtros | resultados | deck / export) === -->
     <div class="app-container empty-queue deck-col-hidden" id="app-layout">
       <div class="col" id="col-filters">
         <div class="col-header col-header-filters-toolbar">
@@ -431,6 +734,7 @@
           </div>
         </div>
         <div class="sidebar-content">
+          <!-- === Filtros: grupos filter-* / chips / datalists (ordem lógica em main.js) === -->
           <div class="filter-group">
             <label data-i18n="filter.type_label">Tipo de carta</label>
             <p class="cardset-hint" data-i18n-html="filter.type_hint">
@@ -1513,6 +1817,7 @@
         </div>
       </div>
 
+      <!-- === Coluna central: busca, paginação, #results-view === -->
       <div class="col" id="col-results">
         <div class="search-area">
           <div style="display: flex; gap: 10px; align-items: flex-end">
@@ -2024,6 +2329,7 @@
         </div>
       </div>
 
+      <!-- === Coluna do deck: filas principal/extra/side, validação, export, PDF === -->
       <div class="col" id="col-preview">
         <div class="col-header queue-col-header">
           <span class="queue-col-title" data-i18n="ui.deck_header">Deck</span>
@@ -2810,6 +3116,7 @@
 
     <script src="/src/main.js"></script>
 
+    <!-- === Scanner / OCR (fullscreen); mantido após main.js no markup legado === -->
     <div
       id="ocr-container"
       style="

@@ -1,11 +1,13 @@
 /**
+ * @fileoverview Gera o HTML monolítico `Deckbuilder_cursor.html` a partir do projeto em árvore.
+ *
  * Script de build: gera `Deckbuilder_cursor.html` no diretório raiz do projeto.
  *
  * Lê `index.html`, `src/style.css` e `src/main.js`, substitui o `<link>` do CSS e o
  * `<script src="main.js">` por blocos inline `<style>` e `<script>`, escapando `</style>`
  * e `</script>` no conteúdo para não quebrar o HTML.
  *
- * Execução: `npm run build:monolith`
+ * @see npm script `build:monolith` em `package.json`.
  */
 import fs from 'fs';
 import path from 'path';

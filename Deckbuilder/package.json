@@ -9,7 +9,8 @@
     "build:monolith": "node scripts/build-monolith.mjs",
     "build:all": "npm run build && npm run build:monolith",
     "test": "node --check src/main.js && node scripts/catalog-cache-spec.mjs && node scripts/card-text-cache-spec.mjs && npm run build --silent && npm run build:monolith --silent",
-    "format": "prettier -w index.html src/main.js src/style.css vite.config.js"
+    "format": "prettier -w index.html src/main.js src/style.css vite.config.js",
+    "doc:refresh-index-ids": "node scripts/generate-index-html-id-catalog-comment.mjs --write"
   },
   "devDependencies": {
     "prettier": "^3.6.2",

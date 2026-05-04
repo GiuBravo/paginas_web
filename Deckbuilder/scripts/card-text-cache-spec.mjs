@@ -1,7 +1,11 @@
 /**
+ * @fileoverview Testes em Node do fingerprint de nomes de carta (espelho de `src/main.js`).
+ *
  * Especificações em Node para a função espelho de `cardDisplayedNameFingerprint`.
  *
  * Deve permanecer idêntica à implementação em `src/main.js` sob o mesmo nome.
+ *
+ * Execução: invocado por `npm run test`.
  */
 
 /**

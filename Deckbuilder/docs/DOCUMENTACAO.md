@@ -2,31 +2,86 @@
 
 Este documento descreve a arquitetura, os artefatos e os fluxos principais do repositório. O código-fonte deve ser comentado em **português do Brasil**, conforme `docs/CODING_STANDARDS.md`.
 
+**Ordem sugerida de leitura** (igual ao `README.md` na raiz): `DOCUMENTACAO.md` → `MAIN_JS.md` → `INDEX_HTML.md` → `STYLE_CSS.md` → `CODING_STANDARDS.md`.
+
 ## Visão geral
 
 O DeckBuilder é uma aplicação web para montar decks de Yu-Gi-Oh!, usando dados públicos da API **YGOPRODeck** (`db.ygoprodeck.com`, imagens em `images.ygoprodeck.com`). O projeto foi separado do HTML monolítico original (`Deckbuilder_cursor.html` como backup conceitual): a fonte de verdade para desenvolvimento é `index.html`, `src/style.css` e `src/main.js`. O monólito pode ser regenerado com `npm run build:monolith`.
 
 ## Estrutura de diretórios
 
+### Documentação (ordem de leitura)
 
-| Caminho                            | Função                                                                                                                   |
-| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| `index.html`                       | Markup, CSP meta, CDNs (jsPDF, JSZip, Tesseract, Font Awesome, fontes), inclusão de `/src/style.css` e `/src/main.js`.   |
-| `src/style.css`                    | Estilos extraídos do HTML legado.                                                                                        |
-| `src/main.js`                      | Toda a lógica cliente (~23 mil linhas, script global para compatibilidade com handlers `onclick` inline no HTML).        |
-| `vite.config.js`                   | Configuração Vite; proxy de desenvolvimento para imagens same-origin (`/__ygo_images__/` → CDN YGOPRODeck).              |
-| `scripts/build-monolith.mjs`       | Concatena HTML + CSS + JS num único `Deckbuilder_cursor.html`.                                                           |
-| `scripts/catalog-cache-spec.mjs`   | Teste em Node do espelho da ingestão de agregados do catálogo (alinhado a `ingestCardinfoRowsIntoAggSets` em `main.js`). |
-| `scripts/card-text-cache-spec.mjs` | Teste em Node do espelho de `cardDisplayedNameFingerprint`.                                                              |
-| `docs/CODING_STANDARDS.md`         | Padrões de nomeação e estrutura.                                                                                         |
-| `docs/DOCUMENTACAO.md`             | Este arquivo.                                                                                                            |
+| Caminho | Função |
+|--------|--------|
+| `README.md` (raiz) | Entrada do repositório: ordem dos guias em `docs/`, comandos `npm` essenciais. |
+| `docs/DOCUMENTACAO.md` | Este ficheiro — arquitetura, fluxos, testes, segurança. |
+| `docs/MAIN_JS.md` | Mapa operacional do `src/main.js`: arranque, subsistemas, globais no `window`. |
+| `docs/INDEX_HTML.md` | Mapa do markup, CSP, regiões da UI; o `index.html` inclui catálogo de **todos** os `id` (`npm run doc:refresh-index-ids`). |
+| `docs/STYLE_CSS.md` | Guia de `src/style.css`: temas, breakpoints, classes ligadas ao JS. |
+| `docs/CODING_STANDARDS.md` | Comentários, JSDoc, nomeação, estrutura de ficheiros. |
 
+### Código, build e scripts Node
+
+| Caminho | Função |
+|--------|--------|
+| `index.html` | Markup, CSP meta, CDNs (jsPDF, JSZip, Tesseract, Font Awesome, fontes), inclusão de `/src/style.css` e `/src/main.js`. Comentário de topo + marcadores de secção. |
+| `src/style.css` | Estilos da app; índice no topo do ficheiro. |
+| `src/main.js` | Lógica cliente monolítica (script global, `onclick` no HTML). |
+| `vite.config.js` | Vite 7; proxy dev `/__ygo_images__/` → CDN YGOPRODeck. |
+| `scripts/build-monolith.mjs` | Gera `Deckbuilder_cursor.html` (HTML + CSS + JS inline). |
+| `scripts/catalog-cache-spec.mjs` | Spec Node alinhada a `ingestCardinfoRowsIntoAggSets` (`main.js`). |
+| `scripts/card-text-cache-spec.mjs` | Spec Node alinhada a `cardDisplayedNameFingerprint` (`main.js`). |
+| `scripts/generate-index-html-id-catalog-comment.mjs` | Gera o bloco do catálogo de `id` no topo do `index.html`; uso: `npm run doc:refresh-index-ids` com `--write`. |
+| `scripts/list-index-html-ids.mjs` | Lista `id` do `index.html` (apoio; não altera ficheiros por defeito). |
+
+### Artefactos gerados (não editar como fonte principal)
+
+| Caminho | Origem |
+|--------|--------|
+| `dist/` | `npm run build` — saída Vite; pode apagar-se e voltar a gerar. |
+| `Deckbuilder_cursor.html` | `npm run build:monolith` — monólito para distribuição legada. |
+
+## `index.html` (resumo)
+
+O documento carrega primeiro as **políticas** (CSP, Permissions-Policy), depois **CDNs** (jsPDF, JSZip, Tesseract, Font Awesome, fontes), o **CSS** da app e, no final do fluxo principal, **`/src/main.js`**. Vários **modais e tooltips** vivem no início do `<body>` **fora** de `#app-layout` para empilhamento (`z-index`) e ARIA previsíveis.
+
+O layout em três colunas está sob **`#app-layout`**: `#col-filters`, `#col-results` (inclui `#results-view`), `#col-preview` (deck, import/export). A UI **OCR** (`#ocr-container`, …) está **depois** da tag `<script src="/src/main.js">` por legado; o código continua a usar os mesmos IDs.
+
+Para uma descrição por blocos, IDs de painéis e lembretes de manutenção, ver **`docs/INDEX_HTML.md`**.
 
 ## Stack e scripts npm
 
 - **Runtime dev/build**: Vite 7 (`npm run dev`, `npm run build`, `npm run preview`).
 - **Formatação**: Prettier (`npm run format`).
-- **Testes rápidos**: `npm run test` — validação sintática de `src/main.js`, specs dos scripts acima e builds silenciosos.
+- **Documentação HTML**: `npm run doc:refresh-index-ids` — atualiza o catálogo de `id` no comentário inicial de `index.html`.
+
+### Conteúdo de `npm run test` (por ordem)
+
+1. `node --check src/main.js` — verificação **sintática** do JavaScript (não executa a app).
+2. `node scripts/catalog-cache-spec.mjs` — regressão da lógica de agregados do catálogo.
+3. `node scripts/card-text-cache-spec.mjs` — regressão da fingerprint de nome exibido.
+4. `npm run build --silent` — build Vite de produção.
+5. `npm run build:monolith --silent` — geração do HTML monolítico.
+
+### Pasta `scripts/` (Node, npm)
+
+| Script | Papel |
+|--------|--------|
+| `build-monolith.mjs` | Empacota `index.html` + `src/style.css` + `src/main.js` → `Deckbuilder_cursor.html`. |
+| `catalog-cache-spec.mjs` | Teste automatizado; manter alinhado a `ingestCardinfoRowsIntoAggSets` se essa função mudar. |
+| `card-text-cache-spec.mjs` | Teste automatizado; manter alinhado a `cardDisplayedNameFingerprint`. |
+| `generate-index-html-id-catalog-comment.mjs` | Doc: substitui o comentário do catálogo de `id` com `--write`. |
+| `list-index-html-ids.mjs` | Listagem de `id` para revisão manual ou scripts. |
+
+### Pasta `tools/` (manutenção manual)
+
+Não fazem parte do `npm run test` por defeito; correr à mão quando necessário.
+
+| Ferramenta | Comando | Papel |
+|------------|---------|--------|
+| `check-simple-tags.mjs` | `node tools/check-simple-tags.mjs` | Verifica aninhamento simples (`div`, `span`, `main`, etc.) em `index.html` — rede de segurança leve, não substitui validador HTML completo. |
+| `extract-deckbuilder.mjs` | `node tools/extract-deckbuilder.mjs` | Operação inversa aproximada do monólito: extrai `<style>` e `<script>` de `Deckbuilder_cursor.html` para `src/style.css` / `src/main.js` e reescreve `index.html` com `<link>` / `<script>`. Útil se só existir o monólito legado. |
 
 ## Fluxo de execução no navegador
 
@@ -49,15 +104,19 @@ O arquivo é único por decisão de compatibilidade com o HTML legado. Conceptua
 - **Exportação**: PDF (jsPDF), ZIP, canvas para imagens.
 - **URL compartilhável**: parâmetros `flt_`* para filtros.
 
-Para localizar símbolos, use busca por nome no editor; comentários de bloco `/** … */` já marcam vários pontos importantes no arquivo.
+Para localizar símbolos, use busca por nome no editor; comentários de bloco `/** … */` já marcam vários pontos importantes no arquivo. **Mapa operacional** (arranque, subsistemas, `window.*`): `docs/MAIN_JS.md`.
 
 ### Progresso da documentação inline em `main.js`
 
 O arquivo está sendo documentado **em ordem**, do início ao fim. Metadados do projeto (API, ambiente, autor, data da última revisão do cabeçalho) ficam no `@fileoverview` no topo de `src/main.js`. Após cada sessão de edição, vale atualizar `@lastupdated` nesse cabeçalho se o conjunto de mudanças for significativo.
 
+O **`index.html`** tem comentário de documentação no topo e marcadores de secção no markup; o mapa estrutural vive em **`docs/INDEX_HTML.md`** (atualizar quando o HTML ganhar modais ou IDs novos relevantes).
+
+O **`src/style.css`** tem índice e marcadores de secção no topo do ficheiro; o guia temático está em **`docs/STYLE_CSS.md`** (atualizar o índice de linhas no CSS se reorganizar blocos grandes).
+
 ## Segurança
 
-- **Content-Security-Policy** e **Permissions-Policy** estão declaradas em `index.html`. Ao adicionar origens novas (scripts, fonts, `connect-src`), atualize o meta CSP.
+- **Content-Security-Policy** e **Permissions-Policy** estão declaradas em `index.html`. Ao adicionar origens novas (scripts, fonts, `connect-src`), atualize o meta CSP e, se for relevante para quem edita markup, **uma linha em `docs/INDEX_HTML.md`** (tabela do `<head>` ou notas).
 - O código tenta mitigar riscos comuns em cliente (por exemplo sanitização de segmentos para URLs de atributo, parsing JSON seguro em trechos específicos).
 
 ## Manutenção da documentação no código

@@ -1,3 +1,13 @@
+/**
+ * @fileoverview Extrai CSS e JS embutidos de `Deckbuilder_cursor.html` para ficheiros em árvore.
+ *
+ * Operação inversa aproximada de `scripts/build-monolith.mjs`: lê o monólito, recorta o primeiro
+ * bloco `<style>...</style>` e o primeiro `<script>...</script>` principal, grava `src/style.css` e
+ * `src/main.js`, e reescreve `index.html` com `<link>` e `<script type="module">` apontando para eles.
+ * Útil quando só existe o HTML monolítico e se pretende voltar a desenvolver com Vite.
+ *
+ * Execução: `node tools/extract-deckbuilder.mjs` na raiz do repositório.
+ */
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -7,10 +17,22 @@ const OUT_HTML = path.join(ROOT, 'index.html');
 const OUT_CSS = path.join(ROOT, 'src', 'style.css');
 const OUT_JS = path.join(ROOT, 'src', 'main.js');
 
+/**
+ * Garante que o diretório existe antes de escrever ficheiros.
+ *
+ * @param {string} dir Caminho do diretório.
+ * @returns {void}
+ */
 function ensureDir(dir) {
   fs.mkdirSync(dir, { recursive: true });
 }
 
+/**
+ * Regista erro no stderr e termina o processo com código 1.
+ *
+ * @param {string} msg Mensagem humana.
+ * @returns {never}
+ */
 function fail(msg) {
   console.error(`[extract] ${msg}`);
   process.exit(1);

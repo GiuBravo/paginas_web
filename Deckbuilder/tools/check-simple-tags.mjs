@@ -1,9 +1,24 @@
+/**
+ * @fileoverview Verificador rápido de aninhamento HTML em `index.html` (subconjunto de tags).
+ *
+ * Percorre apenas tags `div`, `span`, `main`, `header`, `section`, `aside` e `footer`,
+ * em ordem de aparição, e falha se um fechamento não corresponder à pilha ou se sobrar
+ * abertura sem fecho. Não substitui um validador HTML completo; serve como rede de segurança leve.
+ *
+ * Execução: `node tools/check-simple-tags.mjs` (a partir da raiz do repositório).
+ */
 import fs from 'node:fs';
 
 const html = fs.readFileSync('index.html', 'utf8');
 
 const TAGS = ['div', 'span', 'main', 'header', 'section', 'aside', 'footer'];
 
+/**
+ * Itera marcas que parecem tags de abertura ou fecho (`<...>`), na ordem do texto.
+ *
+ * @param {string} s HTML completo.
+ * @yields {{ raw: string, index: number }} Tag bruta e índice na string.
+ */
 function* tokenize(s) {
   const re = /<\/?[a-zA-Z][^>]*>/g;
   let m;
@@ -12,6 +27,12 @@ function* tokenize(s) {
   }
 }
 
+/**
+ * Converte índice absoluto na string em número de linha e coluna (1-based) para mensagens.
+ *
+ * @param {number} idx Índice em `html`.
+ * @returns {{ line: number, col: number }}
+ */
 function lineColAt(idx) {
   const upTo = html.slice(0, idx);
   const lines = upTo.split('\n');

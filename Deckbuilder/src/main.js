@@ -9,7 +9,7 @@
  * (principal, extra e side), exportações (PDF/ZIP), OCR opcional (Tesseract), i18n,
  * validação de banlist/formatos e caches locais (ver código e `docs/DOCUMENTACAO.md`).
  *
- * @lastupdated Documentação inline revisada em etapas; última atualização deste cabeçalho: 2026-05-01 (+ helpers `measureSection`/`drawOneSection` em `exportDeckListImageCanvas`; `window.*` modal aleatório, cópia única, vista fila, painel sets, tooltip detalhe).
+ * @lastupdated 2026-05-01 — Ciclo de JSDoc da lógica da aplicação dado por encerrado: todas as `function` de topo têm `@returns` no bloco precedente; modais/handlers e `OCRCalibrator` documentados. Novas funções: manter o mesmo padrão (pt-BR, `@param`/`@returns`).
  *
  * ## Ambiente de execução e linguagem
  * - **Motor**: ECMAScript moderno nos navegadores suportados (Chromium, Firefox, Safari recentes).
@@ -2800,7 +2800,10 @@ function openDeckSwapPickModal(opts) {
     titleEl.textContent = opts.title || T('ui.swap_pick_title');
     listEl.innerHTML = '';
 
-    /** Remove listeners, fecha estado visual e prepara próximo uso do modal. */
+    /**
+     * Remove listeners, fecha estado visual e prepara próximo uso do modal.
+     * @returns {void}
+     */
     function cleanup() {
       modal.classList.remove('is-open');
       modal.setAttribute('aria-hidden', 'true');
@@ -2813,7 +2816,10 @@ function openDeckSwapPickModal(opts) {
       }
     }
 
-    /** Cancelamento explícito ou backdrop — resolve promise com null. */
+    /**
+     * Cancelamento explícito ou backdrop — resolve a promise com `null`.
+     * @returns {void}
+     */
     function onClose() {
       cleanup();
       resolve(null);
@@ -2833,6 +2839,12 @@ function openDeckSwapPickModal(opts) {
       listEl.appendChild(btn);
     }
 
+    /**
+     * Listener global `keydown`: Escape cancela o modal e resolve a promise com `null`.
+     *
+     * @param {KeyboardEvent} e Evento de teclado.
+     * @returns {void}
+     */
     deckSwapModalKeyHandler = (e) => {
       if (!modal.classList.contains('is-open')) return;
       if (e.key === 'Escape') {
@@ -3309,7 +3321,10 @@ async function openRandomMainModal() {
     randomMainModalKeyHandler = null;
   }
 
-  /** Remove classes/listeners ao fechar para não acumular closures. */
+  /**
+   * Remove classes e handlers `onclick` ao fechar para não acumular closures.
+   * @returns {void}
+   */
   function cleanup() {
     modal.classList.remove('is-open');
     modal.setAttribute('aria-hidden', 'true');
@@ -3323,7 +3338,10 @@ async function openRandomMainModal() {
     }
   }
 
-  /** Fecha modal sem valor de retorno (callback simples em backdrop/botão). */
+  /**
+   * Fecha o modal (backdrop/botão fechar); não devolve valor — só efeito de UI.
+   * @returns {void}
+   */
   function onClose() {
     cleanup();
   }
@@ -3339,6 +3357,12 @@ async function openRandomMainModal() {
     renderRandomMainModalSample();
   };
 
+  /**
+   * Listener global `keydown`: Escape fecha o modal aleatório do main.
+   *
+   * @param {KeyboardEvent} e Evento de teclado.
+   * @returns {void}
+   */
   randomMainModalKeyHandler = (e) => {
     if (!modal.classList.contains('is-open')) return;
     if (e.key === 'Escape') {
@@ -3535,7 +3559,7 @@ function getDropDeckSectionFromPoint(deckEl, clientX, clientY) {
  * Habilita arrastar uma sugestão para o deck (`YGO_DND_SUGGESTION`) respeitando cliques em botões internos.
  *
  * @param {HTMLElement} div Container `.suggestion-item`.
- * @param {{ id: *, imgId: *, name?: string }} cardIds Identificadores da carta na listagem.
+ * @param {{ id: string|number, imgId: string|number, name?: string }} cardIds IDs da carta e nome opcional para o payload de drag.
  * @returns {void}
  */
 function bindSuggestionItemDnD(div, { id, imgId, name }) {
@@ -4146,7 +4170,10 @@ function initDeckDragDrop() {
   }
 }
 
-/** Mapa valor API `race` de magia/armadilha → rótulo PT-BR na UI do deck (campo homónimo na API). */
+/**
+ * Mapa valor API `race` de magia/armadilha (subtipo) → rótulo PT-BR na coluna do deck.
+ * @type {Readonly<Record<string, string>>}
+ */
 const spellTrapSubtypePt = {
   Normal: 'Normal',
   Continuous: 'Contínua',
@@ -5460,6 +5487,9 @@ function betaTooltipNorm(s) {
 /**
  * beta_name na YGOPRODeck vem apenas em inglês (mesmo com `language=pt` na API).
  * Após mescla EN+segunda língua, `beta_name` na raiz pode ser sobrescrito — preferimos `beta_name_en`.
+ *
+ * @param {Record<string, unknown>|null|undefined} card Objeto carta (`beta_name_en`, `beta_name` ou `misc_info[0].beta_name`).
+ * @returns {string} Nome beta para exibição ou string vazia.
  */
 function getCardBetaNameForTooltip(card) {
   if (!card) return '';
@@ -9686,13 +9716,40 @@ async function refreshYgoprodeckDbVersion() {
   refreshViewControlsHeaderCompact();
 }
 
-/** @type {string[]} Nomes de expansion sets selecionados nos chips (escopo global para handlers inline). */
+/**
+ * Nomes de expansion sets nos chips; estado global em `window` para markup e {@link window.resetFilters}.
+ * @type {string[]}
+ */
 window.selectedCardsetNames = [];
-/** @type {string[]} Códigos de set (impressão) selecionados. */
+/**
+ * Códigos de set (impressão) nos chips; estado global em `window` (ver {@link window.resetFilters}).
+ * @type {string[]}
+ */
 window.selectedSetCodes = [];
-/** @type {string[]} Raridades de impressão selecionadas. */
+/**
+ * Raridades de impressão nos chips; estado global em `window` (ver {@link window.resetFilters}).
+ * @type {string[]}
+ */
 window.selectedRarities = [];
-/** Estado serializável dos chips de filtro por categoria (mutado pela UI de filtros). */
+/**
+ * Chips de filtro por categoria (tipo, raça, nível, …); mutado pela UI; reposto por {@link window.resetFilters}.
+ * @type {{
+ *   typeCategory: string[],
+ *   subtype: string[],
+ *   race: string[],
+ *   attribute: string[],
+ *   level: string[],
+ *   linkval: string[],
+ *   linkmarker: string[],
+ *   scale: string[],
+ *   era: string[],
+ *   dateRegion: string[],
+ *   banlist: string[],
+ *   archetype: string[],
+ *   staple: string[],
+ *   hasEffect: string[],
+ * }}
+ */
 window.filterChipState = {
   typeCategory: [],
   subtype: [],
@@ -9709,7 +9766,10 @@ window.filterChipState = {
   staple: [],
   hasEffect: [],
 };
-/** Filtros de texto / numéricos com múltiplos termos ou faixas (fname, descrição, ATK/DEF, preço). */
+/**
+ * Filtros multi-termo / faixas (fname, descrição, ATK, DEF, preço); estado global em `window` (ver {@link window.resetFilters}).
+ * @type {{ fname: string[], desc: string[], atk: string[], def: string[], priceRanges: Array<{ id: string, min: string, max: string }> }}
+ */
 window.multiTextFilters = { fname: [], desc: [], atk: [], def: [], priceRanges: [] };
 /** Timer do debounce da busca ao digitar (ver `performSearch`).
  * @type {ReturnType<typeof setTimeout>|undefined}
@@ -14122,6 +14182,10 @@ function toggleBanlistCheckbox() {
   }
 }
 
+/**
+ * Cedo no carregamento: ajusta visibilidade do filtro “somente banlist” antes da primeira busca completa.
+ * Registo: `DOMContentLoaded` em `document`.
+ */
 window.addEventListener('DOMContentLoaded', toggleBanlistCheckbox);
 
 /** Prefixo dos query params serializados dos filtros do deckbuilder (`flt_tc`, …).
@@ -15332,6 +15396,7 @@ function ensureCardinfoCatalogFromApi() {
 /**
  * Agenda construção tardia do catálogo (~500 ms) para não competir com a primeira pintura.
  *
+ * @see ensureCardinfoCatalogFromApi
  * @returns {void}
  */
 function scheduleCardinfoCatalogBuild() {
@@ -18046,6 +18111,16 @@ function playCardSurfaceChime(kind) {
     const t0 = ctx.currentTime;
     let stopAt = 0.22;
 
+    /**
+     * Um bipe curto (oscilador + ganho exponencial) no grafo WebAudio partilhado.
+     *
+     * @param {number} freq Frequência em Hz.
+     * @param {'sine'|'square'|'sawtooth'|'triangle'|string} type Forma de onda do oscilador.
+     * @param {number} start Tempo de áudio (`AudioContext.currentTime`) de início.
+     * @param {number} dur Duração útil do som em segundos.
+     * @param {number} [peak=0.09] Pico de ganho linear aproximado.
+     * @returns {void}
+     */
     function beep(freq, type, start, dur, peak = 0.09) {
       const osc = ctx.createOscillator();
       const g = ctx.createGain();
@@ -18412,6 +18487,13 @@ function flashLayoutSurfacePulse(reason) {
   const layout = getEl('app-layout');
   const colFilters = getEl('col-filters');
   const colDeck = getEl('col-preview');
+  /**
+   * Remove classes de pulso anteriores, força reflow e aplica `cls` por ~580 ms.
+   *
+   * @param {HTMLElement|null|undefined} el Alvo (coluna ou `#app-layout`).
+   * @param {string} cls Uma das classes `layout-sfc-pulse-*`.
+   * @returns {void}
+   */
   function pulseEl(el, cls) {
     if (!el) return;
     el.classList.remove(
@@ -18753,6 +18835,10 @@ function openDeckNameModal(opts) {
   titleEl.textContent = opts.title || 'Nome do deck';
   input.value = opts.defaultValue != null ? String(opts.defaultValue) : '';
 
+  /**
+   * Remove listeners e estado visual do modal de nome.
+   * @returns {void}
+   */
   function close() {
     modal.classList.remove('is-open');
     modal.setAttribute('aria-hidden', 'true');
@@ -18765,11 +18851,19 @@ function openDeckNameModal(opts) {
     }
   }
 
+  /**
+   * Cancela edição: fecha o modal e chama `opts.onCancel` se existir.
+   * @returns {void}
+   */
   function onClose() {
     close();
     if (opts.onCancel) opts.onCancel();
   }
 
+  /**
+   * Confirma nome: valida vazio, chama `onConfirm` (pode abortar com `false`) e fecha.
+   * @returns {void}
+   */
   function onOk() {
     const t = String(input.value || '').trim();
     if (!t && !opts.allowEmpty) {
@@ -18785,6 +18879,12 @@ function openDeckNameModal(opts) {
     close();
   }
 
+  /**
+   * Listener global `keydown`: Escape cancela; Enter confirma como o botão OK.
+   *
+   * @param {KeyboardEvent} e Evento de teclado.
+   * @returns {void}
+   */
   deckNameModalKeyHandler = (e) => {
     if (!modal.classList.contains('is-open')) return;
     if (e.key === 'Escape') {
@@ -18828,6 +18928,10 @@ function openHelpMouseModal() {
     helpMouseModalKeyHandler = null;
   }
 
+  /**
+   * Remove listeners e estado visual do modal de ajuda ao rato.
+   * @returns {void}
+   */
   function close() {
     modal.classList.remove('is-open');
     modal.setAttribute('aria-hidden', 'true');
@@ -18839,10 +18943,20 @@ function openHelpMouseModal() {
     }
   }
 
+  /**
+   * Fecha o modal de ajuda (atalho comum a botão fechar e backdrop).
+   * @returns {void}
+   */
   function onClose() {
     close();
   }
 
+  /**
+   * Listener global `keydown`: Escape fecha o modal de ajuda ao rato.
+   *
+   * @param {KeyboardEvent} e Evento de teclado.
+   * @returns {void}
+   */
   helpMouseModalKeyHandler = (e) => {
     if (!modal.classList.contains('is-open')) return;
     if (e.key === 'Escape') {
@@ -18953,6 +19067,12 @@ function openCreditsModal(opts) {
     document.removeEventListener('keydown', __creditsModalKeyHandler);
     __creditsModalKeyHandler = null;
   }
+  /**
+   * Listener global `keydown`: Escape pede fecho do modal de créditos (`userInitiated=false`).
+   *
+   * @param {KeyboardEvent} e Evento de teclado.
+   * @returns {void}
+   */
   __creditsModalKeyHandler = (e) => {
     if (!modal.classList.contains('is-open')) return;
     if (e.key === 'Escape') {
@@ -19054,6 +19174,10 @@ function initCreditsModal() {
   if (!modal || !closeBtn || !backdrop) return;
   __creditsModalInitDone = true;
 
+  /**
+   * Fecha o modal de créditos respeitando o lock temporal (`userInitiated=false`).
+   * @returns {void}
+   */
   function tryClose() {
     closeCreditsModal(false);
   }
@@ -19343,6 +19467,12 @@ function openCardSetsPanel(card) {
   panel.setAttribute('aria-hidden', 'false');
   document.body.style.overflow = 'hidden';
   if (cardSetsPanelEscHandler) document.removeEventListener('keydown', cardSetsPanelEscHandler);
+  /**
+   * Listener `keydown` enquanto o painel está aberto: Escape delega a {@link closeCardSetsPanel}.
+   *
+   * @param {KeyboardEvent} ev Evento de teclado.
+   * @returns {void}
+   */
   cardSetsPanelEscHandler = (ev) => {
     if (ev.key === 'Escape') closeCardSetsPanel();
   };
@@ -19864,12 +19994,22 @@ function openTooltipDetailsModal(card) {
   modal.inert = false;
   document.body.style.overflow = 'hidden';
 
+  /**
+   * Fecha o modal de detalhes do tooltip (mesmo fluxo que botão fechar e backdrop).
+   * @returns {void}
+   */
   const onClose = () => closeTooltipDetailsModal();
   backdrop.onclick = onClose;
   closeBtn.onclick = onClose;
 
   if (tooltipDetailsModalEscHandler)
     document.removeEventListener('keydown', tooltipDetailsModalEscHandler);
+  /**
+   * Listener global `keydown`: Escape fecha o tooltip expandido se o modal estiver aberto.
+   *
+   * @param {KeyboardEvent} ev Evento de teclado.
+   * @returns {void}
+   */
   tooltipDetailsModalEscHandler = (ev) => {
     if (!modal.classList.contains('is-open')) return;
     if (ev.key === 'Escape') {
@@ -20151,6 +20291,15 @@ function getItemsPerPage() {
     const n = int10(resultsItemsPerPageOverride, NaN);
     if (Number.isFinite(n) && n >= 1) return Math.min(300, n);
   }
+  /**
+   * Colunas efetivas por estado de layout (lista vs grelha, filtros ocultos, ciclo do deck).
+   *
+   * @param {boolean} isMobile Viewport menor que 900 px (regras compartilhadas com desktop neste helper).
+   * @param {number} d `deckColumnCycle` (0 = deck oculto, 1 = normal, 2 = wide).
+   * @param {boolean} filtersHidden Se `.filters-col-hidden` está ativo em `#app-layout`.
+   * @param {string} currentView Vista atual (`list`, `grid`, …) — para lista usa ramo próprio.
+   * @returns {number} Itens por linha (aproximação para cálculo de página).
+   */
   function getItemsPerRowForCurrentLayout(isMobile, d, filtersHidden, currentView) {
     if (currentView === 'list') {
       // A "lista" aqui é uma grade de linhas; 1 linha extra em fullscreen = +colunas.
@@ -20180,6 +20329,12 @@ function getItemsPerPage() {
     return 5;
   }
 
+  /**
+   * Mede colunas/altura na grelha real de `#results-view` para estimar itens por página (desktop).
+   *
+   * @param {boolean} isMobile Em mobile este caminho é desativado (`null`).
+   * @returns {number|null} Produto colunas×linhas cabíveis ou `null` se não for grelha/medida válida.
+   */
   function tryComputeItemsPerPageFromViewport(isMobile) {
     if (isMobile) return null;
     const rv = getEl('results-view');
@@ -20294,6 +20449,8 @@ function restoreCookieBackedUiStateEarly() {
 /**
  * Handler `window.onload`: datas iniciais dos filtros, restauração massiva de prefs (tema, vista resultados, ordenação, idioma cartas),
  * fullscreen opcional com gate de feedback, scroll horizontal na lista via roda do rato, atalhos de filtros e catálogo cardinfo tardio.
+ *
+ * @returns {void}
  */
 window.onload = () => {
   const hoje = new Date().toISOString().split('T')[0];
@@ -20682,6 +20839,10 @@ window.onload = () => {
   } catch (_) {}
 };
 
+/**
+ * Sincroniza rótulos/ícone do botão de alternância da vista de **resultados** (`currentView` → próximo modo em ciclo).
+ * @returns {void}
+ */
 function syncResultsViewToggleUi() {
   const btn = getEl('btn-toggle-results-view');
   const lab = getEl('label-toggle-results-view');
@@ -20713,6 +20874,10 @@ function syncResultsViewToggleUi() {
   if (icon) icon.className = nextLayout === 'grid' ? 'fas fa-th-large' : 'fas fa-list';
 }
 
+/**
+ * Sincroniza rótulos/ícone do botão de alternância da vista da **fila do deck** (`queueView`).
+ * @returns {void}
+ */
 function syncQueueViewToggleUi() {
   const btn = getEl('btn-toggle-queue-view');
   const lab = getEl('label-toggle-queue-view');
@@ -20744,14 +20909,27 @@ function syncQueueViewToggleUi() {
   if (icon) icon.className = nextLayout === 'grid' ? 'fas fa-th-large' : 'fas fa-list';
 }
 
+/**
+ * Alterna modo de visualização da lista de sugestões para o seguinte em ciclo ({@link nextViewMode4}).
+ * @returns {void}
+ */
 function toggleResultsView() {
   changeView(nextViewMode4(currentView));
 }
 
+/**
+ * Alterna modo de visualização da fila do deck (lista/grelha/recorte) sem passar argumento explícito.
+ * @returns {void}
+ */
 function toggleQueueView() {
   changeQueueView(nextViewMode4(queueView));
 }
 
+/**
+ * Define vista dos resultados, persiste pref, repõe página 1 e redesenha (`renderResults`).
+ * @param {string} view Modo solicitado (normalizado por {@link normalizeViewMode4}).
+ * @returns {void}
+ */
 function changeView(view) {
   currentView = normalizeViewMode4(view, 'list');
   syncResultsViewToggleUi();
@@ -20761,6 +20939,12 @@ function changeView(view) {
   renderResults();
 }
 
+/**
+ * Ajusta valor numérico de um campo por `id` (incremento) e dispara {@link triggerSearch}.
+ * @param {string} id `id` do `<input>`.
+ * @param {number} amount Delta (pode ser negativo; mínimo efetivo `0` ou vazio).
+ * @returns {void}
+ */
 function adjustVal(id, amount) {
   const el = getEl(id);
   if (!el) return;
@@ -20769,6 +20953,11 @@ function adjustVal(id, amount) {
   triggerSearch();
 }
 
+/**
+ * Ajusta `#print-scale` (export PDF), persiste pref e {@link triggerPDFUpdate}.
+ * @param {number} amount Delta aplicado ao valor atual (float).
+ * @returns {void}
+ */
 function adjustScale(amount) {
   const el = getEl('print-scale');
   if (!el) return;
@@ -20784,11 +20973,20 @@ const _debSearchIds = ['search-input', 'filter-desc', 'filter-atk', 'filter-def'
 for (let _dsi = 0; _dsi < _debSearchIds.length; _dsi++)
   getEl(_debSearchIds[_dsi])?.addEventListener('input', triggerSearch);
 
+/**
+ * Debounce (~500 ms) para {@link performSearch}: cancela timeout anterior em `window.sTimeout`.
+ * @returns {void}
+ */
 function triggerSearch() {
   clearTimeout(window.sTimeout);
   window.sTimeout = setTimeout(performSearch, 500);
 }
 
+/**
+ * Mostra placeholder “a carregar” em `#results-view` se `requestId` ainda for o da busca ativa.
+ * @param {number|null|undefined} requestId {@link latestSearchRequestSeq} esperado (omitir para forçar pintura).
+ * @returns {void}
+ */
 function paintResultsLoadingState(requestId) {
   if (requestId != null && requestId !== latestSearchRequestSeq) return;
   const container = getEl('results-view');
@@ -20809,6 +21007,12 @@ function paintResultsLoadingState(requestId) {
   activeCardSearchInFlight = true;
 }
 
+/**
+ * Atualiza texto de progresso no cabeçalho / placeholder de loading durante fetch paginado.
+ * @param {number} n Contagem já processada (≥1).
+ * @param {number|null|undefined} requestId Se diferente de {@link latestSearchRequestSeq}, ignora.
+ * @returns {void}
+ */
 function updateResultsLoadingProgress(n, requestId) {
   if (requestId != null && requestId !== latestSearchRequestSeq) return;
   if (n == null || n < 1) return;
@@ -20820,7 +21024,24 @@ function updateResultsLoadingProgress(n, requestId) {
 }
 
 /**
- * Compactação in-place equivalente aos `.filter` encadeados pós-busca em `computeUnexpandedSearchResults`.
+ * Compactação **in-place** de `finalData` (comprime o array removendo entradas que falham filtros só no cliente).
+ * Equivalente aos `.filter` que antes seguiam `computeUnexpandedSearchResults`.
+ *
+ * @param {object[]} finalData Lista mutável de cartas API.
+ * @param {{
+ *   idUnion?: Set<number>|null,
+ *   allowNumeric?: Set<number>|null,
+ *   priceMode?: 'chips'|'legacy'|null,
+ *   priceNumericRanges?: Array<[number, number]>,
+ *   priceMin?: number,
+ *   priceMax?: number,
+ *   dateCtx?: { regions: string[], rangesByRegion?: Record<string, Array<[string, string]>>, start: string, end: string }|null,
+ *   rarityCtx?: { rarities: unknown[], wantRarity: Set<string> }|null,
+ *   monsterNoSubtype?: boolean,
+ *   stapleChip?: string,
+ *   hasEffectChip?: string,
+ * }} spec Campos opcionais conforme ramos em {@link computeUnexpandedSearchResults}.
+ * @returns {void}
  */
 function narrowFinalSearchResultsInPlace(finalData, spec) {
   if (!finalData || !finalData.length) return;
@@ -20914,9 +21135,18 @@ function narrowFinalSearchResultsInPlace(finalData, spec) {
 }
 
 /**
- * Busca cartas com os filtros atuais (EN+PT); devolve lista sem expandir artes.
- * kind: 'skip' (OCR aberto), 'clear' (sem critério), 'toast' (validação), 'data', 'error'
- * @param requestId id da chamada `performSearch` (para ignorar progresso/estado obsoleto).
+ * Executa a cadeia de fetch/fusão com os filtros do formulário (dual-lang EN+PT quando aplicável) e pós-filtros cliente (data, preço, setcode, …).
+ * Não expande variantes de arte — isso fica em {@link performSearch}.
+ *
+ * @param {boolean} initial Primeira carga ou equivalente (afeta resets de página no caller).
+ * @param {number} requestId Valor de {@link latestSearchRequestSeq} no início desta invocação (descartar se obsoleto).
+ * @returns {Promise<
+ *   | { kind: 'skip' }
+ *   | { kind: 'clear' }
+ *   | { kind: 'toast', msg?: string }
+ *   | { kind: 'data', finalData: object[], hasFnameQuery: boolean, hasDescQuery: boolean, hasOtherFilters: boolean }
+ *   | { kind: 'error', err: Error }
+ * >} `skip` se scanner OCR ativo; `clear` sem critério de busca; `toast` validação; `data` com `finalData`; `error` em falha de rede/API.
  */
 async function computeUnexpandedSearchResults(initial, requestId) {
   const q = String(getVal('search-input', '')).trim();
@@ -21459,7 +21689,11 @@ async function computeUnexpandedSearchResults(initial, requestId) {
   }
 }
 
-/** Chave estável por entrada de `card_images[]` (dedupe de variantes); fora de `performSearch` evita alocação de closures por busca. */
+/**
+ * Chave estável por entrada de `card_images[]` para dedupe de variantes (rápido; `JSON.stringify` sem proteção).
+ * @param {object|null|undefined} img Entrada de `card_images`.
+ * @returns {string} Prefixo `id:` / `url:` / … ou `json:…`.
+ */
 function imageKeyForCardImageDedupeUnsafe(img) {
   if (!img) return '';
   if (img.id != null && String(img.id) !== '') return `id:${String(img.id)}`;
@@ -21469,6 +21703,11 @@ function imageKeyForCardImageDedupeUnsafe(img) {
   return `json:${JSON.stringify(img)}`;
 }
 
+/**
+ * Igual a {@link imageKeyForCardImageDedupeUnsafe}, mas `JSON.stringify` envolvido em try/catch (chaves de `Map` seguras).
+ * @param {object|null|undefined} img
+ * @returns {string}
+ */
 function imageKeyForCardImageDedupeSafe(img) {
   if (!img) return '';
   if (img.id != null && String(img.id) !== '') return `id:${String(img.id)}`;
@@ -21482,6 +21721,13 @@ function imageKeyForCardImageDedupeSafe(img) {
   }
 }
 
+/**
+ * Busca principal: avança {@link latestSearchRequestSeq}, chama {@link computeUnexpandedSearchResults}, deduplica linhas por arte
+ * (preferindo linha traduzida vs inglês), atualiza {@link searchResults} e {@link cardCache}, e {@link sortAndRender}.
+ *
+ * @param {boolean} [initial=false] Com `true` (ou query fname/desc/outros filtros no pacote), repõe {@link currentPage} para `1`.
+ * @returns {Promise<void>}
+ */
 async function performSearch(initial = false) {
   const requestId = ++latestSearchRequestSeq;
   try {
@@ -22332,10 +22578,12 @@ function renderDeckQueue() {
 
   const anchorsByKey = new Map();
   const headsByKey = new Map();
-  const labelsByKey = new Map();
-  const countsByKey = new Map();
-
-  const deckFrag = document.createDocumentFragment();
+  const labelsByKey = new Map(
+    sections.map((s) => [String(s.key), String(s.label || '')])
+  );
+  const countsByKey = new Map(
+    sections.map((s) => [String(s.key), String(s.copies || 0)])
+  );
 
   const overlayTop = document.createElement('div');
   overlayTop.className = 'deck-sections-overlay is-top';
@@ -22345,19 +22593,16 @@ function renderDeckQueue() {
   overlayBottom.className = 'deck-sections-overlay is-bottom';
   overlayBottom.innerHTML = `<div class="deck-sections-overlay-stack" id="deck-sections-overlay-bottom"></div>`;
 
-  deckFrag.appendChild(overlayTop);
-  deckFrag.appendChild(overlayBottom);
+  list.appendChild(overlayTop);
+  list.appendChild(overlayBottom);
 
   for (let _sx = 0; _sx < sections.length; _sx++) {
     const sec = sections[_sx];
-    const sk = String(sec.key);
-    labelsByKey.set(sk, String(sec.label || ''));
-    countsByKey.set(sk, String(sec.copies || 0));
     const anchor = document.createElement('div');
     anchor.className = 'deck-section-anchor';
     anchor.id = `deck-sec-${sec.key}`;
     anchor.dataset.deckSection = sec.key;
-    deckFrag.appendChild(anchor);
+    list.appendChild(anchor);
     anchorsByKey.set(String(sec.key), anchor);
 
     // Cabeçalho original no fluxo (mantém separador como antes).
@@ -22379,7 +22624,7 @@ function renderDeckQueue() {
       } catch (_) {}
       scrollToSectionDuringDrag(String(sec.key));
     };
-    deckFrag.appendChild(head);
+    list.appendChild(head);
     headsByKey.set(String(sec.key), head);
 
     const pool = sec.key === 'side' ? 'side' : 'build';
@@ -22397,7 +22642,7 @@ function renderDeckQueue() {
           `<div class="deck-empty-hint" title="${safeMsg}"><i class="fas fa-inbox" aria-hidden="true"></i><span>${safeMsg}</span></div>`
         );
       }
-      deckFrag.appendChild(body);
+      list.appendChild(body);
     } else {
       const body = document.createElement('div');
       body.className = 'deck-section-body deck-section-body--list';
@@ -22412,11 +22657,9 @@ function renderDeckQueue() {
           `<div class="deck-empty-hint" title="${safeMsg}"><i class="fas fa-inbox" aria-hidden="true"></i><span>${safeMsg}</span></div>`
         );
       }
-      deckFrag.appendChild(body);
+      list.appendChild(body);
     }
   }
-
-  list.appendChild(deckFrag);
 
   const topStack = overlayTop.querySelector('#deck-sections-overlay-top');
   const bottomStack = overlayBottom.querySelector('#deck-sections-overlay-bottom');
@@ -22456,11 +22699,7 @@ function renderDeckQueue() {
     overlayTop.style.display = topKeys.length ? '' : 'none';
   };
 
-  let __overlayTopSig = '';
-  let __overlayBottomSig = '';
-  let __overlayBottomH = 0;
-
-  const updateOverlayState = (forceMeasure = false) => {
+  const updateOverlayState = () => {
     const st = list.scrollTop || 0;
     const h = list.clientHeight || 0;
     const pad = 8;
@@ -22488,29 +22727,21 @@ function renderDeckQueue() {
       .concat(!reachedExtra ? ['extra'] : [])
       .concat(!reachedSide ? ['side'] : []);
 
-    const topSig = topKeys.join('|');
-    const bottomSig = bottomKeys.join('|');
-    const changed = topSig !== __overlayTopSig || bottomSig !== __overlayBottomSig;
-    if (changed) {
-      __overlayTopSig = topSig;
-      __overlayBottomSig = bottomSig;
-      setOverlayStacks(topKeys, bottomKeys);
-      forceMeasure = true;
-    }
+    setOverlayStacks(topKeys, bottomKeys);
 
     // Mantém os overlays "presos" à viewport do scroll, sem ocupar espaço no fluxo.
     overlayTop.style.transform = `translateY(${st + pad}px)`;
-    if (forceMeasure) __overlayBottomH = bottomStack.getBoundingClientRect().height || 0;
-    const yBottom = st + Math.max(pad, h - __overlayBottomH - pad);
+    const bottomH = bottomStack.getBoundingClientRect().height || 0;
+    const yBottom = st + Math.max(pad, h - bottomH - pad);
     overlayBottom.style.transform = `translateY(${yBottom}px)`;
   };
 
   // Atualiza ao rolar e imediatamente após render.
-  list.onscroll = () => updateOverlayState(false);
+  list.onscroll = () => updateOverlayState();
   try {
-    window.addEventListener('resize', () => updateOverlayState(true), { passive: true });
+    window.addEventListener('resize', updateOverlayState, { passive: true });
   } catch (_) {}
-  updateOverlayState(true);
+  updateOverlayState();
 
   // Pós-add: rola até à pilha/carta recém adicionada (respeita a ordenação já aplicada).
   // Se a pilha não for encontrada, faz fallback para o cabeçalho da secção.
@@ -23920,6 +24151,11 @@ async function exportDeckListImageCanvas(q, deckTitle, onProgress, qSide, opts) 
   const totalSteps = Math.max(1, main.length + extra.length + side.length);
   let step = 0;
   let drawnCards = 0;
+  /**
+   * Incrementa o passo de desenho e notifica `onProgress` (cada slot de carta na grelha).
+   *
+   * @returns {void}
+   */
   const bump = () => {
     step++;
     if (onProgress) onProgress(step, totalSteps);
@@ -23997,6 +24233,13 @@ async function exportDeckListImageCanvas(q, deckTitle, onProgress, qSide, opts) 
     pad + 16 + Math.ceil(ctx.measureText(String(deckTitle || 'Deck').slice(0, 72)).width) + 80;
   const titleChipY = y + Math.round((titleH - 22) / 2);
   const titleChipMaxX = pad + innerW - 260;
+  /**
+   * Chip de contagem no título global (para de desenhar se ultrapassar `titleChipMaxX`).
+   *
+   * @param {string} color Cor de fundo do chip.
+   * @param {number} value Contagem (0 omite).
+   * @returns {void}
+   */
   const drawTitleChip = (color, value) => {
     if (!value || titleChipX > titleChipMaxX) return;
     titleChipX = drawDeckListChip(ctx, titleChipX, titleChipY, color, value);
@@ -25576,6 +25819,10 @@ function scoreCardAgainstOcr(card, ocrNormLower) {
 /**
  * Busca fuzzy: vários tokens × (`language` escolhido) → inglês padrão (sem `language=`).
  * `lang`: en | pt | fr | de | it (alinhado ao seletor do deckbuilder quando disponível).
+ *
+ * @param {string} name Nome ou fragmento a resolver (normalizado internamente).
+ * @param {string|null|undefined} lang Código de idioma da cadeia de `fetchCardDataByFname` ou vazio para cadeia padrão.
+ * @returns {Promise<object|null>} Melhor carta por similaridade ou `null` (query curta, sem candidatos, erro ou score baixo).
  */
 async function fetchCardByName(name, lang) {
   const qNorm = normalizeForSim(name).toLowerCase();
@@ -26111,6 +26358,9 @@ const OCR_NAME_DST_H = 85;
 /**
  * Filtros baseados na versão Mobile_proxies_cards.html (que lia melhor Armadilha/Fusão/Efeito).
  * Prioridade: tipo manual > heurística RGB.
+ *
+ * @param {string} cardType Rótulo de tipo vindo da UI / deteção (ex.: `Magia`, `Monstro Link`).
+ * @returns {string|null} Valor de `filter` CSS ou `null` para cair na heurística {@link cssFilterFromRgb}.
  */
 function forcedCssFilterByCardType(cardType) {
   if (cardType === 'Magia') return 'grayscale(1) contrast(2.6) brightness(1.15)';
@@ -26212,6 +26462,29 @@ function sampleNameStripAverages(ctx) {
 
 /**
  * Núcleo compartilhado com o calibrador: mesma geometria e filtros que mobile_camera.html.
+ *
+ * @param {CanvasImageSource} media Frame de vídeo, `Image` ou canvas com a carta.
+ * @param {{ x: number, y: number, width: number, height: number }} cropRect Recorte da faixa do nome no espaço da mídia.
+ * @param {{
+ *   useColorAdaptive?: boolean,
+ *   grayscale?: boolean,
+ *   contrast?: number,
+ *   brightness?: number,
+ *   invert?: boolean,
+ *   useBinarization?: boolean,
+ *   threshold?: number|null,
+ *   adaptiveThreshold?: boolean
+ * }} settings Opções de pré-processamento antes do Tesseract.
+ * @param {string} cardType Tipo de carta (afeta fundo, largura do texto e filtro forçado).
+ * @returns {Promise<null|{
+ *   text: string,
+ *   confidence: number,
+ *   avgR: number,
+ *   avgG: number,
+ *   avgB: number,
+ *   cssFilter: string,
+ *   appliedThreshold: number|null
+ * }>} Texto/confiança e metadados de cor ou `null` sem worker ou em erro de reconhecimento.
  */
 async function runOcrWithSettings(media, cropRect, settings, cardType) {
   if (!ocrWorker) return null;
@@ -26934,6 +27207,10 @@ document.addEventListener('DOMContentLoaded', () => {
  * {@link autoOptimize} varre combinações e grava a melhor via {@link setCalibration}.
  */
 class OCRCalibrator {
+  /**
+   * Inicializa estado em memória, flags de fluxo e {@link loadCalibrations}.
+   * @returns {void}
+   */
   constructor() {
     /** @type {Record<string, object>} */
     this.calibrations = this.loadCalibrations();
@@ -26944,7 +27221,10 @@ class OCRCalibrator {
     this.cancelRequested = false;
   }
 
-  /** Objeto base de flags de filtro antes de presets tipo/raridade. */
+  /**
+   * Objeto base de flags de filtro antes de presets tipo/raridade.
+   * @returns {object} Clonável por spreads em {@link getCalibration} / variações.
+   */
   getDefaultFilters() {
     return {
       grayscale: true,
@@ -26962,7 +27242,10 @@ class OCRCalibrator {
     };
   }
 
-  /** Ajustes sugeridos por tipo de carta (chave = valor do `<select>` manual). */
+  /**
+   * Ajustes sugeridos por tipo de carta (chave = valor do `<select>` manual).
+   * @returns {Object<string, object>} Mapa tipo → subset de flags sobreposto ao default.
+   */
   getTypePresets() {
     return {
       'Monstro Normal': { contrast: 1.4, brightness: 0.95, threshold: 130, invert: false },
@@ -26979,7 +27262,10 @@ class OCRCalibrator {
     };
   }
 
-  /** Ajustes sugeridos por raridade física (aproximação para OCR). */
+  /**
+   * Ajustes sugeridos por raridade física (aproximação para OCR).
+   * @returns {Object<string, object>} Mapa raridade → subset de flags.
+   */
   getRarityPresets() {
     return {
       Comum: { contrast: 1.35, brightness: 0.96, threshold: 125 },
@@ -26994,7 +27280,10 @@ class OCRCalibrator {
     };
   }
 
-  /** Lê `localStorage`; se schema ≠ `5`, limpa dados antigos. */
+  /**
+   * Lê `localStorage`; se schema ≠ `5`, limpa dados antigos.
+   * @returns {Record<string, object>} Mapa chave `tipo|raridade` → settings persistidos.
+   */
   loadCalibrations() {
     const schema = localStorage.getItem('ocr_calib_schema');
     if (schema !== '5') {
@@ -27012,16 +27301,19 @@ class OCRCalibrator {
     return {};
   }
 
-  /** Persiste `this.calibrations` em JSON no `localStorage`. */
+  /**
+   * Persiste `this.calibrations` em JSON no `localStorage`.
+   * @returns {void}
+   */
   saveCalibrations() {
     localStorage.setItem('ocr_calibrations', JSON.stringify(this.calibrations));
   }
 
   /**
    * Preset mesclado: defaults + tipo + raridade + override salvo (força `useColorAdaptive: true`).
-   * @param {string} cardType
-   * @param {string} rarity
-   * @returns {object}
+   * @param {string} cardType Valor do select manual (ex.: `Monstro Efeito`, `Magia`).
+   * @param {string} rarity Raridade física aproximada (ex.: `Comum`, `Secreta`).
+   * @returns {object} Settings completos passíveis de {@link runOcrWithSettings}.
    */
   getCalibration(cardType, rarity) {
     const key = `${cardType}|${rarity}`;
@@ -27038,9 +27330,9 @@ class OCRCalibrator {
 
   /**
    * Grava override para o par `cardType|rarity` (ignora `useColorAdaptive: false` ao salvar).
-   * @param {string} cardType
-   * @param {string} rarity
-   * @param {object} settings
+   * @param {string} cardType Chave de tipo (mesmo vocabulário de {@link getTypePresets}).
+   * @param {string} rarity Chave de raridade (mesmo vocabulário de {@link getRarityPresets}).
+   * @param {object} settings Flags a persistir; `useColorAdaptive` forçado a `true` na gravação.
    * @returns {void}
    */
   setCalibration(cardType, rarity, settings) {
@@ -27054,10 +27346,10 @@ class OCRCalibrator {
 
   /**
    * Aplica filtros CSS + opcional invert/binarização no mesmo canvas (uso UI calibrador).
-   * @param {CanvasRenderingContext2D} ctx
-   * @param {HTMLCanvasElement} canvas
-   * @param {object} settings
-   * @returns {{ filterString: string, threshold: number }}
+   * @param {CanvasRenderingContext2D} ctx Contexto do canvas de pré-visualização.
+   * @param {HTMLCanvasElement} canvas Superfície já desenhada com o recorte OCR.
+   * @param {object} settings Mesmo shape que {@link getDefaultFilters} + overrides.
+   * @returns {{ filterString: string, threshold: number }} Cadeia `filter` aplicada e limiar efetivo pós-adaptativo.
    */
   applyFilters(ctx, canvas, settings) {
     ctx.filter = 'none';
@@ -27098,6 +27390,11 @@ class OCRCalibrator {
 
   /**
    * Uma execução OCR de teste com {@link runOcrWithSettings} e validação {@link isGarbageText}.
+   *
+   * @param {CanvasImageSource} imageElement Frame ou imagem com a carta alinhada ao recorte.
+   * @param {{ x: number, y: number, width: number, height: number }} cropRect Faixa do nome no espaço da imagem.
+   * @param {object} settings Flags de pré-processamento (mescla de presets + overrides).
+   * @param {string} [cardType] Tipo manual para filtros; default interno `Monstro Efeito` se omitido em chamadas internas.
    * @returns {Promise<{ success: boolean, text?: string, cleaned?: string, settings?: object, error?: string }>}
    */
   async testConfiguration(imageElement, cropRect, settings, cardType) {
@@ -27134,7 +27431,12 @@ class OCRCalibrator {
 
   /**
    * Varre {@link generateVariations}, pontua por match API + confiança e grava melhor calibração.
-   * @returns {Promise<object|null>} Melhor resultado (inclui `cleaned`, `settings`) ou `null`.
+   *
+   * @param {CanvasImageSource} imageElement Mídia usada nos testes OCR.
+   * @param {{ x: number, y: number, width: number, height: number }} cropRect Recorte do nome.
+   * @param {string} cardType Tipo da carta sob calibração.
+   * @param {string} rarity Raridade física associada ao preset.
+   * @returns {Promise<object|null>} Melhor resultado (inclui `cleaned`, `settings`, opcionalmente `matchedName`) ou `null`.
    */
   async autoOptimize(imageElement, cropRect, cardType, rarity) {
     console.log('🚀 autoOptimize iniciado');
@@ -27212,7 +27514,13 @@ class OCRCalibrator {
     return null;
   }
 
-  /** Lista limitada (24–28) de variações de contraste/brilho/limiar para não travar mobile. */
+  /**
+   * Lista limitada (24–28) de variações de contraste/brilho/limiar para não travar mobile.
+   *
+   * @param {object} baseSettings Ponto de partida (tipicamente {@link getCalibration}).
+   * @param {string} cardType Controla ramo “hard” em {@link HARD_OCR_CARD_TYPES} (mais variações).
+   * @returns {Array<object>} Lista curta de objetos settings para testar em sequência.
+   */
   generateVariations(baseSettings, cardType) {
     const variations = [];
     const b = { ...baseSettings };

@@ -1,24 +1,22 @@
-## DeckBuilder (Cursor)
+# DeckBuilder GiuBravo
 
-Este projeto foi “desmonolitarizado”: o HTML original (`Deckbuilder_cursor.html`) foi mantido como backup, e o código principal agora roda a partir de:
+Aplicação web para montar decks de Yu-Gi-Oh! com dados da API [YGOPRODeck](https://ygoprodeck.com/api-guide/). Repositório com `index.html`, `src/style.css`, `src/main.js` e build Vite; o ficheiro `Deckbuilder_cursor.html` é o monólito gerado (`npm run build:monolith`).
 
-- `index.html`: markup principal
-- `src/style.css`: CSS extraído do `<style>`
-- `src/main.js`: JS extraído do `<script>` (mantido como script global para compatibilidade com `onclick="..."`)
-- `vite.config.js`: proxy opcional para imagens same-origin em dev
+## Ordem sugerida de leitura da documentação
 
-Documentação mais ampla do projeto (arquitetura, scripts, mapa de subsistemas): **[docs/DOCUMENTACAO.md](docs/DOCUMENTACAO.md)**. Convenções de código e comentários em PT-BR: **[docs/CODING_STANDARDS.md](docs/CODING_STANDARDS.md)**.
+1. **[docs/DOCUMENTACAO.md](docs/DOCUMENTACAO.md)** — visão geral, estrutura de pastas, fluxo no browser, segurança, testes e scripts.
+2. **[docs/MAIN_JS.md](docs/MAIN_JS.md)** — mapa operacional do `src/main.js` (subsistemas, arranque, globais expostos ao HTML).
+3. **[docs/INDEX_HTML.md](docs/INDEX_HTML.md)** — markup, CSP, regiões da UI, catálogo regenerável de `id`.
+4. **[docs/STYLE_CSS.md](docs/STYLE_CSS.md)** — temas, breakpoints, classes que o JavaScript altera.
+5. **[docs/CODING_STANDARDS.md](docs/CODING_STANDARDS.md)** — comentários, JSDoc, nomeação e convenções.
 
-### Como rodar
+## Comandos rápidos
 
-```bash
-npm install
-npm run dev
-```
-
-### Formatação
-
-```bash
-npm run format
-```
-
+| Comando | Descrição |
+|--------|------------|
+| `npm install` | Instala dependências de desenvolvimento (Vite, Prettier). |
+| `npm run dev` | Servidor de desenvolvimento Vite. |
+| `npm run build` | Build de produção para `dist/`. |
+| `npm run test` | Verificação sintática do `main.js`, specs Node e builds silenciosos (ver `docs/DOCUMENTACAO.md`). |
+| `npm run format` | Prettier em HTML, JS, CSS e `vite.config.js`. |
+| `npm run doc:refresh-index-ids` | Atualiza o catálogo de `id` no comentário inicial de `index.html`. |
