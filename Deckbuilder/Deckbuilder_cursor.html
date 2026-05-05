@@ -9347,6 +9347,7 @@ html.theme-white .toast.toast-error {
     </div>
 
     <script>
+window.__DECKBUILDER_MONOLITH__=true;
 /**
  * @fileoverview DeckBuilder GiuBravo — lógica cliente monolítica carregada como script global.
  *
@@ -9369,8 +9370,9 @@ html.theme-white .toast.toast-error {
  *
  * ## APIs e origens externas principais
  * - **YGOPRODeck (JSON)**: `https://db.ygoprodeck.com` — endpoints públicos `cardinfo.php`, etc.
- * - **Imagens / CDN**: `https://images.ygoprodeck.com` — artes e ícones; em dev o Vite pode proxied via `/__ygo_images__/`.
- * - **Site / branding**: `https://ygoprodeck.com` — referências e assets públicos quando aplicável.
+ * - **Imagens da API / CDN**: artes e URLs devolvidas pela YGOPRODeck continuam em `images.ygoprodeck.com` (em dev, proxy `/__ygo_images__/` para canvas/export).
+ * - **Ícones locais** (não vêm como URL da API): `assets/icons/` com `ui/`, `attributes/` (SVG Fandom),
+ *   `races/`, `types/` (CDN espelhado — `npm run vendor:ygo-deck-icons`), `master-duel/`.
  * - Ver também meta **Content-Security-Policy** em `index.html` para lista completa de `connect-src` / `img-src`.
  *
  * ## Bibliotecas globais esperadas (`index.html`)
@@ -9417,46 +9419,83 @@ html.theme-white .toast.toast-error {
 
 /** Namespace UMD jsPDF exposto pelo script do CDN (`index.html`). */
 const { jsPDF } = window.jspdf;
-/** URL do ícone de estrela/nível usado na listagem (asset do site YGOPRODeck). */
-const starIcon = 'https://ygoprodeck.com/wp-content/uploads/2017/01/level.png';
 
-/** Cache em memória: chave raca (`race` string) → URL do ícone PNG no CDN. */
+/** Raiz de ícones locais: `ui/`, `attributes/`, `races/`, `types/`, `master-duel/`. */
+const ICON_ROOT = 'assets/icons';
+
+/**
+ * Monólito `Deckbuilder_cursor.html` sem pasta `assets/`: usa URLs remotas para ícones.
+ * Definido no início do script inline por `scripts/build-monolith.mjs`.
+ *
+ * @returns {boolean}
+ */
+function deckbuilderIsMonolithWithoutAssets() {
+  return typeof window !== 'undefined' && window.__DECKBUILDER_MONOLITH__ === true;
+}
+
+/** SVG de atributo (Yu-Gi-Oh! Wiki) quando o build é só HTML monolítico. */
+const MONOLITH_ATTR_ICON_SVG_URL = Object.freeze({
+  UNKNOWN: 'https://static.wikia.nocookie.net/yugioh/images/3/32/UNKNOWN.svg/revision/latest?cb=20121001051545',
+  DARK: 'https://static.wikia.nocookie.net/yugioh/images/d/de/DARK.svg/revision/latest?cb=20120918053848',
+  LIGHT: 'https://static.wikia.nocookie.net/yugioh/images/3/39/LIGHT.svg/revision/latest?cb=20120918053832',
+  EARTH: 'https://static.wikia.nocookie.net/yugioh/images/a/a1/EARTH.svg/revision/latest?cb=20120918053843',
+  WATER: 'https://static.wikia.nocookie.net/yugioh/images/4/40/WATER.svg/revision/latest?cb=20120918052107',
+  WIND: 'https://static.wikia.nocookie.net/yugioh/images/0/01/WIND.svg/revision/latest?cb=20170920205028',
+  FIRE: 'https://static.wikia.nocookie.net/yugioh/images/d/d6/FIRE.svg/revision/latest?cb=20120918053839',
+  DIVINE: 'https://static.wikia.nocookie.net/yugioh/images/7/7c/DIVINE.svg/revision/latest?cb=20120918053906',
+});
+
+/** Ícone de nível/rank (local ou monólito remoto). */
+const STATIC_ICON_YGO_LEVEL_PNG = deckbuilderIsMonolithWithoutAssets()
+  ? 'https://ygoprodeck.com/wp-content/uploads/2017/01/level.png'
+  : `${ICON_ROOT}/ui/ygo-level.png`;
+const STATIC_ICON_SPELL_FRAME_SVG = deckbuilderIsMonolithWithoutAssets()
+  ? 'https://static.wikia.nocookie.net/yugioh/images/0/09/SPELL.svg'
+  : `${ICON_ROOT}/ui/SPELL.svg`;
+const STATIC_ICON_TRAP_FRAME_SVG = deckbuilderIsMonolithWithoutAssets()
+  ? 'https://static.wikia.nocookie.net/yugioh/images/2/28/TRAP.svg'
+  : `${ICON_ROOT}/ui/TRAP.svg`;
+
+/** Reutilização do ícone de nível em `<img>` (mesmo ficheiro que {@link STATIC_ICON_YGO_LEVEL_PNG}). */
+const starIcon = STATIC_ICON_YGO_LEVEL_PNG;
+
+/** Cache em memória: chave raca (`race` string) → URL do ícone PNG. */
 const __ygoRaceIconUrlCache = new Map();
-/** Cache em memória: chave tipo de monstro → URL do JPG de ícone no CDN. */
+/** Cache em memória: chave tipo de carta (`type`) → URL do JPG de ícone. */
 const __ygoMonsterTypeIconUrlCache = new Map();
 /** Limite de entradas nos caches de ícone; ao exceder, o mapa é limpo para evitar crescimento indefinido. */
 const YGO_CDN_ICON_URL_CACHE_MAX = 400;
 
 /**
- * Monta URL do PNG de ícone de raça (`race`) no CDN YGOPRODeck, com memoização limitada.
- * Muitas cartas partilham o mesmo `race`; o cache reduz concatenações repetidas.
+ * URL do PNG de ícone de raça (`race`) no CDN YGOPRODeck (subtipo de magia/armadilha ou raça de monstro).
  *
  * @param {string|null|undefined} race Valor `race` da API (será normalizado com `String`; null → '').
- * @returns {string} URL absoluta `…/race/<race>.png` com segmento codificado.
+ * @returns {string}
  */
 function ygoRaceIconUrl(race) {
-  // Chave estável para o Map (null/undefined viram string vazia).
   const k = race == null ? '' : String(race);
+  if (!k.trim()) return '';
   let u = __ygoRaceIconUrlCache.get(k);
-  // Caminho rápido: URL já montada anteriormente.
   if (u !== undefined) return u;
+  // Sempre CDN: ícones de raça/subtipo (incl. magia/armadilha) não vêm no repo; `npm run vendor:ygo-deck-icons` espelha-os opcionalmente.
   u = `https://images.ygoprodeck.com/images/cards/icons/race/${encodeURIComponent(k)}.png`;
-  // Evita crescimento ilimitado do cache de ícones.
   if (__ygoRaceIconUrlCache.size > YGO_CDN_ICON_URL_CACHE_MAX) __ygoRaceIconUrlCache.clear();
   __ygoRaceIconUrlCache.set(k, u);
   return u;
 }
 
 /**
- * Monta URL do JPG de ícone de tipo de monstro no CDN, com memoização limitada.
+ * URL do JPG de ícone da linha de tipo (`type`) no CDN YGOPRODeck (`"Effect Monster"`, `"Continuous Spell Card"`, …).
  *
  * @param {string|null|undefined} monsterType Valor `type` da API (ex.: `"Dragon"`); null → `''`.
- * @returns {string} URL absoluta `…/icons/<type>.jpg`.
+ * @returns {string}
  */
 function ygoMonsterTypeIconUrl(monsterType) {
   const k = monsterType == null ? '' : String(monsterType);
+  if (!k.trim()) return '';
   let u = __ygoMonsterTypeIconUrlCache.get(k);
   if (u !== undefined) return u;
+  // Sempre CDN: `assets/icons/types/` só existe após vendor opcional; o monólito já usava este URL.
   u = `https://images.ygoprodeck.com/images/cards/icons/${encodeURIComponent(k)}.jpg`;
   if (__ygoMonsterTypeIconUrlCache.size > YGO_CDN_ICON_URL_CACHE_MAX)
     __ygoMonsterTypeIconUrlCache.clear();
@@ -9464,27 +9503,48 @@ function ygoMonsterTypeIconUrl(monsterType) {
   return u;
 }
 
-/** Cache: segmento de atributo sanitizado → URL `images/cards/<seg>.jpg`. */
-const __ygoAttribCardJpgUrlCache = new Map();
-/** Teto de entradas antes de limpar `__ygoAttribCardJpgUrlCache`. */
-const YGO_ATTRIB_CARD_JPG_CACHE_MAX = 96;
+/** Cache: segmento de atributo sanitizado → URL do ícone (SVG). */
+const __ygoAttribIconUrlCache = new Map();
+/** Teto de entradas antes de limpar `__ygoAttribIconUrlCache`. */
+const YGO_ATTRIB_ICON_URL_CACHE_MAX = 96;
 
 /**
- * URL de arte genérica por segmento de atributo já sanitizado (`images/cards/&lt;seg&gt;.jpg`).
- * O mesmo segmento repete-se em massa nas listagens; o cache amortiza concatenação.
+ * Ícone de atributo (SVG Yu-Gi-Oh! Wiki em `assets/icons/attributes/`; monólito usa URL Fandom).
  *
- * @param {string|null|undefined} sanitizedAttribSeg Segmento seguro para path (sem `../` etc.).
- * @returns {string} URL absoluta no CDN; se `sanitizedAttribSeg` for falsy, usa `UNKNOWN.jpg`.
+ * @param {string|null|undefined} sanitizedAttribSeg Segmento seguro (ex.: `DARK`); falsy → `UNKNOWN`.
+ * @returns {string}
  */
-function ygoAttribCardJpgUrl(sanitizedAttribSeg) {
+function ygoAttribIconUrl(sanitizedAttribSeg) {
   const seg = sanitizedAttribSeg ? String(sanitizedAttribSeg) : 'UNKNOWN';
-  let u = __ygoAttribCardJpgUrlCache.get(seg);
+  const key = seg.toUpperCase();
+  let u = __ygoAttribIconUrlCache.get(seg);
   if (u !== undefined) return u;
-  u = `https://images.ygoprodeck.com/images/cards/${seg}.jpg`;
-  if (__ygoAttribCardJpgUrlCache.size > YGO_ATTRIB_CARD_JPG_CACHE_MAX)
-    __ygoAttribCardJpgUrlCache.clear();
-  __ygoAttribCardJpgUrlCache.set(seg, u);
+  if (deckbuilderIsMonolithWithoutAssets()) {
+    u = MONOLITH_ATTR_ICON_SVG_URL[key] || MONOLITH_ATTR_ICON_SVG_URL.UNKNOWN;
+  } else {
+    u = `${ICON_ROOT}/attributes/${seg}.svg`;
+  }
+  if (__ygoAttribIconUrlCache.size > YGO_ATTRIB_ICON_URL_CACHE_MAX) __ygoAttribIconUrlCache.clear();
+  __ygoAttribIconUrlCache.set(seg, u);
   return u;
+}
+
+/**
+ * URL do ícone da linha de atributo em cartões em modo lista (resultados, fila do deck, modal aleatório).
+ * Magias e armadilhas não trazem `attribute` na API; usam os SVG de frame SPELL/TRAP como no tooltip.
+ *
+ * @param {object} card Objeto carta.
+ * @param {string} ft {@link getFrameType}(card).
+ * @param {string} cardTypeRaw Valor bruto de `card.type`.
+ * @param {string} sanitizedAttribSeg Resultado de {@link sanitizeYgoCdnAttribFileSegment}(card.attribute).
+ * @returns {string}
+ */
+function attrIconUrlForCardListRow(card, ft, cardTypeRaw, sanitizedAttribSeg) {
+  if (card.attribute) return ygoAttribIconUrl(sanitizedAttribSeg);
+  const t = String(cardTypeRaw || '');
+  if (frameTypeIsSpell(ft) || t.includes('Spell')) return STATIC_ICON_SPELL_FRAME_SVG;
+  if (frameTypeIsTrap(ft) || t.includes('Trap')) return STATIC_ICON_TRAP_FRAME_SVG;
+  return '';
 }
 
 /** Versão alta da imagem do verso oficial (fallback quando não há id de carta). */
@@ -12540,7 +12600,7 @@ function renderRandomMainModalSample() {
               ? 'SPELL'
               : 'TRAP';
       const attrSegRm = sanitizeYgoCdnAttribFileSegment(card.attribute);
-      const attrIconUrl = card.attribute ? ygoAttribCardJpgUrl(attrSegRm) : '';
+      const attrIconUrl = attrIconUrlForCardListRow(card, ft, cardTypeRaw, attrSegRm);
       const raceIconUrl = ygoRaceIconUrl(card.race);
       const raceTraduzida = !uiIsPtRandomModal ? card.race : RACE_PT_LABEL[card.race] || card.race;
       let nameColor = hasCustomTheme
@@ -13918,13 +13978,32 @@ function getTcgplayerPriceUsd(card) {
 /** Pontos de “gema” Master Duel por cópia por raridade (ajuste centralizado; hoje todas 30). */
 const MASTER_DUEL_RARITY_POINTS = Object.freeze({ UR: 30, SR: 30, R: 30, N: 30 });
 
-/** URLs dos ícones de raridade MD (Yugipedia / assets estáveis). */
-const MASTER_DUEL_RARITY_ICON_URL = Object.freeze({
+/** Monólito: ícones MD remotos (Yugipedia). */
+const MONOLITH_MD_GEM_ICON_URL = 'https://ms.yugipedia.com//5/5d/Gem-Master_Duel.png';
+const MONOLITH_MD_RARITY_ICON_URL = Object.freeze({
   UR: 'https://ms.yugipedia.com//c/c3/CraftPoints_UR_MD.png',
   SR: 'https://ms.yugipedia.com//f/fb/CraftPoints_SR_MD.png',
   R: 'https://ms.yugipedia.com//3/3e/CraftPoints_R_MD.png',
   N: 'https://ms.yugipedia.com//3/3b/CraftPoints_N_MD.png',
 });
+
+/** Local: ícones MD em `assets/icons/master-duel/`. */
+const LOCAL_MD_GEM_ICON_URL = `${ICON_ROOT}/master-duel/Gem-Master_Duel.png`;
+const LOCAL_MD_RARITY_ICON_URL = Object.freeze({
+  UR: `${ICON_ROOT}/master-duel/CraftPoints_UR_MD.png`,
+  SR: `${ICON_ROOT}/master-duel/CraftPoints_SR_MD.png`,
+  R: `${ICON_ROOT}/master-duel/CraftPoints_R_MD.png`,
+  N: `${ICON_ROOT}/master-duel/CraftPoints_N_MD.png`,
+});
+
+/**
+ * URL da gema Master Duel (export / UI).
+ *
+ * @returns {string}
+ */
+function masterDuelGemIconUrl() {
+  return deckbuilderIsMonolithWithoutAssets() ? MONOLITH_MD_GEM_ICON_URL : LOCAL_MD_GEM_ICON_URL;
+}
 
 /**
  * Banlist/formato selecionado no **deck** é Master Duel (afeta badges na coluna do deck).
@@ -13963,7 +14042,8 @@ function isMasterDuelFormatFiltered() {
  */
 function masterDuelRarityIconUrl(md) {
   const k = md != null ? String(md).trim().toUpperCase() : '';
-  return MASTER_DUEL_RARITY_ICON_URL[k] || '';
+  const map = deckbuilderIsMonolithWithoutAssets() ? MONOLITH_MD_RARITY_ICON_URL : LOCAL_MD_RARITY_ICON_URL;
+  return map[k] || '';
 }
 
 const __mdInlineIconResultsCache = new WeakMap();
@@ -29013,14 +29093,7 @@ function fillTooltipData(card) {
   }
   const mdRarityTt = pickMasterDuelRarity(card);
   if (mdRarityTt) {
-    const mdIcon =
-      mdRarityTt === 'UR'
-        ? 'https://ms.yugipedia.com//c/c3/CraftPoints_UR_MD.png'
-        : mdRarityTt === 'SR'
-          ? 'https://ms.yugipedia.com//f/fb/CraftPoints_SR_MD.png'
-          : mdRarityTt === 'R'
-            ? 'https://ms.yugipedia.com//3/3e/CraftPoints_R_MD.png'
-            : 'https://ms.yugipedia.com//3/3b/CraftPoints_N_MD.png';
+    const mdIcon = masterDuelRarityIconUrl(mdRarityTt);
     const mdBg =
       mdRarityTt === 'UR'
         ? 'rgba(168, 85, 247, 0.18)'
@@ -29062,10 +29135,10 @@ function fillTooltipData(card) {
   ) {
     let iconUrl =
       frameTypeIsSpell(ft) || cardTypeRawTt.includes('Spell')
-        ? 'https://static.wikia.nocookie.net/yugioh/images/0/09/SPELL.svg'
+        ? STATIC_ICON_SPELL_FRAME_SVG
         : frameTypeIsTrap(ft) || cardTypeRawTt.includes('Trap')
-          ? 'https://static.wikia.nocookie.net/yugioh/images/2/28/TRAP.svg'
-          : ygoAttribCardJpgUrl(sanitizeYgoCdnAttribFileSegment(card.attribute));
+          ? STATIC_ICON_TRAP_FRAME_SVG
+          : ygoAttribIconUrl(sanitizeYgoCdnAttribFileSegment(card.attribute));
     let labelText =
       frameTypeIsSpell(ft) || cardTypeRawTt.includes('Spell')
         ? T('ui.spell_attr')
@@ -29082,7 +29155,7 @@ function fillTooltipData(card) {
     }
     if ((card.level || card.rank) && !isLinkTt) {
       infoHtml += `<div style="display: flex; align-items: center; gap: 4px; color: #ffffff; margin-left: 5px;">
-                                <img src="${escAttr('https://ygoprodeck.com/wp-content/uploads/2017/01/level.png')}" style="width:16px; height:16px; ${frameTypeIsXyz(ft) || cardTypeUTt.includes('XYZ') ? 'filter:invert(1) brightness(0.5);' : ''}">
+                                <img src="${escAttr(starIcon)}" style="width:16px; height:16px; ${frameTypeIsXyz(ft) || cardTypeUTt.includes('XYZ') ? 'filter:invert(1) brightness(0.5);' : ''}">
                                 <span>${escapeHtml(String(card.level != null ? card.level : card.rank != null ? card.rank : ''))}</span>
                             </div>`;
     }
@@ -31359,7 +31432,7 @@ function renderResults() {
               ? 'SPELL'
               : 'TRAP';
       const attrSeg = sanitizeYgoCdnAttribFileSegment(card.attribute);
-      const attrIconUrl = card.attribute ? ygoAttribCardJpgUrl(attrSeg) : '';
+      const attrIconUrl = attrIconUrlForCardListRow(card, ft, cardTypeRaw, attrSeg);
       const raceIconUrl = ygoRaceIconUrl(card.race);
       const raceTraduzida = !uiIsPtDeck ? card.race : RACE_PT_LABEL[card.race] || card.race;
       let nameColor = hasCustomTheme
@@ -31610,7 +31683,7 @@ function buildDeckQueueListCardInfoHtml(card, displayNameEscaped, themeOpts) {
           ? 'SPELL'
           : 'TRAP';
   const attrSeg = sanitizeYgoCdnAttribFileSegment(card.attribute);
-  const attrIconUrl = card.attribute ? ygoAttribCardJpgUrl(attrSeg) : '';
+  const attrIconUrl = attrIconUrlForCardListRow(card, ft, cardTypeRaw, attrSeg);
   const raceIconUrl = ygoRaceIconUrl(card.race);
   const raceTraduzida = !uiPtDeckList
     ? card.race || ''
@@ -33620,7 +33693,7 @@ async function exportDeckListImageCanvas(q, deckTitle, onProgress, qSide, opts) 
   // Master Duel totals (UR/SR/R/N + gemas) no header da imagem exportada.
   if (isMasterDuelDeckSelected()) {
     try {
-      const GEM_URL = 'https://ms.yugipedia.com//5/5d/Gem-Master_Duel.png';
+      const GEM_URL = masterDuelGemIconUrl();
       const totals = computeMasterDuelTotalsForEntries(q, qSide);
       const order = ['UR', 'SR', 'R', 'N'];
       const iconSize = 22;
@@ -33629,7 +33702,8 @@ async function exportDeckListImageCanvas(q, deckTitle, onProgress, qSide, opts) 
       ctx.font = 'bold 14px Segoe UI, system-ui, sans-serif';
       ctx.textAlign = 'left';
       ctx.textBaseline = 'middle';
-      let bx = pad + innerW - 16;
+      // Terminar à esquerda do pill/preço — antes era `innerW-16` e cobria o total + USD.
+      let bx = deckPillX - 4;
       // Reaproveita cache, mas com chave separada para a gema.
       if (!__mdExportBadgeBmpCache.has(GEM_URL)) {
         __mdExportBadgeBmpCache.set(

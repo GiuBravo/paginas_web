@@ -94,7 +94,10 @@ let replacedScript = false;
 // Mesma estratégia: primeiro marcador que existir ganha.
 for (const m of scriptMarkers) {
   if (html.includes(m)) {
-    html = html.replace(m, `<script>\n${js}\n    </script>`);
+    html = html.replace(
+      m,
+      `<script>\nwindow.__DECKBUILDER_MONOLITH__=true;\n${js}\n    </script>`
+    );
     replacedScript = true;
     break;
   }
@@ -106,6 +109,44 @@ const banner =
   '<!-- Monólito gerado automaticamente por `npm run build:monolith`. Fonte de verdade: index.html + src/style.css + src/main.js. -->\n';
 // Prefixa o banner ao documento final.
 html = banner + html;
+
+/**
+ * Monólito sem pasta `assets/`: substitui `src` de ícones locais por URLs remotas estáveis.
+ *
+ * @param {string} docHtml HTML completo do monólito.
+ * @returns {string}
+ */
+function rewriteMonolithLocalIconSrc(docHtml) {
+  const pairs = [
+    [
+      'assets/icons/master-duel/CraftPoints_UR_MD.png',
+      'https://ms.yugipedia.com//c/c3/CraftPoints_UR_MD.png',
+    ],
+    [
+      'assets/icons/master-duel/CraftPoints_SR_MD.png',
+      'https://ms.yugipedia.com//f/fb/CraftPoints_SR_MD.png',
+    ],
+    [
+      'assets/icons/master-duel/CraftPoints_R_MD.png',
+      'https://ms.yugipedia.com//3/3e/CraftPoints_R_MD.png',
+    ],
+    [
+      'assets/icons/master-duel/CraftPoints_N_MD.png',
+      'https://ms.yugipedia.com//3/3b/CraftPoints_N_MD.png',
+    ],
+    [
+      'assets/icons/master-duel/Gem-Master_Duel.png',
+      'https://ms.yugipedia.com//5/5d/Gem-Master_Duel.png',
+    ],
+  ];
+  let out = docHtml;
+  for (const [loc, remote] of pairs) {
+    out = out.split(loc).join(remote);
+  }
+  return out;
+}
+
+html = rewriteMonolithLocalIconSrc(html);
 
 // Escreve UTF-8 — mesmo encoding esperado pelos navegadores para este projeto.
 fs.writeFileSync(outPath, html, 'utf8');
