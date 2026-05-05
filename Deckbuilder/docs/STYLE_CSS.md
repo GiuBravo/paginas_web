@@ -8,7 +8,7 @@ Folha **única** de estilos do DeckBuilder GiuBravo (~6000 linhas), herdada do H
 |----------|--------|
 | `index.html` | Estrutura e `id`/`class`; catálogo de `id` no comentário de topo (`npm run doc:refresh-index-ids`). |
 | `src/main.js` | Adiciona/remove classes (`help-enabled`, `has-monster-type`, modos lista/grelha, colunas, etc.). |
-| `Deckbuilder_cursor.html` | Cópia gerada com CSS inline (`npm run build:monolith`). |
+| `yugioh_deckbuilder.html` | Cópia gerada com CSS inline (`npm run build:monolith`). |
 
 ## Estrutura geral (espelha o comentário de topo do CSS)
 

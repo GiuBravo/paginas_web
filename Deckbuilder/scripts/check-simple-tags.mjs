@@ -5,7 +5,7 @@
  * em ordem de aparição, e falha se um fechamento não corresponder à pilha ou se sobrar
  * abertura sem fecho. Não substitui um validador HTML completo; serve como rede de segurança leve.
  *
- * Execução: `node tools/check-simple-tags.mjs` (a partir da raiz do repositório).
+ * Execução: `node scripts/check-simple-tags.mjs` (a partir da raiz do repositório).
  */
 import fs from 'node:fs';
 

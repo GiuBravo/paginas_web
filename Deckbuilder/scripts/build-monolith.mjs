@@ -1,7 +1,7 @@
 /**
- * @fileoverview Gera o HTML monolítico `Deckbuilder_cursor.html` a partir do projeto em árvore.
+ * @fileoverview Gera o HTML monolítico `yugioh_deckbuilder.html` a partir do projeto em árvore.
  *
- * Script de build: gera `Deckbuilder_cursor.html` no diretório raiz do projeto.
+ * Script de build: gera `yugioh_deckbuilder.html` no diretório raiz do projeto.
  *
  * Lê `index.html`, `src/style.css` e `src/main.js`, substitui o `<link>` do CSS e o
  * `<script src="main.js">` por blocos inline `<style>` e `<script>`, escapando `</style>`
@@ -43,7 +43,7 @@ function sanitizeInlineScript(js) {
 const indexPath = path.join(root, 'index.html');
 const cssPath = path.join(root, 'src', 'style.css');
 const jsPath = path.join(root, 'src', 'main.js');
-const outPath = path.join(root, 'Deckbuilder_cursor.html');
+const outPath = path.join(root, 'yugioh_deckbuilder.html');
 
 // Garante que nenhum arquivo obrigatório está ausente antes de ler.
 for (const p of [indexPath, cssPath, jsPath]) {

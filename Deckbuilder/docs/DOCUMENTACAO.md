@@ -6,7 +6,7 @@ Este documento descreve a arquitetura, os artefatos e os fluxos principais do re
 
 ## Visão geral
 
-O DeckBuilder é uma aplicação web para montar decks de Yu-Gi-Oh!, usando dados públicos da API **YGOPRODeck** (`db.ygoprodeck.com`, imagens em `images.ygoprodeck.com`). O projeto foi separado do HTML monolítico original (`Deckbuilder_cursor.html` como backup conceitual): a fonte de verdade para desenvolvimento é `index.html`, `src/style.css` e `src/main.js`. O monólito pode ser regenerado com `npm run build:monolith`.
+O DeckBuilder é uma aplicação web para montar decks de Yu-Gi-Oh!, usando dados públicos da API **YGOPRODeck** (`db.ygoprodeck.com`, imagens em `images.ygoprodeck.com`). O projeto foi separado do HTML monolítico original (`yugioh_deckbuilder.html` como backup conceitual): a fonte de verdade para desenvolvimento é `index.html`, `src/style.css` e `src/main.js`. O monólito pode ser regenerado com `npm run build:monolith`.
 
 ## Estrutura de diretórios
 
@@ -29,7 +29,7 @@ O DeckBuilder é uma aplicação web para montar decks de Yu-Gi-Oh!, usando dado
 | `src/style.css` | Estilos da app; índice no topo do ficheiro. |
 | `src/main.js` | Lógica cliente monolítica (script global, `onclick` no HTML). |
 | `vite.config.js` | Vite 7; proxy dev `/__ygo_images__/` → CDN YGOPRODeck. |
-| `scripts/build-monolith.mjs` | Gera `Deckbuilder_cursor.html` (HTML + CSS + JS inline). |
+| `scripts/build-monolith.mjs` | Gera `yugioh_deckbuilder.html` (HTML + CSS + JS inline). |
 | `scripts/catalog-cache-spec.mjs` | Spec Node alinhada a `ingestCardinfoRowsIntoAggSets` (`main.js`). |
 | `scripts/card-text-cache-spec.mjs` | Spec Node alinhada a `cardDisplayedNameFingerprint` (`main.js`). |
 | `scripts/generate-index-html-id-catalog-comment.mjs` | Gera o bloco do catálogo de `id` no topo do `index.html`; uso: `npm run doc:refresh-index-ids` com `--write`. |
@@ -40,7 +40,7 @@ O DeckBuilder é uma aplicação web para montar decks de Yu-Gi-Oh!, usando dado
 | Caminho | Origem |
 |--------|--------|
 | `dist/` | `npm run build` — saída Vite; pode apagar-se e voltar a gerar. |
-| `Deckbuilder_cursor.html` | `npm run build:monolith` — monólito para distribuição legada. |
+| `yugioh_deckbuilder.html` | `npm run build:monolith` — monólito para distribuição legada. |
 
 ## `index.html` (resumo)
 
@@ -68,20 +68,20 @@ Para uma descrição por blocos, IDs de painéis e lembretes de manutenção, ve
 
 | Script | Papel |
 |--------|--------|
-| `build-monolith.mjs` | Empacota `index.html` + `src/style.css` + `src/main.js` → `Deckbuilder_cursor.html`. |
+| `build-monolith.mjs` | Empacota `index.html` + `src/style.css` + `src/main.js` → `yugioh_deckbuilder.html`. |
 | `catalog-cache-spec.mjs` | Teste automatizado; manter alinhado a `ingestCardinfoRowsIntoAggSets` se essa função mudar. |
 | `card-text-cache-spec.mjs` | Teste automatizado; manter alinhado a `cardDisplayedNameFingerprint`. |
 | `generate-index-html-id-catalog-comment.mjs` | Doc: substitui o comentário do catálogo de `id` com `--write`. |
 | `list-index-html-ids.mjs` | Listagem de `id` para revisão manual ou scripts. |
+| `check-simple-tags.mjs` | (Manual) Verifica aninhamento simples (`div`, `span`, `main`, etc.) em `index.html` — rede de segurança leve, não substitui validador HTML completo. |
+| `extract-deckbuilder.mjs` | (Manual) Operação inversa aproximada do monólito: extrai `<style>` e `<script>` de `yugioh_deckbuilder.html` para `src/style.css` / `src/main.js` e reescreve `index.html` com `<link>` / `<script>`. Útil se só existir o monólito legado. |
 
-### Pasta `tools/` (manutenção manual)
+### Pasta `tools/` (legado / compatibilidade)
 
-Não fazem parte do `npm run test` por defeito; correr à mão quando necessário.
+A pasta `tools/` foi mantida apenas para **não quebrar comandos antigos**. Os ficheiros ali são “shims” que chamam os scripts equivalentes em `scripts/`.
 
-| Ferramenta | Comando | Papel |
-|------------|---------|--------|
-| `check-simple-tags.mjs` | `node tools/check-simple-tags.mjs` | Verifica aninhamento simples (`div`, `span`, `main`, etc.) em `index.html` — rede de segurança leve, não substitui validador HTML completo. |
-| `extract-deckbuilder.mjs` | `node tools/extract-deckbuilder.mjs` | Operação inversa aproximada do monólito: extrai `<style>` e `<script>` de `Deckbuilder_cursor.html` para `src/style.css` / `src/main.js` e reescreve `index.html` com `<link>` / `<script>`. Útil se só existir o monólito legado. |
+- Preferir: `node scripts/check-simple-tags.mjs`, `node scripts/extract-deckbuilder.mjs`.
+- Continua a funcionar: `node tools/check-simple-tags.mjs`, `node tools/extract-deckbuilder.mjs`.
 
 ## Fluxo de execução no navegador
 

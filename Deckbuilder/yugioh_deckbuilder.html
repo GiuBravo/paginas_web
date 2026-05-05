@@ -9424,7 +9424,7 @@ const { jsPDF } = window.jspdf;
 const ICON_ROOT = 'assets/icons';
 
 /**
- * Monólito `Deckbuilder_cursor.html` sem pasta `assets/`: usa URLs remotas para ícones.
+ * Monólito `yugioh_deckbuilder.html` sem pasta `assets/`: usa URLs remotas para ícones.
  * Definido no início do script inline por `scripts/build-monolith.mjs`.
  *
  * @returns {boolean}
@@ -23623,6 +23623,14 @@ window.addEventListener('DOMContentLoaded', toggleBanlistCheckbox);
 const FILTER_URL_PREFIX = 'flt_';
 
 /**
+ * Defaults “iniciais” de ordenação para omitir da URL.
+ * São capturados *lazy* na primeira serialização (já após qualquer setup/prefs),
+ * porque o valor padrão efetivo pode ser diferente do HTML estático.
+ */
+let __defaultUrlSortBy = null;
+let __defaultUrlDeckSortBy = null;
+
+/**
  * Monta nome completo do parâmetro na query string.
  *
  * @param {string} suffix Sufixo sem prefixo (ex.: `tc`).
@@ -23812,19 +23820,21 @@ function buildDeckbuilderFilterUrlSearchParams() {
   // Ordenação (resultados + deck): persistir na URL para compartilhar estado completo.
   try {
     const sb = String(getVal('sort-by', '') || '').trim();
-    if (sb) out.set(filterUrlParamKey('sby'), sb);
+    if (__defaultUrlSortBy == null) __defaultUrlSortBy = sb || 'name';
+    if (sb && sb !== __defaultUrlSortBy) out.set(filterUrlParamKey('sby'), sb);
   } catch (_) {}
   try {
-    if (sortDirection === 1 || sortDirection === -1)
-      out.set(filterUrlParamKey('sdir'), String(sortDirection));
+    // Valor padrão inicial: `1` (não persistir na URL).
+    if (sortDirection === -1) out.set(filterUrlParamKey('sdir'), String(sortDirection));
   } catch (_) {}
   try {
     const dby = String(getVal('deck-sort-by', '') || '').trim();
-    if (dby) out.set(filterUrlParamKey('dby'), dby);
+    if (__defaultUrlDeckSortBy == null) __defaultUrlDeckSortBy = dby || 'custom';
+    if (dby && dby !== __defaultUrlDeckSortBy) out.set(filterUrlParamKey('dby'), dby);
   } catch (_) {}
   try {
-    if (deckSortDirection === 1 || deckSortDirection === -1)
-      out.set(filterUrlParamKey('ddir'), String(deckSortDirection));
+    // Valor padrão inicial: `1` (não persistir na URL).
+    if (deckSortDirection === -1) out.set(filterUrlParamKey('ddir'), String(deckSortDirection));
   } catch (_) {}
   return out;
 }

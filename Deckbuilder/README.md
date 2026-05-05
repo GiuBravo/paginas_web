@@ -1,6 +1,6 @@
 # DeckBuilder GiuBravo
 
-Aplicação web para montar decks de Yu-Gi-Oh! com dados da API [YGOPRODeck](https://ygoprodeck.com/api-guide/). Repositório com `index.html`, `src/style.css`, `src/main.js` e build Vite; o ficheiro `Deckbuilder_cursor.html` é o monólito gerado (`npm run build:monolith`).
+Aplicação web para montar decks de Yu-Gi-Oh! com dados da API [YGOPRODeck](https://ygoprodeck.com/api-guide/). Repositório com `index.html`, `src/style.css`, `src/main.js` e build Vite; o ficheiro `yugioh_deckbuilder.html` é o monólito gerado (`npm run build:monolith`).
 
 ## Ordem sugerida de leitura da documentação
 

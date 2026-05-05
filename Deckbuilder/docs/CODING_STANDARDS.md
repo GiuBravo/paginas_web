@@ -37,7 +37,7 @@ Para visão geral do repositório, ver `docs/DOCUMENTACAO.md`; para navegar no `
 - `**index.html`**: só markup e imports; evitar lógica. Usar comentários `<!-- … -->` para **secções grandes** (como no topo do ficheiro e nos marcadores `<!-- === … === -->`) e manter o mapa em `docs/INDEX_HTML.md` quando adicionar modais, IDs novos usados em `getEl`, ou origens CSP. O topo inclui **catálogo de todos os `id`** (lista alfabética com descrição): após alterar `id` no HTML, correr `npm run doc:refresh-index-ids` e rever o diff; ajustar textos em `scripts/generate-index-html-id-catalog-comment.mjs` se precisar de descrições mais precisas.
 - `**src/style.css**`: CSS; evitar `style="..."` novo (legado ok). Índice e secções grandes comentados no topo do ficheiro; guia em `docs/STYLE_CSS.md`. Atualizar números de linha no índice do CSS se mover blocos longos.
 - `**src/main.js**`: script global (compatibilidade). Refactors futuros podem migrar handlers inline para `addEventListener`.
-- `**tools/**`: scripts de manutenção (extração, validação, etc.).
+- `**scripts/**`: scripts Node auxiliares (build, specs, manutenção manual como extração/validação). `tools/` existe apenas como compatibilidade legada.
 
 ## Formatação
 

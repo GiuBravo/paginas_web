@@ -1,6 +1,6 @@
 # Mapa do `index.html`
 
-Este ficheiro é o **HTML de trabalho** do DeckBuilder GiuBravo: inclui CSP, bibliotecas em CDN, `src/style.css`, `src/main.js` e todo o markup da UI. O monólito `Deckbuilder_cursor.html` é uma cópia empacotada (`npm run build:monolith`); ao alterar origens ou scripts, mantenha **CSP** e **comentários de topo** alinhados. A lógica que consome estes IDs e `onclick` está mapeada em **`docs/MAIN_JS.md`**.
+Este ficheiro é o **HTML de trabalho** do DeckBuilder GiuBravo: inclui CSP, bibliotecas em CDN, `src/style.css`, `src/main.js` e todo o markup da UI. O monólito `yugioh_deckbuilder.html` é uma cópia empacotada (`npm run build:monolith`); ao alterar origens ou scripts, mantenha **CSP** e **comentários de topo** alinhados. A lógica que consome estes IDs e `onclick` está mapeada em **`docs/MAIN_JS.md`**.
 
 No topo do `index.html` existe um **comentário longo** (logo após `<!doctype html>`) com: visão geral do documento e um **catálogo alfabético de todos os `id`** (uma linha por `id`, com descrição em PT-BR). Esse catálogo é **regenerável** para não divergir do markup:
 

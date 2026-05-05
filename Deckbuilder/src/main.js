@@ -1,3 +1,4 @@
+window.__DECKBUILDER_MONOLITH__=true;
 /**
  * @fileoverview DeckBuilder GiuBravo — lógica cliente monolítica carregada como script global.
  *
@@ -74,7 +75,7 @@ const { jsPDF } = window.jspdf;
 const ICON_ROOT = 'assets/icons';
 
 /**
- * Monólito `Deckbuilder_cursor.html` sem pasta `assets/`: usa URLs remotas para ícones.
+ * Monólito `yugioh_deckbuilder.html` sem pasta `assets/`: usa URLs remotas para ícones.
  * Definido no início do script inline por `scripts/build-monolith.mjs`.
  *
  * @returns {boolean}
@@ -4870,7 +4871,7 @@ function paintDeckStatsBar() {
   set('deck-stat-traps', a.traps);
   set('deck-stat-extra', a.extra);
   const pe = getEl('deck-stat-price');
-  if (pe) pe.textContent = a.total === 0 ? '—' : `$${a.price.toFixed(2)}`;
+  if (pe) pe.textContent = a.total === 0 ? '—' : `${a.price.toFixed(2)}`;
   const isMasterDuel = (() => {
     const t = String(getDeckBanlistTypeForValidation() || '')
       .trim()
@@ -14273,6 +14274,14 @@ window.addEventListener('DOMContentLoaded', toggleBanlistCheckbox);
 const FILTER_URL_PREFIX = 'flt_';
 
 /**
+ * Defaults “iniciais” de ordenação para omitir da URL.
+ * São capturados *lazy* na primeira serialização (já após qualquer setup/prefs),
+ * porque o valor padrão efetivo pode ser diferente do HTML estático.
+ */
+let __defaultUrlSortBy = null;
+let __defaultUrlDeckSortBy = null;
+
+/**
  * Monta nome completo do parâmetro na query string.
  *
  * @param {string} suffix Sufixo sem prefixo (ex.: `tc`).
@@ -14462,19 +14471,21 @@ function buildDeckbuilderFilterUrlSearchParams() {
   // Ordenação (resultados + deck): persistir na URL para compartilhar estado completo.
   try {
     const sb = String(getVal('sort-by', '') || '').trim();
-    if (sb) out.set(filterUrlParamKey('sby'), sb);
+    if (__defaultUrlSortBy == null) __defaultUrlSortBy = sb || 'name';
+    if (sb && sb !== __defaultUrlSortBy) out.set(filterUrlParamKey('sby'), sb);
   } catch (_) {}
   try {
-    if (sortDirection === 1 || sortDirection === -1)
-      out.set(filterUrlParamKey('sdir'), String(sortDirection));
+    // Valor padrão inicial: `1` (não persistir na URL).
+    if (sortDirection === -1) out.set(filterUrlParamKey('sdir'), String(sortDirection));
   } catch (_) {}
   try {
     const dby = String(getVal('deck-sort-by', '') || '').trim();
-    if (dby) out.set(filterUrlParamKey('dby'), dby);
+    if (__defaultUrlDeckSortBy == null) __defaultUrlDeckSortBy = dby || 'custom';
+    if (dby && dby !== __defaultUrlDeckSortBy) out.set(filterUrlParamKey('dby'), dby);
   } catch (_) {}
   try {
-    if (deckSortDirection === 1 || deckSortDirection === -1)
-      out.set(filterUrlParamKey('ddir'), String(deckSortDirection));
+    // Valor padrão inicial: `1` (não persistir na URL).
+    if (deckSortDirection === -1) out.set(filterUrlParamKey('ddir'), String(deckSortDirection));
   } catch (_) {}
   return out;
 }
@@ -19485,7 +19496,7 @@ function formatCardSetsLinesHtml(card, max) {
       const rar = escAttr(s.set_rarity || '—');
       const sp =
         s.set_price !== undefined && s.set_price !== null && String(s.set_price).trim() !== ''
-          ? ` · <span class="tt-set-price" style="opacity:0.95;">$${escAttr(String(s.set_price))}</span>`
+          ? ` · <span class="tt-set-price" style="opacity:0.95;">${escAttr(String(s.set_price))}</span>`
           : '';
       const sname = s.set_name
         ? `<div style="font-size:10px;opacity:0.85;margin-top:2px;">${escAttr(s.set_name)}</div>`
@@ -19511,7 +19522,7 @@ function formatCardSetsTooltipGridHtml(card, max) {
       const rar = escAttr(setRarityForTooltip(s.set_rarity));
       const prRaw =
         s.set_price !== undefined && s.set_price !== null && String(s.set_price).trim() !== ''
-          ? `$${String(s.set_price)}`
+          ? `${String(s.set_price)}`
           : '—';
       const pr = escAttr(prRaw);
       return `<span class="tt-cardsets-cell" role="listitem"><span class="tt-cardsets-code">${code}</span> <span class="tt-cardsets-rar">${rar}</span> <span class="tt-cardsets-pr">${pr}</span></span>`;
@@ -19870,7 +19881,7 @@ function fillTooltipData(card) {
         : card.misc_info[0].ocg_date;
   }
   const p = getCardPricesFirst(card) || {};
-  const formatP = (val) => (!val || floatNum(val, NaN) === 0 ? T('price.not_found') : `$${val}`);
+  const formatP = (val) => (!val || floatNum(val, NaN) === 0 ? T('price.not_found') : `${val}`);
   const cardIdDisplay = card.id !== undefined && card.id !== null ? String(card.id) : '—';
   const konamiRaw =
     card.misc_info &&
@@ -24111,7 +24122,7 @@ function formatExportPriceUsd(n) {
       minimumFractionDigits: 2,
     }).format(n);
   } catch (_) {
-    return `$${n.toFixed(2)}`;
+    return `${n.toFixed(2)}`;
   }
 }
 
@@ -26394,7 +26405,7 @@ function updateScannerResultsUI() {
     const cidNum = sanitizeYuGiOhCardId(card.id);
     if (cidNum == null) continue;
     const usdOcr = getTcgplayerPriceUsd(card);
-    const priceOcrStr = usdOcr > 0 ? `$${usdOcr.toFixed(2)}` : 'N/A';
+    const priceOcrStr = usdOcr > 0 ? `${usdOcr.toFixed(2)}` : 'N/A';
     const smallUrl = String(card.card_images[0].image_url_small || '')
       .trim()
       .slice(0, 2048);
@@ -27957,3 +27968,5 @@ mobileStyle.textContent = `
     }
 `;
 document.head.appendChild(mobileStyle);
+
+    
