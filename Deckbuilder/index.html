@@ -1820,6 +1820,30 @@
 
       <!-- === Coluna central: busca, paginação, #results-view === -->
       <div class="col" id="col-results">
+        <div class="result-info-row" id="result-info-row">
+          <span id="result-info" style="color: #888">Carregando…</span>
+          <div
+            class="result-db-version-wrap"
+            id="result-db-version-wrap"
+            role="group"
+            data-i18n-aria="ui.result_db_aria"
+            aria-label="Versão do banco de dados YGOPRODeck"
+            style="display: none"
+          >
+            <span
+              class="result-db-version-label"
+              id="result-db-version-label"
+              data-i18n="ui.result_db_label"
+              >Versão do banco YGOPRODeck</span
+            >
+            <span
+              id="result-db-version"
+              class="result-db-version"
+              title=""
+              aria-live="polite"
+            ></span>
+          </div>
+        </div>
         <div class="search-area">
           <div style="display: flex; gap: 10px; align-items: flex-end">
             <div class="icon-btn-stack icon-btn-stack--tool icon-btn-stack--tool-wide">
@@ -1889,7 +1913,9 @@
                 </button>
               </div>
             </div>
+            <span id="search-qty-anchor" class="search-qty-anchor" aria-hidden="true"></span>
             <div
+              id="search-qty-stack"
               class="icon-btn-stack icon-btn-stack--tool icon-btn-stack--tool-wide search-qty-stack"
             >
               <span class="theme-row-label" data-i18n="ui.search_qty_label">Quantidade</span>
@@ -2020,30 +2046,6 @@
           <div id="filter-fname-chips" class="cardset-chips" style="margin-top: 4px"></div>
         </div>
         <div class="view-controls">
-          <div class="result-info-row" id="result-info-row">
-            <span id="result-info" style="color: #888">Carregando…</span>
-            <div
-              class="result-db-version-wrap"
-              id="result-db-version-wrap"
-              role="group"
-              data-i18n-aria="ui.result_db_aria"
-              aria-label="Versão do banco de dados YGOPRODeck"
-              style="display: none"
-            >
-              <span
-                class="result-db-version-label"
-                id="result-db-version-label"
-                data-i18n="ui.result_db_label"
-                >Versão do banco YGOPRODeck</span
-              >
-              <span
-                id="result-db-version"
-                class="result-db-version"
-                title=""
-                aria-live="polite"
-              ></span>
-            </div>
-          </div>
           <div
             class="view-controls-toolbar-row"
             style="display: flex; gap: 15px; align-items: flex-start"

@@ -282,6 +282,49 @@ let queueView = 'list';
 let cardSurfaceFeedbackReason = null;
 /** Flag de reentrância: evita atualizar UI recursivamente durante `updateUI`. */
 let isUpdatingUi = false;
+/**
+ * Alinha com `@media (max-width: 900px)` (inclui 900 px — `innerWidth < 900` falharia nesse caso).
+ *
+ * @returns {boolean}
+ */
+function deckbuilderUsesMobileLayoutCssBreakpoint() {
+  try {
+    return typeof window !== 'undefined' && window.matchMedia('(max-width: 900px)').matches;
+  } catch (_) {
+    return typeof window !== 'undefined' && window.innerWidth <= 900;
+  }
+}
+
+/** Pré-visualização PDF desactivada em mobile (`max-width: 900px`) — controlo omitido na UI; export manual continua em `generatePDF(true)`. */
+function deckbuilderPdfPreviewDisabledOnMobile() {
+  return deckbuilderUsesMobileLayoutCssBreakpoint();
+}
+
+/**
+ * O `MutationObserver` em `#app-layout` refaz a lista quando as classes mudam. `renderDeckQueue` altera só
+ * `empty-queue` ao passar de deck vazio ↔ com cartas; em mobile isso não muda itens por página nem a grelha
+ * desktop, mas `renderResults` apagava o scroll da lista.
+ *
+ * @param {string|null|undefined} oldClass
+ * @param {string|null|undefined} newClass
+ * @returns {boolean}
+ */
+function layoutClassDeltaIsOnlyEmptyQueueToggle(oldClass, newClass) {
+  const tokenize = (s) =>
+    new Set(
+      String(s || '')
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean)
+    );
+  const a = tokenize(oldClass);
+  const b = tokenize(newClass);
+  const sym = [];
+  for (const c of a) if (!b.has(c)) sym.push(c);
+  for (const c of b) if (!a.has(c)) sym.push(c);
+  return sym.length === 1 && sym[0] === 'empty-queue';
+}
+
 /** >0: não animar entrada das cartas (ex.: add/remove/reordenar por arrastar). */
 let suppressCardSurfaceEnterAnimDepth = 0;
 /** Snapshot opcional do deck usado por efeitos visuais da “superfície” da fila (diffs / animações). */
@@ -290,6 +333,17 @@ let deckSnapshotForSurface = null;
 let surfaceFilterFxTimer = null;
 /** Scroll automático pós-add: tenta focar a pilha/carta recém adicionada. */
 let pendingDeckScrollTarget = null;
+/** Snapshot mobile `{ rvEl, rv, vp }` antes de `updateUI`; `rvEl` é `#results-view` quando existir. `generatePDF` / `#preview-frame` repõem scroll após layout assíncrono. */
+let __pendingMobileDeckUiScroll = null;
+/**
+ * Ao agendar novo repõe-scroll, aumenta este valor; timeouts/rAF mais antigos não aplicam —
+ * evita a 2.ª/3.ª carta ficarem no topo porque timers da 1.ª sobrescrevem com valores velhos / layout antigo.
+ */
+let __mobileScrollRestoreGen = 0;
+/** Enquanto `Date.now() <` este valor, não repor o scroll do **documento** no mobile; `#results-view` não usa este defer. */
+let __mobileScrollRestoreDeferUntil = 0;
+/** `triggerPDFUpdate` perdido porque `pdfPreviewBusy` durante adição seguinte → regeramos no fim da geração actual. */
+let __pdfPreviewRegenerationQueued = false;
 /** Ordenação do deck: critério no DOM (#deck-sort-by); «Personalizado» = ordem da fila + arrastar; «Aleatório» só baralha ao mudar o critério ou ao botão de ordem. */
 let deckSortDirection = 1;
 /** Ultimo criterio lido do select (fallback se getElementById('deck-sort-by') falhar). */
@@ -4054,6 +4108,7 @@ function initDeckDragDrop() {
         toAdd.push({ id: String(payloadSugg.id), name: nm, imgId: String(payloadSugg.imgId) });
       }
       if (effectiveDropForSuggest === 'side') {
+        const mobScrollSnap = readMobileSuggestionsScrollSnapshot();
         revealDeckColumnIfHidden();
         if (isDeckSortCustom()) {
           if (phIns && phIns.refId) {
@@ -4070,7 +4125,7 @@ function initDeckDragDrop() {
         requestDeckScrollToStack('side', toAdd && toAdd[0] ? toAdd[0].imgId : null);
         pushSuppressCardSurfaceEnterAnimation();
         try {
-          updateUI();
+          updateUI({ skipSuggestionsRerender: true, mobileScrollSnapshot: mobScrollSnap });
         } finally {
           popSuppressCardSurfaceEnterAnimation();
         }
@@ -4090,6 +4145,7 @@ function initDeckDragDrop() {
           if (!tryAddEntryToBuild(ent)) await forceAddToBuild(ent);
         }
       }
+      const mobScrollSnapDeck = readMobileSuggestionsScrollSnapshot();
       revealDeckColumnIfHidden();
       requestDeckScrollToStack(
         effectiveDropForSuggest === 'extra' ? 'extra' : 'principal',
@@ -4097,7 +4153,7 @@ function initDeckDragDrop() {
       );
       pushSuppressCardSurfaceEnterAnimation();
       try {
-        updateUI();
+        updateUI({ skipSuggestionsRerender: true, mobileScrollSnapshot: mobScrollSnapDeck });
       } finally {
         popSuppressCardSurfaceEnterAnimation();
       }
@@ -7788,14 +7844,25 @@ const STRINGS = {
     en: 'Help: off (click to turn on)',
   },
   'ui.help_mouse_btn': { pt: 'Como interagir (mouse)', en: 'How to interact (mouse)' },
+  'ui.help_touch_btn': { pt: 'Como interagir', en: 'How to interact' },
   'ui.help_qty_hint': {
     pt: 'Define quantas c\u00f3pias ser\u00e3o adicionadas ao clicar em uma carta.',
     en: 'Sets how many copies are added when clicking a card.',
   },
   'ui.help_mouse_title': { pt: 'Como interagir com as cartas', en: 'How to interact with cards' },
+  'ui.help_touch_title': {
+    pt: 'Como interagir com as cartas (toque)',
+    en: 'How to interact with cards (touch)',
+  },
   'ui.help_mouse_body': {
     pt: '<div style="display:flex; flex-direction:column; gap:12px;"><div style="display:flex; gap:12px; align-items:flex-start; flex-wrap:wrap;"><svg width="140" height="168" viewBox="0 0 140 168" role="img" aria-label="Mouse" style="flex:0 0 auto;"><defs><filter id="hmShPt" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="rgba(0,0,0,0.4)"/></filter><marker id="hmALPt" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#93c5fd"/></marker><marker id="hmARPt" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#fca5a5"/></marker><marker id="hmAMPt" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#d1d5db"/></marker></defs><rect x="30" y="32" width="80" height="130" rx="40" fill="#1f2937" stroke="#6b7280" stroke-width="2" filter="url(#hmShPt)"/><path d="M 30 74 L 70 74 L 70 32 A 40 40 0 0 0 30 72 Z" fill="#2563eb" opacity="0.88"/><path d="M 110 74 L 70 74 L 70 32 A 40 40 0 0 1 110 72 Z" fill="#ef4444" opacity="0.88"/><line x1="70" y1="32" x2="70" y2="94" stroke="#6b7280" stroke-width="2"/><path d="M30 74 Q70 42 110 74" fill="none" stroke="#6b7280" stroke-width="2" opacity="0.7"/><rect x="64" y="44" width="12" height="26" rx="6" fill="#e5e7eb" opacity="0.92"/><line x1="50" y1="56" x2="28" y2="26" stroke="#93c5fd" stroke-width="2" marker-end="url(#hmALPt)"/><line x1="70" y1="44" x2="70" y2="26" stroke="#d1d5db" stroke-width="2" marker-end="url(#hmAMPt)"/><line x1="90" y1="56" x2="112" y2="26" stroke="#fca5a5" stroke-width="2" marker-end="url(#hmARPt)"/><text x="28" y="18" fill="#93c5fd" font-size="10" font-family="ui-sans-serif,system-ui,sans-serif" text-anchor="middle">Esquerdo</text><text x="70" y="18" fill="#d1d5db" font-size="10" font-family="ui-sans-serif,system-ui,sans-serif" text-anchor="middle">Scroll</text><text x="112" y="18" fill="#fca5a5" font-size="10" font-family="ui-sans-serif,system-ui,sans-serif" text-anchor="middle">Direito</text></svg><div style="flex:1 1 220px; display:flex; flex-direction:column; gap:8px;"><div><strong>Lista de resultados / sugestões</strong></div><div><strong>Esquerdo</strong>: adiciona ao <strong>Main Deck</strong> (usa a <strong>Quantidade</strong>).</div><div><strong>Direito</strong>: adiciona ao <strong>Side Deck</strong>.</div><div><strong>Scroll</strong> (clique na roda): abre <strong>Detalhes da carta</strong>.</div><div><strong>Rolar a roda</strong> na lista de resultados: <strong>página anterior</strong> (para cima) / <strong>próxima</strong> (para baixo).</div></div></div><div style="display:flex; flex-direction:column; gap:8px;"><div><strong>No deck (Build / Side)</strong></div><div><strong>Esquerdo</strong>: no <strong>Build</strong>, adiciona 1 c\u00f3pia; no <strong>Side</strong>, move 1 c\u00f3pia para o Build.</div><div><strong>Direito</strong>: alterna 1 c\u00f3pia entre <strong>Build \u2194 Side</strong>.</div><div><strong>Scroll</strong> (clique na roda): remove 1 c\u00f3pia (do Build ou do Side, conforme onde clicou).</div><div><strong>Dica</strong>: clique no bot\u00e3o de <strong>Impress\u00f5es/Sets</strong> na carta para abrir as impress\u00f5es (quando dispon\u00edvel).</div></div></div>',
     en: '<div style="display:flex; flex-direction:column; gap:12px;"><div style="display:flex; gap:12px; align-items:flex-start; flex-wrap:wrap;"><svg width="140" height="168" viewBox="0 0 140 168" role="img" aria-label="Mouse" style="flex:0 0 auto;"><defs><filter id="hmShEn" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="rgba(0,0,0,0.4)"/></filter><marker id="hmALEn" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#93c5fd"/></marker><marker id="hmAREn" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#fca5a5"/></marker><marker id="hmAMEn" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#d1d5db"/></marker></defs><rect x="30" y="32" width="80" height="130" rx="40" fill="#1f2937" stroke="#6b7280" stroke-width="2" filter="url(#hmShEn)"/><path d="M 30 74 L 70 74 L 70 32 A 40 40 0 0 0 30 72 Z" fill="#2563eb" opacity="0.88"/><path d="M 110 74 L 70 74 L 70 32 A 40 40 0 0 1 110 72 Z" fill="#ef4444" opacity="0.88"/><line x1="70" y1="32" x2="70" y2="94" stroke="#6b7280" stroke-width="2"/><path d="M30 74 Q70 42 110 74" fill="none" stroke="#6b7280" stroke-width="2" opacity="0.7"/><rect x="64" y="44" width="12" height="26" rx="6" fill="#e5e7eb" opacity="0.92"/><line x1="50" y1="56" x2="28" y2="26" stroke="#93c5fd" stroke-width="2" marker-end="url(#hmALEn)"/><line x1="70" y1="44" x2="70" y2="26" stroke="#d1d5db" stroke-width="2" marker-end="url(#hmAMEn)"/><line x1="90" y1="56" x2="112" y2="26" stroke="#fca5a5" stroke-width="2" marker-end="url(#hmAREn)"/><text x="28" y="18" fill="#93c5fd" font-size="10" font-family="ui-sans-serif,system-ui,sans-serif" text-anchor="middle">Left</text><text x="70" y="18" fill="#d1d5db" font-size="10" font-family="ui-sans-serif,system-ui,sans-serif" text-anchor="middle">Scroll</text><text x="112" y="18" fill="#fca5a5" font-size="10" font-family="ui-sans-serif,system-ui,sans-serif" text-anchor="middle">Right</text></svg><div style="flex:1 1 220px; display:flex; flex-direction:column; gap:8px;"><div><strong>Results / suggestions list</strong></div><div><strong>Left</strong>: adds to the <strong>Main Deck</strong> (uses <strong>Quantity</strong>).</div><div><strong>Right</strong>: adds to the <strong>Side Deck</strong>.</div><div><strong>Scroll</strong> (wheel click): opens <strong>Card details</strong>.</div><div><strong>Scrolling</strong> the wheel on the results list: <strong>previous page</strong> (scroll up) / <strong>next page</strong> (scroll down).</div></div></div><div style="display:flex; flex-direction:column; gap:8px;"><div><strong>In the deck (Build / Side)</strong></div><div><strong>Left</strong>: on <strong>Build</strong>, adds 1 copy; on <strong>Side</strong>, moves 1 copy to Build.</div><div><strong>Right</strong>: toggles 1 copy between <strong>Build \u2194 Side</strong>.</div><div><strong>Scroll</strong> (wheel click): removes 1 copy (from Build or Side, depending on where you clicked).</div><div><strong>Tip</strong>: click the <strong>Prints/Sets</strong> button on a card to open its prints (when available).</div></div></div>',
+  },
+  'ui.help_touch_body': {
+    pt:
+      '<div style="display:flex; flex-direction:column; gap:12px;"><div><strong>Lista de resultados / sugest\u00f5es</strong></div><div><strong>Toque</strong> na metade <strong>esquerda</strong> da carta: adiciona ao <strong>Main Deck</strong> (usa <strong>Quantidade</strong>).</div><div><strong>Toque</strong> na metade <strong>direita</strong>: adiciona ao <strong>Side Deck</strong>.</div><div><strong>Toque longo</strong> (<strong>segurar</strong>): abre <strong>Detalhes da carta</strong> (em tela cheia no celular).</div><div><strong>Deslize</strong> a lista para percorrer; use a <strong>pagina\u00e7\u00e3o</strong> acima dos resultados para mudar de p\u00e1gina (n\u00e3o h\u00e1 roda do rato).</div><div style="margin-top:8px;"><strong>No deck (Build / Side)</strong></div><div>Em cada pilha na fila do deck: <strong>metade esquerda</strong> aumenta em 1 naquela zona; <strong>metade direita</strong> diminui em 1.</div><div><strong>Toque longo</strong> na carta: abre informa\u00e7\u00f5es (tooltip / detalhes).</div><div><strong>Dica</strong>: use o bot\u00e3o de <strong>Impress\u00f5es/Sets</strong> na carta quando existir.</div></div>',
+    en:
+      '<div style="display:flex; flex-direction:column; gap:12px;"><div><strong>Results / suggestions</strong></div><div><strong>Tap</strong> the <strong>left</strong> half of a card: adds to the <strong>Main Deck</strong> (uses <strong>Quantity</strong>).</div><div><strong>Tap</strong> the <strong>right</strong> half: adds to the <strong>Side Deck</strong>.</div><div><strong>Long-press</strong> (<strong>hold</strong>): opens <strong>Card details</strong> (fullscreen on phones).</div><div><strong>Swipe</strong> the list to scroll; use <strong>pagination</strong> above the list to change pages (no mouse wheel).</div><div style="margin-top:8px;"><strong>In the deck (Build / Side)</strong></div><div>On each stack in the deck list: <strong>left half</strong> increases by 1 in that zone; <strong>right half</strong> decreases by 1.</div><div><strong>Long-press</strong> a card: opens card info (tooltip / details).</div><div><strong>Tip</strong>: use the <strong>Prints/Sets</strong> button on a card when available.</div></div>',
   },
   'ui.close': { pt: 'Fechar', en: 'Close' },
   'ui.sets_partial': { pt: '{max} de {total}', en: '{max} of {total}' },
@@ -8755,6 +8822,9 @@ function applyUiLanguage() {
     applyHelpUi();
   } catch (_) {}
   try {
+    refreshHelpMouseInteractionCopy();
+  } catch (_) {}
+  try {
     refreshViewControlsHeaderCompact();
   } catch (_) {}
   // Garante que labels gerados via JS (ex.: seções do deck) reflitam o idioma atual.
@@ -9323,8 +9393,163 @@ function cycleDeckColumnMode() {
 }
 
 /**
+ * @param {HTMLElement|null} rvEl
+ * @param {number} savedRvScroll
+ * @param {number} savedViewportScroll
+ * @returns {void}
+ */
+function applyMobileDeckUiScrollPositions(rvEl, savedRvScroll, savedViewportScroll) {
+  if (!deckbuilderUsesMobileLayoutCssBreakpoint()) return;
+  const deferDocumentScroll = Date.now() < __mobileScrollRestoreDeferUntil;
+  try {
+    const docEl = document.scrollingElement || document.documentElement;
+    if (
+      !deferDocumentScroll &&
+      docEl &&
+      typeof savedViewportScroll === 'number' &&
+      Number.isFinite(savedViewportScroll)
+    ) {
+      const maxW = Math.max(0, docEl.scrollHeight - window.innerHeight);
+      docEl.scrollTop = Math.min(Math.max(0, savedViewportScroll), maxW);
+    }
+    if (rvEl && typeof savedRvScroll === 'number' && Number.isFinite(savedRvScroll)) {
+      const maxR = Math.max(0, rvEl.scrollHeight - rvEl.clientHeight);
+      rvEl.scrollTop = Math.min(Math.max(0, savedRvScroll), maxR);
+    }
+  } catch (_) {}
+}
+
+/**
+ * No mobile o scroll pode ser do **documento** e/ou de `#results-view`. Após `renderDeckQueue` e a pré-visualização PDF o layout muda.
+ *
+ * @param {HTMLElement|null} rvEl `#results-view` quando existir — repõe o scroll interno da lista mesmo sem `renderResults` (ex.: só `renderDeckQueue`).
+ * @param {number} savedRvScroll
+ * @param {number} savedViewportScroll
+ * @returns {void}
+ */
+function scheduleMobileScrollRestoreAfterDeckUi(rvEl, savedRvScroll, savedViewportScroll) {
+  if (!deckbuilderUsesMobileLayoutCssBreakpoint()) return;
+  __mobileScrollRestoreGen++;
+  const gen = __mobileScrollRestoreGen;
+  const apply = () => {
+    if (gen !== __mobileScrollRestoreGen) return;
+    applyMobileDeckUiScrollPositions(rvEl, savedRvScroll, savedViewportScroll);
+  };
+
+  apply();
+  requestAnimationFrame(() => {
+    apply();
+    requestAnimationFrame(() => {
+      apply();
+      setTimeout(apply, 0);
+      setTimeout(apply, 40);
+      setTimeout(apply, 100);
+      setTimeout(apply, 240);
+      setTimeout(apply, 400);
+      setTimeout(apply, 700);
+      setTimeout(apply, 1200);
+    });
+  });
+}
+
+/**
+ * Marca interação do utilizador no mobile para não repor o scroll **do documento** em cima do gesto.
+ * O scroll interno de `#results-view` repõe-se sempre — caso contrário, ao tocar numa sugestão para
+ * adicionar carta, o guard bloqueava a reposição e a lista saltava para o topo.
+ *
+ * @returns {void}
+ */
+function markMobileScrollUserInteracting() {
+  if (!deckbuilderUsesMobileLayoutCssBreakpoint()) return;
+  __mobileScrollRestoreDeferUntil = Date.now() + 1600;
+}
+
+/**
+ * Liga `touch` / `wheel` ao guard de scroll mobile (uma vez).
+ *
+ * @returns {void}
+ */
+function initMobileScrollRestoreUserGestureGuard() {
+  if (initMobileScrollRestoreUserGestureGuard.__done) return;
+  initMobileScrollRestoreUserGestureGuard.__done = true;
+  const opts = { capture: true, passive: true };
+  const bump = () => markMobileScrollUserInteracting();
+  window.addEventListener('touchstart', bump, opts);
+  window.addEventListener('touchmove', bump, opts);
+  window.addEventListener('touchend', bump, opts);
+  window.addEventListener('wheel', bump, opts);
+}
+
+/**
+ * Ao carregar o PDF na pré-visualização, o iframe muda altura e o scroll das sugestões pode zerar *depois* dos timeouts.
+ *
+ * @returns {void}
+ */
+function initPdfPreviewMobileScrollRepair() {
+  const fr = getEl('preview-frame');
+  if (!fr || initPdfPreviewMobileScrollRepair.__done) return;
+  initPdfPreviewMobileScrollRepair.__done = true;
+  fr.addEventListener('load', () => {
+    if (deckbuilderPdfPreviewDisabledOnMobile()) return;
+    if (!deckbuilderUsesMobileLayoutCssBreakpoint()) return;
+    const p = __pendingMobileDeckUiScroll;
+    if (!p) return;
+    scheduleMobileScrollRestoreAfterDeckUi(p.rvEl, p.rv, p.vp);
+  });
+}
+
+/**
+ * Lê scroll da página e de `#results-view` **antes** de mutações de layout (ex.: `revealDeckColumnIfHidden`),
+ * para `updateUI` não guardar posição já reposta pelo browser.
+ *
+ * @returns {{ rv: number, vp: number }|null} `null` fora do breakpoint mobile.
+ */
+function readMobileSuggestionsScrollSnapshot() {
+  if (!deckbuilderUsesMobileLayoutCssBreakpoint()) return null;
+  const rv = getEl('results-view');
+  let vp = 0;
+  let rvs = 0;
+  try {
+    const docEl = document.scrollingElement || document.documentElement;
+    vp = docEl ? docEl.scrollTop : 0;
+  } catch (_) {}
+  if (rv) rvs = /** @type {HTMLElement} */ (rv).scrollTop || 0;
+  return { rv: rvs, vp };
+}
+
+/**
+ * Em mobile, guarda o scroll de `#results-view` e do documento, executa `fn`, e repõe o scroll
+ * (útil após um segundo `renderResults` em `requestAnimationFrame` ou refit por `MutationObserver`).
+ *
+ * @param {() => void} fn
+ * @returns {void}
+ */
+function withMobileListResultsScrollPreserved(fn) {
+  const rv = getEl('results-view');
+  let savedRvScroll = 0;
+  let savedViewportScroll = 0;
+  const use = deckbuilderUsesMobileLayoutCssBreakpoint() && !!rv;
+  if (use) {
+    savedRvScroll = /** @type {HTMLElement} */ (rv).scrollTop || 0;
+    try {
+      const docEl = document.scrollingElement || document.documentElement;
+      savedViewportScroll = docEl ? docEl.scrollTop : 0;
+    } catch (_) {}
+  }
+  fn();
+  if (use) {
+    scheduleMobileScrollRestoreAfterDeckUi(
+      /** @type {HTMLElement} */ (rv),
+      savedRvScroll,
+      savedViewportScroll
+    );
+  }
+}
+
+/**
  * Se a coluna do deck estiver oculta (`deckColumnCycle === 0`), passa para tamanho normal e persiste preferência.
- * Útil ao adicionar carta a partir das sugestões (clique ou arrastar); chamar antes de {@link updateUI}.
+ * Útil ao adicionar carta a partir das sugestões (clique ou arrastar). Preferir {@link readMobileSuggestionsScrollSnapshot}
+ * **antes** desta função e passar o valor a {@link updateUI} — o layout muda aqui e o scroll pode zerar antes de `updateUI`.
  *
  * @returns {void}
  */
@@ -9342,9 +9567,10 @@ function revealDeckColumnIfHidden() {
  * Mostra ou oculta a coluna de pré-visualização do PDF e sincroniza botão, ícone e preferência {@link UI_PREF_KEYS.pdfPreview}.
  *
  * @param {boolean} hidden `true` para esconder a prévia.
+ * @param {{ persistPreference?: boolean }} [persistOpts] `persistPreference: false` não altera cookies (ex.: prévia sempre oculta em mobile sem apagar prefs de desktop).
  * @returns {void}
  */
-function applyPdfPreviewVisibility(hidden) {
+function applyPdfPreviewVisibility(hidden, persistOpts) {
   const col = getEl('col-preview');
   const btn = getEl('btn-toggle-pdf-preview');
   const icon = getEl('icon-pdf-preview');
@@ -9358,8 +9584,36 @@ function applyPdfPreviewVisibility(hidden) {
   }
   // Ícone deve indicar a ação/estado seguinte (o que vai acontecer ao clicar).
   if (icon) icon.className = hidden ? 'fas fa-file-pdf' : 'fas fa-eye-slash';
+  const persist = !persistOpts || persistOpts.persistPreference !== false;
+  if (persist) {
+    try {
+      setUiPref(UI_PREF_KEYS.pdfPreview, hidden ? '0' : '1');
+    } catch (_) {}
+  }
+}
+
+/**
+ * Alinha pré-visualização ao breakpoint: sempre oculta em mobile sem persistir; desktop segue prefs.
+ *
+ * @returns {void}
+ */
+function clearPdfPreviewFrameIfMobile() {
+  if (!deckbuilderPdfPreviewDisabledOnMobile()) return;
+  const fr = getEl('preview-frame');
+  if (!fr) return;
   try {
-    setUiPref(UI_PREF_KEYS.pdfPreview, hidden ? '0' : '1');
+    fr.src = 'about:blank';
+  } catch (_) {}
+}
+
+function syncPdfPreviewVisibilityForBreakpoint() {
+  try {
+    if (deckbuilderPdfPreviewDisabledOnMobile()) {
+      applyPdfPreviewVisibility(true, { persistPreference: false });
+      clearPdfPreviewFrameIfMobile();
+    } else {
+      applyPdfPreviewVisibility(getUiPref(UI_PREF_KEYS.pdfPreview) === '0');
+    }
   } catch (_) {}
 }
 
@@ -9406,6 +9660,7 @@ async function loadPersistedSavedDeckIntoQueueOnStartup() {
  * @returns {void}
  */
 function initSavedDecksAndPdfToolbar() {
+  syncPdfPreviewVisibilityForBreakpoint();
   const sel = getEl('saved-decks-select');
   const btnSave = getEl('btn-deck-save');
   const btnRename = getEl('btn-deck-rename');
@@ -9421,10 +9676,10 @@ function initSavedDecksAndPdfToolbar() {
       setSavedDecksSelectValue(savedSel);
     }
   } catch (_) {}
-  applyPdfPreviewVisibility(getUiPref(UI_PREF_KEYS.pdfPreview) === '0');
 
   if (btnPdf) {
     btnPdf.onclick = () => {
+      if (deckbuilderPdfPreviewDisabledOnMobile()) return;
       const col = getEl('col-preview');
       const currentlyHidden = col && col.classList.contains('pdf-preview-hidden');
       applyPdfPreviewVisibility(!currentlyHidden);
@@ -9706,22 +9961,112 @@ function paintResultDbVersion() {
   const label = getEl('result-db-version-label');
   if (!el) return;
   const ver = ygoprodeckDbVersionShort || '';
+  const isMobile = window.innerWidth < 900;
   const compact = isCompactViewControlsContext();
   const tip = ygoprodeckDbVersionTitle || 'Versão do banco de dados YGOPRODeck (API)';
   if (label) {
-    if (compact && ver) {
+    if ((isMobile || compact) && ver) {
       label.style.display = 'none';
     } else {
       label.style.display = '';
       label.textContent = T('ui.result_db_label');
     }
   }
-  el.textContent = compact && ver ? `V ${ver}` : ver;
+  el.textContent = (isMobile || compact) && ver ? `V ${ver}` : ver;
   el.setAttribute('title', tip);
   if (wrap) {
     wrap.style.display = ver ? 'flex' : 'none';
     wrap.setAttribute('title', tip);
   }
+}
+
+/**
+ * No mobile, move o stepper de quantidade (`#search-qty-stack`) para a esquerda do botão Aleatório na barra de vista.
+ * No desktop, devolve-o imediatamente após `#search-qty-anchor` na linha de busca.
+ *
+ * @returns {void}
+ */
+function relocateSearchQtyStackForViewport() {
+  const qty = getEl('search-qty-stack');
+  const anchor = getEl('search-qty-anchor');
+  const iconRow = document.querySelector('.view-controls-toolbar-row .icon-btn-row');
+  if (!qty || !anchor || !iconRow) return;
+  const mobile = window.innerWidth < 900;
+  if (mobile) {
+    if (qty.parentElement !== iconRow) iconRow.insertBefore(qty, iconRow.firstChild);
+  } else if (qty.previousElementSibling !== anchor) {
+    anchor.parentNode.insertBefore(qty, anchor.nextSibling);
+  }
+}
+
+/**
+ * No mobile, coloca **Ajuda**, **Como interagir** e **Créditos** na barra de vista, entre Quantidade e Aleatório (ordem: Ajuda → Mouse → Créditos → Aleatório).
+ * No desktop, recoloca os três em `.help-controls` (ordem: Ajuda, Mouse, Créditos).
+ *
+ * @returns {void}
+ */
+function relocateHelpCreditsStacksForViewport() {
+  const helpControls = document.querySelector('.search-area .help-controls');
+  const iconRow = document.querySelector('.view-controls-toolbar-row .icon-btn-row');
+  const randomBtn = getEl('btn-random-filter-card');
+  if (!helpControls || !iconRow || !randomBtn) return;
+  const helpStack = getEl('btn-help-toggle')?.closest('.icon-btn-stack');
+  const creditsStack = getEl('btn-credits')?.closest('.icon-btn-stack');
+  const mouseStack = getEl('btn-help-mouse')?.closest('.icon-btn-stack');
+  if (!helpStack || !creditsStack || !mouseStack) return;
+  const randomStack = randomBtn.closest('.icon-btn-stack');
+  if (!randomStack) return;
+  const mobile = window.innerWidth < 900;
+  if (mobile) {
+    iconRow.insertBefore(helpStack, randomStack);
+    iconRow.insertBefore(mouseStack, randomStack);
+    iconRow.insertBefore(creditsStack, randomStack);
+  } else if (helpStack.parentElement === iconRow) {
+    helpControls.appendChild(helpStack);
+    helpControls.appendChild(mouseStack);
+    helpControls.appendChild(creditsStack);
+  }
+}
+
+/**
+ * Troca textos do botão/modal “Como interagir” entre modo **rato** (desktop) e **toque** (mobile).
+ *
+ * @returns {void}
+ */
+function refreshHelpMouseInteractionCopy() {
+  const mobile = window.innerWidth < 900;
+  const titleEl = getEl('help-mouse-modal-title');
+  const bodyEl = getEl('help-mouse-modal-body');
+  const mouseBtn = getEl('btn-help-mouse');
+  const labelEl =
+    mouseBtn &&
+    /** @type {HTMLElement|null} */ (mouseBtn.closest('.icon-btn-stack')?.querySelector('.theme-row-label'));
+  const titleKey = mobile ? 'ui.help_touch_title' : 'ui.help_mouse_title';
+  const bodyKey = mobile ? 'ui.help_touch_body' : 'ui.help_mouse_body';
+  const btnKey = mobile ? 'ui.help_touch_btn' : 'ui.help_mouse_btn';
+  if (titleEl) titleEl.textContent = T(titleKey);
+  if (bodyEl) bodyEl.innerHTML = T(bodyKey);
+  if (labelEl) labelEl.textContent = T(btnKey);
+  if (mouseBtn) mouseBtn.setAttribute('aria-label', T(btnKey));
+  if (mouseBtn) {
+    const icon = mouseBtn.querySelector('i');
+    if (icon) icon.className = mobile ? 'fas fa-hand-pointer' : 'fas fa-mouse';
+  }
+}
+
+/**
+ * Coordenada X do toque/clique para hit-test em cartões (mobile).
+ *
+ * @param {MouseEvent|TouchEvent} e Evento de apontador.
+ * @returns {number|null}
+ */
+function eventPointerClientX(e) {
+  if (!e) return null;
+  if (typeof e.clientX === 'number' && !Number.isNaN(e.clientX)) return e.clientX;
+  const te = /** @type {TouchEvent} */ (e);
+  if (te.changedTouches && te.changedTouches[0]) return te.changedTouches[0].clientX;
+  if (te.touches && te.touches[0]) return te.touches[0].clientX;
+  return null;
 }
 
 /**
@@ -19012,6 +19357,9 @@ function openHelpMouseModal() {
   const closeBtn = getEl('help-mouse-modal-close');
   const backdrop = getEl('help-mouse-modal-backdrop');
   if (!modal || !closeBtn || !backdrop) return;
+  try {
+    refreshHelpMouseInteractionCopy();
+  } catch (_) {}
 
   if (helpMouseModalKeyHandler) {
     document.removeEventListener('keydown', helpMouseModalKeyHandler);
@@ -19315,7 +19663,9 @@ function applyHelpUi() {
     if (wrap) wrap.style.display = isHelpEnabled() ? '' : 'none';
     else mouseBtn.style.display = isHelpEnabled() ? '' : 'none';
     mouseBtn.setAttribute('title', '');
-    mouseBtn.setAttribute('aria-label', T('ui.help_mouse_btn'));
+    const mouseLblKey =
+      window.innerWidth < 900 ? 'ui.help_touch_btn' : 'ui.help_mouse_btn';
+    mouseBtn.setAttribute('aria-label', T(mouseLblKey));
   }
 }
 
@@ -20870,13 +21220,21 @@ window.onload = () => {
   window.addEventListener('resize', () => {
     clearTimeout(resizeItemsPerPageTimer);
     resizeItemsPerPageTimer = setTimeout(() => {
+      try {
+        relocateSearchQtyStackForViewport();
+        relocateHelpCreditsStacksForViewport();
+        refreshHelpMouseInteractionCopy();
+      } catch (_) {}
+      syncPdfPreviewVisibilityForBreakpoint();
       const items = getItemsPerPage();
       if (searchResults.length > 0) {
         const maxPage = Math.max(1, Math.ceil(searchResults.length / items));
         if (currentPage > maxPage) currentPage = maxPage;
       }
       requestCardSurfaceFeedback('silent');
-      renderResults();
+      withMobileListResultsScrollPreserved(() => {
+        renderResults();
+      });
     }, 150);
   });
 
@@ -20888,14 +21246,32 @@ window.onload = () => {
       const scheduleRefit = () => {
         if (viewModeLayout(currentView) !== 'list') return;
         const rv = getEl('results-view');
-        clearResultsListOverrides(rv);
-        try {
-          requestCardSurfaceFeedback('silent');
-        } catch (_) {}
-        renderResults();
+        withMobileListResultsScrollPreserved(() => {
+          clearResultsListOverrides(rv);
+          try {
+            requestCardSurfaceFeedback('silent');
+          } catch (_) {}
+          renderResults();
+        });
       };
-      const obs = new MutationObserver(() => {
+      const obs = new MutationObserver((mutations) => {
         if (viewModeLayout(currentView) !== 'list') return;
+        if (deckbuilderUsesMobileLayoutCssBreakpoint() && mutations && mutations.length) {
+          let classOld = /** @type {string|null} */ (null);
+          for (let mi = 0; mi < mutations.length; mi++) {
+            const m = mutations[mi];
+            if (m.type === 'attributes' && m.attributeName === 'class' && m.oldValue != null) {
+              classOld = m.oldValue;
+              break;
+            }
+          }
+          if (
+            classOld != null &&
+            layoutClassDeltaIsOnlyEmptyQueueToggle(classOld, layout.getAttribute('class'))
+          ) {
+            return;
+          }
+        }
         clearTimeout(moTimer);
         moTimer = setTimeout(() => {
           // 1) imediato (para trocar cols/perPage já)
@@ -20904,7 +21280,11 @@ window.onload = () => {
           setTimeout(() => scheduleRefit(), 360);
         }, 50);
       });
-      obs.observe(layout, { attributes: true, attributeFilter: ['class'] });
+      obs.observe(layout, {
+        attributes: true,
+        attributeFilter: ['class'],
+        attributeOldValue: true,
+      });
 
       // Alguns browsers não disparam mutation no timing ideal durante transições;
       // reforça com transitionend do container.
@@ -20919,6 +21299,11 @@ window.onload = () => {
         true
       );
     }
+  } catch (_) {}
+  try {
+    relocateSearchQtyStackForViewport();
+    relocateHelpCreditsStacksForViewport();
+    refreshHelpMouseInteractionCopy();
   } catch (_) {}
 };
 
@@ -21953,6 +22338,7 @@ function renderResults() {
   const viewLayout = viewModeLayout(viewMode);
   container.className = buildMainResultsViewClassName(viewMode);
   const items = getItemsPerPage();
+  const isMobile = window.innerWidth < 900;
   if (searchResults.length > 0) {
     const maxPage = Math.max(1, Math.ceil(searchResults.length / items));
     if (currentPage > maxPage) currentPage = maxPage;
@@ -22007,23 +22393,26 @@ function renderResults() {
   const uniqueCards = stats.uniqueCards;
   const variantExtra = stats.variantExtra;
   const compactHeader = isCompactViewControlsContext();
-  const infoText = compactHeader
+  const infoText = isMobile
     ? T('results.range', { a: start + 1, b: sliceEnd, t: entryTotal })
-    : uniqueCards > 0 && uniqueCards < entryTotal
-      ? T('results.range_cards', {
-          a: start + 1,
-          b: sliceEnd,
-          e: entryTotal,
-          c: uniqueCards,
-          v: variantExtra,
-        })
-      : T('results.range', { a: start + 1, b: sliceEnd, t: entryTotal });
+    : compactHeader
+      ? T('results.range', { a: start + 1, b: sliceEnd, t: entryTotal })
+      : uniqueCards > 0 && uniqueCards < entryTotal
+        ? T('results.range_cards', {
+            a: start + 1,
+            b: sliceEnd,
+            e: entryTotal,
+            c: uniqueCards,
+            v: variantExtra,
+          })
+        : T('results.range', { a: start + 1, b: sliceEnd, t: entryTotal });
   const infoEl = getEl('result-info');
   if (infoEl) infoEl.innerText = infoText;
   refreshViewControlsHeaderCompact();
   const pageTotalEl = getEl('page-total');
   const pageJumpEl = getEl('page-jump');
-  if (pageTotalEl) pageTotalEl.innerText = `/ ${Math.ceil(searchResults.length / items) || 1}`;
+  const totalPages = Math.ceil(searchResults.length / items) || 1;
+  if (pageTotalEl) pageTotalEl.innerText = `/ ${totalPages}`;
   if (pageJumpEl) pageJumpEl.value = currentPage;
 
   const frag = document.createDocumentFragment();
@@ -22194,10 +22583,11 @@ function renderResults() {
       e.preventDefault();
       const entry = { id: card.id, name: displayName, imgId: imageObj.id };
       void (async () => {
+        const mobScrollSnap = readMobileSuggestionsScrollSnapshot();
         revealDeckColumnIfHidden();
         if (!(await forceAddToSide(entry))) return;
         requestDeckScrollToStack('side', entry.imgId);
-        updateUI();
+        updateUI({ skipSuggestionsRerender: true, mobileScrollSnapshot: mobScrollSnap });
         showToast(`1x ${displayName || 'Carta'} → ${deckSectionUiLabel('side')}`);
       })();
     });
@@ -22220,11 +22610,35 @@ function renderResults() {
       }
       const qtyEl = getEl('search-qty');
       const qty = Math.max(1, int10(qtyEl && qtyEl.value, 1) || 1);
+      const entry = { id: card.id, name: displayName, imgId: imageObj.id };
+      if (isMobile) {
+        const cx = eventPointerClientX(e);
+        const r = div.getBoundingClientRect();
+        if (cx != null && r.width > 1) {
+          const toSide = cx >= r.left + r.width / 2;
+          if (toSide) {
+            void (async () => {
+              const mobScrollSnap = readMobileSuggestionsScrollSnapshot();
+              revealDeckColumnIfHidden();
+              let added = 0;
+              for (let i = 0; i < qty; i++) {
+                if (!(await forceAddToSide(entry))) break;
+                added += 1;
+              }
+              requestDeckScrollToStack('side', String(imageObj.id));
+              updateUI({ skipSuggestionsRerender: true, mobileScrollSnapshot: mobScrollSnap });
+              if (added > 0)
+                showToast(`${added}x ${displayName || 'Carta'} → ${deckSectionUiLabel('side')}`);
+            })();
+            return;
+          }
+        }
+      }
       void (async () => {
+        const mobScrollSnap = readMobileSuggestionsScrollSnapshot();
         revealDeckColumnIfHidden();
         let added = 0;
         for (let i = 0; i < qty; i++) {
-          const entry = { id: card.id, name: displayName, imgId: imageObj.id };
           if (!tryAddEntryToBuild(entry)) {
             if (!(await forceAddToBuild(entry))) break;
           }
@@ -22232,7 +22646,7 @@ function renderResults() {
         }
         const secKey = deckSectionKeyFromIsExtra(getQueueCardSection(card) === 'extra');
         requestDeckScrollToStack(secKey, String(imageObj.id));
-        updateUI();
+        updateUI({ skipSuggestionsRerender: true, mobileScrollSnapshot: mobScrollSnap });
         if (added > 0)
           showToast(`${added}x ${displayName || 'Carta'} → ${deckSectionUiLabel(secKey)}`);
       })();
@@ -22250,12 +22664,14 @@ function renderResults() {
       requestAnimationFrame(() => {
         __resultsListRerenderQueued = false;
         if (viewModeLayout(currentView) !== 'list') return;
-        const items2 = getItemsPerPage();
-        if (searchResults.length > 0) {
-          const maxPage = Math.max(1, Math.ceil(searchResults.length / items2));
-          if (currentPage > maxPage) currentPage = maxPage;
-        }
-        renderResults();
+        withMobileListResultsScrollPreserved(() => {
+          const items2 = getItemsPerPage();
+          if (searchResults.length > 0) {
+            const maxPage = Math.max(1, Math.ceil(searchResults.length / items2));
+            if (currentPage > maxPage) currentPage = maxPage;
+          }
+          renderResults();
+        });
       });
     }
 
@@ -22279,7 +22695,9 @@ function renderResults() {
             requestAnimationFrame(() => {
               __resultsListRerenderQueued = false;
               if (viewModeLayout(currentView) !== 'list') return;
-              renderResults();
+              withMobileListResultsScrollPreserved(() => {
+                renderResults();
+              });
             });
           }
         } else if (!fs) {
@@ -22606,6 +23024,49 @@ function renderDeckQueue() {
       if (pool === 'side') removeOneSideDeckCopy(stackImgId);
       else removeOneDeckCopy(stackImgId);
     });
+    let rowPressTimer = /** @type {ReturnType<typeof setTimeout>|null} */ (null);
+    let rowLongPress = false;
+    row.addEventListener(
+      'touchstart',
+      (e) => {
+        if (e.target.closest('button')) return;
+        rowLongPress = false;
+        if (rowPressTimer != null) clearTimeout(rowPressTimer);
+        rowPressTimer = null;
+        if (!fullCardData) return;
+        rowPressTimer = setTimeout(() => {
+          rowPressTimer = null;
+          rowLongPress = true;
+          const touch = e.touches[0];
+          if (touch)
+            showTooltip(fullCardData, { clientX: touch.clientX, clientY: touch.clientY });
+          else showTooltip(fullCardData, { clientX: 0, clientY: 0 });
+          if (__hasUserGesture && navigator.vibrate) navigator.vibrate(50);
+        }, 600);
+      },
+      { passive: true }
+    );
+    row.addEventListener(
+      'touchmove',
+      () => {
+        if (rowPressTimer != null) {
+          clearTimeout(rowPressTimer);
+          rowPressTimer = null;
+        }
+      },
+      { passive: true }
+    );
+    row.addEventListener(
+      'touchend',
+      (e) => {
+        if (rowPressTimer != null) {
+          clearTimeout(rowPressTimer);
+          rowPressTimer = null;
+        }
+        if (rowLongPress && e.cancelable) e.preventDefault();
+      },
+      { passive: false }
+    );
     row.addEventListener('click', (ev) => {
       if (ev.button !== 0 || ev.ctrlKey || ev.metaKey || ev.shiftKey || ev.altKey) return;
       const openSets = ev.target.closest('.btn-open-card-sets');
@@ -22619,6 +23080,38 @@ function renderDeckQueue() {
       if (ev.target.closest('button')) return;
       if (rowDragActive) return;
       ev.preventDefault();
+      const mob = deckbuilderUsesMobileLayoutCssBreakpoint();
+      if (mob) {
+        const tooltip = getEl('card-tooltip');
+        const tooltipVisible = !!tooltip && tooltip.style.display === 'block';
+        if (rowLongPress || tooltipVisible) {
+          rowLongPress = false;
+          return;
+        }
+        const cx = eventPointerClientX(ev);
+        const r = row.getBoundingClientRect();
+        const mobScrollSnap = readMobileSuggestionsScrollSnapshot();
+        const rightHalf = cx != null && r.width > 1 && cx >= r.left + r.width / 2;
+        if (rightHalf) {
+          if (pool === 'side') {
+            if (removeOneCopyFromQueueByImgId(cardQueueSide, stackImgId)) {
+              hideTooltip();
+              updateUI({ skipSuggestionsRerender: true, mobileScrollSnapshot: mobScrollSnap });
+            }
+          } else if (removeOneCopyFromQueueByImgId(cardQueue, stackImgId)) {
+            hideTooltip();
+            updateUI({ skipSuggestionsRerender: true, mobileScrollSnapshot: mobScrollSnap });
+          }
+          return;
+        }
+        const entryMob = { id: c.id, name: c.name, imgId: c.imgId };
+        void (async () => {
+          if (pool === 'side') await forceAddToSide(entryMob);
+          else if (!tryAddEntryToBuild(entryMob)) await forceAddToBuild(entryMob);
+          updateUI({ skipSuggestionsRerender: true, mobileScrollSnapshot: mobScrollSnap });
+        })();
+        return;
+      }
       if (pool === 'side') {
         void moveOneCopySideToBuild(stackImgId);
         return;
@@ -22629,7 +23122,7 @@ function renderDeckQueue() {
         updateUI();
       })();
     });
-    if (fullCardData) {
+    if (fullCardData && !deckbuilderUsesMobileLayoutCssBreakpoint()) {
       row.onmouseenter = (e) => showTooltip(fullCardData, e);
       row.onmousemove = (e) => moveTooltip(e);
       row.onmouseleave = () => hideTooltip();
@@ -22872,15 +23365,56 @@ function renderDeckQueue() {
 /**
  * Atualiza fila do deck e lista de sugestões num único ciclo; consome ou infere motivo de feedback superficial e agenda PDF.
  *
+ * @param {{ skipSuggestionsRerender?: boolean, mobileScrollSnapshot?: { rv: number, vp: number }|null }} [opts] Em mobile (`max-width: 900px`), `skipSuggestionsRerender: true` evita redesenhar `#results-view` quando só a composição do deck mudou — mantém scroll da lista ao tocar/adicionar cartas. `mobileScrollSnapshot` (de {@link readMobileSuggestionsScrollSnapshot} **antes** de `revealDeckColumnIfHidden`) evita guardar scroll já zerado pelo reflow.
  * @returns {void}
  */
-function updateUI() {
+function updateUI(opts) {
+  const mob = deckbuilderUsesMobileLayoutCssBreakpoint();
+  const resultsViewEl = /** @type {HTMLElement|null} */ (getEl('results-view'));
+  let savedViewportScroll = 0;
+  let savedRvScroll = 0;
+  if (mob) {
+    const snap = opts && opts.mobileScrollSnapshot;
+    if (snap && typeof snap.rv === 'number' && typeof snap.vp === 'number') {
+      savedRvScroll = snap.rv;
+      savedViewportScroll = snap.vp;
+    } else {
+      try {
+        const docEl = document.scrollingElement || document.documentElement;
+        savedViewportScroll = docEl ? docEl.scrollTop : 0;
+      } catch (_) {}
+      if (resultsViewEl) savedRvScroll = resultsViewEl.scrollTop;
+    }
+  }
+
+  const skipSuggestionsRerender =
+    !!(opts && opts.skipSuggestionsRerender) &&
+    mob &&
+    !activeCardSearchInFlight &&
+    Array.isArray(searchResults) &&
+    searchResults.length > 0 &&
+    !!resultsViewEl;
+
   isUpdatingUi = true;
   try {
     renderDeckQueue();
-    renderResults();
+    if (!skipSuggestionsRerender) {
+      renderResults();
+    } else {
+      try {
+        refreshViewControlsHeaderCompact();
+      } catch (_) {}
+    }
   } finally {
     isUpdatingUi = false;
+  }
+  if (mob) {
+    __pendingMobileDeckUiScroll = {
+      rvEl: resultsViewEl,
+      rv: savedRvScroll,
+      vp: savedViewportScroll,
+    };
+    scheduleMobileScrollRestoreAfterDeckUi(resultsViewEl, savedRvScroll, savedViewportScroll);
   }
   let reason = consumeCardSurfaceFeedback();
   if (!reason) {
@@ -22902,8 +23436,12 @@ function updateUI() {
  * @returns {void}
  */
 function triggerPDFUpdate() {
-  if (isGenerating || pdfPreviewBusy || (cardQueue.length === 0 && cardQueueSide.length === 0))
+  if (deckbuilderPdfPreviewDisabledOnMobile()) return;
+  if (isGenerating || (cardQueue.length === 0 && cardQueueSide.length === 0)) return;
+  if (pdfPreviewBusy) {
+    __pdfPreviewRegenerationQueued = true;
     return;
+  }
   generatePDF();
 }
 
@@ -23296,6 +23834,7 @@ async function runQuickExportWithFeedback(title, asyncFn, subtitle) {
  */
 async function generatePDF(forUserExport) {
   if (!cardQueue.length && !cardQueueSide.length) return;
+  if (!forUserExport && deckbuilderPdfPreviewDisabledOnMobile()) return;
   if (forUserExport) {
     if (isGenerating) return;
     const tDeadline = Date.now() + 120000;
@@ -23329,7 +23868,9 @@ async function generatePDF(forUserExport) {
     if (blob) {
       window.currentPdf = blob;
       const fr = getEl('preview-frame');
-      if (fr) fr.src = URL.createObjectURL(blob);
+      if (fr && !deckbuilderPdfPreviewDisabledOnMobile()) {
+        fr.src = URL.createObjectURL(blob);
+      }
     }
   } finally {
     if (bar) bar.style.width = '0%';
@@ -23340,6 +23881,17 @@ async function generatePDF(forUserExport) {
     }
     if (forUserExport) isGenerating = false;
     else pdfPreviewBusy = false;
+    if (!forUserExport) {
+      const p = __pendingMobileDeckUiScroll;
+      if (p && deckbuilderUsesMobileLayoutCssBreakpoint()) {
+        scheduleMobileScrollRestoreAfterDeckUi(p.rvEl, p.rv, p.vp);
+      }
+      const stillHasCards = cardQueue.length > 0 || cardQueueSide.length > 0;
+      if (__pdfPreviewRegenerationQueued && stillHasCards) {
+        __pdfPreviewRegenerationQueued = false;
+        queueMicrotask(() => triggerPDFUpdate());
+      }
+    }
   }
 }
 
@@ -23367,6 +23919,8 @@ window.changeQueueView = changeQueueView;
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => {
     restoreCookieBackedUiStateEarly();
+    initMobileScrollRestoreUserGestureGuard();
+    initPdfPreviewMobileScrollRepair();
     initDeckDragDrop();
     initSavedDecksAndPdfToolbar();
     initFiltersColumnToolbar();
@@ -23381,6 +23935,8 @@ if (document.readyState === 'loading') {
   });
 } else {
   restoreCookieBackedUiStateEarly();
+  initMobileScrollRestoreUserGestureGuard();
+  initPdfPreviewMobileScrollRepair();
   initDeckDragDrop();
   initSavedDecksAndPdfToolbar();
   initFiltersColumnToolbar();

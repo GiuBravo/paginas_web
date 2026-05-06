@@ -61,48 +61,31 @@ let html = rawHtml;
 const css = sanitizeInlineStyle(fs.readFileSync(cssPath, 'utf8'));
 const js = sanitizeInlineScript(fs.readFileSync(jsPath, 'utf8'));
 
-// Marcadores aceitos para o `<link>` do stylesheet Vite/local.
-const styleMarkers = ['<link rel="stylesheet" href="/src/style.css" />'];
-// Variante legada caso o index use caminho relativo sem barra inicial.
-const legacyStyle = '<link rel="stylesheet" href="src/style.css" />';
-// Inclui o marcador legado na lista de tentativas se existir no HTML.
-if (html.includes(legacyStyle)) styleMarkers.push(legacyStyle);
-
-// Indica se algum marcador de estilo foi substituído com sucesso.
-let replacedStyle = false;
-// Itera marcadores até encontrar um presente no HTML.
-for (const m of styleMarkers) {
-  // Só substitui se a string exata existir (evita replace falso positivo).
-  if (html.includes(m)) {
-    // Injeta CSS completo dentro de <style>.
-    html = html.replace(m, `<style>\n${css}\n    </style>`);
-    replacedStyle = true;
-    // Um marcador suficiente — interrompe o laço.
-    break;
-  }
+// Substitui o `<link rel="stylesheet" href="/src/style.css">` por `<style>…</style>`.
+// Intencionalmente tolerante a:
+// - `>` vs `/>`
+// - ordem/quantidade de atributos
+// - aspas simples ou duplas
+// - espaços e quebras de linha
+const styleHrefRe = /href\s*=\s*(['"])(\/?src\/style\.css)\1/i;
+const styleTagRe =
+  /<link\b(?=[^>]*\brel\s*=\s*(['"])stylesheet\1)(?=[^>]*\bhref\s*=\s*(['"])(\/?src\/style\.css)\2)[^>]*\/?>/i;
+if (!styleTagRe.test(html) || !styleHrefRe.test(html)) {
+  throw new Error('Could not find stylesheet link to /src/style.css in index.html');
 }
-// Falha explicitamente se nenhum link de CSS foi encontrado.
-if (!replacedStyle)
-  throw new Error('Could not find <link … href="/src/style.css" /> in index.html');
+html = html.replace(styleTagRe, `<style>\n${css}\n    </style>`);
 
 // Marcadores para o script principal (Vite usa `/src/`, clone local pode usar `./src/`).
-const scriptMarkers = [
-  '<script src="/src/main.js"></script>',
-  '<script src="./src/main.js"></script>',
-];
-let replacedScript = false;
-// Mesma estratégia: primeiro marcador que existir ganha.
-for (const m of scriptMarkers) {
-  if (html.includes(m)) {
-    html = html.replace(
-      m,
-      `<script>\nwindow.__DECKBUILDER_MONOLITH__=true;\n${js}\n    </script>`
-    );
-    replacedScript = true;
-    break;
-  }
+// Também tolera `type="module"` e outros atributos no `<script …>`.
+const scriptTagRe =
+  /<script\b(?=[^>]*\bsrc\s*=\s*(['"])\.?(\/src\/main\.js)\1)[^>]*>\s*<\/script>/i;
+if (!scriptTagRe.test(html)) {
+  throw new Error('Could not find script tag with src="/src/main.js" in index.html');
 }
-if (!replacedScript) throw new Error('Could not find <script src="/src/main.js"> in index.html');
+html = html.replace(
+  scriptTagRe,
+  `<script>\nwindow.__DECKBUILDER_MONOLITH__=true;\n${js}\n    </script>`
+);
 
 // Comentário de aviso no topo do arquivo gerado (rastreabilidade da geração).
 const banner =

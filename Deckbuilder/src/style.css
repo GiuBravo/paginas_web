@@ -1418,6 +1418,11 @@ html:not(.help-enabled) .filter-action-row .icon-btn-stack--tool .theme-row-labe
   min-width: 0 !important;
   width: 0 !important;
 }
+/* Marcador para recolocar o stepper no desktop após reparent no mobile (`relocateSearchQtyStackForViewport`). */
+.search-qty-anchor {
+  display: contents;
+}
+
 /* Quantidade (busca): botões ± mais estreitos e campo numérico sempre legível */
 .search-qty-stack {
   /* não força sobra à direita do botão + */
@@ -3032,6 +3037,32 @@ html.theme-white .custom-select-wrap--api-lang .custom-select-trigger .lang-flag
   color: var(--highlight-yellow);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
+}
+/* Barra de estado no topo da coluna de resultados (antes era dentro de `.view-controls`). */
+#col-results > .result-info-row {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  padding: 12px;
+  background: var(--panel-bg);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  margin-bottom: 15px;
+  flex-shrink: 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+#col-results > .result-info-row #result-info {
+  flex: 1 1 160px;
+  width: auto;
+  min-width: 0;
+  margin: 0;
+}
+#col-results > .result-info-row .result-db-version-wrap {
+  margin-top: 0;
 }
 .theme-white .result-db-version-label {
   color: var(--label-text);
@@ -6033,7 +6064,33 @@ html.theme-white .toast.toast-error {
     max-width: 100%;
     overflow-x: hidden !important;
     position: relative;
+    /* Reduz “saltos” de scroll quando o conteúdo abaixo (deck/PDF) muda de altura. */
+    overflow-anchor: none;
   }
+
+  /* Em mobile algumas ferramentas perdem sentido: ocultar botões + rótulos. */
+  label.theme-row-label[for='btn-toggle-tooltip'],
+  #btn-toggle-tooltip,
+  label.theme-row-label[for='btn-toggle-filters-column'],
+  #btn-toggle-filters-column,
+  label.theme-row-label[for='btn-toggle-deck-column'],
+  #btn-toggle-deck-column,
+  span.theme-row-label[data-i18n='ui.deck_pdf_label'],
+  #btn-toggle-pdf-preview {
+    display: none !important;
+  }
+
+  /* Remove os wrappers do flex — só esconder o botão deixa lacunas grandes entre Aleatório e Lista. */
+  .view-controls-toolbar-row .icon-btn-row .icon-btn-stack:has(#btn-toggle-tooltip),
+  .view-controls-toolbar-row .icon-btn-row .icon-btn-stack:has(#btn-toggle-filters-column),
+  .view-controls-toolbar-row .icon-btn-row .icon-btn-stack:has(#btn-toggle-deck-column) {
+    display: none !important;
+  }
+
+  .view-controls-toolbar-row .icon-btn-row {
+    gap: 5px !important;
+  }
+
   .app-container,
   .app-container.empty-queue {
     display: block !important;
@@ -6048,6 +6105,13 @@ html.theme-white .toast.toast-error {
   .results-view {
     height: 550px;
     overflow-y: auto;
+    overflow-anchor: none;
+  }
+  /* `.results-view.list-mode` tem especificidade maior que `.results-view` sozinha. */
+  .results-view.list-mode,
+  .results-view.grid-mode {
+    /* `fadeInPage` reinicia a cada `renderResults`; no mobile atrapalha repor scroll. */
+    animation: none !important;
   }
   .grid-mode {
     display: grid !important;
@@ -6070,12 +6134,13 @@ html.theme-white .toast.toast-error {
   .grid-mode .card-info-box {
     display: none !important;
   }
-  #col-preview.pdf-preview-hidden .pdf-preview-container {
+  /* Pré-visualização PDF desactivada em mobile: só exportação; sobrepõe o bloco desktop `:not(.pdf-preview-hidden)`. */
+  #col-preview:not(.pdf-preview-hidden) .pdf-preview-container,
+  #col-preview.pdf-preview-hidden .pdf-preview-container,
+  #col-preview #preview-frame {
     display: none !important;
-  }
-  #col-preview:not(.pdf-preview-hidden) .pdf-preview-container {
-    display: block !important;
-    min-height: 200px;
+    min-height: 0 !important;
+    visibility: hidden !important;
   }
   #col-preview {
     margin-top: 20px;
@@ -6147,47 +6212,59 @@ html.theme-white .toast.toast-error {
     height: auto !important;
     padding: 10px !important;
   }
-  .result-info-row {
-    width: 100% !important;
-    margin-bottom: 10px !important;
-    flex-wrap: wrap;
-    justify-content: center;
+  #col-results > .result-info-row {
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    justify-content: space-between !important;
     align-items: center !important;
+    margin-bottom: 8px !important;
+    padding: 8px 10px !important;
   }
-  #result-info {
+  #col-results > .result-info-row #result-info {
     display: block !important;
-    width: 100% !important;
+    flex: 1 1 auto !important;
+    width: auto !important;
+    min-width: 0 !important;
     margin-bottom: 0 !important;
-    text-align: center;
+    text-align: left !important;
+    font-size: 12px !important;
   }
-  .result-db-version-wrap {
-    width: 100%;
-    justify-content: center;
-    margin-top: 6px;
-    flex-wrap: wrap;
+  #col-results > .result-info-row .result-db-version-wrap {
+    width: auto !important;
+    flex-shrink: 0 !important;
+    justify-content: flex-end !important;
+    margin-top: 0 !important;
+    flex-wrap: nowrap !important;
   }
-  .view-controls > div {
+
+  /* No mobile, `view-controls` tem 2 blocos: infos (texto) e toolbar (controles).
+   * Evita aplicar grid genérico em qualquer `<div>` para não bagunçar `#result-info-row`. */
+  .view-controls-toolbar-row {
     display: grid !important;
-    grid-template-columns: repeat(2, 1fr) !important;
-    gap: 15px 10px !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 12px 10px !important;
     width: 100% !important;
+    align-items: start !important;
+  }
+  .view-controls-toolbar-row > * {
+    min-width: 0;
   }
   /* Só zera margem nos filtros da barra de resultados — não na sidebar (lá o reset colava todos os filtros) */
-  .view-controls .filter-group,
-  .view-controls > div > label,
-  .view-controls > div > div {
+  .view-controls-toolbar-row .filter-group,
+  .view-controls-toolbar-row > label,
+  .view-controls-toolbar-row > div {
     width: 100% !important;
     margin: 0 !important;
   }
   .sidebar-content .filter-group {
     margin-bottom: 20px !important;
   }
-  .view-controls > div > label {
+  .view-controls-toolbar-row > label {
     justify-content: flex-start;
     align-self: center;
     height: 35px;
   }
-  .view-controls > div > div:last-child {
+  .view-controls-toolbar-row > div:last-child {
     grid-column: span 2 !important;
     justify-content: center !important;
     margin-top: 5px !important;
