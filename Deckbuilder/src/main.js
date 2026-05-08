@@ -342,6 +342,12 @@ let __pendingMobileDeckUiScroll = null;
 let __mobileScrollRestoreGen = 0;
 /** Enquanto `Date.now() <` este valor, não repor o scroll do **documento** no mobile; `#results-view` não usa este defer. */
 let __mobileScrollRestoreDeferUntil = 0;
+/** Enquanto `Date.now() <` este valor, não repor o scroll de `#results-view` no mobile (evita “brigar” com scroll do utilizador). */
+let __mobileRvScrollRestoreDeferUntil = 0;
+/** >0 enquanto aplicamos `scrollTop` programaticamente; impede `scroll` na viewport de invalidar o próprio restore. */
+let __mobileScrollRestoreProgrammaticDepth = 0;
+/** Geração de restore de scroll do deck no mobile (invalida timeouts/rAF anteriores). */
+let __mobileDeckItemsScrollRestoreGen = 0;
 /** `triggerPDFUpdate` perdido porque `pdfPreviewBusy` durante adição seguinte → regeramos no fim da geração actual. */
 let __pdfPreviewRegenerationQueued = false;
 /** Ordenação do deck: critério no DOM (#deck-sort-by); «Personalizado» = ordem da fila + arrastar; «Aleatório» só baralha ao mudar o critério ou ao botão de ordem. */
@@ -989,6 +995,8 @@ function deckSectionUiLabel(secKey) {
  * @returns {void}
  */
 function requestDeckScrollToSection(secKey) {
+  // Em mobile, não fazemos auto-scroll do deck (UX: a viewport já é estreita; scroll automático atrapalha).
+  if (deckbuilderUsesMobileLayoutCssBreakpoint()) return;
   const k = String(secKey || '')
     .trim()
     .toLowerCase();
@@ -1005,6 +1013,8 @@ function requestDeckScrollToSection(secKey) {
  * @returns {void}
  */
 function requestDeckScrollToStack(sectionKey, stackImgId) {
+  // Em mobile, não fazemos auto-scroll do deck (UX: a viewport já é estreita; scroll automático atrapalha).
+  if (deckbuilderUsesMobileLayoutCssBreakpoint()) return;
   const k = String(sectionKey || '')
     .trim()
     .toLowerCase();
@@ -1021,6 +1031,8 @@ function requestDeckScrollToStack(sectionKey, stackImgId) {
  * @returns {void}
  */
 function requestDeckScrollForBuildEntry(entry) {
+  // Em mobile, não fazemos auto-scroll do deck (UX: a viewport já é estreita; scroll automático atrapalha).
+  if (deckbuilderUsesMobileLayoutCssBreakpoint()) return;
   const full = entry && entry.id != null ? cardCache[String(entry.id)] : null;
   const isExtra = getQueueCardSection(full) === 'extra';
   requestDeckScrollToStack(
@@ -4125,7 +4137,11 @@ function initDeckDragDrop() {
         requestDeckScrollToStack('side', toAdd && toAdd[0] ? toAdd[0].imgId : null);
         pushSuppressCardSurfaceEnterAnimation();
         try {
-          updateUI({ skipSuggestionsRerender: true, mobileScrollSnapshot: mobScrollSnap });
+              updateUI({
+                skipSuggestionsRerender: true,
+                mobileScrollSnapshot: mobScrollSnap,
+                mobilePreserveDeckItemsScroll: true,
+              });
         } finally {
           popSuppressCardSurfaceEnterAnimation();
         }
@@ -8915,7 +8931,14 @@ function setApiCardLang(next) {
  */
 function removeOneDeckCopy(imgId) {
   if (removeOneCopyFromQueueByImgId(cardQueue, imgId)) {
-    updateUI();
+    if (deckbuilderUsesMobileLayoutCssBreakpoint()) {
+      const mobScrollSnap = readMobileSuggestionsScrollSnapshot();
+      updateUI({
+        skipSuggestionsRerender: true,
+        mobileScrollSnapshot: mobScrollSnap,
+        mobilePreserveDeckItemsScroll: true,
+      });
+    } else updateUI();
     hideTooltip();
   }
 }
@@ -8928,7 +8951,14 @@ function removeOneDeckCopy(imgId) {
  */
 function removeOneSideDeckCopy(imgId) {
   if (removeOneCopyFromQueueByImgId(cardQueueSide, imgId)) {
-    updateUI();
+    if (deckbuilderUsesMobileLayoutCssBreakpoint()) {
+      const mobScrollSnap = readMobileSuggestionsScrollSnapshot();
+      updateUI({
+        skipSuggestionsRerender: true,
+        mobileScrollSnapshot: mobScrollSnap,
+        mobilePreserveDeckItemsScroll: true,
+      });
+    } else updateUI();
     hideTooltip();
   }
 }
@@ -9398,9 +9428,11 @@ function cycleDeckColumnMode() {
  * @param {number} savedViewportScroll
  * @returns {void}
  */
-function applyMobileDeckUiScrollPositions(rvEl, savedRvScroll, savedViewportScroll) {
+function applyMobileDeckUiScrollPositions(rvEl, savedRvScroll, savedViewportScroll, opts) {
   if (!deckbuilderUsesMobileLayoutCssBreakpoint()) return;
   const deferDocumentScroll = Date.now() < __mobileScrollRestoreDeferUntil;
+  const deferRvScroll = Date.now() < __mobileRvScrollRestoreDeferUntil;
+  __mobileScrollRestoreProgrammaticDepth++;
   try {
     const docEl = document.scrollingElement || document.documentElement;
     if (
@@ -9412,11 +9444,25 @@ function applyMobileDeckUiScrollPositions(rvEl, savedRvScroll, savedViewportScro
       const maxW = Math.max(0, docEl.scrollHeight - window.innerHeight);
       docEl.scrollTop = Math.min(Math.max(0, savedViewportScroll), maxW);
     }
-    if (rvEl && typeof savedRvScroll === 'number' && Number.isFinite(savedRvScroll)) {
+    if (
+      !deferRvScroll &&
+      rvEl &&
+      typeof savedRvScroll === 'number' &&
+      Number.isFinite(savedRvScroll)
+    ) {
       const maxR = Math.max(0, rvEl.scrollHeight - rvEl.clientHeight);
       rvEl.scrollTop = Math.min(Math.max(0, savedRvScroll), maxR);
     }
   } catch (_) {}
+  finally {
+    try {
+      queueMicrotask(() => {
+        __mobileScrollRestoreProgrammaticDepth = Math.max(0, __mobileScrollRestoreProgrammaticDepth - 1);
+      });
+    } catch (_) {
+      __mobileScrollRestoreProgrammaticDepth = Math.max(0, __mobileScrollRestoreProgrammaticDepth - 1);
+    }
+  }
 }
 
 /**
@@ -9427,13 +9473,13 @@ function applyMobileDeckUiScrollPositions(rvEl, savedRvScroll, savedViewportScro
  * @param {number} savedViewportScroll
  * @returns {void}
  */
-function scheduleMobileScrollRestoreAfterDeckUi(rvEl, savedRvScroll, savedViewportScroll) {
+function scheduleMobileScrollRestoreAfterDeckUi(rvEl, savedRvScroll, savedViewportScroll, opts) {
   if (!deckbuilderUsesMobileLayoutCssBreakpoint()) return;
   __mobileScrollRestoreGen++;
   const gen = __mobileScrollRestoreGen;
   const apply = () => {
     if (gen !== __mobileScrollRestoreGen) return;
-    applyMobileDeckUiScrollPositions(rvEl, savedRvScroll, savedViewportScroll);
+    applyMobileDeckUiScrollPositions(rvEl, savedRvScroll, savedViewportScroll, opts);
   };
 
   apply();
@@ -9448,6 +9494,9 @@ function scheduleMobileScrollRestoreAfterDeckUi(rvEl, savedRvScroll, savedViewpo
       setTimeout(apply, 400);
       setTimeout(apply, 700);
       setTimeout(apply, 1200);
+      // Um passo após o defer máximo da lista (~1600ms) — só útil se o utilizador não tiver mexido na
+      // viewport (caso contrário {@link initMobileViewportScrollRestoreInvalidator} invalida esta geração).
+      setTimeout(apply, 1680);
     });
   });
 }
@@ -9459,9 +9508,43 @@ function scheduleMobileScrollRestoreAfterDeckUi(rvEl, savedRvScroll, savedViewpo
  *
  * @returns {void}
  */
-function markMobileScrollUserInteracting() {
+function markMobileScrollUserInteracting(e) {
   if (!deckbuilderUsesMobileLayoutCssBreakpoint()) return;
-  __mobileScrollRestoreDeferUntil = Date.now() + 1600;
+  // Adiar repor o scroll do **documento** só quando o gesto é na lista de sugestões (`#results-view`).
+  // `touchmove` global (ex.: micro-movimento ao tocar no deck) + defer longo fazia os timeouts de
+  // `scheduleMobileScrollRestoreAfterDeckUi` (máx. ~1200ms) expirarem sem nunca repor `document.scrollTop`
+  // (defer ~1600ms) — salto intermitente para o topo.
+  try {
+    const typeTop = String(e && e.type ? e.type : '');
+    const t0 = /** @type {any} */ (e && e.target ? e.target : null);
+    const inRv =
+      t0 && t0.closest ? (/** @type {HTMLElement|null} */ (t0.closest('#results-view'))) : null;
+    if (inRv) {
+      const nowTop = Date.now();
+      if (typeTop === 'touchmove') __mobileScrollRestoreDeferUntil = nowTop + 1600;
+      else if (typeTop === 'wheel') __mobileScrollRestoreDeferUntil = nowTop + 350;
+    }
+  } catch (_) {}
+  // Para a lista de sugestões, também evita repor o scroll interno enquanto o utilizador está a rolar.
+  try {
+    const type = String(e && e.type ? e.type : '');
+    const t = /** @type {any} */ (e && e.target ? e.target : null);
+    const el = t && t.closest ? t.closest('#results-view') : null;
+    if (!el) return;
+    const now = Date.now();
+    // touchmove: gesto ativo → defer maior.
+    if (type === 'touchmove') __mobileRvScrollRestoreDeferUntil = now + 1200;
+    // wheel: inércia curta → defer curto (não bloquear cliques).
+    else if (type === 'wheel') __mobileRvScrollRestoreDeferUntil = now + 250;
+    // touchend: gesto terminou → libera reposição imediatamente (evita “às vezes vai pro topo” após scroll+tap rápido).
+    else if (type === 'touchend') __mobileRvScrollRestoreDeferUntil = now;
+
+    // Se o utilizador está a rolar a lista, invalida restores já agendados (rAF/timeout)
+    // para não “brigar” com o gesto e causar pulos.
+    if (type === 'touchmove' || type === 'wheel') {
+      __mobileScrollRestoreGen++;
+    }
+  } catch (_) {}
 }
 
 /**
@@ -9473,11 +9556,33 @@ function initMobileScrollRestoreUserGestureGuard() {
   if (initMobileScrollRestoreUserGestureGuard.__done) return;
   initMobileScrollRestoreUserGestureGuard.__done = true;
   const opts = { capture: true, passive: true };
-  const bump = () => markMobileScrollUserInteracting();
+  /** @param {Event} ev */
+  const bump = (ev) => markMobileScrollUserInteracting(ev);
   window.addEventListener('touchstart', bump, opts);
   window.addEventListener('touchmove', bump, opts);
   window.addEventListener('touchend', bump, opts);
   window.addEventListener('wheel', bump, opts);
+}
+
+/**
+ * Se o utilizador rola a **viewport** durante os vários `setTimeout` de restore, cancela essa geração para não
+ * forçar `document.scrollTop` antigo de volta (travamentos / “voltar” várias vezes).
+ *
+ * @returns {void}
+ */
+function initMobileViewportScrollRestoreInvalidator() {
+  if (initMobileViewportScrollRestoreInvalidator.__done) return;
+  initMobileViewportScrollRestoreInvalidator.__done = true;
+  const onScroll = () => {
+    if (!deckbuilderUsesMobileLayoutCssBreakpoint()) return;
+    if (__mobileScrollRestoreProgrammaticDepth > 0) return;
+    __mobileScrollRestoreGen++;
+  };
+  window.addEventListener('scroll', onScroll, { capture: true, passive: true });
+  try {
+    const vv = window.visualViewport;
+    if (vv) vv.addEventListener('scroll', onScroll, { passive: true });
+  } catch (_) {}
 }
 
 /**
@@ -19001,7 +19106,6 @@ function applyCardSurfaceFeedback(reason) {
   const run = () => {
     flashLayoutSurfacePulse(reason);
     let toastReason = reason;
-    if (toastReason === 'deck_add' && window.innerWidth < 900) toastReason = null;
     if (toastReason && !SURFACE_TOAST_SKIP_REASONS.has(reason)) {
       showSurfaceToast(surfaceToastMessageForReason(toastReason), toastReason);
     }
@@ -22844,6 +22948,43 @@ function renderDeckQueue() {
   const list = getEl('deck-items');
   const layout = getEl('app-layout');
   if (!list || !layout) return;
+  // Em mobile, re-renderizar o DOM do deck pode zerar o scroll do container e “puxar” para o topo (Deck principal).
+  // Preservamos o scroll do próprio `#deck-items` para evitar esse salto.
+  const __mobPreserveDeckScroll = deckbuilderUsesMobileLayoutCssBreakpoint();
+  let __savedDeckItemsScrollTop = 0;
+  let __savedDeckItemsBottomOffset = 0;
+  let __savedDeckItemsClientH = 0;
+  /** @type {{ id: string, delta: number }|null} */
+  let __deckScrollAnchor = null;
+  if (__mobPreserveDeckScroll) {
+    try {
+      const el = /** @type {HTMLElement} */ (list);
+      __savedDeckItemsScrollTop = el.scrollTop || 0;
+      __savedDeckItemsClientH = el.clientHeight || 0;
+      // Distância ao fundo: ajuda a manter o utilizador “ancorado” no fim quando remove/adiciona no final.
+      __savedDeckItemsBottomOffset = Math.max(0, (el.scrollHeight || 0) - (el.scrollTop || 0) - el.clientHeight);
+
+      // Âncora mais robusta: captura o item visível perto do rodapé da viewport do deck e mantém a mesma
+      // posição relativa após o re-render. Isto evita “saltos” quando alturas mudam (ex.: ao remover no fim).
+      try {
+        const r = el.getBoundingClientRect();
+        const x = r.left + Math.max(6, r.width * 0.5);
+        const y = r.bottom - Math.min(30, Math.max(12, r.height * 0.2));
+        const hit = document.elementFromPoint(x, y);
+        const row = hit && hit.closest ? hit.closest('.queue-item') : null;
+        const sid = row && row.dataset && row.dataset.stackImgId ? String(row.dataset.stackImgId) : '';
+        if (sid) {
+          const delta = (row.offsetTop || 0) - __savedDeckItemsScrollTop;
+          __deckScrollAnchor = { id: sid, delta: Number.isFinite(delta) ? delta : 0 };
+        }
+      } catch (_) {}
+    } catch (_) {
+      __savedDeckItemsScrollTop = 0;
+      __savedDeckItemsBottomOffset = 0;
+      __savedDeckItemsClientH = 0;
+      __deckScrollAnchor = null;
+    }
+  }
   if (cardQueue.length === 0 && cardQueueSide.length === 0) layout.classList.add('empty-queue');
   else layout.classList.remove('empty-queue');
   applyDeckColumnCycleClasses();
@@ -22883,6 +23024,7 @@ function renderDeckQueue() {
     if (!firstSideByImgId.has(k)) firstSideByImgId.set(k, q);
   }
   const deckIsEmpty = cardQueue.length === 0 && cardQueueSide.length === 0;
+  const isMobLayout = deckbuilderUsesMobileLayoutCssBreakpoint();
 
   const rowHint = isDeckSortCustom()
     ? 'Principal/Extra: clique +1 · direito: enviar 1 ao Side · meio: −1 · arrastar na secção Side: move pilha · arrastar entre linhas: reordenar. Side: clique ou direito → principal/extra · meio: −1.'
@@ -22984,7 +23126,16 @@ function renderDeckQueue() {
         const rid = rmBtn.getAttribute('data-queue-remove');
         if (pool === 'side') removeAllCopiesFromQueueByImgIdInPlace(cardQueueSide, rid);
         else removeAllCopiesFromQueueByImgIdInPlace(cardQueue, rid);
-        updateUI();
+        if (deckbuilderUsesMobileLayoutCssBreakpoint()) {
+          const mobScrollSnap = readMobileSuggestionsScrollSnapshot();
+          updateUI({
+            skipSuggestionsRerender: true,
+            mobileScrollSnapshot: mobScrollSnap,
+            mobilePreserveDeckItemsScroll: true,
+          });
+        } else {
+          updateUI();
+        }
         hideTooltip();
       };
     }
@@ -23096,19 +23247,51 @@ function renderDeckQueue() {
           if (pool === 'side') {
             if (removeOneCopyFromQueueByImgId(cardQueueSide, stackImgId)) {
               hideTooltip();
-              updateUI({ skipSuggestionsRerender: true, mobileScrollSnapshot: mobScrollSnap });
+              try {
+                showToast(`-1x ${c.name || 'Carta'} (${deckSectionUiLabel('side')})`, {
+                  variant: 'error',
+                });
+              } catch (_) {}
+              updateUI({
+                skipSuggestionsRerender: true,
+                mobileScrollSnapshot: mobScrollSnap,
+              });
             }
           } else if (removeOneCopyFromQueueByImgId(cardQueue, stackImgId)) {
             hideTooltip();
-            updateUI({ skipSuggestionsRerender: true, mobileScrollSnapshot: mobScrollSnap });
+            try {
+              const secKey = deckSectionKeyFromIsExtra(getQueueCardSection(fullCardData) === 'extra');
+              showToast(`-1x ${c.name || 'Carta'} (${deckSectionUiLabel(secKey)})`, {
+                variant: 'error',
+              });
+            } catch (_) {}
+            updateUI({
+              skipSuggestionsRerender: true,
+              mobileScrollSnapshot: mobScrollSnap,
+              mobilePreserveDeckItemsScroll: true,
+            });
           }
           return;
         }
         const entryMob = { id: c.id, name: c.name, imgId: c.imgId };
         void (async () => {
-          if (pool === 'side') await forceAddToSide(entryMob);
-          else if (!tryAddEntryToBuild(entryMob)) await forceAddToBuild(entryMob);
-          updateUI({ skipSuggestionsRerender: true, mobileScrollSnapshot: mobScrollSnap });
+          let ok = true;
+          if (pool === 'side') ok = !!(await forceAddToSide(entryMob));
+          else if (!tryAddEntryToBuild(entryMob)) ok = !!(await forceAddToBuild(entryMob));
+          if (ok) {
+            try {
+              const secKey =
+                pool === 'side'
+                  ? 'side'
+                  : deckSectionKeyFromIsExtra(getQueueCardSection(fullCardData) === 'extra');
+              showToast(`+1x ${c.name || 'Carta'} (${deckSectionUiLabel(secKey)})`);
+            } catch (_) {}
+          }
+          updateUI({
+            skipSuggestionsRerender: true,
+            mobileScrollSnapshot: mobScrollSnap,
+            mobilePreserveDeckItemsScroll: true,
+          });
         })();
         return;
       }
@@ -23187,19 +23370,21 @@ function renderDeckQueue() {
     head.id = `deck-head-${sec.key}`;
     head.dataset.deckSection = sec.key;
     head.innerHTML = `<span>${sec.label}</span><span class="deck-section-count">${sec.copies}</span>`;
-    head.onclick = () => scrollToSection(String(sec.key));
-    head.ondragenter = (e) => {
-      try {
-        e.preventDefault();
-      } catch (_) {}
-      scrollToSectionDuringDrag(String(sec.key));
-    };
-    head.ondragover = (e) => {
-      try {
-        e.preventDefault();
-      } catch (_) {}
-      scrollToSectionDuringDrag(String(sec.key));
-    };
+    if (!isMobLayout) {
+      head.onclick = () => scrollToSection(String(sec.key));
+      head.ondragenter = (e) => {
+        try {
+          e.preventDefault();
+        } catch (_) {}
+        scrollToSectionDuringDrag(String(sec.key));
+      };
+      head.ondragover = (e) => {
+        try {
+          e.preventDefault();
+        } catch (_) {}
+        scrollToSectionDuringDrag(String(sec.key));
+      };
+    }
     list.appendChild(head);
     headsByKey.set(String(sec.key), head);
 
@@ -23249,19 +23434,21 @@ function renderDeckQueue() {
     el.setAttribute('data-overlay-key', k);
     el.dataset.deckSection = k;
     el.innerHTML = `<span>${escapeHtml(label)}</span><span class="deck-section-count">${escapeHtml(count)}</span>`;
-    el.onclick = () => scrollToSection(k);
-    el.ondragenter = (e) => {
-      try {
-        e.preventDefault();
-      } catch (_) {}
-      scrollToSectionDuringDrag(k);
-    };
-    el.ondragover = (e) => {
-      try {
-        e.preventDefault();
-      } catch (_) {}
-      scrollToSectionDuringDrag(k);
-    };
+    if (!isMobLayout) {
+      el.onclick = () => scrollToSection(k);
+      el.ondragenter = (e) => {
+        try {
+          e.preventDefault();
+        } catch (_) {}
+        scrollToSectionDuringDrag(k);
+      };
+      el.ondragover = (e) => {
+        try {
+          e.preventDefault();
+        } catch (_) {}
+        scrollToSectionDuringDrag(k);
+      };
+    }
     return el;
   };
 
@@ -23319,10 +23506,36 @@ function renderDeckQueue() {
   } catch (_) {}
   updateOverlayState();
 
+  if (__mobPreserveDeckScroll) {
+    try {
+      const max = Math.max(0, list.scrollHeight - list.clientHeight);
+      let desiredTop = __savedDeckItemsScrollTop;
+      if (__deckScrollAnchor) {
+        const cssEsc = (s) => {
+          try {
+            return CSS && CSS.escape ? CSS.escape(String(s)) : String(s);
+          } catch (_) {
+            return String(s);
+          }
+        };
+        const row = list.querySelector(`.queue-item[data-stack-img-id="${cssEsc(__deckScrollAnchor.id)}"]`);
+        if (row) desiredTop = Math.max(0, (row.offsetTop || 0) - __deckScrollAnchor.delta);
+      } else {
+        // Fallback: se o utilizador estava perto do fundo, mantém o “offset do fundo” para evitar salto grande.
+        const nearBottom = __savedDeckItemsBottomOffset <= 80 && (__savedDeckItemsClientH || 0) > 0;
+        if (nearBottom)
+          desiredTop = Math.max(0, (list.scrollHeight - list.clientHeight) - __savedDeckItemsBottomOffset);
+      }
+      list.scrollTop = Math.min(Math.max(0, desiredTop), max);
+      updateOverlayState();
+    } catch (_) {}
+  }
+
   // Pós-add: rola até à pilha/carta recém adicionada (respeita a ordenação já aplicada).
+  // Em mobile, o ideal é NÃO rolar ao interagir (toque/remove/add), então ignoramos este auto-scroll.
   // Se a pilha não for encontrada, faz fallback para o cabeçalho da secção.
   const pending = pendingDeckScrollTarget;
-  if (pending) {
+  if (pending && !deckbuilderUsesMobileLayoutCssBreakpoint()) {
     pendingDeckScrollTarget = null;
     const k = pending.sectionKey;
     const stackId = pending.stackImgId;
@@ -23357,22 +23570,120 @@ function renderDeckQueue() {
         list.scrollTo({ top: desiredTop, behavior: 'smooth' });
       }
     }
+  } else if (pending) {
+    // Consome o alvo pendente para não reaplicar num render desktop futuro.
+    pendingDeckScrollTarget = null;
   }
 
   paintCardSurfaceEnterAnimations('#deck-items', '.queue-item');
 }
 
 /**
+ * Captura âncora robusta do scroll de `#deck-items` para restaurar após re-render no mobile.
+ *
+ * @param {HTMLElement|null} deckItemsEl
+ * @returns {{ top: number, bottomOffset: number, anchorId: string, anchorDelta: number }|null}
+ */
+function captureMobileDeckItemsScrollAnchor(deckItemsEl) {
+  if (!deckbuilderUsesMobileLayoutCssBreakpoint()) return null;
+  const el = deckItemsEl;
+  if (!el) return null;
+  try {
+    const top = el.scrollTop || 0;
+    const bottomOffset = Math.max(
+      0,
+      (el.scrollHeight || 0) - (el.scrollTop || 0) - (el.clientHeight || 0)
+    );
+    let anchorId = '';
+    let anchorDelta = 0;
+    try {
+      const r = el.getBoundingClientRect();
+      const x = r.left + Math.max(6, r.width * 0.5);
+      const y = r.bottom - Math.min(30, Math.max(12, r.height * 0.2));
+      const hit = document.elementFromPoint(x, y);
+      const row = hit && hit.closest ? hit.closest('.queue-item') : null;
+      const sid = row && row.dataset && row.dataset.stackImgId ? String(row.dataset.stackImgId) : '';
+      if (sid) {
+        anchorId = sid;
+        anchorDelta = (row.offsetTop || 0) - top;
+      }
+    } catch (_) {}
+    return {
+      top,
+      bottomOffset,
+      anchorId,
+      anchorDelta: Number.isFinite(anchorDelta) ? anchorDelta : 0,
+    };
+  } catch (_) {
+    return null;
+  }
+}
+
+/**
+ * Agenda restauração do scroll de `#deck-items` no mobile, invalidável por geração.
+ *
+ * @param {HTMLElement|null} deckItemsEl
+ * @param {{ top: number, bottomOffset: number, anchorId: string, anchorDelta: number }|null} anchor
+ * @returns {void}
+ */
+function scheduleMobileDeckItemsScrollRestoreAfterUi(deckItemsEl, anchor) {
+  if (!deckbuilderUsesMobileLayoutCssBreakpoint()) return;
+  const el = deckItemsEl;
+  if (!el || !anchor) return;
+  __mobileDeckItemsScrollRestoreGen++;
+  const gen = __mobileDeckItemsScrollRestoreGen;
+  const apply = () => {
+    if (gen !== __mobileDeckItemsScrollRestoreGen) return;
+    try {
+      const max = Math.max(0, el.scrollHeight - el.clientHeight);
+      let desiredTop = anchor.top;
+      if (anchor.anchorId) {
+        const cssEsc = (s) => {
+          try {
+            return CSS && CSS.escape ? CSS.escape(String(s)) : String(s);
+          } catch (_) {
+            return String(s);
+          }
+        };
+        const row = el.querySelector(
+          `.queue-item[data-stack-img-id="${cssEsc(anchor.anchorId)}"]`
+        );
+        if (row) desiredTop = Math.max(0, (row.offsetTop || 0) - (anchor.anchorDelta || 0));
+      } else if (anchor.bottomOffset <= 80 && (el.clientHeight || 0) > 0) {
+        desiredTop = Math.max(0, (el.scrollHeight - el.clientHeight) - anchor.bottomOffset);
+      }
+      el.scrollTop = Math.min(Math.max(0, desiredTop), max);
+    } catch (_) {}
+  };
+  apply();
+  requestAnimationFrame(() => {
+    apply();
+    requestAnimationFrame(() => {
+      apply();
+      setTimeout(apply, 0);
+      setTimeout(apply, 40);
+      setTimeout(apply, 120);
+      setTimeout(apply, 240);
+    });
+  });
+}
+
+/**
  * Atualiza fila do deck e lista de sugestões num único ciclo; consome ou infere motivo de feedback superficial e agenda PDF.
  *
- * @param {{ skipSuggestionsRerender?: boolean, mobileScrollSnapshot?: { rv: number, vp: number }|null }} [opts] Em mobile (`max-width: 900px`), `skipSuggestionsRerender: true` evita redesenhar `#results-view` quando só a composição do deck mudou — mantém scroll da lista ao tocar/adicionar cartas. `mobileScrollSnapshot` (de {@link readMobileSuggestionsScrollSnapshot} **antes** de `revealDeckColumnIfHidden`) evita guardar scroll já zerado pelo reflow.
+ * @param {{ skipSuggestionsRerender?: boolean, mobileScrollSnapshot?: { rv: number, vp: number }|null, mobileDisableViewportScrollRestore?: boolean, mobilePreserveDeckItemsScroll?: boolean }} [opts] Em mobile (`max-width: 900px`), `skipSuggestionsRerender: true` evita redesenhar `#results-view` quando só a composição do deck mudou — mantém scroll da lista ao tocar/adicionar cartas. `mobileScrollSnapshot` (de {@link readMobileSuggestionsScrollSnapshot} **antes** de `revealDeckColumnIfHidden`) evita guardar scroll já zerado pelo reflow. `mobileDisableViewportScrollRestore` evita repor `document.scrollTop` (útil quando a interação é no próprio deck e não queremos nenhum “scroll automático” da página). `mobilePreserveDeckItemsScroll` mantém o scroll do próprio deck estável após re-render (evita saltos agressivos no fim).
  * @returns {void}
  */
 function updateUI(opts) {
   const mob = deckbuilderUsesMobileLayoutCssBreakpoint();
   const resultsViewEl = /** @type {HTMLElement|null} */ (getEl('results-view'));
+  const deckItemsEl = /** @type {HTMLElement|null} */ (getEl('deck-items'));
   let savedViewportScroll = 0;
   let savedRvScroll = 0;
+  const savedDeckAnchor =
+    mob && opts && opts.mobilePreserveDeckItemsScroll
+      ? captureMobileDeckItemsScrollAnchor(deckItemsEl)
+      : null;
   if (mob) {
     const snap = opts && opts.mobileScrollSnapshot;
     if (snap && typeof snap.rv === 'number' && typeof snap.vp === 'number') {
@@ -23384,6 +23695,10 @@ function updateUI(opts) {
         savedViewportScroll = docEl ? docEl.scrollTop : 0;
       } catch (_) {}
       if (resultsViewEl) savedRvScroll = resultsViewEl.scrollTop;
+    }
+    if (opts && opts.mobileDisableViewportScrollRestore) {
+      // NaN evita o ramo `Number.isFinite(savedViewportScroll)` em `applyMobileDeckUiScrollPositions`.
+      savedViewportScroll = NaN;
     }
   }
 
@@ -23415,6 +23730,9 @@ function updateUI(opts) {
       vp: savedViewportScroll,
     };
     scheduleMobileScrollRestoreAfterDeckUi(resultsViewEl, savedRvScroll, savedViewportScroll);
+    if (savedDeckAnchor) {
+      scheduleMobileDeckItemsScrollRestoreAfterUi(deckItemsEl, savedDeckAnchor);
+    }
   }
   let reason = consumeCardSurfaceFeedback();
   if (!reason) {
@@ -23920,6 +24238,7 @@ if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => {
     restoreCookieBackedUiStateEarly();
     initMobileScrollRestoreUserGestureGuard();
+    initMobileViewportScrollRestoreInvalidator();
     initPdfPreviewMobileScrollRepair();
     initDeckDragDrop();
     initSavedDecksAndPdfToolbar();
@@ -23936,6 +24255,7 @@ if (document.readyState === 'loading') {
 } else {
   restoreCookieBackedUiStateEarly();
   initMobileScrollRestoreUserGestureGuard();
+  initMobileViewportScrollRestoreInvalidator();
   initPdfPreviewMobileScrollRepair();
   initDeckDragDrop();
   initSavedDecksAndPdfToolbar();

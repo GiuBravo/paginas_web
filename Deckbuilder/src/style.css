@@ -4716,6 +4716,17 @@ html.theme-white .deck-section-head.deck-drop-section-invalid {
   pointer-events: auto;
   align-items: center; /* centraliza os botões do overlay na coluna do deck */
 }
+@media (max-width: 900px) {
+  /* Em mobile, o overlay pode interceptar taps nas primeiras cartas (especialmente no "principal"). */
+  .deck-sections-overlay-stack {
+    pointer-events: none;
+  }
+  /* Evita “scroll anchoring” do browser quando o deck re-renderiza no fim (causa saltos agressivos). */
+  #deck-items,
+  .deck-list.deck-queue-view {
+    overflow-anchor: none;
+  }
+}
 .deck-section-head.deck-section-head--overlay {
   background: rgba(0, 0, 0, 0.55);
   backdrop-filter: blur(6px);
