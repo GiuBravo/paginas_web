@@ -3017,6 +3017,9 @@ html.theme-white .custom-select-wrap--api-lang .custom-select-trigger .lang-flag
 .theme-white .result-info-row #result-info {
   color: var(--label-text) !important;
 }
+.theme-white #col-results > .results-footer #result-info {
+  color: var(--label-text) !important;
+}
 .result-db-version-wrap {
   display: flex;
   align-items: baseline;
@@ -3038,31 +3041,74 @@ html.theme-white .custom-select-wrap--api-lang .custom-select-trigger .lang-flag
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
-/* Barra de estado no topo da coluna de resultados (antes era dentro de `.view-controls`). */
-#col-results > .result-info-row {
+/* Rodapé da grelha: contagem (esq.), paginação (centro), versão DB (dir.). Desktop em 3 colunas. */
+#col-results > .results-footer {
   display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px 12px;
-  padding: 12px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+  padding: 10px 12px;
   background: var(--panel-bg);
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  margin-bottom: 15px;
+  border-top: 1px solid var(--border);
   flex-shrink: 0;
-  width: 100%;
   box-sizing: border-box;
 }
-#col-results > .result-info-row #result-info {
-  flex: 1 1 160px;
-  width: auto;
+#col-results > .results-footer .results-footer-meta {
   min-width: 0;
-  margin: 0;
 }
-#col-results > .result-info-row .result-db-version-wrap {
+#col-results > .results-footer .results-footer-meta--left #result-info {
+  display: block;
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--highlight-yellow) !important;
+  line-height: 1.35;
+  margin: 0;
+  text-align: center;
+}
+#col-results > .results-footer .results-footer-meta--right .result-db-version-wrap {
   margin-top: 0;
+  flex-shrink: 0;
+  justify-content: center;
+}
+#col-results > .results-footer .pagination-bar {
+  padding: 0;
+  margin: 0;
+  border-top: none;
+  background: transparent;
+  align-self: center;
+}
+@media (min-width: 901px) {
+  #col-results > .results-footer {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: center;
+    column-gap: 16px;
+    row-gap: 8px;
+    padding: 10px 14px;
+  }
+  #col-results > .results-footer .results-footer-meta--left {
+    grid-column: 1;
+    justify-self: start;
+    align-self: center;
+  }
+  #col-results > .results-footer .pagination-bar {
+    grid-column: 2;
+    justify-self: center;
+    align-self: center;
+  }
+  #col-results > .results-footer .results-footer-meta--right {
+    grid-column: 3;
+    justify-self: end;
+    align-self: center;
+    display: flex;
+    justify-content: flex-end;
+  }
+  #col-results > .results-footer .results-footer-meta--left #result-info {
+    text-align: left;
+  }
+  #col-results > .results-footer .results-footer-meta--right .result-db-version-wrap {
+    justify-content: flex-end;
+  }
 }
 .theme-white .result-db-version-label {
   color: var(--label-text);
@@ -6223,33 +6269,26 @@ html.theme-white .toast.toast-error {
     height: auto !important;
     padding: 10px !important;
   }
-  #col-results > .result-info-row {
-    flex-direction: row !important;
-    flex-wrap: nowrap !important;
-    justify-content: space-between !important;
-    align-items: center !important;
-    margin-bottom: 8px !important;
+  #col-results > .results-footer {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
     padding: 8px 10px !important;
+    align-items: stretch !important;
   }
-  #col-results > .result-info-row #result-info {
-    display: block !important;
-    flex: 1 1 auto !important;
-    width: auto !important;
-    min-width: 0 !important;
-    margin-bottom: 0 !important;
-    text-align: left !important;
+  #col-results > .results-footer .results-footer-meta--left #result-info {
+    text-align: center !important;
     font-size: 12px !important;
   }
-  #col-results > .result-info-row .result-db-version-wrap {
-    width: auto !important;
-    flex-shrink: 0 !important;
-    justify-content: flex-end !important;
-    margin-top: 0 !important;
-    flex-wrap: nowrap !important;
+  #col-results > .results-footer .results-footer-meta--right .result-db-version-wrap {
+    justify-content: center !important;
+  }
+  #col-results > .results-footer .pagination-bar {
+    align-self: center !important;
   }
 
   /* No mobile, `view-controls` tem 2 blocos: infos (texto) e toolbar (controles).
-   * Evita aplicar grid genérico em qualquer `<div>` para não bagunçar `#result-info-row`. */
+   * Evita aplicar grid genérico em qualquer `<div>` para não bagunçar o rodapé de resultados. */
   .view-controls-toolbar-row {
     display: grid !important;
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;

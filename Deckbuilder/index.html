@@ -19,7 +19,7 @@
   Ordem de leitura da documentação: README.md (raiz) → docs/DOCUMENTACAO.md → docs/MAIN_JS.md → …
   Mapa de secções e IDs notáveis: docs/INDEX_HTML.md
   ── Catálogo de ids (gerado: consulte scripts/generate-index-html-id-catalog-comment.mjs) ──
-  Total: 277 ids. Ordem alfabética; descrições em PT-BR para navegação humana.
+  Total: 279 ids. Ordem alfabética; descrições em PT-BR para navegação humana.
 
   • app-layout — Raiz do layout em 3 colunas; classes alternam deck/filtros visíveis.
   • banlist-only-container — Checkbox “só banlist”.
@@ -276,12 +276,14 @@
   • result-db-version-label — Label da versão DB.
   • result-db-version-wrap — Contentor da versão da API/cardinfo.
   • result-info — Texto “N resultados” / estado.
-  • result-info-row — Linha com contagem de resultados e versão DB.
+  • result-info-row — Célula esquerda do rodapé de resultados (contagem «N–M de T»).
   • results-view — Lista ou grelha de cartas sugeridas pela busca.
   • saved-decks-select — Deck guardado a carregar.
   • scanner-visual — Moldura visual região de scan.
   • search-input — Campo principal de busca por nome (fname).
   • search-qty — Quantidade a adicionar ao deck por clique.
+  • search-qty-anchor — Elemento com id «search-qty-anchor» (ver uso em src/main.js / getEl).
+  • search-qty-stack — Elemento com id «search-qty-stack» (ver uso em src/main.js / getEl).
   • select-api-card-lang — Idioma dos dados de carta na API.
   • sort-by — Critério de ordenação dos resultados.
   • theme-selector — Tema claro/escuro.
@@ -1820,30 +1822,6 @@
 
       <!-- === Coluna central: busca, paginação, #results-view === -->
       <div class="col" id="col-results">
-        <div class="result-info-row" id="result-info-row">
-          <span id="result-info" style="color: #888">Carregando…</span>
-          <div
-            class="result-db-version-wrap"
-            id="result-db-version-wrap"
-            role="group"
-            data-i18n-aria="ui.result_db_aria"
-            aria-label="Versão do banco de dados YGOPRODeck"
-            style="display: none"
-          >
-            <span
-              class="result-db-version-label"
-              id="result-db-version-label"
-              data-i18n="ui.result_db_label"
-              >Versão do banco YGOPRODeck</span
-            >
-            <span
-              id="result-db-version"
-              class="result-db-version"
-              title=""
-              aria-live="polite"
-            ></span>
-          </div>
-        </div>
         <div class="search-area">
           <div style="display: flex; gap: 10px; align-items: flex-end">
             <div class="icon-btn-stack icon-btn-stack--tool icon-btn-stack--tool-wide">
@@ -2286,48 +2264,76 @@
           </div>
         </div>
         <div id="results-view" class="results-view list-mode"></div>
-        <div class="pagination-bar">
-          <div class="icon-btn-stack">
-            <span class="theme-row-label" data-i18n="ui.pagination_prev">Anterior</span>
-            <button
-              type="button"
-              class="btn-view btn-icon-tool"
-              onclick="changePage(-1)"
-              data-i18n-title="ui.pagination_prev"
-              data-i18n-aria="ui.pagination_prev"
-              title=""
-              aria-label=""
-            >
-              <i class="fas fa-chevron-left" aria-hidden="true"></i>
-            </button>
+        <div class="results-footer">
+          <div class="results-footer-meta results-footer-meta--left" id="result-info-row">
+            <span id="result-info" style="color: #888">Carregando…</span>
           </div>
-          <div class="pagination-page-wrap">
-            <span class="theme-row-label" data-i18n="ui.pagination_page_label">Página</span>
-            <div style="display: flex; align-items: center; gap: 5px">
-              <input
-                type="number"
-                id="page-jump"
-                class="page-input"
-                value="1"
-                min="1"
-                onchange="jumpToPage(this.value)"
-              />
-              <span id="page-total" style="font-size: 11px; color: #888">/ 1</span>
+          <div class="pagination-bar">
+            <div class="icon-btn-stack">
+              <span class="theme-row-label" data-i18n="ui.pagination_prev">Anterior</span>
+              <button
+                type="button"
+                class="btn-view btn-icon-tool"
+                onclick="changePage(-1)"
+                data-i18n-title="ui.pagination_prev"
+                data-i18n-aria="ui.pagination_prev"
+                title=""
+                aria-label=""
+              >
+                <i class="fas fa-chevron-left" aria-hidden="true"></i>
+              </button>
+            </div>
+            <div class="pagination-page-wrap">
+              <span class="theme-row-label" data-i18n="ui.pagination_page_label">Página</span>
+              <div style="display: flex; align-items: center; gap: 5px">
+                <input
+                  type="number"
+                  id="page-jump"
+                  class="page-input"
+                  value="1"
+                  min="1"
+                  onchange="jumpToPage(this.value)"
+                />
+                <span id="page-total" style="font-size: 11px; color: #888">/ 1</span>
+              </div>
+            </div>
+            <div class="icon-btn-stack">
+              <span class="theme-row-label" data-i18n="ui.pagination_next">Próximo</span>
+              <button
+                type="button"
+                class="btn-view btn-icon-tool"
+                onclick="changePage(1)"
+                data-i18n-title="ui.pagination_next"
+                data-i18n-aria="ui.pagination_next"
+                title=""
+                aria-label=""
+              >
+                <i class="fas fa-chevron-right" aria-hidden="true"></i>
+              </button>
             </div>
           </div>
-          <div class="icon-btn-stack">
-            <span class="theme-row-label" data-i18n="ui.pagination_next">Próximo</span>
-            <button
-              type="button"
-              class="btn-view btn-icon-tool"
-              onclick="changePage(1)"
-              data-i18n-title="ui.pagination_next"
-              data-i18n-aria="ui.pagination_next"
-              title=""
-              aria-label=""
+          <div class="results-footer-meta results-footer-meta--right">
+            <div
+              class="result-db-version-wrap"
+              id="result-db-version-wrap"
+              role="group"
+              data-i18n-aria="ui.result_db_aria"
+              aria-label="Versão do banco de dados YGOPRODeck"
+              style="display: none"
             >
-              <i class="fas fa-chevron-right" aria-hidden="true"></i>
-            </button>
+              <span
+                class="result-db-version-label"
+                id="result-db-version-label"
+                data-i18n="ui.result_db_label"
+                >Versão do banco YGOPRODeck</span
+              >
+              <span
+                id="result-db-version"
+                class="result-db-version"
+                title=""
+                aria-live="polite"
+              ></span>
+            </div>
           </div>
         </div>
       </div>

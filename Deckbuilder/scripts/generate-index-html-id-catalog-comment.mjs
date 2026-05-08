@@ -101,7 +101,7 @@ const EXACT = {
   'random-main-close': 'Fecha modal aleatório.',
   'random-main-cards': 'Grelha/lista de cartas no modal aleatório.',
   'random-main-empty': 'Mensagem quando não há cartas no modal.',
-  'result-info-row': 'Linha com contagem de resultados e versão DB.',
+  'result-info-row': 'Célula esquerda do rodapé de resultados (contagem «N–M de T»).',
   'result-info': 'Texto “N resultados” / estado.',
   'result-db-version-wrap': 'Contentor da versão da API/cardinfo.',
   'result-db-version-label': 'Label da versão DB.',
