@@ -15,6 +15,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vite';
+import { countProjectLinesWithDocs } from './scripts/loc.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ASSETS_PROJECT_DIR = path.join(__dirname, 'assets');
@@ -107,6 +108,13 @@ function deckbuilderProjectAssets() {
  */
 export default defineConfig({
   plugins: [deckbuilderProjectAssets()],
+  define: (() => {
+    // Valor calculado no arranque do dev server / build, e substituído no bundle.
+    const { totalLines } = countProjectLinesWithDocs(path.join(__dirname));
+    return {
+      __LOC_WITH_DOCS__: totalLines,
+    };
+  })(),
   server: {
     proxy: {
       '/__ygo_images__': {

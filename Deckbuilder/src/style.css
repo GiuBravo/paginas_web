@@ -4763,9 +4763,13 @@ html.theme-white .deck-section-head.deck-drop-section-invalid {
   align-items: center; /* centraliza os botões do overlay na coluna do deck */
 }
 @media (max-width: 900px) {
-  /* Em mobile, o overlay pode interceptar taps nas primeiras cartas (especialmente no "principal"). */
+  /* Em mobile o contentor do overlay não recebe hits (evita bloquear a grelha por baixo).
+     Só os “pills” `.deck-section-head--overlay` voltam a ser clicáveis. */
   .deck-sections-overlay-stack {
     pointer-events: none;
+  }
+  .deck-section-head.deck-section-head--overlay {
+    pointer-events: auto;
   }
   /* Evita “scroll anchoring” do browser quando o deck re-renderiza no fim (causa saltos agressivos). */
   #deck-items,
@@ -6202,8 +6206,18 @@ html.theme-white .toast.toast-error {
   #col-preview {
     margin-top: 20px;
   }
-  .deck-list {
-    height: 210px;
+  /* Com PDF oculto (sempre em mobile), o desktop força `height: auto !important` na lista do deck.
+     Isso faz a fila crescer com a página: não há scroll em `#deck-items`, `scrollTop` fica 0 e os
+     overlays / scroll para secção deixam de funcionar. Forçamos um viewport interno com scroll. */
+  #col-preview .deck-queue-pane #deck-items.deck-list.deck-queue-view {
+    flex: 0 1 auto !important;
+    height: min(84vh, 700px) !important;
+    min-height: 200px !important;
+    max-height: min(84vh, 700px) !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
   }
   #card-tooltip {
     display: none;

@@ -19605,6 +19605,9 @@ function openCreditsModal(opts) {
   try {
     creditsSyncMediaVisibility();
   } catch (_) {}
+  try {
+    creditsRenderLocWithDocs();
+  } catch (_) {}
   if (__creditsModalKeyHandler) {
     document.removeEventListener('keydown', __creditsModalKeyHandler);
     __creditsModalKeyHandler = null;
@@ -19704,6 +19707,31 @@ function creditsBindMediaFallbacks() {
 }
 
 /**
+ * Exibe a contagem de linhas do projeto (inclui docs) no modal de créditos.
+ *
+ * Em modo Vite, `__LOC_WITH_DOCS__` é substituído em build-time via `vite.config.js/define`.
+ * No monólito, `scripts/build-monolith.mjs` injeta `window.__LOC_WITH_DOCS__` antes do JS inline.
+ *
+ * @returns {void}
+ */
+function creditsRenderLocWithDocs() {
+  const el = getEl('credits-loc-value');
+  if (!el) return;
+  let n = 0;
+  try {
+    // eslint-disable-next-line no-undef
+    if (typeof __LOC_WITH_DOCS__ !== 'undefined') n = Number(__LOC_WITH_DOCS__ || 0);
+    else if (typeof window !== 'undefined' && window.__LOC_WITH_DOCS__ != null)
+      n = Number(window.__LOC_WITH_DOCS__ || 0);
+  } catch (_) {}
+  const locWithDocs = Number.isFinite(n) && n > 0 ? Math.round(n) : 0;
+  // Se não conseguimos determinar o valor via variável global (ex.: abrindo index.html via file://),
+  // não sobrescreva o número já presente no HTML.
+  if (!locWithDocs) return;
+  el.textContent = String(locWithDocs);
+}
+
+/**
  * Liga fechar, backdrop, botão `#btn-credits` e fallbacks de mídia uma única vez.
  *
  * @returns {void}
@@ -19733,6 +19761,7 @@ function initCreditsModal() {
 
   creditsUpdateCloseUi();
   creditsBindMediaFallbacks();
+  creditsRenderLocWithDocs();
 }
 
 /** Estado global do modo ajuda (botões guia / stacks extras na toolbar). */
@@ -23024,7 +23053,6 @@ function renderDeckQueue() {
     if (!firstSideByImgId.has(k)) firstSideByImgId.set(k, q);
   }
   const deckIsEmpty = cardQueue.length === 0 && cardQueueSide.length === 0;
-  const isMobLayout = deckbuilderUsesMobileLayoutCssBreakpoint();
 
   const rowHint = isDeckSortCustom()
     ? 'Principal/Extra: clique +1 · direito: enviar 1 ao Side · meio: −1 · arrastar na secção Side: move pilha · arrastar entre linhas: reordenar. Side: clique ou direito → principal/extra · meio: −1.'
@@ -23316,11 +23344,16 @@ function renderDeckQueue() {
   const sections = buildDeckSectionPlans(counts);
 
   const scrollToSection = (key) => {
-    const head = list.querySelector(`#deck-head-${key}`);
-    const a = list.querySelector(`#deck-sec-${key}`);
+    const k = String(key || '');
+    const head = list.querySelector(`#deck-head-${k}`);
+    const a = list.querySelector(`#deck-sec-${k}`);
     const target = head || a;
     if (!target) return;
-    list.scrollTo({ top: target.offsetTop, behavior: 'smooth' });
+    const pad = 6;
+    const listRect = list.getBoundingClientRect();
+    const tr = target.getBoundingClientRect();
+    const nextTop = list.scrollTop + (tr.top - listRect.top) - pad;
+    list.scrollTo({ top: Math.max(0, nextTop), behavior: 'smooth' });
   };
 
   // Auto-scroll durante drag: ao pairar uma “aba” de secção enquanto arrasta, rola para ela.
@@ -23370,21 +23403,19 @@ function renderDeckQueue() {
     head.id = `deck-head-${sec.key}`;
     head.dataset.deckSection = sec.key;
     head.innerHTML = `<span>${sec.label}</span><span class="deck-section-count">${sec.copies}</span>`;
-    if (!isMobLayout) {
-      head.onclick = () => scrollToSection(String(sec.key));
-      head.ondragenter = (e) => {
-        try {
-          e.preventDefault();
-        } catch (_) {}
-        scrollToSectionDuringDrag(String(sec.key));
-      };
-      head.ondragover = (e) => {
-        try {
-          e.preventDefault();
-        } catch (_) {}
-        scrollToSectionDuringDrag(String(sec.key));
-      };
-    }
+    head.onclick = () => scrollToSection(String(sec.key));
+    head.ondragenter = (e) => {
+      try {
+        e.preventDefault();
+      } catch (_) {}
+      scrollToSectionDuringDrag(String(sec.key));
+    };
+    head.ondragover = (e) => {
+      try {
+        e.preventDefault();
+      } catch (_) {}
+      scrollToSectionDuringDrag(String(sec.key));
+    };
     list.appendChild(head);
     headsByKey.set(String(sec.key), head);
 
@@ -23434,21 +23465,19 @@ function renderDeckQueue() {
     el.setAttribute('data-overlay-key', k);
     el.dataset.deckSection = k;
     el.innerHTML = `<span>${escapeHtml(label)}</span><span class="deck-section-count">${escapeHtml(count)}</span>`;
-    if (!isMobLayout) {
-      el.onclick = () => scrollToSection(k);
-      el.ondragenter = (e) => {
-        try {
-          e.preventDefault();
-        } catch (_) {}
-        scrollToSectionDuringDrag(k);
-      };
-      el.ondragover = (e) => {
-        try {
-          e.preventDefault();
-        } catch (_) {}
-        scrollToSectionDuringDrag(k);
-      };
-    }
+    el.onclick = () => scrollToSection(k);
+    el.ondragenter = (e) => {
+      try {
+        e.preventDefault();
+      } catch (_) {}
+      scrollToSectionDuringDrag(k);
+    };
+    el.ondragover = (e) => {
+      try {
+        e.preventDefault();
+      } catch (_) {}
+      scrollToSectionDuringDrag(k);
+    };
     return el;
   };
 

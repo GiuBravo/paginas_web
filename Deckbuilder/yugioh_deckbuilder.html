@@ -20,7 +20,7 @@
   Ordem de leitura da documentação: README.md (raiz) → docs/DOCUMENTACAO.md → docs/MAIN_JS.md → …
   Mapa de secções e IDs notáveis: docs/INDEX_HTML.md
   ── Catálogo de ids (gerado: consulte scripts/generate-index-html-id-catalog-comment.mjs) ──
-  Total: 277 ids. Ordem alfabética; descrições em PT-BR para navegação humana.
+  Total: 279 ids. Ordem alfabética; descrições em PT-BR para navegação humana.
 
   • app-layout — Raiz do layout em 3 colunas; classes alternam deck/filtros visíveis.
   • banlist-only-container — Checkbox “só banlist”.
@@ -277,12 +277,14 @@
   • result-db-version-label — Label da versão DB.
   • result-db-version-wrap — Contentor da versão da API/cardinfo.
   • result-info — Texto “N resultados” / estado.
-  • result-info-row — Linha com contagem de resultados e versão DB.
+  • result-info-row — Célula esquerda do rodapé de resultados (contagem «N–M de T»).
   • results-view — Lista ou grelha de cartas sugeridas pela busca.
   • saved-decks-select — Deck guardado a carregar.
   • scanner-visual — Moldura visual região de scan.
   • search-input — Campo principal de busca por nome (fname).
   • search-qty — Quantidade a adicionar ao deck por clique.
+  • search-qty-anchor — Elemento com id «search-qty-anchor» (ver uso em src/main.js / getEl).
+  • search-qty-stack — Elemento com id «search-qty-stack» (ver uso em src/main.js / getEl).
   • select-api-card-lang — Idioma dos dados de carta na API.
   • sort-by — Critério de ordenação dos resultados.
   • theme-selector — Tema claro/escuro.
@@ -5105,9 +5107,13 @@ html.theme-white .deck-section-head.deck-drop-section-invalid {
   align-items: center; /* centraliza os botões do overlay na coluna do deck */
 }
 @media (max-width: 900px) {
-  /* Em mobile, o overlay pode interceptar taps nas primeiras cartas (especialmente no "principal"). */
+  /* Em mobile o contentor do overlay não recebe hits (evita bloquear a grelha por baixo).
+     Só os “pills” `.deck-section-head--overlay` voltam a ser clicáveis. */
   .deck-sections-overlay-stack {
     pointer-events: none;
+  }
+  .deck-section-head.deck-section-head--overlay {
+    pointer-events: auto;
   }
   /* Evita “scroll anchoring” do browser quando o deck re-renderiza no fim (causa saltos agressivos). */
   #deck-items,
@@ -6544,8 +6550,18 @@ html.theme-white .toast.toast-error {
   #col-preview {
     margin-top: 20px;
   }
-  .deck-list {
-    height: 210px;
+  /* Com PDF oculto (sempre em mobile), o desktop força `height: auto !important` na lista do deck.
+     Isso faz a fila crescer com a página: não há scroll em `#deck-items`, `scrollTop` fica 0 e os
+     overlays / scroll para secção deixam de funcionar. Forçamos um viewport interno com scroll. */
+  #col-preview .deck-queue-pane #deck-items.deck-list.deck-queue-view {
+    flex: 0 1 auto !important;
+    height: min(84vh, 700px) !important;
+    min-height: 200px !important;
+    max-height: min(84vh, 700px) !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
   }
   #card-tooltip {
     display: none;
@@ -7029,8 +7045,8 @@ html.theme-white .toast.toast-error {
             />
           </div>
           <div>
-            Mais de <strong>25 mil linhas</strong> de código em meses de dedicação!<br />
-            Você pode me ajudar me pagando um lanche. Obrigado.
+            <strong id="credits-loc-value">39033</strong> linhas de códigos implementadas.<br />
+            Você pode me ajudar me pagando um lanche? Seria ótimo! Obrigado.
           </div>
         </div>
       </div>
@@ -9483,6 +9499,7 @@ html.theme-white .toast.toast-error {
 
         <script>
 window.__DECKBUILDER_MONOLITH__=true;
+window.__LOC_WITH_DOCS__=39036;
 window.__DECKBUILDER_MONOLITH__=true;
 /**
  * @fileoverview DeckBuilder GiuBravo — lógica cliente monolítica carregada como script global.
@@ -29090,6 +29107,9 @@ function openCreditsModal(opts) {
   try {
     creditsSyncMediaVisibility();
   } catch (_) {}
+  try {
+    creditsRenderLocWithDocs();
+  } catch (_) {}
   if (__creditsModalKeyHandler) {
     document.removeEventListener('keydown', __creditsModalKeyHandler);
     __creditsModalKeyHandler = null;
@@ -29189,6 +29209,31 @@ function creditsBindMediaFallbacks() {
 }
 
 /**
+ * Exibe a contagem de linhas do projeto (inclui docs) no modal de créditos.
+ *
+ * Em modo Vite, `__LOC_WITH_DOCS__` é substituído em build-time via `vite.config.js/define`.
+ * No monólito, `scripts/build-monolith.mjs` injeta `window.__LOC_WITH_DOCS__` antes do JS inline.
+ *
+ * @returns {void}
+ */
+function creditsRenderLocWithDocs() {
+  const el = getEl('credits-loc-value');
+  if (!el) return;
+  let n = 0;
+  try {
+    // eslint-disable-next-line no-undef
+    if (typeof __LOC_WITH_DOCS__ !== 'undefined') n = Number(__LOC_WITH_DOCS__ || 0);
+    else if (typeof window !== 'undefined' && window.__LOC_WITH_DOCS__ != null)
+      n = Number(window.__LOC_WITH_DOCS__ || 0);
+  } catch (_) {}
+  const locWithDocs = Number.isFinite(n) && n > 0 ? Math.round(n) : 0;
+  // Se não conseguimos determinar o valor via variável global (ex.: abrindo index.html via file://),
+  // não sobrescreva o número já presente no HTML.
+  if (!locWithDocs) return;
+  el.textContent = String(locWithDocs);
+}
+
+/**
  * Liga fechar, backdrop, botão `#btn-credits` e fallbacks de mídia uma única vez.
  *
  * @returns {void}
@@ -29218,6 +29263,7 @@ function initCreditsModal() {
 
   creditsUpdateCloseUi();
   creditsBindMediaFallbacks();
+  creditsRenderLocWithDocs();
 }
 
 /** Estado global do modo ajuda (botões guia / stacks extras na toolbar). */
@@ -32509,7 +32555,6 @@ function renderDeckQueue() {
     if (!firstSideByImgId.has(k)) firstSideByImgId.set(k, q);
   }
   const deckIsEmpty = cardQueue.length === 0 && cardQueueSide.length === 0;
-  const isMobLayout = deckbuilderUsesMobileLayoutCssBreakpoint();
 
   const rowHint = isDeckSortCustom()
     ? 'Principal/Extra: clique +1 · direito: enviar 1 ao Side · meio: −1 · arrastar na secção Side: move pilha · arrastar entre linhas: reordenar. Side: clique ou direito → principal/extra · meio: −1.'
@@ -32801,11 +32846,16 @@ function renderDeckQueue() {
   const sections = buildDeckSectionPlans(counts);
 
   const scrollToSection = (key) => {
-    const head = list.querySelector(`#deck-head-${key}`);
-    const a = list.querySelector(`#deck-sec-${key}`);
+    const k = String(key || '');
+    const head = list.querySelector(`#deck-head-${k}`);
+    const a = list.querySelector(`#deck-sec-${k}`);
     const target = head || a;
     if (!target) return;
-    list.scrollTo({ top: target.offsetTop, behavior: 'smooth' });
+    const pad = 6;
+    const listRect = list.getBoundingClientRect();
+    const tr = target.getBoundingClientRect();
+    const nextTop = list.scrollTop + (tr.top - listRect.top) - pad;
+    list.scrollTo({ top: Math.max(0, nextTop), behavior: 'smooth' });
   };
 
   // Auto-scroll durante drag: ao pairar uma “aba” de secção enquanto arrasta, rola para ela.
@@ -32855,21 +32905,19 @@ function renderDeckQueue() {
     head.id = `deck-head-${sec.key}`;
     head.dataset.deckSection = sec.key;
     head.innerHTML = `<span>${sec.label}</span><span class="deck-section-count">${sec.copies}</span>`;
-    if (!isMobLayout) {
-      head.onclick = () => scrollToSection(String(sec.key));
-      head.ondragenter = (e) => {
-        try {
-          e.preventDefault();
-        } catch (_) {}
-        scrollToSectionDuringDrag(String(sec.key));
-      };
-      head.ondragover = (e) => {
-        try {
-          e.preventDefault();
-        } catch (_) {}
-        scrollToSectionDuringDrag(String(sec.key));
-      };
-    }
+    head.onclick = () => scrollToSection(String(sec.key));
+    head.ondragenter = (e) => {
+      try {
+        e.preventDefault();
+      } catch (_) {}
+      scrollToSectionDuringDrag(String(sec.key));
+    };
+    head.ondragover = (e) => {
+      try {
+        e.preventDefault();
+      } catch (_) {}
+      scrollToSectionDuringDrag(String(sec.key));
+    };
     list.appendChild(head);
     headsByKey.set(String(sec.key), head);
 
@@ -32919,21 +32967,19 @@ function renderDeckQueue() {
     el.setAttribute('data-overlay-key', k);
     el.dataset.deckSection = k;
     el.innerHTML = `<span>${escapeHtml(label)}</span><span class="deck-section-count">${escapeHtml(count)}</span>`;
-    if (!isMobLayout) {
-      el.onclick = () => scrollToSection(k);
-      el.ondragenter = (e) => {
-        try {
-          e.preventDefault();
-        } catch (_) {}
-        scrollToSectionDuringDrag(k);
-      };
-      el.ondragover = (e) => {
-        try {
-          e.preventDefault();
-        } catch (_) {}
-        scrollToSectionDuringDrag(k);
-      };
-    }
+    el.onclick = () => scrollToSection(k);
+    el.ondragenter = (e) => {
+      try {
+        e.preventDefault();
+      } catch (_) {}
+      scrollToSectionDuringDrag(k);
+    };
+    el.ondragover = (e) => {
+      try {
+        e.preventDefault();
+      } catch (_) {}
+      scrollToSectionDuringDrag(k);
+    };
     return el;
   };
 

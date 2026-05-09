@@ -12,6 +12,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { countProjectLinesWithDocs } from './loc.mjs';
 
 // Diretório deste arquivo (`scripts/`), para resolver caminhos relativos ao projeto.
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -59,7 +60,15 @@ if (!/^\s*</.test(rawHtml)) throw new Error('index.html does not start with <!DO
 let html = rawHtml;
 // Conteúdos sanitizados para injeção inline.
 const css = sanitizeInlineStyle(fs.readFileSync(cssPath, 'utf8'));
-const js = sanitizeInlineScript(fs.readFileSync(jsPath, 'utf8'));
+let js = fs.readFileSync(jsPath, 'utf8');
+// Para o monólito, precisamos de um valor real (não há substituição do Vite `define`).
+try {
+  const { totalLines } = countProjectLinesWithDocs(root);
+  js = `window.__LOC_WITH_DOCS__=${Number(totalLines || 0)};\n` + js;
+} catch {
+  js = 'window.__LOC_WITH_DOCS__=0;\n' + js;
+}
+js = sanitizeInlineScript(js);
 
 // Substitui o `<link rel="stylesheet" href="/src/style.css">` por `<style>…</style>`.
 // Intencionalmente tolerante a:
