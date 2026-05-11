@@ -325,8 +325,14 @@ function layoutClassDeltaIsOnlyEmptyQueueToggle(oldClass, newClass) {
   return sym.length === 1 && sym[0] === 'empty-queue';
 }
 
-/** >0: não animar entrada das cartas (ex.: add/remove/reordenar por arrastar). */
+/** >0: não animar entrada das cartas (re-renders que pedem silêncio explícito). */
 let suppressCardSurfaceEnterAnimDepth = 0;
+/**
+ * One-shot: pilhas (`imgId`) a animar no próximo `renderDeckQueue` quando só muda a ordem na fila
+ * (DnD em modo personalizado — {@link computeDeckCompositionChangedStackImgIds} fica vazio).
+ * @type {string[]|null}
+ */
+let __pendingDeckSurfaceAnimateStackImgIds = null;
 /** Snapshot opcional do deck usado por efeitos visuais da “superfície” da fila (diffs / animações). */
 let deckSnapshotForSurface = null;
 /** Timeout para suavizar ou debouncing de efeitos nos filtros da superfície (valor definido onde agendado). */
@@ -4135,16 +4141,11 @@ function initDeckDragDrop() {
           }
         }
         requestDeckScrollToStack('side', toAdd && toAdd[0] ? toAdd[0].imgId : null);
-        pushSuppressCardSurfaceEnterAnimation();
-        try {
-              updateUI({
-                skipSuggestionsRerender: true,
-                mobileScrollSnapshot: mobScrollSnap,
-                mobilePreserveDeckItemsScroll: true,
-              });
-        } finally {
-          popSuppressCardSurfaceEnterAnimation();
-        }
+        updateUI({
+          skipSuggestionsRerender: true,
+          mobileScrollSnapshot: mobScrollSnap,
+          mobilePreserveDeckItemsScroll: true,
+        });
         showToast(`${qty}x ${nm || 'Carta'} → ${deckSectionUiLabel('side')}`);
         clearDeckDropPlaceholder(deck);
         return;
@@ -4167,12 +4168,7 @@ function initDeckDragDrop() {
         effectiveDropForSuggest === 'extra' ? 'extra' : 'principal',
         toAdd && toAdd[0] ? toAdd[0].imgId : null
       );
-      pushSuppressCardSurfaceEnterAnimation();
-      try {
-        updateUI({ skipSuggestionsRerender: true, mobileScrollSnapshot: mobScrollSnapDeck });
-      } finally {
-        popSuppressCardSurfaceEnterAnimation();
-      }
+      updateUI({ skipSuggestionsRerender: true, mobileScrollSnapshot: mobScrollSnapDeck });
       showToast(
         `${qty}x ${nm || 'Carta'} → ${deckSectionUiLabel(effectiveDropForSuggest === 'extra' ? 'extra' : 'principal')}`
       );
@@ -4194,12 +4190,7 @@ function initDeckDragDrop() {
       if (dragPool === 'build' && dropSec === 'side') {
         const moved = await moveStackBuildToSide(dragId);
         clearDeckDropPlaceholder(deck);
-        pushSuppressCardSurfaceEnterAnimation();
-        try {
-          updateUI();
-        } finally {
-          popSuppressCardSurfaceEnterAnimation();
-        }
+        updateUI();
         if (moved > 0)
           showToast(
             `${moved}x ${ent && ent.name ? ent.name : ''} → ${deckSectionUiLabel('side')}`.trim()
@@ -4214,12 +4205,7 @@ function initDeckDragDrop() {
         }
         const moved = await moveStackSideToBuild(dragId);
         clearDeckDropPlaceholder(deck);
-        pushSuppressCardSurfaceEnterAnimation();
-        try {
-          updateUI();
-        } finally {
-          popSuppressCardSurfaceEnterAnimation();
-        }
+        updateUI();
         if (moved > 0)
           showToast(
             `${moved}x ${ent && ent.name ? ent.name : ''} → ${deckSectionUiLabel(dropSec)}`.trim()
@@ -4242,6 +4228,7 @@ function initDeckDragDrop() {
               })();
           if (dragPool === 'side' && dropSec === 'side') {
             moveSideStackInQueue(dragId, refId, insertBefore);
+            requestDeckSurfaceStackImgAnimation(dragId);
           } else if (dragPool === 'build' && (dropSec === 'principal' || dropSec === 'extra')) {
             if (!isSectionValidForIsExtra(dropSec, isExtra)) {
               showToast(`Inválido em ${deckSectionUiLabel(dropSec)}.`, { variant: 'error' });
@@ -4249,13 +4236,9 @@ function initDeckDragDrop() {
               return;
             }
             moveDeckStackInQueue(dragId, refId, insertBefore);
+            requestDeckSurfaceStackImgAnimation(dragId);
           }
-          pushSuppressCardSurfaceEnterAnimation();
-          try {
-            updateUI();
-          } finally {
-            popSuppressCardSurfaceEnterAnimation();
-          }
+          updateUI();
         }
       }
     }
@@ -4290,13 +4273,8 @@ function initDeckDragDrop() {
       resultsCol.classList.remove('suggestions-drop-target');
       const payload = parseDndJson(e.dataTransfer, YGO_DND_QUEUE);
       if (payload && payload.imgId != null) {
-        pushSuppressCardSurfaceEnterAnimation();
-        try {
-          if (payload.pool === 'side') removeOneSideDeckCopy(payload.imgId);
-          else removeOneDeckCopy(payload.imgId);
-        } finally {
-          popSuppressCardSurfaceEnterAnimation();
-        }
+        if (payload.pool === 'side') removeOneSideDeckCopy(payload.imgId);
+        else removeOneDeckCopy(payload.imgId);
       }
     });
   }
@@ -5424,6 +5402,13 @@ async function toggleDeckOrder() {
     scheduleDeckbuilderFilterUrlSync();
   } catch (_) {}
 }
+
+/**
+ * Handler HTML (`onclick` em `#btn-deck-order`). Com `type="module"`, `onclick` resolve em `window`.
+ *
+ * @type {typeof toggleDeckOrder}
+ */
+window.toggleDeckOrder = toggleDeckOrder;
 
 /** Chave do cookie (`document.cookie`) com lista compacta de decks salvos (fallback quando `localStorage` falha).
  * @constant {string}
@@ -8463,6 +8448,13 @@ const STRINGS = {
   'ui.pagination_prev': { pt: 'Anterior', en: 'Previous' },
   'ui.pagination_next': { pt: 'Pr\u00f3ximo', en: 'Next' },
   'ui.pagination_page_label': { pt: 'P\u00e1gina', en: 'Page' },
+  'ui.pagination_page_total': {
+    pt: 'de {t}',
+    en: 'of {t}',
+    fr: 'sur {t}',
+    de: 'von {t}',
+    it: 'di {t}',
+  },
   'ui.search_qty_label': { pt: 'Quantidade', en: 'Quantity' },
   'ui.deck_validate_label_on': { pt: 'Validar', en: 'Validate' },
   'ui.deck_validate_label_off': { pt: 'N\u00e3o validar', en: 'Skip check' },
@@ -13364,6 +13356,60 @@ function collectDatalistOptionRows(datalistId, query) {
 }
 
 /**
+ * Cor hex da barra lateral ao hover nas sugestões de combo de filtro (paleta {@link RESULT_TYPE_COLORS}).
+ *
+ * @param {string} kind Chave do combo (`type`, `subtype`, …).
+ * @param {string} value Valor da opção do `<datalist>`.
+ * @param {string} label Rótulo exibido na lista.
+ * @returns {string|null} `#rrggbb` ou null para usar `var(--accent)` no CSS.
+ */
+function suggestRowHoverAccentFromFilterRow(kind, value, label) {
+  const v = String(value || '').trim();
+  const lab = String(label || '').trim();
+  if (kind === 'type') {
+    const cat =
+      (v && FILTER_TYPE_CATEGORY_ALIAS_TO_V[v.toLowerCase()]) ||
+      (lab && FILTER_TYPE_CATEGORY_ALIAS_TO_V[lab.toLowerCase()]) ||
+      null;
+    if (cat === 'Monster') return RESULT_TYPE_COLORS['Effect Monster'];
+    if (cat === 'Spell Card') return RESULT_TYPE_COLORS['Spell Card'];
+    if (cat === 'Trap Card') return RESULT_TYPE_COLORS['Trap Card'];
+    return null;
+  }
+  if (kind === 'subtype') {
+    let colorKey = getTypeColorKeyFromCardType(v) || getTypeColorKeyFromCardType(lab);
+    if (!colorKey && v) {
+      const vl = v.toLowerCase();
+      for (const enKey of Object.keys(MONSTER_TYPE_LABEL_PT)) {
+        const pt = MONSTER_TYPE_LABEL_PT[enKey];
+        if (pt && pt.toLowerCase() === vl) {
+          colorKey = getTypeColorKeyFromCardType(enKey);
+          break;
+        }
+      }
+    }
+    return colorKey ? RESULT_TYPE_COLORS[colorKey] || null : null;
+  }
+  return null;
+}
+
+/**
+ * Cor opcional ao hover nas linhas do painel de `<select>` custom quando o texto coincide com tipo de carta.
+ *
+ * @param {string} kind Contexto do select (`theme`, `results-sort`, …).
+ * @param {string} text Texto da `<option>`.
+ * @param {string} value `value` da `<option>`.
+ * @returns {string|null}
+ */
+function suggestRowHoverAccentFromNativeSelectOption(kind, text, value) {
+  if (kind === 'api-lang') return null;
+  const t = String(text || '').trim();
+  const tv = String(value || '').trim();
+  const colorKey = getTypeColorKeyFromCardType(t) || getTypeColorKeyFromCardType(tv);
+  return colorKey ? RESULT_TYPE_COLORS[colorKey] || null : null;
+}
+
+/**
  * Reconstrói linhas do painel de sugestão a partir do datalist do input; cancela pré-busca pendente se necessário.
  *
  * @param {HTMLInputElement} inp
@@ -13392,6 +13438,9 @@ function refreshFilterComboSuggestPanel(inp, kind) {
     const div = document.createElement('div');
     div.className = 'filter-combo-suggest-row';
     div.setAttribute('role', 'option');
+    const accent = suggestRowHoverAccentFromFilterRow(kind, row.value, row.label);
+    if (accent) div.style.setProperty('--suggest-row-accent', accent);
+    else div.style.removeProperty('--suggest-row-accent');
     div.textContent = row.label || row.value;
     div.addEventListener('mouseenter', () => onFilterComboSuggestRowEnter(kind, row.value));
     div.addEventListener('mousedown', (e) => {
@@ -13864,6 +13913,13 @@ function refreshNativeCustomSelectPanel() {
     } else {
       div.textContent = o.textContent || v || '—';
     }
+    const rowAccent = suggestRowHoverAccentFromNativeSelectOption(
+      kind,
+      o.textContent || '',
+      v
+    );
+    if (rowAccent) div.style.setProperty('--suggest-row-accent', rowAccent);
+    else div.style.removeProperty('--suggest-row-accent');
     div.addEventListener('mouseenter', () => {
       void onNativeCustomSelectRowEnter(kind, v);
     });
@@ -17539,6 +17595,13 @@ function toggleOrder() {
   sortAndRender();
 }
 
+/**
+ * Handler HTML (`onclick` em `#btn-order`). Com `type="module"`, `onclick` resolve em `window`.
+ *
+ * @type {typeof toggleOrder}
+ */
+window.toggleOrder = toggleOrder;
+
 /** Ordem geométrica canônica ao ordenar ou serializar lista `linkmarkers` da API. */
 const LINK_MARKER_SORT_ORDER = [
   'Top-Left',
@@ -18532,6 +18595,105 @@ function inferDeckSurfaceReason(prevStr, nextStr) {
 }
 
 /**
+ * Acrescenta contagens de `imgId` a partir da assinatura ordenada `sig` (`a|b|b|…`).
+ *
+ * @param {string} sig Resultado típico de {@link queueImgIdSignature}.
+ * @param {Record<string, number>} into Mapa mutável `imgId` → quantidade.
+ * @returns {void}
+ */
+function addQueueSigToMultiset(sig, into) {
+  if (!sig) return;
+  const parts = String(sig).split('|');
+  for (let i = 0; i < parts.length; i++) {
+    const id = parts[i];
+    if (!id) continue;
+    into[id] = (into[id] || 0) + 1;
+  }
+}
+
+/**
+ * `imgId` de pilhas cuja contagem em **main** ou **side** mudou entre dois snapshots do deck.
+ * Sem baseline (`!prevStr`) devolve lista vazia — evita animar todas as linhas no primeiro paint com deck já carregado.
+ * Reordenação pura (mesmos multiconjuntos em ambas as zonas) devolve vazio.
+ *
+ * @param {string|null|undefined} prevStr JSON de {@link snapshotDeckForSurface}.
+ * @param {string|null|undefined} nextStr JSON de {@link snapshotDeckForSurface}.
+ * @returns {string[]} `imgId` alterados, ordenados lexicograficamente.
+ */
+function computeDeckCompositionChangedStackImgIds(prevStr, nextStr) {
+  if (!prevStr || !nextStr) return [];
+  let prevMainSig = '';
+  let prevSideSig = '';
+  let nextMainSig = '';
+  let nextSideSig = '';
+  try {
+    const p = JSON.parse(prevStr);
+    const n = JSON.parse(nextStr);
+    prevMainSig = p && p.main != null ? String(p.main) : '';
+    prevSideSig = p && p.side != null ? String(p.side) : '';
+    nextMainSig = n && n.main != null ? String(n.main) : '';
+    nextSideSig = n && n.side != null ? String(n.side) : '';
+  } catch {
+    return [];
+  }
+  /** @type {Record<string, number>} */
+  const pm = Object.create(null);
+  /** @type {Record<string, number>} */
+  const ps = Object.create(null);
+  /** @type {Record<string, number>} */
+  const nm = Object.create(null);
+  /** @type {Record<string, number>} */
+  const ns = Object.create(null);
+  addQueueSigToMultiset(prevMainSig, pm);
+  addQueueSigToMultiset(prevSideSig, ps);
+  addQueueSigToMultiset(nextMainSig, nm);
+  addQueueSigToMultiset(nextSideSig, ns);
+  const keys = new Set([
+    ...Object.keys(pm),
+    ...Object.keys(ps),
+    ...Object.keys(nm),
+    ...Object.keys(ns),
+  ]);
+  const out = [];
+  for (const k of keys) {
+    if ((pm[k] || 0) !== (nm[k] || 0) || (ps[k] || 0) !== (ns[k] || 0)) out.push(k);
+  }
+  out.sort();
+  return out;
+}
+
+/**
+ * Marca pilhas a animar no próximo `renderDeckQueue` quando só muda a ordem (DnD personalizado).
+ *
+ * @param {string|string[]|null|undefined} imgIdOrIds Um ou vários `imgId` de pilha.
+ * @returns {void}
+ */
+function requestDeckSurfaceStackImgAnimation(imgIdOrIds) {
+  if (imgIdOrIds == null || imgIdOrIds === '') {
+    __pendingDeckSurfaceAnimateStackImgIds = null;
+    return;
+  }
+  const arr = Array.isArray(imgIdOrIds) ? imgIdOrIds : [imgIdOrIds];
+  const out = [];
+  for (let i = 0; i < arr.length; i++) {
+    const s = String(arr[i] || '').trim();
+    if (s) out.push(s);
+  }
+  __pendingDeckSurfaceAnimateStackImgIds = out.length ? out : null;
+}
+
+/**
+ * Lê e limpa {@link __pendingDeckSurfaceAnimateStackImgIds} (consumo único na pintura do deck).
+ *
+ * @returns {string[]|null}
+ */
+function consumePendingDeckSurfaceAnimateStackImgIds() {
+  const x = __pendingDeckSurfaceAnimateStackImgIds;
+  __pendingDeckSurfaceAnimateStackImgIds = null;
+  return x;
+}
+
+/**
  * Agrupa cada `reason` de feedback superficial numa “família” visual/sonora ({@link mapReasonToSurfaceFamily}, CSS, haptic).
  */
 const SURFACE_FAMILY_BY_REASON = Object.freeze({
@@ -19069,12 +19231,26 @@ function paintCardSurfaceEnterAnimations(rootSelector, itemSelector) {
   if (suppressCardSurfaceEnterAnimDepth > 0) return;
   const root = rootSelector ? document.querySelector(rootSelector) : null;
   if (!root) return;
-  const items = root.querySelectorAll(itemSelector);
   const paintKind = getCardSurfacePaintKind();
   // Sem motivo explícito: não animar (evita “piscar” em re-renders encadeados — layout/lista, refit, rAF).
   // 'silent' suprime som/toast mas não deve forçar entrada genérica a cada passo.
   if (!paintKind || paintKind === 'silent') return;
   const family = mapReasonToSurfaceFamily(paintKind);
+  let items = Array.from(root.querySelectorAll(itemSelector));
+  if (rootSelector === '#deck-items' && isSurfacePaintKindDeckCompositionOnly(paintKind)) {
+    const pending = consumePendingDeckSurfaceAnimateStackImgIds();
+    let changedIds = computeDeckCompositionChangedStackImgIds(
+      deckSnapshotForSurface,
+      snapshotDeckForSurface()
+    );
+    if (!changedIds.length && paintKind === 'deck_change' && pending && pending.length) {
+      changedIds = pending;
+    }
+    if (!changedIds.length) return;
+    const idSet = new Set(changedIds);
+    items = items.filter((el) => idSet.has(String(el.dataset.stackImgId || '')));
+    if (!items.length) return;
+  }
   const nSurf = items.length;
   const sfx = SFC_CARD_ANIM_SUFFIXES;
   const sfxLen = sfx.length;
@@ -19170,6 +19346,14 @@ function toggleTooltipButton() {
   } catch (_) {}
   applyCardSurfaceFeedback(on ? 'tooltip_on' : 'tooltip_off');
 }
+
+/**
+ * Handler HTML em `#btn-toggle-tooltip` (`onclick`). Com `type="module"`, o escopo não é global;
+ * o atributo `onclick` resolve símbolos em `window`, daí a exposição explícita.
+ *
+ * @type {typeof toggleTooltipButton}
+ */
+window.toggleTooltipButton = toggleTooltipButton;
 
 /**
  * Mostra ou oculta a coluna de filtros (`#app-layout.filters-col-hidden`), atualiza toolbar e pref {@link UI_PREF_KEYS.filtersColVisible}.
@@ -21527,6 +21711,18 @@ function toggleQueueView() {
 }
 
 /**
+ * Handlers HTML (`onclick` em `#btn-toggle-results-view` e `#btn-toggle-queue-view`).
+ * Com `type="module"`, `onclick` resolve em `window`.
+ *
+ * @type {typeof toggleResultsView}
+ */
+window.toggleResultsView = toggleResultsView;
+/**
+ * @type {typeof toggleQueueView}
+ */
+window.toggleQueueView = toggleQueueView;
+
+/**
  * Define vista dos resultados, persiste pref, repõe página 1 e redesenha (`renderResults`).
  * @param {string} view Modo solicitado (normalizado por {@link normalizeViewMode4}).
  * @returns {void}
@@ -22503,7 +22699,7 @@ function renderResults() {
     const pageTotalEl = getEl('page-total');
     const pageJumpEl = getEl('page-jump');
     if (infoEl) infoEl.innerText = T('results.none');
-    if (pageTotalEl) pageTotalEl.innerText = '/ 1';
+    if (pageTotalEl) pageTotalEl.innerText = T('ui.pagination_page_total', { t: 1 });
     if (pageJumpEl) pageJumpEl.value = 1;
     refreshViewControlsHeaderCompact();
     container.innerHTML = `<div style="grid-column: 1/-1; padding: 60px 20px; text-align: center; opacity: 0.6;">
@@ -22545,7 +22741,7 @@ function renderResults() {
   const pageTotalEl = getEl('page-total');
   const pageJumpEl = getEl('page-jump');
   const totalPages = Math.ceil(searchResults.length / items) || 1;
-  if (pageTotalEl) pageTotalEl.innerText = `/ ${totalPages}`;
+  if (pageTotalEl) pageTotalEl.innerText = T('ui.pagination_page_total', { t: totalPages });
   if (pageJumpEl) pageJumpEl.value = currentPage;
 
   const frag = document.createDocumentFragment();

@@ -261,7 +261,7 @@
   • ocr-video — Elemento vídeo câmara.
   • order-icon — Ícone seta ordenação.
   • page-jump — Input ir para página N.
-  • page-total — Texto “/ total” da paginação.
+  • page-total — Texto “de total” (i18n) da paginação.
   • preview-canvas — Canvas pré-visualização recorte OCR.
   • preview-frame — iframe da pré-visualização PDF (blob URL).
   • print-scale — Escala percentual do PDF (readonly + ajuste por código).
@@ -1251,6 +1251,9 @@ html:not(.has-monster-type) #monster-extras {
   display: flex;
   align-items: center;
   justify-content: center;
+  transition:
+    color 0.16s ease,
+    filter 0.16s ease;
 }
 /* Ajuda desligada: reduz espaço vertical nos filtros */
 html:not(.help-enabled) .sidebar-content .filter-group {
@@ -1551,17 +1554,51 @@ html:not(.help-enabled) .filter-action-row .icon-btn-stack--tool .theme-row-labe
   min-width: 120px;
   display: none;
 }
-.filter-combo-suggest-row {
-  padding: 8px 10px;
+.filter-combo-suggest-row,
+.ui-native-custom-select-row {
+  position: relative;
+  padding: 8px 14px;
   cursor: pointer;
   font-size: 13px;
   color: var(--text);
   border-bottom: 1px solid var(--border);
 }
-.filter-combo-suggest-row:last-child {
+.filter-combo-suggest-row:last-child,
+.ui-native-custom-select-row:last-child {
   border-bottom: none;
 }
-.filter-combo-suggest-row:hover {
+.filter-combo-suggest-row::before,
+.filter-combo-suggest-row::after,
+.ui-native-custom-select-row::before,
+.ui-native-custom-select-row::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--suggest-row-accent, var(--accent));
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.14s ease;
+}
+.filter-combo-suggest-row::before,
+.ui-native-custom-select-row::before {
+  left: 0;
+  border-radius: 3px 0 0 3px;
+}
+.filter-combo-suggest-row::after,
+.ui-native-custom-select-row::after {
+  right: 0;
+  border-radius: 0 3px 3px 0;
+}
+.filter-combo-suggest-row:hover::before,
+.filter-combo-suggest-row:hover::after,
+.ui-native-custom-select-row:hover::before,
+.ui-native-custom-select-row:hover::after {
+  opacity: 1;
+}
+.filter-combo-suggest-row:hover,
+.ui-native-custom-select-row:hover {
   background: var(--bg-dark);
 }
 /* Selects nativos substituídos por botão + painel (hover pré-visualiza). */
@@ -1620,19 +1657,6 @@ html:not(.help-enabled) .filter-action-row .icon-btn-stack--tool .theme-row-labe
 .ui-native-custom-select-panel.ui-native-custom-select-panel--api-lang {
   min-width: 0;
   width: auto;
-}
-.ui-native-custom-select-row {
-  padding: 8px 10px;
-  cursor: pointer;
-  font-size: 13px;
-  color: var(--text);
-  border-bottom: 1px solid var(--border);
-}
-.ui-native-custom-select-row:last-child {
-  border-bottom: none;
-}
-.ui-native-custom-select-row:hover {
-  background: var(--bg-dark);
 }
 .filter-full-add-stack {
   display: flex;
@@ -3141,6 +3165,176 @@ textarea {
   font-size: 13px;
   width: 100%;
   box-sizing: border-box;
+  transition:
+    border-color 0.16s ease,
+    box-shadow 0.16s ease;
+}
+
+/* Hover: realce em campos de texto/seleção e no respetivo rótulo (sidebar, barra de busca, toolbar, modais). */
+@media (hover: hover) {
+  input[type='text']:hover:not(:disabled),
+  input[type='search']:hover:not(:disabled),
+  input[type='number']:hover:not(:disabled),
+  input[type='email']:hover:not(:disabled),
+  input[type='url']:hover:not(:disabled),
+  input[type='password']:hover:not(:disabled),
+  textarea:hover:not(:disabled),
+  select:hover:not(:disabled) {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 40%, transparent);
+  }
+
+  html.theme-white input[type='text']:hover:not(:disabled),
+  html.theme-white input[type='search']:hover:not(:disabled),
+  html.theme-white input[type='number']:hover:not(:disabled),
+  html.theme-white input[type='email']:hover:not(:disabled),
+  html.theme-white input[type='url']:hover:not(:disabled),
+  html.theme-white input[type='password']:hover:not(:disabled),
+  html.theme-white textarea:hover:not(:disabled),
+  html.theme-white select:hover:not(:disabled) {
+    border-color: var(--accent) !important;
+  }
+
+  .filter-group:has(input:hover) > label,
+  .filter-group:has(select:hover) > label,
+  .filter-group:has(textarea:hover) > label {
+    color: var(--accent);
+    filter: brightness(1.14);
+  }
+
+  html.theme-white .filter-group:has(input:hover) > label,
+  html.theme-white .filter-group:has(select:hover) > label,
+  html.theme-white .filter-group:has(textarea:hover) > label {
+    filter: none;
+    color: var(--accent) !important;
+  }
+
+  .filter-group > label:hover ~ .filter-action-row input:not(:disabled),
+  .filter-group > label:hover ~ .filter-action-row select:not(:disabled),
+  .filter-group > label:hover ~ .stepper input:not(:disabled),
+  .filter-group > label:hover ~ .stepper select:not(:disabled),
+  .filter-group > label:hover ~ .sort-controls select:not(:disabled) {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 40%, transparent);
+  }
+
+  html.theme-white .filter-group > label:hover ~ .filter-action-row input:not(:disabled),
+  html.theme-white .filter-group > label:hover ~ .filter-action-row select:not(:disabled),
+  html.theme-white .filter-group > label:hover ~ .stepper input:not(:disabled),
+  html.theme-white .filter-group > label:hover ~ .stepper select:not(:disabled),
+  html.theme-white .filter-group > label:hover ~ .sort-controls select:not(:disabled) {
+    border-color: var(--accent) !important;
+  }
+
+  .label-width-stack:has(input:hover) > label,
+  .label-width-stack:has(select:hover) > label,
+  .label-width-stack:has(textarea:hover) > label,
+  .label-width-stack:has(.stepper input:hover) > label,
+  .label-width-stack:has(.stepper select:hover) > label {
+    color: var(--accent);
+    filter: brightness(1.14);
+  }
+
+  html.theme-white .label-width-stack:has(input:hover) > label,
+  html.theme-white .label-width-stack:has(select:hover) > label,
+  html.theme-white .label-width-stack:has(textarea:hover) > label,
+  html.theme-white .label-width-stack:has(.stepper input:hover) > label,
+  html.theme-white .label-width-stack:has(.stepper select:hover) > label {
+    filter: none;
+    color: var(--accent) !important;
+  }
+
+  .label-width-stack > label:hover ~ input:not(:disabled),
+  .label-width-stack > label:hover ~ textarea:not(:disabled),
+  .label-width-stack > label:hover ~ .stepper input:not(:disabled),
+  .label-width-stack > label:hover ~ .stepper select:not(:disabled) {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 40%, transparent);
+  }
+
+  html.theme-white .label-width-stack > label:hover ~ input:not(:disabled),
+  html.theme-white .label-width-stack > label:hover ~ textarea:not(:disabled),
+  html.theme-white .label-width-stack > label:hover ~ .stepper input:not(:disabled),
+  html.theme-white .label-width-stack > label:hover ~ .stepper select:not(:disabled) {
+    border-color: var(--accent) !important;
+  }
+
+  .theme-select-stack:has(select:hover) > label,
+  .theme-select-stack > label:hover {
+    color: var(--accent);
+    filter: brightness(1.14);
+  }
+
+  html.theme-white .theme-select-stack:has(select:hover) > label,
+  html.theme-white .theme-select-stack > label:hover {
+    filter: none;
+    color: var(--accent) !important;
+  }
+
+  .theme-select-stack > label:hover ~ select:not(:disabled) {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 40%, transparent);
+  }
+
+  html.theme-white .theme-select-stack > label:hover ~ select:not(:disabled) {
+    border-color: var(--accent) !important;
+  }
+
+  .queue-toolbar-select-stack:has(select:hover) > label,
+  .queue-toolbar-select-stack > label:hover {
+    color: var(--accent);
+    filter: brightness(1.14);
+  }
+
+  html.theme-white .queue-toolbar-select-stack:has(select:hover) > label,
+  html.theme-white .queue-toolbar-select-stack > label:hover {
+    filter: none;
+    color: var(--accent) !important;
+  }
+
+  .queue-toolbar-select-stack > label:hover ~ select:not(:disabled) {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 40%, transparent);
+  }
+
+  html.theme-white .queue-toolbar-select-stack > label:hover ~ select:not(:disabled) {
+    border-color: var(--accent) !important;
+  }
+
+  /* Preço: inputs num <div> após o hint (o label não é irmão direto dos inputs). */
+  .filter-group--price:has(> label:hover) input:not(:disabled) {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 40%, transparent);
+  }
+
+  html.theme-white .filter-group--price:has(> label:hover) input:not(:disabled) {
+    border-color: var(--accent) !important;
+  }
+
+  .icon-btn-stack--tool:has(.lang-switch select:hover) > label.theme-row-label,
+  .icon-btn-stack--tool:has(.lang-switch) > label.theme-row-label:hover {
+    color: var(--accent);
+    filter: brightness(1.14);
+  }
+
+  html.theme-white .icon-btn-stack--tool:has(.lang-switch select:hover) > label.theme-row-label,
+  html.theme-white .icon-btn-stack--tool:has(.lang-switch) > label.theme-row-label:hover {
+    filter: none;
+    color: var(--accent) !important;
+  }
+
+  .icon-btn-stack--tool > label.theme-row-label:hover ~ .lang-switch select:not(:disabled) {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 40%, transparent);
+  }
+
+  html.theme-white .icon-btn-stack--tool > label.theme-row-label:hover ~ .lang-switch select:not(:disabled) {
+    border-color: var(--accent) !important;
+  }
+
+  .deck-name-modal-dialog:has(#deck-name-modal-input:hover:not(:disabled)) #deck-name-modal-title {
+    color: var(--accent);
+  }
 }
 
 .btn-secondary {
@@ -3380,9 +3574,9 @@ html.theme-white .custom-select-wrap--api-lang .custom-select-trigger .lang-flag
   letter-spacing: 0.02em;
 }
 .result-db-version {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--highlight-yellow);
-  font-weight: 600;
+  font-weight: 800;
   font-variant-numeric: tabular-nums;
 }
 /* Rodapé da grelha: contagem (esq.), paginação (centro), versão DB (dir.). Desktop em 3 colunas. */
@@ -3848,7 +4042,10 @@ html.theme-white .custom-select-wrap--api-lang .custom-select-trigger .lang-flag
   align-items: flex-start;
   cursor: pointer;
   border-bottom: 1px solid var(--border);
-  transition: background 0.2s;
+  transition:
+    background 0.2s,
+    filter 0.18s ease,
+    box-shadow 0.18s ease;
   color: var(--text);
 }
 .suggestion-item.suggestion-item--draggable {
@@ -3860,6 +4057,76 @@ html.theme-white .custom-select-wrap--api-lang .custom-select-trigger .lang-flag
 
 .suggestion-item:active {
   background: var(--bg-dark);
+}
+
+/* Destaque ao hover: sugestões (lista + lista recortada, grelha + grelha recortada) e fila do deck nos quatro modos. */
+@media (hover: hover) {
+  .results-view.list-mode .suggestion-item:hover,
+  #random-main-modal .results-view.list-mode .suggestion-item:hover {
+    filter: brightness(1.14);
+    box-shadow:
+      inset 0 0 0 2px rgba(255, 255, 255, 0.38),
+      0 0 18px rgba(255, 255, 255, 0.08);
+  }
+
+  html.theme-white .results-view.list-mode .suggestion-item:hover,
+  html.theme-white #random-main-modal .results-view.list-mode .suggestion-item:hover {
+    filter: none;
+    box-shadow:
+      inset 0 0 0 2px rgba(37, 99, 235, 0.45),
+      0 0 0 3px rgba(59, 130, 246, 0.12);
+    background-color: #e8f0fe !important;
+  }
+
+  .results-view.grid-mode .suggestion-item:hover .suggestion-item-grid-artwrap img,
+  #random-main-modal .results-view.grid-mode .suggestion-item:hover .suggestion-item-grid-artwrap img {
+    transform: scale(1.06);
+    box-shadow:
+      0 8px 26px rgba(0, 0, 0, 0.65),
+      0 0 0 3px rgba(255, 255, 255, 0.28),
+      0 0 22px rgba(255, 220, 150, 0.18);
+  }
+
+  html.theme-white .results-view.grid-mode .suggestion-item:hover .suggestion-item-grid-artwrap img,
+  html.theme-white #random-main-modal .results-view.grid-mode .suggestion-item:hover .suggestion-item-grid-artwrap img {
+    box-shadow:
+      0 8px 24px rgba(0, 0, 0, 0.22),
+      0 0 0 3px rgba(37, 99, 235, 0.42),
+      0 0 20px rgba(59, 130, 246, 0.2);
+  }
+
+  .deck-list.deck-queue-view.list-mode .queue-item.deck-queue-list-row:hover {
+    filter: brightness(1.14);
+    box-shadow:
+      inset 0 0 0 2px rgba(255, 255, 255, 0.38),
+      0 0 18px rgba(255, 255, 255, 0.08);
+  }
+
+  html.theme-white .deck-list.deck-queue-view.list-mode .queue-item.deck-queue-list-row:hover {
+    filter: none;
+    box-shadow:
+      inset 0 0 0 2px rgba(37, 99, 235, 0.45),
+      0 0 0 3px rgba(59, 130, 246, 0.12);
+    background-color: #e8f0fe !important;
+  }
+
+  .deck-list.deck-queue-view.grid-mode .queue-item--grid:hover {
+    border-color: rgba(255, 255, 255, 0.55);
+    box-shadow:
+      0 6px 22px rgba(0, 0, 0, 0.48),
+      0 0 0 2px rgba(255, 255, 255, 0.12);
+  }
+
+  html.theme-white .deck-list.deck-queue-view.grid-mode .queue-item--grid:hover {
+    border-color: rgba(37, 99, 235, 0.58);
+    box-shadow:
+      0 6px 20px rgba(0, 0, 0, 0.14),
+      0 0 0 2px rgba(59, 130, 246, 0.22);
+  }
+
+  .deck-list.deck-queue-view.grid-mode .queue-item--grid:hover .queue-item-thumb-wrap img {
+    filter: brightness(1.12);
+  }
 }
 .suggestion-item img {
   width: 80px;
@@ -4090,7 +4357,10 @@ html.theme-white .custom-select-wrap--api-lang .custom-select-trigger .lang-flag
   object-fit: contain;
   margin: 0 auto;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-  transition: transform 0.2s;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    filter 0.2s ease;
 }
 
 .suggestion-item-grid-artwrap {
@@ -5531,7 +5801,11 @@ html.theme-white .deck-import-overlay-track {
 
 .queue-item {
   color: var(--text);
-  transition: background 0.15s ease;
+  transition:
+    background 0.15s ease,
+    filter 0.18s ease,
+    box-shadow 0.18s ease,
+    border-color 0.18s ease;
 }
 .queue-item[draggable='true'] {
   cursor: grab;
@@ -5576,6 +5850,7 @@ html.theme-white .deck-import-overlay-track {
   border-radius: 4px;
   border: 1px solid rgba(255, 255, 255, 0.12);
   object-fit: contain;
+  transition: filter 0.18s ease;
 }
 .queue-item-body {
   flex: 1;
@@ -5636,6 +5911,9 @@ html.theme-white .deck-import-overlay-track {
   position: relative;
   min-width: 0;
   cursor: pointer;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
 }
 .queue-item--grid .queue-item-thumb-wrap {
   width: 100%;
@@ -5726,10 +6004,17 @@ html.theme-white .deck-import-overlay-track {
   flex-shrink: 0;
 }
 .page-input {
-  width: 50px;
+  box-sizing: border-box;
+  width: 5.25ch;
+  min-width: 40px;
   text-align: center;
   background: var(--bg-dark);
   border: 1px solid var(--border);
+  color: var(--accent);
+}
+#page-total {
+  font-size: 13px;
+  font-weight: 700;
   color: var(--accent);
 }
 
@@ -8668,7 +8953,7 @@ html.theme-white .toast.toast-error {
                   min="1"
                   onchange="jumpToPage(this.value)"
                 />
-                <span id="page-total" style="font-size: 11px; color: #888">/ 1</span>
+                <span id="page-total">de 1</span>
               </div>
             </div>
             <div class="icon-btn-stack">
@@ -9499,7 +9784,7 @@ html.theme-white .toast.toast-error {
 
         <script>
 window.__DECKBUILDER_MONOLITH__=true;
-window.__LOC_WITH_DOCS__=39036;
+window.__LOC_WITH_DOCS__=39517;
 window.__DECKBUILDER_MONOLITH__=true;
 /**
  * @fileoverview DeckBuilder GiuBravo — lógica cliente monolítica carregada como script global.
@@ -9827,8 +10112,14 @@ function layoutClassDeltaIsOnlyEmptyQueueToggle(oldClass, newClass) {
   return sym.length === 1 && sym[0] === 'empty-queue';
 }
 
-/** >0: não animar entrada das cartas (ex.: add/remove/reordenar por arrastar). */
+/** >0: não animar entrada das cartas (re-renders que pedem silêncio explícito). */
 let suppressCardSurfaceEnterAnimDepth = 0;
+/**
+ * One-shot: pilhas (`imgId`) a animar no próximo `renderDeckQueue` quando só muda a ordem na fila
+ * (DnD em modo personalizado — {@link computeDeckCompositionChangedStackImgIds} fica vazio).
+ * @type {string[]|null}
+ */
+let __pendingDeckSurfaceAnimateStackImgIds = null;
 /** Snapshot opcional do deck usado por efeitos visuais da “superfície” da fila (diffs / animações). */
 let deckSnapshotForSurface = null;
 /** Timeout para suavizar ou debouncing de efeitos nos filtros da superfície (valor definido onde agendado). */
@@ -13637,16 +13928,11 @@ function initDeckDragDrop() {
           }
         }
         requestDeckScrollToStack('side', toAdd && toAdd[0] ? toAdd[0].imgId : null);
-        pushSuppressCardSurfaceEnterAnimation();
-        try {
-              updateUI({
-                skipSuggestionsRerender: true,
-                mobileScrollSnapshot: mobScrollSnap,
-                mobilePreserveDeckItemsScroll: true,
-              });
-        } finally {
-          popSuppressCardSurfaceEnterAnimation();
-        }
+        updateUI({
+          skipSuggestionsRerender: true,
+          mobileScrollSnapshot: mobScrollSnap,
+          mobilePreserveDeckItemsScroll: true,
+        });
         showToast(`${qty}x ${nm || 'Carta'} → ${deckSectionUiLabel('side')}`);
         clearDeckDropPlaceholder(deck);
         return;
@@ -13669,12 +13955,7 @@ function initDeckDragDrop() {
         effectiveDropForSuggest === 'extra' ? 'extra' : 'principal',
         toAdd && toAdd[0] ? toAdd[0].imgId : null
       );
-      pushSuppressCardSurfaceEnterAnimation();
-      try {
-        updateUI({ skipSuggestionsRerender: true, mobileScrollSnapshot: mobScrollSnapDeck });
-      } finally {
-        popSuppressCardSurfaceEnterAnimation();
-      }
+      updateUI({ skipSuggestionsRerender: true, mobileScrollSnapshot: mobScrollSnapDeck });
       showToast(
         `${qty}x ${nm || 'Carta'} → ${deckSectionUiLabel(effectiveDropForSuggest === 'extra' ? 'extra' : 'principal')}`
       );
@@ -13696,12 +13977,7 @@ function initDeckDragDrop() {
       if (dragPool === 'build' && dropSec === 'side') {
         const moved = await moveStackBuildToSide(dragId);
         clearDeckDropPlaceholder(deck);
-        pushSuppressCardSurfaceEnterAnimation();
-        try {
-          updateUI();
-        } finally {
-          popSuppressCardSurfaceEnterAnimation();
-        }
+        updateUI();
         if (moved > 0)
           showToast(
             `${moved}x ${ent && ent.name ? ent.name : ''} → ${deckSectionUiLabel('side')}`.trim()
@@ -13716,12 +13992,7 @@ function initDeckDragDrop() {
         }
         const moved = await moveStackSideToBuild(dragId);
         clearDeckDropPlaceholder(deck);
-        pushSuppressCardSurfaceEnterAnimation();
-        try {
-          updateUI();
-        } finally {
-          popSuppressCardSurfaceEnterAnimation();
-        }
+        updateUI();
         if (moved > 0)
           showToast(
             `${moved}x ${ent && ent.name ? ent.name : ''} → ${deckSectionUiLabel(dropSec)}`.trim()
@@ -13744,6 +14015,7 @@ function initDeckDragDrop() {
               })();
           if (dragPool === 'side' && dropSec === 'side') {
             moveSideStackInQueue(dragId, refId, insertBefore);
+            requestDeckSurfaceStackImgAnimation(dragId);
           } else if (dragPool === 'build' && (dropSec === 'principal' || dropSec === 'extra')) {
             if (!isSectionValidForIsExtra(dropSec, isExtra)) {
               showToast(`Inválido em ${deckSectionUiLabel(dropSec)}.`, { variant: 'error' });
@@ -13751,13 +14023,9 @@ function initDeckDragDrop() {
               return;
             }
             moveDeckStackInQueue(dragId, refId, insertBefore);
+            requestDeckSurfaceStackImgAnimation(dragId);
           }
-          pushSuppressCardSurfaceEnterAnimation();
-          try {
-            updateUI();
-          } finally {
-            popSuppressCardSurfaceEnterAnimation();
-          }
+          updateUI();
         }
       }
     }
@@ -13792,13 +14060,8 @@ function initDeckDragDrop() {
       resultsCol.classList.remove('suggestions-drop-target');
       const payload = parseDndJson(e.dataTransfer, YGO_DND_QUEUE);
       if (payload && payload.imgId != null) {
-        pushSuppressCardSurfaceEnterAnimation();
-        try {
-          if (payload.pool === 'side') removeOneSideDeckCopy(payload.imgId);
-          else removeOneDeckCopy(payload.imgId);
-        } finally {
-          popSuppressCardSurfaceEnterAnimation();
-        }
+        if (payload.pool === 'side') removeOneSideDeckCopy(payload.imgId);
+        else removeOneDeckCopy(payload.imgId);
       }
     });
   }
@@ -14926,6 +15189,13 @@ async function toggleDeckOrder() {
     scheduleDeckbuilderFilterUrlSync();
   } catch (_) {}
 }
+
+/**
+ * Handler HTML (`onclick` em `#btn-deck-order`). Com `type="module"`, `onclick` resolve em `window`.
+ *
+ * @type {typeof toggleDeckOrder}
+ */
+window.toggleDeckOrder = toggleDeckOrder;
 
 /** Chave do cookie (`document.cookie`) com lista compacta de decks salvos (fallback quando `localStorage` falha).
  * @constant {string}
@@ -17965,6 +18235,13 @@ const STRINGS = {
   'ui.pagination_prev': { pt: 'Anterior', en: 'Previous' },
   'ui.pagination_next': { pt: 'Pr\u00f3ximo', en: 'Next' },
   'ui.pagination_page_label': { pt: 'P\u00e1gina', en: 'Page' },
+  'ui.pagination_page_total': {
+    pt: 'de {t}',
+    en: 'of {t}',
+    fr: 'sur {t}',
+    de: 'von {t}',
+    it: 'di {t}',
+  },
   'ui.search_qty_label': { pt: 'Quantidade', en: 'Quantity' },
   'ui.deck_validate_label_on': { pt: 'Validar', en: 'Validate' },
   'ui.deck_validate_label_off': { pt: 'N\u00e3o validar', en: 'Skip check' },
@@ -22866,6 +23143,60 @@ function collectDatalistOptionRows(datalistId, query) {
 }
 
 /**
+ * Cor hex da barra lateral ao hover nas sugestões de combo de filtro (paleta {@link RESULT_TYPE_COLORS}).
+ *
+ * @param {string} kind Chave do combo (`type`, `subtype`, …).
+ * @param {string} value Valor da opção do `<datalist>`.
+ * @param {string} label Rótulo exibido na lista.
+ * @returns {string|null} `#rrggbb` ou null para usar `var(--accent)` no CSS.
+ */
+function suggestRowHoverAccentFromFilterRow(kind, value, label) {
+  const v = String(value || '').trim();
+  const lab = String(label || '').trim();
+  if (kind === 'type') {
+    const cat =
+      (v && FILTER_TYPE_CATEGORY_ALIAS_TO_V[v.toLowerCase()]) ||
+      (lab && FILTER_TYPE_CATEGORY_ALIAS_TO_V[lab.toLowerCase()]) ||
+      null;
+    if (cat === 'Monster') return RESULT_TYPE_COLORS['Effect Monster'];
+    if (cat === 'Spell Card') return RESULT_TYPE_COLORS['Spell Card'];
+    if (cat === 'Trap Card') return RESULT_TYPE_COLORS['Trap Card'];
+    return null;
+  }
+  if (kind === 'subtype') {
+    let colorKey = getTypeColorKeyFromCardType(v) || getTypeColorKeyFromCardType(lab);
+    if (!colorKey && v) {
+      const vl = v.toLowerCase();
+      for (const enKey of Object.keys(MONSTER_TYPE_LABEL_PT)) {
+        const pt = MONSTER_TYPE_LABEL_PT[enKey];
+        if (pt && pt.toLowerCase() === vl) {
+          colorKey = getTypeColorKeyFromCardType(enKey);
+          break;
+        }
+      }
+    }
+    return colorKey ? RESULT_TYPE_COLORS[colorKey] || null : null;
+  }
+  return null;
+}
+
+/**
+ * Cor opcional ao hover nas linhas do painel de `<select>` custom quando o texto coincide com tipo de carta.
+ *
+ * @param {string} kind Contexto do select (`theme`, `results-sort`, …).
+ * @param {string} text Texto da `<option>`.
+ * @param {string} value `value` da `<option>`.
+ * @returns {string|null}
+ */
+function suggestRowHoverAccentFromNativeSelectOption(kind, text, value) {
+  if (kind === 'api-lang') return null;
+  const t = String(text || '').trim();
+  const tv = String(value || '').trim();
+  const colorKey = getTypeColorKeyFromCardType(t) || getTypeColorKeyFromCardType(tv);
+  return colorKey ? RESULT_TYPE_COLORS[colorKey] || null : null;
+}
+
+/**
  * Reconstrói linhas do painel de sugestão a partir do datalist do input; cancela pré-busca pendente se necessário.
  *
  * @param {HTMLInputElement} inp
@@ -22894,6 +23225,9 @@ function refreshFilterComboSuggestPanel(inp, kind) {
     const div = document.createElement('div');
     div.className = 'filter-combo-suggest-row';
     div.setAttribute('role', 'option');
+    const accent = suggestRowHoverAccentFromFilterRow(kind, row.value, row.label);
+    if (accent) div.style.setProperty('--suggest-row-accent', accent);
+    else div.style.removeProperty('--suggest-row-accent');
     div.textContent = row.label || row.value;
     div.addEventListener('mouseenter', () => onFilterComboSuggestRowEnter(kind, row.value));
     div.addEventListener('mousedown', (e) => {
@@ -23366,6 +23700,13 @@ function refreshNativeCustomSelectPanel() {
     } else {
       div.textContent = o.textContent || v || '—';
     }
+    const rowAccent = suggestRowHoverAccentFromNativeSelectOption(
+      kind,
+      o.textContent || '',
+      v
+    );
+    if (rowAccent) div.style.setProperty('--suggest-row-accent', rowAccent);
+    else div.style.removeProperty('--suggest-row-accent');
     div.addEventListener('mouseenter', () => {
       void onNativeCustomSelectRowEnter(kind, v);
     });
@@ -27041,6 +27382,13 @@ function toggleOrder() {
   sortAndRender();
 }
 
+/**
+ * Handler HTML (`onclick` em `#btn-order`). Com `type="module"`, `onclick` resolve em `window`.
+ *
+ * @type {typeof toggleOrder}
+ */
+window.toggleOrder = toggleOrder;
+
 /** Ordem geométrica canônica ao ordenar ou serializar lista `linkmarkers` da API. */
 const LINK_MARKER_SORT_ORDER = [
   'Top-Left',
@@ -28034,6 +28382,105 @@ function inferDeckSurfaceReason(prevStr, nextStr) {
 }
 
 /**
+ * Acrescenta contagens de `imgId` a partir da assinatura ordenada `sig` (`a|b|b|…`).
+ *
+ * @param {string} sig Resultado típico de {@link queueImgIdSignature}.
+ * @param {Record<string, number>} into Mapa mutável `imgId` → quantidade.
+ * @returns {void}
+ */
+function addQueueSigToMultiset(sig, into) {
+  if (!sig) return;
+  const parts = String(sig).split('|');
+  for (let i = 0; i < parts.length; i++) {
+    const id = parts[i];
+    if (!id) continue;
+    into[id] = (into[id] || 0) + 1;
+  }
+}
+
+/**
+ * `imgId` de pilhas cuja contagem em **main** ou **side** mudou entre dois snapshots do deck.
+ * Sem baseline (`!prevStr`) devolve lista vazia — evita animar todas as linhas no primeiro paint com deck já carregado.
+ * Reordenação pura (mesmos multiconjuntos em ambas as zonas) devolve vazio.
+ *
+ * @param {string|null|undefined} prevStr JSON de {@link snapshotDeckForSurface}.
+ * @param {string|null|undefined} nextStr JSON de {@link snapshotDeckForSurface}.
+ * @returns {string[]} `imgId` alterados, ordenados lexicograficamente.
+ */
+function computeDeckCompositionChangedStackImgIds(prevStr, nextStr) {
+  if (!prevStr || !nextStr) return [];
+  let prevMainSig = '';
+  let prevSideSig = '';
+  let nextMainSig = '';
+  let nextSideSig = '';
+  try {
+    const p = JSON.parse(prevStr);
+    const n = JSON.parse(nextStr);
+    prevMainSig = p && p.main != null ? String(p.main) : '';
+    prevSideSig = p && p.side != null ? String(p.side) : '';
+    nextMainSig = n && n.main != null ? String(n.main) : '';
+    nextSideSig = n && n.side != null ? String(n.side) : '';
+  } catch {
+    return [];
+  }
+  /** @type {Record<string, number>} */
+  const pm = Object.create(null);
+  /** @type {Record<string, number>} */
+  const ps = Object.create(null);
+  /** @type {Record<string, number>} */
+  const nm = Object.create(null);
+  /** @type {Record<string, number>} */
+  const ns = Object.create(null);
+  addQueueSigToMultiset(prevMainSig, pm);
+  addQueueSigToMultiset(prevSideSig, ps);
+  addQueueSigToMultiset(nextMainSig, nm);
+  addQueueSigToMultiset(nextSideSig, ns);
+  const keys = new Set([
+    ...Object.keys(pm),
+    ...Object.keys(ps),
+    ...Object.keys(nm),
+    ...Object.keys(ns),
+  ]);
+  const out = [];
+  for (const k of keys) {
+    if ((pm[k] || 0) !== (nm[k] || 0) || (ps[k] || 0) !== (ns[k] || 0)) out.push(k);
+  }
+  out.sort();
+  return out;
+}
+
+/**
+ * Marca pilhas a animar no próximo `renderDeckQueue` quando só muda a ordem (DnD personalizado).
+ *
+ * @param {string|string[]|null|undefined} imgIdOrIds Um ou vários `imgId` de pilha.
+ * @returns {void}
+ */
+function requestDeckSurfaceStackImgAnimation(imgIdOrIds) {
+  if (imgIdOrIds == null || imgIdOrIds === '') {
+    __pendingDeckSurfaceAnimateStackImgIds = null;
+    return;
+  }
+  const arr = Array.isArray(imgIdOrIds) ? imgIdOrIds : [imgIdOrIds];
+  const out = [];
+  for (let i = 0; i < arr.length; i++) {
+    const s = String(arr[i] || '').trim();
+    if (s) out.push(s);
+  }
+  __pendingDeckSurfaceAnimateStackImgIds = out.length ? out : null;
+}
+
+/**
+ * Lê e limpa {@link __pendingDeckSurfaceAnimateStackImgIds} (consumo único na pintura do deck).
+ *
+ * @returns {string[]|null}
+ */
+function consumePendingDeckSurfaceAnimateStackImgIds() {
+  const x = __pendingDeckSurfaceAnimateStackImgIds;
+  __pendingDeckSurfaceAnimateStackImgIds = null;
+  return x;
+}
+
+/**
  * Agrupa cada `reason` de feedback superficial numa “família” visual/sonora ({@link mapReasonToSurfaceFamily}, CSS, haptic).
  */
 const SURFACE_FAMILY_BY_REASON = Object.freeze({
@@ -28571,12 +29018,26 @@ function paintCardSurfaceEnterAnimations(rootSelector, itemSelector) {
   if (suppressCardSurfaceEnterAnimDepth > 0) return;
   const root = rootSelector ? document.querySelector(rootSelector) : null;
   if (!root) return;
-  const items = root.querySelectorAll(itemSelector);
   const paintKind = getCardSurfacePaintKind();
   // Sem motivo explícito: não animar (evita “piscar” em re-renders encadeados — layout/lista, refit, rAF).
   // 'silent' suprime som/toast mas não deve forçar entrada genérica a cada passo.
   if (!paintKind || paintKind === 'silent') return;
   const family = mapReasonToSurfaceFamily(paintKind);
+  let items = Array.from(root.querySelectorAll(itemSelector));
+  if (rootSelector === '#deck-items' && isSurfacePaintKindDeckCompositionOnly(paintKind)) {
+    const pending = consumePendingDeckSurfaceAnimateStackImgIds();
+    let changedIds = computeDeckCompositionChangedStackImgIds(
+      deckSnapshotForSurface,
+      snapshotDeckForSurface()
+    );
+    if (!changedIds.length && paintKind === 'deck_change' && pending && pending.length) {
+      changedIds = pending;
+    }
+    if (!changedIds.length) return;
+    const idSet = new Set(changedIds);
+    items = items.filter((el) => idSet.has(String(el.dataset.stackImgId || '')));
+    if (!items.length) return;
+  }
   const nSurf = items.length;
   const sfx = SFC_CARD_ANIM_SUFFIXES;
   const sfxLen = sfx.length;
@@ -28672,6 +29133,14 @@ function toggleTooltipButton() {
   } catch (_) {}
   applyCardSurfaceFeedback(on ? 'tooltip_on' : 'tooltip_off');
 }
+
+/**
+ * Handler HTML em `#btn-toggle-tooltip` (`onclick`). Com `type="module"`, o escopo não é global;
+ * o atributo `onclick` resolve símbolos em `window`, daí a exposição explícita.
+ *
+ * @type {typeof toggleTooltipButton}
+ */
+window.toggleTooltipButton = toggleTooltipButton;
 
 /**
  * Mostra ou oculta a coluna de filtros (`#app-layout.filters-col-hidden`), atualiza toolbar e pref {@link UI_PREF_KEYS.filtersColVisible}.
@@ -31029,6 +31498,18 @@ function toggleQueueView() {
 }
 
 /**
+ * Handlers HTML (`onclick` em `#btn-toggle-results-view` e `#btn-toggle-queue-view`).
+ * Com `type="module"`, `onclick` resolve em `window`.
+ *
+ * @type {typeof toggleResultsView}
+ */
+window.toggleResultsView = toggleResultsView;
+/**
+ * @type {typeof toggleQueueView}
+ */
+window.toggleQueueView = toggleQueueView;
+
+/**
  * Define vista dos resultados, persiste pref, repõe página 1 e redesenha (`renderResults`).
  * @param {string} view Modo solicitado (normalizado por {@link normalizeViewMode4}).
  * @returns {void}
@@ -32005,7 +32486,7 @@ function renderResults() {
     const pageTotalEl = getEl('page-total');
     const pageJumpEl = getEl('page-jump');
     if (infoEl) infoEl.innerText = T('results.none');
-    if (pageTotalEl) pageTotalEl.innerText = '/ 1';
+    if (pageTotalEl) pageTotalEl.innerText = T('ui.pagination_page_total', { t: 1 });
     if (pageJumpEl) pageJumpEl.value = 1;
     refreshViewControlsHeaderCompact();
     container.innerHTML = `<div style="grid-column: 1/-1; padding: 60px 20px; text-align: center; opacity: 0.6;">
@@ -32047,7 +32528,7 @@ function renderResults() {
   const pageTotalEl = getEl('page-total');
   const pageJumpEl = getEl('page-jump');
   const totalPages = Math.ceil(searchResults.length / items) || 1;
-  if (pageTotalEl) pageTotalEl.innerText = `/ ${totalPages}`;
+  if (pageTotalEl) pageTotalEl.innerText = T('ui.pagination_page_total', { t: totalPages });
   if (pageJumpEl) pageJumpEl.value = currentPage;
 
   const frag = document.createDocumentFragment();

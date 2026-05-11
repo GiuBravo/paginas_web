@@ -907,6 +907,9 @@ html:not(.has-monster-type) #monster-extras {
   display: flex;
   align-items: center;
   justify-content: center;
+  transition:
+    color 0.16s ease,
+    filter 0.16s ease;
 }
 /* Ajuda desligada: reduz espaço vertical nos filtros */
 html:not(.help-enabled) .sidebar-content .filter-group {
@@ -1207,17 +1210,51 @@ html:not(.help-enabled) .filter-action-row .icon-btn-stack--tool .theme-row-labe
   min-width: 120px;
   display: none;
 }
-.filter-combo-suggest-row {
-  padding: 8px 10px;
+.filter-combo-suggest-row,
+.ui-native-custom-select-row {
+  position: relative;
+  padding: 8px 14px;
   cursor: pointer;
   font-size: 13px;
   color: var(--text);
   border-bottom: 1px solid var(--border);
 }
-.filter-combo-suggest-row:last-child {
+.filter-combo-suggest-row:last-child,
+.ui-native-custom-select-row:last-child {
   border-bottom: none;
 }
-.filter-combo-suggest-row:hover {
+.filter-combo-suggest-row::before,
+.filter-combo-suggest-row::after,
+.ui-native-custom-select-row::before,
+.ui-native-custom-select-row::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--suggest-row-accent, var(--accent));
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.14s ease;
+}
+.filter-combo-suggest-row::before,
+.ui-native-custom-select-row::before {
+  left: 0;
+  border-radius: 3px 0 0 3px;
+}
+.filter-combo-suggest-row::after,
+.ui-native-custom-select-row::after {
+  right: 0;
+  border-radius: 0 3px 3px 0;
+}
+.filter-combo-suggest-row:hover::before,
+.filter-combo-suggest-row:hover::after,
+.ui-native-custom-select-row:hover::before,
+.ui-native-custom-select-row:hover::after {
+  opacity: 1;
+}
+.filter-combo-suggest-row:hover,
+.ui-native-custom-select-row:hover {
   background: var(--bg-dark);
 }
 /* Selects nativos substituídos por botão + painel (hover pré-visualiza). */
@@ -1276,19 +1313,6 @@ html:not(.help-enabled) .filter-action-row .icon-btn-stack--tool .theme-row-labe
 .ui-native-custom-select-panel.ui-native-custom-select-panel--api-lang {
   min-width: 0;
   width: auto;
-}
-.ui-native-custom-select-row {
-  padding: 8px 10px;
-  cursor: pointer;
-  font-size: 13px;
-  color: var(--text);
-  border-bottom: 1px solid var(--border);
-}
-.ui-native-custom-select-row:last-child {
-  border-bottom: none;
-}
-.ui-native-custom-select-row:hover {
-  background: var(--bg-dark);
 }
 .filter-full-add-stack {
   display: flex;
@@ -2797,6 +2821,176 @@ textarea {
   font-size: 13px;
   width: 100%;
   box-sizing: border-box;
+  transition:
+    border-color 0.16s ease,
+    box-shadow 0.16s ease;
+}
+
+/* Hover: realce em campos de texto/seleção e no respetivo rótulo (sidebar, barra de busca, toolbar, modais). */
+@media (hover: hover) {
+  input[type='text']:hover:not(:disabled),
+  input[type='search']:hover:not(:disabled),
+  input[type='number']:hover:not(:disabled),
+  input[type='email']:hover:not(:disabled),
+  input[type='url']:hover:not(:disabled),
+  input[type='password']:hover:not(:disabled),
+  textarea:hover:not(:disabled),
+  select:hover:not(:disabled) {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 40%, transparent);
+  }
+
+  html.theme-white input[type='text']:hover:not(:disabled),
+  html.theme-white input[type='search']:hover:not(:disabled),
+  html.theme-white input[type='number']:hover:not(:disabled),
+  html.theme-white input[type='email']:hover:not(:disabled),
+  html.theme-white input[type='url']:hover:not(:disabled),
+  html.theme-white input[type='password']:hover:not(:disabled),
+  html.theme-white textarea:hover:not(:disabled),
+  html.theme-white select:hover:not(:disabled) {
+    border-color: var(--accent) !important;
+  }
+
+  .filter-group:has(input:hover) > label,
+  .filter-group:has(select:hover) > label,
+  .filter-group:has(textarea:hover) > label {
+    color: var(--accent);
+    filter: brightness(1.14);
+  }
+
+  html.theme-white .filter-group:has(input:hover) > label,
+  html.theme-white .filter-group:has(select:hover) > label,
+  html.theme-white .filter-group:has(textarea:hover) > label {
+    filter: none;
+    color: var(--accent) !important;
+  }
+
+  .filter-group > label:hover ~ .filter-action-row input:not(:disabled),
+  .filter-group > label:hover ~ .filter-action-row select:not(:disabled),
+  .filter-group > label:hover ~ .stepper input:not(:disabled),
+  .filter-group > label:hover ~ .stepper select:not(:disabled),
+  .filter-group > label:hover ~ .sort-controls select:not(:disabled) {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 40%, transparent);
+  }
+
+  html.theme-white .filter-group > label:hover ~ .filter-action-row input:not(:disabled),
+  html.theme-white .filter-group > label:hover ~ .filter-action-row select:not(:disabled),
+  html.theme-white .filter-group > label:hover ~ .stepper input:not(:disabled),
+  html.theme-white .filter-group > label:hover ~ .stepper select:not(:disabled),
+  html.theme-white .filter-group > label:hover ~ .sort-controls select:not(:disabled) {
+    border-color: var(--accent) !important;
+  }
+
+  .label-width-stack:has(input:hover) > label,
+  .label-width-stack:has(select:hover) > label,
+  .label-width-stack:has(textarea:hover) > label,
+  .label-width-stack:has(.stepper input:hover) > label,
+  .label-width-stack:has(.stepper select:hover) > label {
+    color: var(--accent);
+    filter: brightness(1.14);
+  }
+
+  html.theme-white .label-width-stack:has(input:hover) > label,
+  html.theme-white .label-width-stack:has(select:hover) > label,
+  html.theme-white .label-width-stack:has(textarea:hover) > label,
+  html.theme-white .label-width-stack:has(.stepper input:hover) > label,
+  html.theme-white .label-width-stack:has(.stepper select:hover) > label {
+    filter: none;
+    color: var(--accent) !important;
+  }
+
+  .label-width-stack > label:hover ~ input:not(:disabled),
+  .label-width-stack > label:hover ~ textarea:not(:disabled),
+  .label-width-stack > label:hover ~ .stepper input:not(:disabled),
+  .label-width-stack > label:hover ~ .stepper select:not(:disabled) {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 40%, transparent);
+  }
+
+  html.theme-white .label-width-stack > label:hover ~ input:not(:disabled),
+  html.theme-white .label-width-stack > label:hover ~ textarea:not(:disabled),
+  html.theme-white .label-width-stack > label:hover ~ .stepper input:not(:disabled),
+  html.theme-white .label-width-stack > label:hover ~ .stepper select:not(:disabled) {
+    border-color: var(--accent) !important;
+  }
+
+  .theme-select-stack:has(select:hover) > label,
+  .theme-select-stack > label:hover {
+    color: var(--accent);
+    filter: brightness(1.14);
+  }
+
+  html.theme-white .theme-select-stack:has(select:hover) > label,
+  html.theme-white .theme-select-stack > label:hover {
+    filter: none;
+    color: var(--accent) !important;
+  }
+
+  .theme-select-stack > label:hover ~ select:not(:disabled) {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 40%, transparent);
+  }
+
+  html.theme-white .theme-select-stack > label:hover ~ select:not(:disabled) {
+    border-color: var(--accent) !important;
+  }
+
+  .queue-toolbar-select-stack:has(select:hover) > label,
+  .queue-toolbar-select-stack > label:hover {
+    color: var(--accent);
+    filter: brightness(1.14);
+  }
+
+  html.theme-white .queue-toolbar-select-stack:has(select:hover) > label,
+  html.theme-white .queue-toolbar-select-stack > label:hover {
+    filter: none;
+    color: var(--accent) !important;
+  }
+
+  .queue-toolbar-select-stack > label:hover ~ select:not(:disabled) {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 40%, transparent);
+  }
+
+  html.theme-white .queue-toolbar-select-stack > label:hover ~ select:not(:disabled) {
+    border-color: var(--accent) !important;
+  }
+
+  /* Preço: inputs num <div> após o hint (o label não é irmão direto dos inputs). */
+  .filter-group--price:has(> label:hover) input:not(:disabled) {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 40%, transparent);
+  }
+
+  html.theme-white .filter-group--price:has(> label:hover) input:not(:disabled) {
+    border-color: var(--accent) !important;
+  }
+
+  .icon-btn-stack--tool:has(.lang-switch select:hover) > label.theme-row-label,
+  .icon-btn-stack--tool:has(.lang-switch) > label.theme-row-label:hover {
+    color: var(--accent);
+    filter: brightness(1.14);
+  }
+
+  html.theme-white .icon-btn-stack--tool:has(.lang-switch select:hover) > label.theme-row-label,
+  html.theme-white .icon-btn-stack--tool:has(.lang-switch) > label.theme-row-label:hover {
+    filter: none;
+    color: var(--accent) !important;
+  }
+
+  .icon-btn-stack--tool > label.theme-row-label:hover ~ .lang-switch select:not(:disabled) {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 40%, transparent);
+  }
+
+  html.theme-white .icon-btn-stack--tool > label.theme-row-label:hover ~ .lang-switch select:not(:disabled) {
+    border-color: var(--accent) !important;
+  }
+
+  .deck-name-modal-dialog:has(#deck-name-modal-input:hover:not(:disabled)) #deck-name-modal-title {
+    color: var(--accent);
+  }
 }
 
 .btn-secondary {
@@ -3036,9 +3230,9 @@ html.theme-white .custom-select-wrap--api-lang .custom-select-trigger .lang-flag
   letter-spacing: 0.02em;
 }
 .result-db-version {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--highlight-yellow);
-  font-weight: 600;
+  font-weight: 800;
   font-variant-numeric: tabular-nums;
 }
 /* Rodapé da grelha: contagem (esq.), paginação (centro), versão DB (dir.). Desktop em 3 colunas. */
@@ -3504,7 +3698,10 @@ html.theme-white .custom-select-wrap--api-lang .custom-select-trigger .lang-flag
   align-items: flex-start;
   cursor: pointer;
   border-bottom: 1px solid var(--border);
-  transition: background 0.2s;
+  transition:
+    background 0.2s,
+    filter 0.18s ease,
+    box-shadow 0.18s ease;
   color: var(--text);
 }
 .suggestion-item.suggestion-item--draggable {
@@ -3516,6 +3713,76 @@ html.theme-white .custom-select-wrap--api-lang .custom-select-trigger .lang-flag
 
 .suggestion-item:active {
   background: var(--bg-dark);
+}
+
+/* Destaque ao hover: sugestões (lista + lista recortada, grelha + grelha recortada) e fila do deck nos quatro modos. */
+@media (hover: hover) {
+  .results-view.list-mode .suggestion-item:hover,
+  #random-main-modal .results-view.list-mode .suggestion-item:hover {
+    filter: brightness(1.14);
+    box-shadow:
+      inset 0 0 0 2px rgba(255, 255, 255, 0.38),
+      0 0 18px rgba(255, 255, 255, 0.08);
+  }
+
+  html.theme-white .results-view.list-mode .suggestion-item:hover,
+  html.theme-white #random-main-modal .results-view.list-mode .suggestion-item:hover {
+    filter: none;
+    box-shadow:
+      inset 0 0 0 2px rgba(37, 99, 235, 0.45),
+      0 0 0 3px rgba(59, 130, 246, 0.12);
+    background-color: #e8f0fe !important;
+  }
+
+  .results-view.grid-mode .suggestion-item:hover .suggestion-item-grid-artwrap img,
+  #random-main-modal .results-view.grid-mode .suggestion-item:hover .suggestion-item-grid-artwrap img {
+    transform: scale(1.06);
+    box-shadow:
+      0 8px 26px rgba(0, 0, 0, 0.65),
+      0 0 0 3px rgba(255, 255, 255, 0.28),
+      0 0 22px rgba(255, 220, 150, 0.18);
+  }
+
+  html.theme-white .results-view.grid-mode .suggestion-item:hover .suggestion-item-grid-artwrap img,
+  html.theme-white #random-main-modal .results-view.grid-mode .suggestion-item:hover .suggestion-item-grid-artwrap img {
+    box-shadow:
+      0 8px 24px rgba(0, 0, 0, 0.22),
+      0 0 0 3px rgba(37, 99, 235, 0.42),
+      0 0 20px rgba(59, 130, 246, 0.2);
+  }
+
+  .deck-list.deck-queue-view.list-mode .queue-item.deck-queue-list-row:hover {
+    filter: brightness(1.14);
+    box-shadow:
+      inset 0 0 0 2px rgba(255, 255, 255, 0.38),
+      0 0 18px rgba(255, 255, 255, 0.08);
+  }
+
+  html.theme-white .deck-list.deck-queue-view.list-mode .queue-item.deck-queue-list-row:hover {
+    filter: none;
+    box-shadow:
+      inset 0 0 0 2px rgba(37, 99, 235, 0.45),
+      0 0 0 3px rgba(59, 130, 246, 0.12);
+    background-color: #e8f0fe !important;
+  }
+
+  .deck-list.deck-queue-view.grid-mode .queue-item--grid:hover {
+    border-color: rgba(255, 255, 255, 0.55);
+    box-shadow:
+      0 6px 22px rgba(0, 0, 0, 0.48),
+      0 0 0 2px rgba(255, 255, 255, 0.12);
+  }
+
+  html.theme-white .deck-list.deck-queue-view.grid-mode .queue-item--grid:hover {
+    border-color: rgba(37, 99, 235, 0.58);
+    box-shadow:
+      0 6px 20px rgba(0, 0, 0, 0.14),
+      0 0 0 2px rgba(59, 130, 246, 0.22);
+  }
+
+  .deck-list.deck-queue-view.grid-mode .queue-item--grid:hover .queue-item-thumb-wrap img {
+    filter: brightness(1.12);
+  }
 }
 .suggestion-item img {
   width: 80px;
@@ -3746,7 +4013,10 @@ html.theme-white .custom-select-wrap--api-lang .custom-select-trigger .lang-flag
   object-fit: contain;
   margin: 0 auto;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-  transition: transform 0.2s;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    filter 0.2s ease;
 }
 
 .suggestion-item-grid-artwrap {
@@ -5187,7 +5457,11 @@ html.theme-white .deck-import-overlay-track {
 
 .queue-item {
   color: var(--text);
-  transition: background 0.15s ease;
+  transition:
+    background 0.15s ease,
+    filter 0.18s ease,
+    box-shadow 0.18s ease,
+    border-color 0.18s ease;
 }
 .queue-item[draggable='true'] {
   cursor: grab;
@@ -5232,6 +5506,7 @@ html.theme-white .deck-import-overlay-track {
   border-radius: 4px;
   border: 1px solid rgba(255, 255, 255, 0.12);
   object-fit: contain;
+  transition: filter 0.18s ease;
 }
 .queue-item-body {
   flex: 1;
@@ -5292,6 +5567,9 @@ html.theme-white .deck-import-overlay-track {
   position: relative;
   min-width: 0;
   cursor: pointer;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
 }
 .queue-item--grid .queue-item-thumb-wrap {
   width: 100%;
@@ -5382,10 +5660,17 @@ html.theme-white .deck-import-overlay-track {
   flex-shrink: 0;
 }
 .page-input {
-  width: 50px;
+  box-sizing: border-box;
+  width: 5.25ch;
+  min-width: 40px;
   text-align: center;
   background: var(--bg-dark);
   border: 1px solid var(--border);
+  color: var(--accent);
+}
+#page-total {
+  font-size: 13px;
+  font-weight: 700;
   color: var(--accent);
 }
 

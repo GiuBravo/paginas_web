@@ -59,7 +59,7 @@ const EXACT = {
   'search-input': 'Campo principal de busca por nome (fname).',
   'search-qty': 'Quantidade a adicionar ao deck por clique.',
   'page-jump': 'Input ir para página N.',
-  'page-total': 'Texto “/ total” da paginação.',
+  'page-total': 'Texto “de total” / i18n (`ui.pagination_page_total`) na paginação.',
   'sort-by': 'Critério de ordenação dos resultados.',
   'theme-selector': 'Tema claro/escuro.',
   'select-api-card-lang': 'Idioma dos dados de carta na API.',
