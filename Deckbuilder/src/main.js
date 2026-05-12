@@ -20403,6 +20403,7 @@ function fillTooltipData(card) {
     else tt.prepend(banContainer);
   }
   let infoHtml = `<div style="display: flex; flex-direction: column; gap: 8px; width: 100%;">`;
+  const separatorHtml = `<hr style="border: 0; border-top: 1px solid #444; margin: 4px 0; opacity: 1;">`;
   const gpRawTt =
     card && card.genesys_points != null
       ? card.genesys_points
@@ -20461,6 +20462,7 @@ function fillTooltipData(card) {
     cardTypeRawTt.includes('Spell') ||
     cardTypeRawTt.includes('Trap')
   ) {
+    infoHtml += separatorHtml;
     let iconUrl =
       frameTypeIsSpell(ft) || cardTypeRawTt.includes('Spell')
         ? STATIC_ICON_SPELL_FRAME_SVG
@@ -20558,7 +20560,7 @@ function fillTooltipData(card) {
       ? String(card.misc_info[0].konami_id)
       : '';
   const konamiDisplay = konamiRaw ? escapeHtml(konamiRaw) : '—';
-  const idHtml = `<div class="tt-card-id-row">
+  const idHtml = `${separatorHtml}<div class="tt-card-id-row">
             <span class="tt-card-id-pair"><span class="tt-card-id-label">ID</span><span class="tt-card-id-value">${escapeHtml(String(cardIdDisplay))}</span></span>
             <span class="tt-card-id-pair"><span class="tt-konami-id-label">Konami</span><span class="tt-konami-id-value">${konamiDisplay}</span></span>
         </div>`;
@@ -20607,7 +20609,6 @@ function fillTooltipData(card) {
     }
   }
   const datesHtml = `<div class="tt-tooltip-dates"><span>📅 TCG: ${escapeHtml(String(tcgDate))}</span><span>📅 OCG: ${escapeHtml(String(ocgDate))}</span></div>`;
-  const separatorHtml = `<hr style="border: 0; border-top: 1px solid #444; margin: 4px 0; opacity: 1;">`;
   const pricesHtml = `<div style="margin-top: 4px; display: flex; flex-wrap: wrap; gap: 8px; font-size: 11px; color: #fff; font-weight: 500;">
             <span title="TCGPlayer"><i class="fa-solid fa-store" style="color:var(--accent); font-size: 11px;"></i> TCG: ${escapeHtml(formatP(p.tcgplayer_price))}</span>
             <span title="Cardmarket"><i class="fa-solid fa-m" style="color:var(--accent); font-size: 11px;"></i> CM: ${escapeHtml(formatP(p.cardmarket_price))}</span>
