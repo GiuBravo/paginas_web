@@ -14,8 +14,8 @@ window.__DECKBUILDER_MONOLITH__=true;
  *
  * ## Ambiente de execução e linguagem
  * - **Motor**: ECMAScript moderno nos navegadores suportados (Chromium, Firefox, Safari recentes).
- * - **Forma de carregamento**: `<script src="/src/main.js">` em `index.html` — escopo global (sem `type="module"`),
- *   compatível com handlers `onclick="..."` legados no markup.
+ * - **Forma de carregamento**: `index.html` usa `<script type="module" src="/src/main.js">` (Vite); funções
+ *   chamadas em `onclick="..."` no markup devem estar em `window` (ex.: `window.togglePageFullscreen`).
  * - **Recursos típicos usados**: `Map`, `Set`, `WeakMap`, `Intl.Collator`, `fetch`, DOM, `localStorage`/cookies,
  *   APIs opcionais conforme funcionalidades ativas (workers, canvas, etc.).
  *
@@ -337,6 +337,8 @@ let __pendingDeckSurfaceAnimateStackImgIds = null;
 let deckSnapshotForSurface = null;
 /** Timeout para suavizar ou debouncing de efeitos nos filtros da superfície (valor definido onde agendado). */
 let surfaceFilterFxTimer = null;
+/** Debounce só do toast de mudança de página (som/pulso ficam síncronos ao gesto — evita bloqueio de áudio e fila de toasts). */
+let surfacePageFxTimer = null;
 /** Scroll automático pós-add: tenta focar a pilha/carta recém adicionada. */
 let pendingDeckScrollTarget = null;
 /** Snapshot mobile `{ rvEl, rv, vp }` antes de `updateUI`; `rvEl` é `#results-view` quando existir. `generatePDF` / `#preview-frame` repõem scroll após layout assíncrono. */
@@ -922,6 +924,33 @@ const RESULT_TYPE_COLORS = {
   'Ritual Monster': '#3b73a3',
   Token: '#6e6e6e',
 };
+
+/**
+ * Opacidade do tinte por tipo na listagem (sugestões, deck, amostra aleatória) quando o tema usa
+ * cor de tipo no fundo da linha — o canal alfa deixa ver o `--panel-bg` por baixo e melhora contraste.
+ * @type {number}
+ */
+const LIST_ROW_TYPE_TINT_ALPHA = 0.42;
+
+/**
+ * Converte um `#rrggbb` da paleta em `rgba` semitransparente; devolve o valor original se não for hex
+ * (ex.: `var(--panel-bg)`).
+ *
+ * @param {string} hexOrCss Cor em hex ou outro valor CSS.
+ * @param {number} [alpha] Opacidade 0–1 (default {@link LIST_ROW_TYPE_TINT_ALPHA}).
+ * @returns {string} `rgba(r,g,b,a)` ou `hexOrCss` inalterado.
+ */
+function typePaletteBackgroundTint(hexOrCss, alpha = LIST_ROW_TYPE_TINT_ALPHA) {
+  const s = String(hexOrCss || '').trim();
+  const m = /^#([0-9a-fA-F]{6})$/.exec(s);
+  if (!m) return s;
+  const n = parseInt(m[1], 16);
+  const r = (n >> 16) & 255;
+  const g = (n >> 8) & 255;
+  const b = n & 255;
+  const a = Math.max(0, Math.min(1, Number(alpha) || 0));
+  return `rgba(${r},${g},${b},${a})`;
+}
 
 /** Rótulos de seção do deck quando o idioma da UI é inglês (imutável). */
 const DECK_SECTION_UI_LABEL_EN = Object.freeze({
@@ -3267,7 +3296,7 @@ function renderRandomMainModalSample() {
     const colorKey = getTypeColorKeyFromCardType(card.type);
     const cardBgColor = RESULT_TYPE_COLORS[colorKey] || 'var(--panel-bg)';
     if (!hasCustomTheme) {
-      div.style.backgroundColor = cardBgColor;
+      div.style.backgroundColor = typePaletteBackgroundTint(cardBgColor);
       div.style.borderLeft = 'none';
     } else {
       div.style.backgroundColor = 'var(--panel-bg)';
@@ -19271,7 +19300,8 @@ function paintCardSurfaceEnterAnimations(rootSelector, itemSelector) {
 
 /**
  * Dispara feedback completo: pulso de layout (se aplicável), toast superficial, chime WebAudio e vibração.
- * `filter` / `filter_reset` executam com debounce curto.
+ * `filter` / `filter_reset` executam com debounce curto. Em `page`, só o toast é debounced (som/vibração/pulso
+ * ficam síncronos para o WebAudio não ser bloqueado após o gesto do utilizador).
  *
  * @param {string|null|undefined} reason Motivo; `silent` ou vazio não faz nada.
  * @returns {void}
@@ -19279,6 +19309,7 @@ function paintCardSurfaceEnterAnimations(rootSelector, itemSelector) {
 function applyCardSurfaceFeedback(reason) {
   if (!reason || reason === 'silent') return;
   const debounced = reason === 'filter' || reason === 'filter_reset';
+  const pageDebounced = reason === 'page';
   const run = () => {
     flashLayoutSurfacePulse(reason);
     let toastReason = reason;
@@ -19294,6 +19325,19 @@ function applyCardSurfaceFeedback(reason) {
       surfaceFilterFxTimer = null;
       run();
     }, 340);
+    return;
+  }
+  if (pageDebounced) {
+    flashLayoutSurfacePulse(reason);
+    playCardSurfaceChime(reason);
+    pulseCardSurfaceHaptic(reason);
+    clearTimeout(surfacePageFxTimer);
+    surfacePageFxTimer = setTimeout(() => {
+      surfacePageFxTimer = null;
+      if (!SURFACE_TOAST_SKIP_REASONS.has('page')) {
+        showSurfaceToast(surfaceToastMessageForReason('page'), 'page');
+      }
+    }, 320);
     return;
   }
   run();
@@ -19464,6 +19508,8 @@ function togglePageFullscreen() {
     showToast(T('toast.fullscreen_fail'));
   }
 }
+
+window.togglePageFullscreen = togglePageFullscreen;
 
 /**
  * Atualiza `#btn-toggle-fullscreen`: classe ativa, ícone, `title`, `aria-*` conforme {@link getFullscreenElement}.
@@ -20284,6 +20330,23 @@ function fillTooltipData(card) {
   const isMobile = window.innerWidth < 900;
   const colorKey = getTypeColorKeyFromCardType(card.type);
   const cardColor = RESULT_TYPE_COLORS[colorKey] || 'var(--accent)';
+  const typeBgHex = RESULT_TYPE_COLORS[colorKey] || null;
+  const htmlEl = document.documentElement;
+  const hasCustomThemeTooltip =
+    htmlEl.classList.contains('theme-white') ||
+    htmlEl.classList.contains('theme-black') ||
+    htmlEl.classList.contains('theme-kaiba');
+  if (!hasCustomThemeTooltip && typeBgHex) {
+    const wash = typePaletteBackgroundTint(typeBgHex);
+    const layered = `linear-gradient(${wash}, ${wash}), var(--panel-bg)`;
+    if (isMobile) {
+      tt.style.setProperty('background', layered, 'important');
+    } else {
+      tt.style.background = layered;
+    }
+  } else {
+    tt.style.removeProperty('background');
+  }
   const oldBtn = getEl('mobile-close-x');
   if (oldBtn) oldBtn.remove();
   if (isMobile) {
@@ -21767,6 +21830,9 @@ function adjustScale(amount) {
   triggerPDFUpdate();
 }
 
+window.adjustVal = adjustVal;
+window.adjustScale = adjustScale;
+
 const _debSearchIds = ['search-input', 'filter-desc', 'filter-atk', 'filter-def'];
 for (let _dsi = 0; _dsi < _debSearchIds.length; _dsi++)
   getEl(_debSearchIds[_dsi])?.addEventListener('input', triggerSearch);
@@ -22762,7 +22828,7 @@ function renderResults() {
     const colorKey = getTypeColorKeyFromCardType(card.type);
     const cardBgColor = RESULT_TYPE_COLORS[colorKey] || 'var(--panel-bg)';
     if (!hasCustomTheme) {
-      div.style.backgroundColor = cardBgColor;
+      div.style.backgroundColor = typePaletteBackgroundTint(cardBgColor);
       div.style.borderLeft = 'none';
     } else {
       div.style.backgroundColor = 'var(--panel-bg)';
@@ -23286,7 +23352,7 @@ function renderDeckQueue() {
     row.dataset.stackImgId = sid;
     row.title = rowHint;
     if (!deckQueueHasCustomTheme && colorKey) {
-      row.style.backgroundColor = cardBgColor;
+      row.style.backgroundColor = typePaletteBackgroundTint(cardBgColor);
       row.style.borderLeft = 'none';
     } else if (colorKey) {
       row.style.backgroundColor = 'var(--panel-bg)';

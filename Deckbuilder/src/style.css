@@ -1353,9 +1353,50 @@ html:not(.help-enabled) .filter-action-row .icon-btn-stack--tool .theme-row-labe
   max-width: 100%;
   gap: 5px;
 }
+/* Linha superior da busca: tudo na mesma linha, sem scroll horizontal (o Nome/ID encolhe no espaço livre) */
+.search-area-top-row {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 10px;
+  align-items: flex-end;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: hidden;
+  overflow-y: visible;
+}
 .search-area .label-width-stack,
 .queue-toolbar-extras .label-width-stack {
   align-self: flex-end;
+}
+/* Linha Nome/ID + Adicionar/Limpar: ocupa o espaço flexível entre OCR e Quantidade e pode encolher */
+.search-area-name-row {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 8px;
+  align-items: flex-end;
+  flex: 1 1 0;
+  min-width: 0;
+}
+/* Campo Nome/ID: cresce até no máx. ~38ch dentro da faixa flexível; texto longo rola dentro do input */
+.search-area .label-width-stack.search-area-name-stack {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: auto;
+  max-width: min(38ch, 100%);
+  box-sizing: border-box;
+}
+.search-area .label-width-stack.search-area-name-stack .cardset-hint {
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.search-area .label-width-stack.search-area-name-stack #search-input {
+  width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  text-overflow: clip;
+  white-space: nowrap;
 }
 .label-width-stack > .theme-row-label,
 .label-width-stack > label.theme-row-label {
@@ -1444,7 +1485,8 @@ html:not(.help-enabled) .filter-action-row .icon-btn-stack--tool .theme-row-labe
 }
 /* Marcador para recolocar o stepper no desktop após reparent no mobile (`relocateSearchQtyStackForViewport`). */
 .search-qty-anchor {
-  display: contents;
+  /* `display: contents` em alguns browsers altera o flattening do flex e pode colar pilhas vizinhas */
+  display: none;
 }
 
 /* Quantidade (busca): botões ± mais estreitos e campo numérico sempre legível */
@@ -1452,6 +1494,8 @@ html:not(.help-enabled) .filter-action-row .icon-btn-stack--tool .theme-row-labe
   /* não força sobra à direita do botão + */
   min-width: 0;
   width: fit-content;
+  flex: 0 0 auto;
+  flex-shrink: 0;
 }
 /* Ajuda (hints abaixo dos labels) */
 .ui-help-hint {
@@ -3175,6 +3219,7 @@ html.theme-white .custom-select-wrap--api-lang .custom-select-trigger .lang-flag
   padding: 15px;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
+  min-width: 0;
 }
 .view-controls {
   display: flex;
@@ -6417,8 +6462,6 @@ html.theme-white .toast.toast-error {
   /* Em mobile algumas ferramentas perdem sentido: ocultar botões + rótulos. */
   label.theme-row-label[for='btn-toggle-tooltip'],
   #btn-toggle-tooltip,
-  label.theme-row-label[for='btn-toggle-filters-column'],
-  #btn-toggle-filters-column,
   label.theme-row-label[for='btn-toggle-deck-column'],
   #btn-toggle-deck-column,
   span.theme-row-label[data-i18n='ui.deck_pdf_label'],
@@ -6428,8 +6471,8 @@ html.theme-white .toast.toast-error {
 
   /* Remove os wrappers do flex — só esconder o botão deixa lacunas grandes entre Aleatório e Lista. */
   .view-controls-toolbar-row .icon-btn-row .icon-btn-stack:has(#btn-toggle-tooltip),
-  .view-controls-toolbar-row .icon-btn-row .icon-btn-stack:has(#btn-toggle-filters-column),
-  .view-controls-toolbar-row .icon-btn-row .icon-btn-stack:has(#btn-toggle-deck-column) {
+  .search-area .icon-btn-stack:has(#btn-toggle-filters-column),
+  .search-area .icon-btn-stack:has(#btn-toggle-deck-column) {
     display: none !important;
   }
 

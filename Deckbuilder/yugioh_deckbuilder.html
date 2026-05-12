@@ -13,7 +13,7 @@
      #random-main-modal, #help-mouse-modal, #credits-modal, #tooltip-details-modal).
   3) #app-layout — grelha principal: #col-filters (filtros), #col-results (busca + #results-view),
      #col-preview (fila do deck, #deck-items, exportação, PDF, etc.).
-  4) <script src="/src/main.js"> — lógica monolítica global (handlers onclick="…" no markup).
+  4) <script type="module" src="/src/main.js"> — lógica monolítica; handlers `onclick="…"` exigem funções em `window`.
   5) #ocr-container e nós associados — UI fullscreen do scanner/OCR (após o script por legado;
      o mesmo nó é referido em main.js).
 
@@ -1697,9 +1697,50 @@ html:not(.help-enabled) .filter-action-row .icon-btn-stack--tool .theme-row-labe
   max-width: 100%;
   gap: 5px;
 }
+/* Linha superior da busca: tudo na mesma linha, sem scroll horizontal (o Nome/ID encolhe no espaço livre) */
+.search-area-top-row {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 10px;
+  align-items: flex-end;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: hidden;
+  overflow-y: visible;
+}
 .search-area .label-width-stack,
 .queue-toolbar-extras .label-width-stack {
   align-self: flex-end;
+}
+/* Linha Nome/ID + Adicionar/Limpar: ocupa o espaço flexível entre OCR e Quantidade e pode encolher */
+.search-area-name-row {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 8px;
+  align-items: flex-end;
+  flex: 1 1 0;
+  min-width: 0;
+}
+/* Campo Nome/ID: cresce até no máx. ~38ch dentro da faixa flexível; texto longo rola dentro do input */
+.search-area .label-width-stack.search-area-name-stack {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: auto;
+  max-width: min(38ch, 100%);
+  box-sizing: border-box;
+}
+.search-area .label-width-stack.search-area-name-stack .cardset-hint {
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.search-area .label-width-stack.search-area-name-stack #search-input {
+  width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  text-overflow: clip;
+  white-space: nowrap;
 }
 .label-width-stack > .theme-row-label,
 .label-width-stack > label.theme-row-label {
@@ -1788,7 +1829,8 @@ html:not(.help-enabled) .filter-action-row .icon-btn-stack--tool .theme-row-labe
 }
 /* Marcador para recolocar o stepper no desktop após reparent no mobile (`relocateSearchQtyStackForViewport`). */
 .search-qty-anchor {
-  display: contents;
+  /* `display: contents` em alguns browsers altera o flattening do flex e pode colar pilhas vizinhas */
+  display: none;
 }
 
 /* Quantidade (busca): botões ± mais estreitos e campo numérico sempre legível */
@@ -1796,6 +1838,8 @@ html:not(.help-enabled) .filter-action-row .icon-btn-stack--tool .theme-row-labe
   /* não força sobra à direita do botão + */
   min-width: 0;
   width: fit-content;
+  flex: 0 0 auto;
+  flex-shrink: 0;
 }
 /* Ajuda (hints abaixo dos labels) */
 .ui-help-hint {
@@ -3519,6 +3563,7 @@ html.theme-white .custom-select-wrap--api-lang .custom-select-trigger .lang-flag
   padding: 15px;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
+  min-width: 0;
 }
 .view-controls {
   display: flex;
@@ -6761,8 +6806,6 @@ html.theme-white .toast.toast-error {
   /* Em mobile algumas ferramentas perdem sentido: ocultar botões + rótulos. */
   label.theme-row-label[for='btn-toggle-tooltip'],
   #btn-toggle-tooltip,
-  label.theme-row-label[for='btn-toggle-filters-column'],
-  #btn-toggle-filters-column,
   label.theme-row-label[for='btn-toggle-deck-column'],
   #btn-toggle-deck-column,
   span.theme-row-label[data-i18n='ui.deck_pdf_label'],
@@ -6772,8 +6815,8 @@ html.theme-white .toast.toast-error {
 
   /* Remove os wrappers do flex — só esconder o botão deixa lacunas grandes entre Aleatório e Lista. */
   .view-controls-toolbar-row .icon-btn-row .icon-btn-stack:has(#btn-toggle-tooltip),
-  .view-controls-toolbar-row .icon-btn-row .icon-btn-stack:has(#btn-toggle-filters-column),
-  .view-controls-toolbar-row .icon-btn-row .icon-btn-stack:has(#btn-toggle-deck-column) {
+  .search-area .icon-btn-stack:has(#btn-toggle-filters-column),
+  .search-area .icon-btn-stack:has(#btn-toggle-deck-column) {
     display: none !important;
   }
 
@@ -8482,7 +8525,39 @@ html.theme-white .toast.toast-error {
       <!-- === Coluna central: busca, paginação, #results-view === -->
       <div class="col" id="col-results">
         <div class="search-area">
-          <div style="display: flex; gap: 10px; align-items: flex-end">
+          <div class="search-area-top-row">
+            <div class="icon-btn-stack icon-btn-stack--tool">
+              <label
+                class="theme-row-label"
+                for="btn-toggle-filters-column"
+                data-i18n="ui.filters_toggle_label"
+                >Filtros</label
+              >
+              <button
+                type="button"
+                id="btn-toggle-filters-column"
+                class="btn-view active"
+                data-i18n-title="ui.filters_toggle_title_on"
+                title="Ocultar coluna de filtros"
+                aria-pressed="true"
+                data-i18n-aria="ui.filters_toggle_aria"
+                aria-label="Ocultar/mostrar coluna de filtros"
+                style="
+                  min-width: 38px;
+                  height: 35px;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                "
+              >
+                <i
+                  class="fas fa-filter"
+                  id="icon-toggle-filters-column"
+                  style="font-size: 14px"
+                  aria-hidden="true"
+                ></i>
+              </button>
+            </div>
             <div class="icon-btn-stack icon-btn-stack--tool icon-btn-stack--tool-wide">
               <span class="theme-row-label" data-i18n="ui.scan_card_ocr">Escanear Carta (OCR)</span>
               <button
@@ -8497,8 +8572,8 @@ html.theme-white .toast.toast-error {
                 <i class="fa-solid fa-camera" aria-hidden="true"></i>
               </button>
             </div>
-            <div style="flex: 1; display: flex; gap: 8px; min-width: 0; align-items: flex-end">
-              <div class="label-width-stack" style="flex: 1; min-width: 0">
+            <div class="search-area-name-row">
+              <div class="label-width-stack search-area-name-stack">
                 <label class="theme-row-label" for="search-input" data-i18n="ui.search_name_label"
                   >Nome</label
                 >
@@ -8650,33 +8725,30 @@ html.theme-white .toast.toast-error {
               </div>
             </div>
             <div class="icon-btn-stack icon-btn-stack--tool">
-              <label class="theme-row-label" for="btn-toggle-fullscreen" data-i18n="ui.screen_label"
-                >Tela</label
+              <label
+                class="theme-row-label"
+                for="btn-toggle-deck-column"
+                data-i18n="ui.deck_col_label"
+                >Deck</label
               >
               <button
                 type="button"
-                id="btn-toggle-fullscreen"
+                id="btn-toggle-deck-column"
                 class="btn-view"
-                data-i18n-title="ui.screen_title"
-                title="Tela inteira (como F11)"
-                aria-pressed="false"
-                data-i18n-aria="ui.screen_aria"
-                aria-label="Entrar em tela inteira"
-                onclick="togglePageFullscreen()"
+                data-i18n-title="ui.deck_col_title"
+                title="Coluna do deck: ocultar / normal / ampliada"
                 style="
+                  font-size: 16px;
                   min-width: 38px;
                   height: 35px;
                   display: flex;
                   align-items: center;
                   justify-content: center;
                 "
+                data-i18n-aria="ui.deck_col_aria"
+                aria-label="Alternar coluna do deck: ocultar, normal ou ampliada"
               >
-                <i
-                  class="fas fa-expand"
-                  id="icon-toggle-fullscreen"
-                  style="font-size: 14px"
-                  aria-hidden="true"
-                ></i>
+                <i class="fas fa-columns" id="icon-toggle-deck-column" aria-hidden="true"></i>
               </button>
             </div>
           </div>
@@ -8835,39 +8907,6 @@ html.theme-white .toast.toast-error {
               <div class="icon-btn-stack">
                 <label
                   class="theme-row-label"
-                  for="btn-toggle-filters-column"
-                  data-i18n="ui.filters_toggle_label"
-                  >Filtros</label
-                >
-                <button
-                  type="button"
-                  id="btn-toggle-filters-column"
-                  class="btn-view active"
-                  data-i18n-title="ui.filters_toggle_title_on"
-                  title="Ocultar coluna de filtros"
-                  aria-pressed="true"
-                  data-i18n-aria="ui.filters_toggle_aria"
-                  aria-label="Ocultar/mostrar coluna de filtros"
-                  style="
-                    min-width: 38px;
-                    height: 35px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                  "
-                >
-                  <i
-                    class="fas fa-filter"
-                    id="icon-toggle-filters-column"
-                    style="font-size: 14px"
-                    aria-hidden="true"
-                  ></i>
-                </button>
-              </div>
-
-              <div class="icon-btn-stack">
-                <label
-                  class="theme-row-label"
                   for="btn-toggle-results-view"
                   id="label-toggle-results-view"
                   >Grade</label
@@ -8893,30 +8932,33 @@ html.theme-white .toast.toast-error {
               </div>
 
               <div class="icon-btn-stack">
-                <label
-                  class="theme-row-label"
-                  for="btn-toggle-deck-column"
-                  data-i18n="ui.deck_col_label"
-                  >Deck</label
+                <label class="theme-row-label" for="btn-toggle-fullscreen" data-i18n="ui.screen_label"
+                  >Tela</label
                 >
                 <button
                   type="button"
-                  id="btn-toggle-deck-column"
+                  id="btn-toggle-fullscreen"
                   class="btn-view"
-                  data-i18n-title="ui.deck_col_title"
-                  title="Coluna do deck: ocultar / normal / ampliada"
+                  data-i18n-title="ui.screen_title"
+                  title="Tela inteira (como F11)"
+                  aria-pressed="false"
+                  data-i18n-aria="ui.screen_aria"
+                  aria-label="Entrar em tela inteira"
+                  onclick="togglePageFullscreen()"
                   style="
-                    font-size: 16px;
                     min-width: 38px;
                     height: 35px;
                     display: flex;
                     align-items: center;
                     justify-content: center;
                   "
-                  data-i18n-aria="ui.deck_col_aria"
-                  aria-label="Alternar coluna do deck: ocultar, normal ou ampliada"
                 >
-                  <i class="fas fa-columns" id="icon-toggle-deck-column" aria-hidden="true"></i>
+                  <i
+                    class="fas fa-expand"
+                    id="icon-toggle-fullscreen"
+                    style="font-size: 14px"
+                    aria-hidden="true"
+                  ></i>
                 </button>
               </div>
             </div>
@@ -9784,7 +9826,7 @@ html.theme-white .toast.toast-error {
 
         <script>
 window.__DECKBUILDER_MONOLITH__=true;
-window.__LOC_WITH_DOCS__=39518;
+window.__LOC_WITH_DOCS__=39626;
 window.__DECKBUILDER_MONOLITH__=true;
 /**
  * @fileoverview DeckBuilder GiuBravo — lógica cliente monolítica carregada como script global.
@@ -9801,8 +9843,8 @@ window.__DECKBUILDER_MONOLITH__=true;
  *
  * ## Ambiente de execução e linguagem
  * - **Motor**: ECMAScript moderno nos navegadores suportados (Chromium, Firefox, Safari recentes).
- * - **Forma de carregamento**: `<script src="/src/main.js">` em `index.html` — escopo global (sem `type="module"`),
- *   compatível com handlers `onclick="..."` legados no markup.
+ * - **Forma de carregamento**: `index.html` usa `<script type="module" src="/src/main.js">` (Vite); funções
+ *   chamadas em `onclick="..."` no markup devem estar em `window` (ex.: `window.togglePageFullscreen`).
  * - **Recursos típicos usados**: `Map`, `Set`, `WeakMap`, `Intl.Collator`, `fetch`, DOM, `localStorage`/cookies,
  *   APIs opcionais conforme funcionalidades ativas (workers, canvas, etc.).
  *
@@ -10124,6 +10166,8 @@ let __pendingDeckSurfaceAnimateStackImgIds = null;
 let deckSnapshotForSurface = null;
 /** Timeout para suavizar ou debouncing de efeitos nos filtros da superfície (valor definido onde agendado). */
 let surfaceFilterFxTimer = null;
+/** Debounce só do toast de mudança de página (som/pulso ficam síncronos ao gesto — evita bloqueio de áudio e fila de toasts). */
+let surfacePageFxTimer = null;
 /** Scroll automático pós-add: tenta focar a pilha/carta recém adicionada. */
 let pendingDeckScrollTarget = null;
 /** Snapshot mobile `{ rvEl, rv, vp }` antes de `updateUI`; `rvEl` é `#results-view` quando existir. `generatePDF` / `#preview-frame` repõem scroll após layout assíncrono. */
@@ -10709,6 +10753,33 @@ const RESULT_TYPE_COLORS = {
   'Ritual Monster': '#3b73a3',
   Token: '#6e6e6e',
 };
+
+/**
+ * Opacidade do tinte por tipo na listagem (sugestões, deck, amostra aleatória) quando o tema usa
+ * cor de tipo no fundo da linha — o canal alfa deixa ver o `--panel-bg` por baixo e melhora contraste.
+ * @type {number}
+ */
+const LIST_ROW_TYPE_TINT_ALPHA = 0.42;
+
+/**
+ * Converte um `#rrggbb` da paleta em `rgba` semitransparente; devolve o valor original se não for hex
+ * (ex.: `var(--panel-bg)`).
+ *
+ * @param {string} hexOrCss Cor em hex ou outro valor CSS.
+ * @param {number} [alpha] Opacidade 0–1 (default {@link LIST_ROW_TYPE_TINT_ALPHA}).
+ * @returns {string} `rgba(r,g,b,a)` ou `hexOrCss` inalterado.
+ */
+function typePaletteBackgroundTint(hexOrCss, alpha = LIST_ROW_TYPE_TINT_ALPHA) {
+  const s = String(hexOrCss || '').trim();
+  const m = /^#([0-9a-fA-F]{6})$/.exec(s);
+  if (!m) return s;
+  const n = parseInt(m[1], 16);
+  const r = (n >> 16) & 255;
+  const g = (n >> 8) & 255;
+  const b = n & 255;
+  const a = Math.max(0, Math.min(1, Number(alpha) || 0));
+  return `rgba(${r},${g},${b},${a})`;
+}
 
 /** Rótulos de seção do deck quando o idioma da UI é inglês (imutável). */
 const DECK_SECTION_UI_LABEL_EN = Object.freeze({
@@ -13054,7 +13125,7 @@ function renderRandomMainModalSample() {
     const colorKey = getTypeColorKeyFromCardType(card.type);
     const cardBgColor = RESULT_TYPE_COLORS[colorKey] || 'var(--panel-bg)';
     if (!hasCustomTheme) {
-      div.style.backgroundColor = cardBgColor;
+      div.style.backgroundColor = typePaletteBackgroundTint(cardBgColor);
       div.style.borderLeft = 'none';
     } else {
       div.style.backgroundColor = 'var(--panel-bg)';
@@ -29058,7 +29129,8 @@ function paintCardSurfaceEnterAnimations(rootSelector, itemSelector) {
 
 /**
  * Dispara feedback completo: pulso de layout (se aplicável), toast superficial, chime WebAudio e vibração.
- * `filter` / `filter_reset` executam com debounce curto.
+ * `filter` / `filter_reset` executam com debounce curto. Em `page`, só o toast é debounced (som/vibração/pulso
+ * ficam síncronos para o WebAudio não ser bloqueado após o gesto do utilizador).
  *
  * @param {string|null|undefined} reason Motivo; `silent` ou vazio não faz nada.
  * @returns {void}
@@ -29066,6 +29138,7 @@ function paintCardSurfaceEnterAnimations(rootSelector, itemSelector) {
 function applyCardSurfaceFeedback(reason) {
   if (!reason || reason === 'silent') return;
   const debounced = reason === 'filter' || reason === 'filter_reset';
+  const pageDebounced = reason === 'page';
   const run = () => {
     flashLayoutSurfacePulse(reason);
     let toastReason = reason;
@@ -29081,6 +29154,19 @@ function applyCardSurfaceFeedback(reason) {
       surfaceFilterFxTimer = null;
       run();
     }, 340);
+    return;
+  }
+  if (pageDebounced) {
+    flashLayoutSurfacePulse(reason);
+    playCardSurfaceChime(reason);
+    pulseCardSurfaceHaptic(reason);
+    clearTimeout(surfacePageFxTimer);
+    surfacePageFxTimer = setTimeout(() => {
+      surfacePageFxTimer = null;
+      if (!SURFACE_TOAST_SKIP_REASONS.has('page')) {
+        showSurfaceToast(surfaceToastMessageForReason('page'), 'page');
+      }
+    }, 320);
     return;
   }
   run();
@@ -29251,6 +29337,8 @@ function togglePageFullscreen() {
     showToast(T('toast.fullscreen_fail'));
   }
 }
+
+window.togglePageFullscreen = togglePageFullscreen;
 
 /**
  * Atualiza `#btn-toggle-fullscreen`: classe ativa, ícone, `title`, `aria-*` conforme {@link getFullscreenElement}.
@@ -30071,6 +30159,23 @@ function fillTooltipData(card) {
   const isMobile = window.innerWidth < 900;
   const colorKey = getTypeColorKeyFromCardType(card.type);
   const cardColor = RESULT_TYPE_COLORS[colorKey] || 'var(--accent)';
+  const typeBgHex = RESULT_TYPE_COLORS[colorKey] || null;
+  const htmlEl = document.documentElement;
+  const hasCustomThemeTooltip =
+    htmlEl.classList.contains('theme-white') ||
+    htmlEl.classList.contains('theme-black') ||
+    htmlEl.classList.contains('theme-kaiba');
+  if (!hasCustomThemeTooltip && typeBgHex) {
+    const wash = typePaletteBackgroundTint(typeBgHex);
+    const layered = `linear-gradient(${wash}, ${wash}), var(--panel-bg)`;
+    if (isMobile) {
+      tt.style.setProperty('background', layered, 'important');
+    } else {
+      tt.style.background = layered;
+    }
+  } else {
+    tt.style.removeProperty('background');
+  }
   const oldBtn = getEl('mobile-close-x');
   if (oldBtn) oldBtn.remove();
   if (isMobile) {
@@ -31554,6 +31659,9 @@ function adjustScale(amount) {
   triggerPDFUpdate();
 }
 
+window.adjustVal = adjustVal;
+window.adjustScale = adjustScale;
+
 const _debSearchIds = ['search-input', 'filter-desc', 'filter-atk', 'filter-def'];
 for (let _dsi = 0; _dsi < _debSearchIds.length; _dsi++)
   getEl(_debSearchIds[_dsi])?.addEventListener('input', triggerSearch);
@@ -32549,7 +32657,7 @@ function renderResults() {
     const colorKey = getTypeColorKeyFromCardType(card.type);
     const cardBgColor = RESULT_TYPE_COLORS[colorKey] || 'var(--panel-bg)';
     if (!hasCustomTheme) {
-      div.style.backgroundColor = cardBgColor;
+      div.style.backgroundColor = typePaletteBackgroundTint(cardBgColor);
       div.style.borderLeft = 'none';
     } else {
       div.style.backgroundColor = 'var(--panel-bg)';
@@ -33073,7 +33181,7 @@ function renderDeckQueue() {
     row.dataset.stackImgId = sid;
     row.title = rowHint;
     if (!deckQueueHasCustomTheme && colorKey) {
-      row.style.backgroundColor = cardBgColor;
+      row.style.backgroundColor = typePaletteBackgroundTint(cardBgColor);
       row.style.borderLeft = 'none';
     } else if (colorKey) {
       row.style.backgroundColor = 'var(--panel-bg)';

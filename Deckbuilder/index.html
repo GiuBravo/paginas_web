@@ -12,7 +12,7 @@
      #random-main-modal, #help-mouse-modal, #credits-modal, #tooltip-details-modal).
   3) #app-layout — grelha principal: #col-filters (filtros), #col-results (busca + #results-view),
      #col-preview (fila do deck, #deck-items, exportação, PDF, etc.).
-  4) <script src="/src/main.js"> — lógica monolítica global (handlers onclick="…" no markup).
+  4) <script type="module" src="/src/main.js"> — lógica monolítica; handlers `onclick="…"` exigem funções em `window`.
   5) #ocr-container e nós associados — UI fullscreen do scanner/OCR (após o script por legado;
      o mesmo nó é referido em main.js).
 
@@ -1823,7 +1823,39 @@
       <!-- === Coluna central: busca, paginação, #results-view === -->
       <div class="col" id="col-results">
         <div class="search-area">
-          <div style="display: flex; gap: 10px; align-items: flex-end">
+          <div class="search-area-top-row">
+            <div class="icon-btn-stack icon-btn-stack--tool">
+              <label
+                class="theme-row-label"
+                for="btn-toggle-filters-column"
+                data-i18n="ui.filters_toggle_label"
+                >Filtros</label
+              >
+              <button
+                type="button"
+                id="btn-toggle-filters-column"
+                class="btn-view active"
+                data-i18n-title="ui.filters_toggle_title_on"
+                title="Ocultar coluna de filtros"
+                aria-pressed="true"
+                data-i18n-aria="ui.filters_toggle_aria"
+                aria-label="Ocultar/mostrar coluna de filtros"
+                style="
+                  min-width: 38px;
+                  height: 35px;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                "
+              >
+                <i
+                  class="fas fa-filter"
+                  id="icon-toggle-filters-column"
+                  style="font-size: 14px"
+                  aria-hidden="true"
+                ></i>
+              </button>
+            </div>
             <div class="icon-btn-stack icon-btn-stack--tool icon-btn-stack--tool-wide">
               <span class="theme-row-label" data-i18n="ui.scan_card_ocr">Escanear Carta (OCR)</span>
               <button
@@ -1838,8 +1870,8 @@
                 <i class="fa-solid fa-camera" aria-hidden="true"></i>
               </button>
             </div>
-            <div style="flex: 1; display: flex; gap: 8px; min-width: 0; align-items: flex-end">
-              <div class="label-width-stack" style="flex: 1; min-width: 0">
+            <div class="search-area-name-row">
+              <div class="label-width-stack search-area-name-stack">
                 <label class="theme-row-label" for="search-input" data-i18n="ui.search_name_label"
                   >Nome</label
                 >
@@ -1991,33 +2023,30 @@
               </div>
             </div>
             <div class="icon-btn-stack icon-btn-stack--tool">
-              <label class="theme-row-label" for="btn-toggle-fullscreen" data-i18n="ui.screen_label"
-                >Tela</label
+              <label
+                class="theme-row-label"
+                for="btn-toggle-deck-column"
+                data-i18n="ui.deck_col_label"
+                >Deck</label
               >
               <button
                 type="button"
-                id="btn-toggle-fullscreen"
+                id="btn-toggle-deck-column"
                 class="btn-view"
-                data-i18n-title="ui.screen_title"
-                title="Tela inteira (como F11)"
-                aria-pressed="false"
-                data-i18n-aria="ui.screen_aria"
-                aria-label="Entrar em tela inteira"
-                onclick="togglePageFullscreen()"
+                data-i18n-title="ui.deck_col_title"
+                title="Coluna do deck: ocultar / normal / ampliada"
                 style="
+                  font-size: 16px;
                   min-width: 38px;
                   height: 35px;
                   display: flex;
                   align-items: center;
                   justify-content: center;
                 "
+                data-i18n-aria="ui.deck_col_aria"
+                aria-label="Alternar coluna do deck: ocultar, normal ou ampliada"
               >
-                <i
-                  class="fas fa-expand"
-                  id="icon-toggle-fullscreen"
-                  style="font-size: 14px"
-                  aria-hidden="true"
-                ></i>
+                <i class="fas fa-columns" id="icon-toggle-deck-column" aria-hidden="true"></i>
               </button>
             </div>
           </div>
@@ -2176,39 +2205,6 @@
               <div class="icon-btn-stack">
                 <label
                   class="theme-row-label"
-                  for="btn-toggle-filters-column"
-                  data-i18n="ui.filters_toggle_label"
-                  >Filtros</label
-                >
-                <button
-                  type="button"
-                  id="btn-toggle-filters-column"
-                  class="btn-view active"
-                  data-i18n-title="ui.filters_toggle_title_on"
-                  title="Ocultar coluna de filtros"
-                  aria-pressed="true"
-                  data-i18n-aria="ui.filters_toggle_aria"
-                  aria-label="Ocultar/mostrar coluna de filtros"
-                  style="
-                    min-width: 38px;
-                    height: 35px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                  "
-                >
-                  <i
-                    class="fas fa-filter"
-                    id="icon-toggle-filters-column"
-                    style="font-size: 14px"
-                    aria-hidden="true"
-                  ></i>
-                </button>
-              </div>
-
-              <div class="icon-btn-stack">
-                <label
-                  class="theme-row-label"
                   for="btn-toggle-results-view"
                   id="label-toggle-results-view"
                   >Grade</label
@@ -2234,30 +2230,33 @@
               </div>
 
               <div class="icon-btn-stack">
-                <label
-                  class="theme-row-label"
-                  for="btn-toggle-deck-column"
-                  data-i18n="ui.deck_col_label"
-                  >Deck</label
+                <label class="theme-row-label" for="btn-toggle-fullscreen" data-i18n="ui.screen_label"
+                  >Tela</label
                 >
                 <button
                   type="button"
-                  id="btn-toggle-deck-column"
+                  id="btn-toggle-fullscreen"
                   class="btn-view"
-                  data-i18n-title="ui.deck_col_title"
-                  title="Coluna do deck: ocultar / normal / ampliada"
+                  data-i18n-title="ui.screen_title"
+                  title="Tela inteira (como F11)"
+                  aria-pressed="false"
+                  data-i18n-aria="ui.screen_aria"
+                  aria-label="Entrar em tela inteira"
+                  onclick="togglePageFullscreen()"
                   style="
-                    font-size: 16px;
                     min-width: 38px;
                     height: 35px;
                     display: flex;
                     align-items: center;
                     justify-content: center;
                   "
-                  data-i18n-aria="ui.deck_col_aria"
-                  aria-label="Alternar coluna do deck: ocultar, normal ou ampliada"
                 >
-                  <i class="fas fa-columns" id="icon-toggle-deck-column" aria-hidden="true"></i>
+                  <i
+                    class="fas fa-expand"
+                    id="icon-toggle-fullscreen"
+                    style="font-size: 14px"
+                    aria-hidden="true"
+                  ></i>
                 </button>
               </div>
             </div>
