@@ -19,10 +19,9 @@
   Ordem de leitura da documentação: README.md (raiz) → docs/DOCUMENTACAO.md → docs/MAIN_JS.md → …
   Mapa de secções e IDs notáveis: docs/INDEX_HTML.md
   ── Catálogo de ids (gerado: consulte scripts/generate-index-html-id-catalog-comment.mjs) ──
-  Total: 279 ids. Ordem alfabética; descrições em PT-BR para navegação humana.
+  Total: 308 ids. Ordem alfabética; descrições em PT-BR para navegação humana.
 
   • app-layout — Raiz do layout em 3 colunas; classes alternam deck/filtros visíveis.
-  • banlist-only-container — Checkbox “só banlist”.
   • btn-close-ocr — Fechar scanner OCR.
   • btn-credits — Abre modal de créditos.
   • btn-deck-delete-saved — Apagar deck guardado selecionado.
@@ -59,6 +58,7 @@
   • col-filters — Coluna esquerda: filtros e ferramentas da coluna.
   • col-preview — Coluna direita: deck, estatísticas, import/export, PDF.
   • col-results — Coluna central: busca, toolbar e lista/grelha de resultados.
+  • credits-loc-value — Elemento com id «credits-loc-value» (ver uso em src/main.js / getEl).
   • credits-modal — Modal créditos.
   • credits-modal-backdrop — Backdrop créditos.
   • credits-modal-close — Fechar créditos.
@@ -68,14 +68,19 @@
   • datalist-filter-attribute — Datalist de sugestões: atributo.
   • datalist-filter-banlist — Datalist de sugestões: banlist (filtro busca).
   • datalist-filter-era — Datalist de sugestões: era.
+  • datalist-filter-genesys-pt — Datalist de sugestões: genesys-pt.
   • datalist-filter-haseffect — Datalist de sugestões: tem descrição.
   • datalist-filter-level — Datalist de sugestões: nível.
   • datalist-filter-linkmarker — Datalist de sugestões: marcador Link.
   • datalist-filter-linkval — Datalist de sugestões: valor Link.
-  • datalist-filter-race — Datalist de sugestões: raça.
+  • datalist-filter-md-rarity — Datalist de sugestões: md-rarity.
+  • datalist-filter-monster-race — Datalist de sugestões: monster-race.
   • datalist-filter-scale — Datalist de sugestões: escala Pêndulo.
+  • datalist-filter-spell-race — Datalist de sugestões: spell-race.
   • datalist-filter-staple — Datalist de sugestões: staple.
   • datalist-filter-subtype — Datalist de sugestões: subtipo.
+  • datalist-filter-tcgocg-banstatus — Datalist de sugestões: tcgocg-banstatus.
+  • datalist-filter-trap-race — Datalist de sugestões: trap-race.
   • datalist-filter-type — Datalist de sugestões: tipo de carta.
   • datalist-rarities — Datalist raridades.
   • datalist-setcodes — Datalist códigos set.
@@ -126,7 +131,6 @@
   • deck-validity-text — Texto curto estado validação.
   • deck-validity-tooltip — Tooltip flutuante regras validação deck.
   • deck-validity-tooltip-body — Corpo HTML do tooltip de validação.
-  • enable-banlist-only — Input checkbox banlist-only.
   • export-menu-back — Voltar um passo no menu export.
   • export-menu-back-wrap — Área botão voltar no menu export.
   • export-menu-close — Fechar menu export.
@@ -177,6 +181,11 @@
   • filter-fname-add-chip — Botão adicionar chip: nome (multi).
   • filter-fname-chips — Chips selecionados: nome (multi).
   • filter-fname-clear-chips — Chips selecionados: fname-clear.
+  • filter-genesys-pt — Elemento com id «filter-genesys-pt» (ver uso em src/main.js / getEl).
+  • filter-genesys-pt-add-chip — Botão adicionar chip: genesys-pt.
+  • filter-genesys-pt-chips — Chips selecionados: genesys-pt.
+  • filter-genesys-pt-clear-chips — Chips selecionados: genesys-pt-clear.
+  • filter-genesys-pt-group — Elemento com id «filter-genesys-pt-group» (ver uso em src/main.js / getEl).
   • filter-haseffect-add — Botão adicionar chip: tem descrição.
   • filter-haseffect-chips — Chips selecionados: tem descrição.
   • filter-haseffect-clear — Limpar chips: tem descrição.
@@ -195,15 +204,20 @@
   • filter-linkval-chips — Chips selecionados: valor Link.
   • filter-linkval-clear — Limpar chips: valor Link.
   • filter-linkval-input — Campo do filtro: valor Link.
+  • filter-md-rarity-add-chip — Botão adicionar chip: md-rarity.
+  • filter-md-rarity-chips — Chips selecionados: md-rarity.
+  • filter-md-rarity-clear-chips — Chips selecionados: md-rarity-clear.
+  • filter-md-rarity-group — Elemento com id «filter-md-rarity-group» (ver uso em src/main.js / getEl).
+  • filter-md-rarity-input — Campo do filtro: md-rarity.
+  • filter-monster-race-add — Botão adicionar chip: monster-race.
+  • filter-monster-race-chips — Chips selecionados: monster-race.
+  • filter-monster-race-clear — Limpar chips: monster-race.
+  • filter-monster-race-input — Campo do filtro: monster-race.
   • filter-price-add-chip — Botão adicionar chip: preço TCGPlayer.
   • filter-price-chips — Chips selecionados: preço TCGPlayer.
   • filter-price-clear-chips — Chips selecionados: price-clear.
   • filter-price-max — Limite máx preço TCGPlayer.
   • filter-price-min — Limite mín preço TCGPlayer.
-  • filter-race-add — Botão adicionar chip: raça.
-  • filter-race-chips — Chips selecionados: raça.
-  • filter-race-clear — Limpar chips: raça.
-  • filter-race-input — Campo do filtro: raça.
   • filter-rarity-add — Botão adicionar chip: raridade.
   • filter-rarity-chips — Chips selecionados: raridade.
   • filter-rarity-clear — Limpar chips: raridade.
@@ -216,6 +230,10 @@
   • filter-setcode-chips — Chips selecionados: código da expansão.
   • filter-setcode-clear — Limpar chips: código da expansão.
   • filter-setcode-input — Campo do filtro: código da expansão.
+  • filter-spell-race-add — Botão adicionar chip: spell-race.
+  • filter-spell-race-chips — Chips selecionados: spell-race.
+  • filter-spell-race-clear — Limpar chips: spell-race.
+  • filter-spell-race-input — Campo do filtro: spell-race.
   • filter-staple-add — Botão adicionar chip: staple.
   • filter-staple-chips — Chips selecionados: staple.
   • filter-staple-clear — Limpar chips: staple.
@@ -224,6 +242,15 @@
   • filter-subtype-chips — Chips selecionados: subtipo.
   • filter-subtype-clear — Limpar chips: subtipo.
   • filter-subtype-input — Campo do filtro: subtipo.
+  • filter-tcgocg-banstatus-add-chip — Botão adicionar chip: tcgocg-banstatus.
+  • filter-tcgocg-banstatus-chips — Chips selecionados: tcgocg-banstatus.
+  • filter-tcgocg-banstatus-clear-chips — Chips selecionados: tcgocg-banstatus-clear.
+  • filter-tcgocg-banstatus-group — Elemento com id «filter-tcgocg-banstatus-group» (ver uso em src/main.js / getEl).
+  • filter-tcgocg-banstatus-input — Campo do filtro: tcgocg-banstatus.
+  • filter-trap-race-add — Botão adicionar chip: trap-race.
+  • filter-trap-race-chips — Chips selecionados: trap-race.
+  • filter-trap-race-clear — Limpar chips: trap-race.
+  • filter-trap-race-input — Campo do filtro: trap-race.
   • filter-type-add — Botão adicionar chip: tipo de carta.
   • filter-type-chips — Chips selecionados: tipo de carta.
   • filter-type-clear — Limpar chips: tipo de carta.
@@ -232,8 +259,10 @@
   • global-export-overlay-label — Título export global.
   • global-export-overlay-sub — Subtexto export global.
   • global-export-progress-bar — Barra de progresso export global.
-  • group-race — Grupo raça (visível após tipo monstro).
+  • group-monster-race — Elemento com id «group-monster-race» (ver uso em src/main.js / getEl).
+  • group-spell-race — Elemento com id «group-spell-race» (ver uso em src/main.js / getEl).
   • group-subtype — Grupo subtipo (visível após tipo monstro).
+  • group-trap-race — Elemento com id «group-trap-race» (ver uso em src/main.js / getEl).
   • help-mouse-modal — Modal ajuda rato/teclado.
   • help-mouse-modal-backdrop — Backdrop ajuda rato.
   • help-mouse-modal-body — Corpo texto ajuda rato.
@@ -260,7 +289,7 @@
   • ocr-video — Elemento vídeo câmara.
   • order-icon — Ícone seta ordenação.
   • page-jump — Input ir para página N.
-  • page-total — Texto “de total” (i18n) da paginação.
+  • page-total — Texto “de total” / i18n (`ui.pagination_page_total`) na paginação.
   • preview-canvas — Canvas pré-visualização recorte OCR.
   • preview-frame — iframe da pré-visualização PDF (blob URL).
   • print-scale — Escala percentual do PDF (readonly + ajuste por código).
@@ -786,6 +815,198 @@
               </button>
             </div>
           </div>
+          <div id="group-subtype" class="filter-group" style="display: none">
+            <label data-i18n="filter.subtype_label">Categoria (subtipo)</label>
+            <p class="cardset-hint" data-i18n-html="filter.subtype_hint">
+              Apenas com “Monstro” selecionado. Um subtipo por vez.
+            </p>
+            <div class="filter-action-row">
+              <input
+                type="text"
+                id="filter-subtype-input"
+                list="datalist-filter-subtype"
+                data-i18n-placeholder="filter.subtype_ph"
+                placeholder="Ex.: Monstro Pêndulo de efeito…"
+                autocomplete="off"
+                style="flex: 1"
+              />
+              <div class="icon-btn-stack icon-btn-stack--tool">
+                <span class="theme-row-label" data-i18n="filter.add">Adicionar</span>
+
+                <button
+                  type="button"
+                  id="filter-subtype-add"
+                  class="btn-secondary btn-icon-tool"
+                  data-i18n-title="filter.add"
+                  data-i18n-aria="filter.add"
+                  title=""
+                  aria-label=""
+                >
+                  <i class="fas fa-plus" aria-hidden="true"></i>
+                </button>
+              </div>
+            </div>
+            <datalist id="datalist-filter-subtype"></datalist>
+            <div id="filter-subtype-chips" class="cardset-chips"></div>
+            <div class="filter-clear-stack">
+              <span class="theme-row-label" data-i18n="filter.subtype_clear"></span>
+              <button
+                type="button"
+                id="filter-subtype-clear"
+                class="btn-secondary btn-icon-tool"
+                data-i18n-title="filter.subtype_clear"
+                data-i18n-aria="filter.subtype_clear"
+                title=""
+                aria-label=""
+              >
+                <i class="fas fa-eraser" aria-hidden="true"></i>
+              </button>
+            </div>
+          </div>
+          <div id="group-monster-race" class="filter-group" style="display: none">
+            <label data-i18n="filter.monster_race_label">Raça</label>
+            <p class="cardset-hint" data-i18n-html="filter.monster_race_hint">
+              Um ou vários (API: vírgula). Sugestões do catálogo de monstros.
+            </p>
+            <div class="filter-action-row">
+              <input
+                type="text"
+                id="filter-monster-race-input"
+                list="datalist-filter-monster-race"
+                data-i18n-placeholder="filter.monster_race_ph"
+                placeholder="Ex.: Dragão…"
+                autocomplete="off"
+                style="flex: 1"
+              />
+              <div class="icon-btn-stack icon-btn-stack--tool">
+                <span class="theme-row-label" data-i18n="filter.add">Adicionar</span>
+
+                <button
+                  type="button"
+                  id="filter-monster-race-add"
+                  class="btn-secondary btn-icon-tool"
+                  data-i18n-title="filter.add"
+                  data-i18n-aria="filter.add"
+                  title=""
+                  aria-label=""
+                >
+                  <i class="fas fa-plus" aria-hidden="true"></i>
+                </button>
+              </div>
+            </div>
+            <datalist id="datalist-filter-monster-race"></datalist>
+            <div id="filter-monster-race-chips" class="cardset-chips"></div>
+            <div class="filter-clear-stack">
+              <span class="theme-row-label" data-i18n="filter.monster_race_clear"></span>
+              <button
+                type="button"
+                id="filter-monster-race-clear"
+                class="btn-secondary btn-icon-tool"
+                data-i18n-title="filter.monster_race_clear"
+                data-i18n-aria="filter.monster_race_clear"
+                title=""
+                aria-label=""
+              >
+                <i class="fas fa-eraser" aria-hidden="true"></i>
+              </button>
+            </div>
+          </div>
+          <div id="group-spell-race" class="filter-group" style="display: none">
+            <label data-i18n="filter.spell_type_label">Tipo de magia</label>
+            <p class="cardset-hint" data-i18n-html="filter.spell_type_hint">
+              Só com <strong>Magia</strong> no tipo de carta. Normal, Rápida, Contínua, etc. (API: <code>race</code>).
+            </p>
+            <div class="filter-action-row">
+              <input
+                type="text"
+                id="filter-spell-race-input"
+                list="datalist-filter-spell-race"
+                data-i18n-placeholder="filter.spell_type_ph"
+                placeholder="Ex.: Rápida…"
+                autocomplete="off"
+                style="flex: 1"
+              />
+              <div class="icon-btn-stack icon-btn-stack--tool">
+                <span class="theme-row-label" data-i18n="filter.add">Adicionar</span>
+
+                <button
+                  type="button"
+                  id="filter-spell-race-add"
+                  class="btn-secondary btn-icon-tool"
+                  data-i18n-title="filter.add"
+                  data-i18n-aria="filter.add"
+                  title=""
+                  aria-label=""
+                >
+                  <i class="fas fa-plus" aria-hidden="true"></i>
+                </button>
+              </div>
+            </div>
+            <datalist id="datalist-filter-spell-race"></datalist>
+            <div id="filter-spell-race-chips" class="cardset-chips"></div>
+            <div class="filter-clear-stack">
+              <span class="theme-row-label" data-i18n="filter.spell_type_clear"></span>
+              <button
+                type="button"
+                id="filter-spell-race-clear"
+                class="btn-secondary btn-icon-tool"
+                data-i18n-title="filter.spell_type_clear"
+                data-i18n-aria="filter.spell_type_clear"
+                title=""
+                aria-label=""
+              >
+                <i class="fas fa-eraser" aria-hidden="true"></i>
+              </button>
+            </div>
+          </div>
+          <div id="group-trap-race" class="filter-group" style="display: none">
+            <label data-i18n="filter.trap_type_label">Tipo de armadilha</label>
+            <p class="cardset-hint" data-i18n-html="filter.trap_type_hint">
+              Só com <strong>Armadilha</strong> no tipo de carta. Normal, Contínua, Resposta (API: <code>race</code>).
+            </p>
+            <div class="filter-action-row">
+              <input
+                type="text"
+                id="filter-trap-race-input"
+                list="datalist-filter-trap-race"
+                data-i18n-placeholder="filter.trap_type_ph"
+                placeholder="Ex.: Resposta…"
+                autocomplete="off"
+                style="flex: 1"
+              />
+              <div class="icon-btn-stack icon-btn-stack--tool">
+                <span class="theme-row-label" data-i18n="filter.add">Adicionar</span>
+
+                <button
+                  type="button"
+                  id="filter-trap-race-add"
+                  class="btn-secondary btn-icon-tool"
+                  data-i18n-title="filter.add"
+                  data-i18n-aria="filter.add"
+                  title=""
+                  aria-label=""
+                >
+                  <i class="fas fa-plus" aria-hidden="true"></i>
+                </button>
+              </div>
+            </div>
+            <datalist id="datalist-filter-trap-race"></datalist>
+            <div id="filter-trap-race-chips" class="cardset-chips"></div>
+            <div class="filter-clear-stack">
+              <span class="theme-row-label" data-i18n="filter.trap_type_clear"></span>
+              <button
+                type="button"
+                id="filter-trap-race-clear"
+                class="btn-secondary btn-icon-tool"
+                data-i18n-title="filter.trap_type_clear"
+                data-i18n-aria="filter.trap_type_clear"
+                title=""
+                aria-label=""
+              >
+                <i class="fas fa-eraser" aria-hidden="true"></i>
+              </button>
+            </div>
+          </div>
           <div class="filter-group">
             <label data-i18n="filter.desc_label">Descrição/Efeito</label>
             <p class="cardset-hint" data-i18n-html="filter.desc_hint">
@@ -876,102 +1097,6 @@
                 class="btn-secondary btn-icon-tool"
                 data-i18n-title="filter.arch_clear"
                 data-i18n-aria="filter.arch_clear"
-                title=""
-                aria-label=""
-              >
-                <i class="fas fa-eraser" aria-hidden="true"></i>
-              </button>
-            </div>
-          </div>
-          <div id="group-subtype" class="filter-group" style="display: none">
-            <label data-i18n="filter.subtype_label">Categoria (subtipo)</label>
-            <p class="cardset-hint" data-i18n-html="filter.subtype_hint">
-              Apenas com “Monstro” selecionado. Um subtipo por vez.
-            </p>
-            <div class="filter-action-row">
-              <input
-                type="text"
-                id="filter-subtype-input"
-                list="datalist-filter-subtype"
-                data-i18n-placeholder="filter.subtype_ph"
-                placeholder="Ex.: Monstro Pêndulo de efeito…"
-                autocomplete="off"
-                style="flex: 1"
-              />
-              <div class="icon-btn-stack icon-btn-stack--tool">
-                <span class="theme-row-label" data-i18n="filter.add">Adicionar</span>
-
-                <button
-                  type="button"
-                  id="filter-subtype-add"
-                  class="btn-secondary btn-icon-tool"
-                  data-i18n-title="filter.add"
-                  data-i18n-aria="filter.add"
-                  title=""
-                  aria-label=""
-                >
-                  <i class="fas fa-plus" aria-hidden="true"></i>
-                </button>
-              </div>
-            </div>
-            <datalist id="datalist-filter-subtype"></datalist>
-            <div id="filter-subtype-chips" class="cardset-chips"></div>
-            <div class="filter-clear-stack">
-              <span class="theme-row-label" data-i18n="filter.subtype_clear"></span>
-              <button
-                type="button"
-                id="filter-subtype-clear"
-                class="btn-secondary btn-icon-tool"
-                data-i18n-title="filter.subtype_clear"
-                data-i18n-aria="filter.subtype_clear"
-                title=""
-                aria-label=""
-              >
-                <i class="fas fa-eraser" aria-hidden="true"></i>
-              </button>
-            </div>
-          </div>
-          <div id="group-race" class="filter-group" style="display: none">
-            <label data-i18n="filter.race_label">Raça / tipo de magia ou armadilha</label>
-            <p class="cardset-hint" data-i18n-html="filter.race_hint">
-              Um ou vários (API: vírgula). Sugestões mudam conforme o tipo de carta.
-            </p>
-            <div class="filter-action-row">
-              <input
-                type="text"
-                id="filter-race-input"
-                list="datalist-filter-race"
-                data-i18n-placeholder="filter.race_ph"
-                placeholder="Ex.: Dragão…"
-                autocomplete="off"
-                style="flex: 1"
-              />
-              <div class="icon-btn-stack icon-btn-stack--tool">
-                <span class="theme-row-label" data-i18n="filter.add">Adicionar</span>
-
-                <button
-                  type="button"
-                  id="filter-race-add"
-                  class="btn-secondary btn-icon-tool"
-                  data-i18n-title="filter.add"
-                  data-i18n-aria="filter.add"
-                  title=""
-                  aria-label=""
-                >
-                  <i class="fas fa-plus" aria-hidden="true"></i>
-                </button>
-              </div>
-            </div>
-            <datalist id="datalist-filter-race"></datalist>
-            <div id="filter-race-chips" class="cardset-chips"></div>
-            <div class="filter-clear-stack">
-              <span class="theme-row-label" data-i18n="filter.race_clear"></span>
-              <button
-                type="button"
-                id="filter-race-clear"
-                class="btn-secondary btn-icon-tool"
-                data-i18n-title="filter.race_clear"
-                data-i18n-aria="filter.race_clear"
                 title=""
                 aria-label=""
               >
@@ -1454,7 +1579,7 @@
                 id="filter-banlist-input"
                 list="datalist-filter-banlist"
                 data-i18n-placeholder="filter.ban_ph"
-                placeholder="Ex.: Formato TCG (principal)"
+                placeholder="Ex.: TCG"
                 autocomplete="off"
                 style="flex: 1"
               />
@@ -1491,25 +1616,155 @@
               </button>
             </div>
           </div>
-          <div id="banlist-only-container" class="filter-group">
-            <label
-              style="
-                display: flex;
-                align-items: center;
-                gap: 8px;
-                cursor: pointer;
-                font-size: 11px;
-                color: var(--accent);
-              "
-            >
+          <div id="filter-tcgocg-banstatus-group" class="filter-group" style="display: none">
+            <label data-i18n="filter.tcgocg_banstatus_label">Status na banlist (TCG / OCG)</label>
+            <p class="cardset-hint" data-i18n-html="filter.tcgocg_banstatus_hint">
+              Com <strong>TCG</strong> ou <strong>OCG</strong> no filtro de formato acima. Escolha o status e use
+              <strong>Adicionar</strong> — vários chips fazem união (carta com qualquer um dos status). Filtra pelo
+              campo <code>banlist_info</code> no resultado.
+            </p>
+            <div class="filter-action-row">
               <input
-                type="checkbox"
-                id="enable-banlist-only"
-                style="width: auto"
-                onchange="performSearch()"
+                type="text"
+                id="filter-tcgocg-banstatus-input"
+                list="datalist-filter-tcgocg-banstatus"
+                data-i18n-placeholder="filter.tcgocg_banstatus_ph"
+                placeholder="Escolher status…"
+                autocomplete="off"
+                style="flex: 1"
               />
-              <span data-i18n="filter.banlist_only">Exibir somente cartas da Banlist</span>
-            </label>
+              <div class="icon-btn-stack icon-btn-stack--tool">
+                <span class="theme-row-label" data-i18n="filter.add">Adicionar</span>
+                <button
+                  type="button"
+                  id="filter-tcgocg-banstatus-add-chip"
+                  class="btn-secondary btn-icon-tool"
+                  data-i18n-title="filter.add"
+                  data-i18n-aria="filter.add"
+                  title=""
+                  aria-label=""
+                >
+                  <i class="fas fa-plus" aria-hidden="true"></i>
+                </button>
+              </div>
+            </div>
+            <datalist id="datalist-filter-tcgocg-banstatus"></datalist>
+            <div id="filter-tcgocg-banstatus-chips" class="cardset-chips" aria-live="polite"></div>
+            <div class="filter-clear-stack">
+              <span class="theme-row-label" data-i18n="filter.tcgocg_banstatus_clear"></span>
+              <button
+                type="button"
+                id="filter-tcgocg-banstatus-clear-chips"
+                class="btn-secondary btn-icon-tool"
+                data-i18n-title="filter.tcgocg_banstatus_clear"
+                data-i18n-aria="filter.tcgocg_banstatus_clear"
+                title=""
+                aria-label=""
+              >
+                <i class="fas fa-eraser" aria-hidden="true"></i>
+              </button>
+            </div>
+          </div>
+          <div id="filter-genesys-pt-group" class="filter-group" style="display: none">
+            <label data-i18n="filter.genesys_pt_label">Pontos Genesys</label>
+            <p class="cardset-hint" data-i18n-html="filter.genesys_pt_hint">
+              Com <strong>Formato Genesys</strong> no filtro acima. Um ou mais valores exatos (união:
+              carta com qualquer um dos pontos). Requer dados com <code>format=genesys</code> na API.
+              Ao focar o campo, o navegador sugere os 51 valores de pontos que existem em alguma carta no catálogo.
+            </p>
+            <div class="filter-action-row">
+              <input
+                type="number"
+                id="filter-genesys-pt"
+                list="datalist-filter-genesys-pt"
+                min="0"
+                step="1"
+                data-i18n-placeholder="filter.genesys_pt_ph"
+                placeholder="Ex.: 10"
+                autocomplete="off"
+                style="flex: 1"
+              />
+              <div class="icon-btn-stack icon-btn-stack--tool">
+                <span class="theme-row-label" data-i18n="filter.add">Adicionar</span>
+
+                <button
+                  type="button"
+                  id="filter-genesys-pt-add-chip"
+                  class="btn-secondary btn-icon-tool"
+                  data-i18n-title="filter.add"
+                  data-i18n-aria="filter.add"
+                  title=""
+                  aria-label=""
+                >
+                  <i class="fas fa-plus" aria-hidden="true"></i>
+                </button>
+              </div>
+            </div>
+            <datalist id="datalist-filter-genesys-pt"></datalist>
+            <div id="filter-genesys-pt-chips" class="cardset-chips"></div>
+            <div class="filter-clear-stack">
+              <span class="theme-row-label" data-i18n="filter.genesys_pt_clear"></span>
+              <button
+                type="button"
+                id="filter-genesys-pt-clear-chips"
+                class="btn-secondary btn-icon-tool"
+                data-i18n-title="filter.genesys_pt_clear"
+                data-i18n-aria="filter.genesys_pt_clear"
+                title=""
+                aria-label=""
+              >
+                <i class="fas fa-eraser" aria-hidden="true"></i>
+              </button>
+            </div>
+          </div>
+          <div id="filter-md-rarity-group" class="filter-group" style="display: none">
+            <label data-i18n="filter.md_rarity_label">Master Duel — rarity</label>
+            <p class="cardset-hint" data-i18n-html="filter.md_rarity_hint">
+              With <strong>Master Duel</strong> in the format filter above. Pick a rarity and add one or more chips
+              (union: card matches any selected). Icons reflect in-game craft tiers; filtering uses API
+              <code>md_rarity</code> / <code>misc_info</code> when present.
+            </p>
+            <div class="filter-action-row">
+              <input
+                type="text"
+                id="filter-md-rarity-input"
+                list="datalist-filter-md-rarity"
+                data-i18n-placeholder="filter.md_rarity_opt_none"
+                placeholder="Choose rarity…"
+                autocomplete="off"
+                style="flex: 1"
+              />
+              <div class="icon-btn-stack icon-btn-stack--tool">
+                <span class="theme-row-label" data-i18n="filter.add">Adicionar</span>
+                <button
+                  type="button"
+                  id="filter-md-rarity-add-chip"
+                  class="btn-secondary btn-icon-tool"
+                  data-i18n-title="filter.add"
+                  data-i18n-aria="filter.add"
+                  title=""
+                  aria-label=""
+                >
+                  <i class="fas fa-plus" aria-hidden="true"></i>
+                </button>
+              </div>
+            </div>
+            <datalist id="datalist-filter-md-rarity"></datalist>
+            <div id="filter-md-rarity-chips" class="cardset-chips" aria-live="polite"></div>
+            <div class="filter-clear-stack">
+              <span class="theme-row-label" data-i18n="filter.md_rarity_clear"></span>
+              <button
+                type="button"
+                id="filter-md-rarity-clear-chips"
+                class="btn-secondary btn-icon-tool"
+                data-i18n-title="filter.md_rarity_clear"
+                data-i18n-aria="filter.md_rarity_clear"
+                title=""
+                aria-label=""
+              >
+                <i class="fas fa-eraser" aria-hidden="true"></i>
+              </button>
+            </div>
           </div>
           <div class="filter-group">
             <label data-i18n="filter.staple_label">Staple</label>

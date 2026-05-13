@@ -166,7 +166,8 @@
 }
 
 /* 7. BOTÕES GERAIS */
-.theme-white button:not(.action-btn):not(#generate-pdf):not(.btn-accent),
+.theme-white
+  button:not(.action-btn):not(#generate-pdf):not(.btn-accent):not(.tt-deck-search-link),
 .theme-white .btn-secondary,
 .theme-white .btn-view,
 .theme-white .stepper button {
@@ -512,11 +513,17 @@ html {
   color: #e5e7eb;
   word-break: break-word;
 }
-html.theme-white #tooltip-beta-name-row .tt-beta-name-label {
-  color: #6b7280 !important;
+#tooltip-beta-name-row span.tt-beta-name-value.tt-deck-search-link {
+  color: #e5e7eb !important;
 }
 html.theme-white #tooltip-beta-name-row .tt-beta-name-value {
   color: #374151 !important;
+}
+html.theme-white #tooltip-beta-name-row span.tt-beta-name-value.tt-deck-search-link {
+  color: #374151 !important;
+}
+html.theme-white #tooltip-beta-name-row .tt-beta-name-label {
+  color: #6b7280 !important;
 }
 
 .tt-ban-container {
@@ -535,6 +542,15 @@ html.theme-white #tooltip-beta-name-row .tt-beta-name-value {
   padding: 2px 8px;
   border-radius: 12px;
   text-transform: uppercase;
+  flex-wrap: wrap;
+  row-gap: 2px;
+}
+
+.tt-ban-badge .tt-ban-format {
+  font-weight: 700;
+  text-transform: none;
+  letter-spacing: 0.01em;
+  max-width: 100%;
 }
 
 .tt-ban-banned {
@@ -551,6 +567,22 @@ html.theme-white #tooltip-beta-name-row .tt-beta-name-value {
   background: rgba(241, 196, 15, 0.2);
   color: #f1c40f;
   border: 1px solid #f1c40f;
+}
+
+/* Selo banlist clicável: manter pill .tt-ban-* (evitar reset global de .tt-deck-search-link no #card-tooltip). */
+#card-tooltip span.tt-ban-badge.tt-deck-search-link {
+  cursor: pointer;
+  text-decoration: none !important;
+}
+#card-tooltip span.tt-ban-badge.tt-deck-search-link:hover,
+#card-tooltip span.tt-ban-badge.tt-deck-search-link:focus-visible {
+  filter: brightness(1.07);
+  box-shadow: 0 0 0 1px color-mix(in srgb, currentColor 42%, transparent);
+  outline: none;
+}
+html.theme-white #card-tooltip span.tt-ban-badge.tt-deck-search-link:hover,
+html.theme-white #card-tooltip span.tt-ban-badge.tt-deck-search-link:focus-visible {
+  filter: brightness(1.04);
 }
 
 .tt-row-split {
@@ -754,10 +786,18 @@ html:not(.help-enabled).has-monster-type
   #filter-haseffect-group.filter-group.filter-group--inline-add {
   display: grid !important; /* o seletor por # acima vencia o grid genérico sem o id */
 }
-/* Filtros que dependem de "Monstro" (seguro contra estados/caches estranhos). */
+/* Subtipo de monstro + bloco ATK/nível/etc.; raça / tipo magia / tipo armadilha têm grupos próprios. */
 html:not(.has-monster-type) #group-subtype,
-html:not(.has-monster-type) #group-race,
 html:not(.has-monster-type) #monster-extras {
+  display: none !important;
+}
+html:not(.has-monster-type) #group-monster-race {
+  display: none !important;
+}
+html:not(.has-spell-type-filter) #group-spell-race {
+  display: none !important;
+}
+html:not(.has-trap-type-filter) #group-trap-race {
   display: none !important;
 }
 /* Mesmo espaçamento rótulo→campo que .theme-select-stack (5px) */
@@ -1182,6 +1222,173 @@ html:not(.help-enabled) .filter-action-row .icon-btn-stack--tool .theme-row-labe
 .filter-action-row > input[style*='flex'] {
   min-width: 0;
 }
+.filter-combo-suggest-row.filter-combo-suggest-row--md-rarity,
+.filter-combo-suggest-row.filter-combo-suggest-row--with-icon {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.filter-combo-suggest-row.filter-combo-suggest-row--md-rarity .md-suggest-icon,
+.filter-combo-suggest-row .filter-suggest-icon,
+.filter-combo-suggest-row .filter-suggest-fa-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+.filter-combo-suggest-row .filter-suggest-icon {
+  object-fit: contain;
+}
+.filter-combo-suggest-row .filter-suggest-icon--card-type {
+  border-radius: 3px;
+}
+.filter-combo-suggest-row .filter-suggest-fa-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
+}
+.filter-combo-suggest-row .filter-suggest-html-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  min-height: 20px;
+  flex-shrink: 0;
+  color: var(--accent);
+}
+.filter-combo-suggest-row .filter-suggest-html-icon .link-markers-band,
+.filter-combo-suggest-row .filter-suggest-html-icon .pendulum-scale-band {
+  margin-left: 0;
+}
+.filter-combo-suggest-row .filter-pendulum-scale-icon,
+.cardset-chip .filter-pendulum-scale-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+.filter-combo-suggest-row .filter-pendulum-scale-side,
+.cardset-chip .filter-pendulum-scale-side {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text);
+  font-weight: 800;
+  font-size: 12px;
+  line-height: 1;
+}
+.filter-combo-suggest-row .filter-suggest-dual-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+.filter-combo-suggest-row .filter-suggest-dual-icon--level {
+  gap: 8px;
+}
+.filter-combo-suggest-row .filter-suggest-dual-icon img {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+}
+.filter-combo-suggest-row .filter-suggest-token-icon,
+.cardset-chip .filter-suggest-token-icon {
+  width: 16px;
+  height: 20px;
+  border-radius: 2px;
+  background: linear-gradient(135deg, #ffffff 0%, #e5e7eb 72%, #cbd5e1 100%);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.9),
+    0 0 0 1px rgba(15, 23, 42, 0.45);
+}
+.filter-combo-suggest-row .filter-suggest-dual-icon-num {
+  min-width: 1ch;
+  color: var(--text);
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
+  text-align: center;
+}
+.filter-combo-suggest-row.filter-combo-suggest-row--md-rarity .md-suggest-label,
+.filter-combo-suggest-row .filter-suggest-label {
+  flex: 1;
+  min-width: 0;
+}
+.cardset-chip.cardset-chip--md-rarity {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.cardset-chip.cardset-chip--md-rarity .md-rarity-chip-icon {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+.cardset-chip.cardset-chip--with-icon {
+  gap: 6px;
+}
+.cardset-chip .filter-chip-icon,
+.cardset-chip .filter-chip-html-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+.cardset-chip .filter-chip-icon {
+  object-fit: contain;
+}
+.cardset-chip .filter-chip-html-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  width: auto;
+  color: var(--accent);
+}
+.cardset-chip .filter-chip-html-icon .filter-suggest-dual-icon {
+  gap: 2px;
+}
+.cardset-chip .filter-chip-html-icon .filter-suggest-dual-icon--level {
+  gap: 5px;
+}
+.cardset-chip .filter-chip-html-icon .filter-suggest-dual-icon img {
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
+}
+.cardset-chip .filter-chip-html-icon .filter-suggest-dual-icon-num {
+  color: inherit;
+  font-size: 9px;
+}
+.cardset-chip .filter-chip-html-icon .link-markers-band,
+.cardset-chip .filter-chip-html-icon .pendulum-scale-band {
+  margin-left: 0;
+}
+.cardset-chip .filter-chip-html-icon .link-marker-icon svg {
+  width: 16px;
+  height: 16px;
+}
+.cardset-chip .filter-chip-html-icon .pendulum-diamond {
+  width: 10px;
+  height: auto;
+}
+.cardset-chip .filter-chip-html-icon .pendulum-scale-num {
+  font-size: 9px;
+}
+.cardset-chip .filter-chip-html-icon .filter-pendulum-scale-icon {
+  gap: 6px;
+}
+.cardset-chip .filter-chip-html-icon .filter-pendulum-scale-side {
+  gap: 2px;
+  font-size: 9px;
+  color: inherit;
+}
+.cardset-chip .filter-chip-html-icon .filter-pendulum-scale-side .pendulum-diamond {
+  width: 9px;
+  height: auto;
+}
+.cardset-chip .filter-chip-label,
+.cardset-chip .filter-suggest-label {
+  min-width: 0;
+}
 .filter-clear-stack {
   display: none;
   flex-direction: column;
@@ -1519,11 +1726,21 @@ html.help-enabled #app-layout:not(.deck-col-hidden) .help-hide-when-deck-visible
   gap: 6px;
   align-items: center;
   justify-content: center;
-  width: 100%;
+  width: auto;
+  flex-shrink: 0;
+}
+/* Rótulos longos (pt): o wrapper usa `icon-btn-stack--tool-wide`, cujo CSS global
+   impõe `nowrap` em `.theme-row-label` — com colunas de 46px o texto invadia o vizinho. */
+.help-controls .icon-btn-stack--tool .theme-row-label {
+  white-space: normal;
+  line-height: 1.15;
+  max-width: min(11.5rem, 36vw);
 }
 .help-controls .icon-btn-stack--tool {
-  min-width: 46px;
-  width: 46px;
+  flex: 0 0 auto;
+  min-width: 38px;
+  width: auto;
+  max-width: min(12rem, 38vw);
 }
 .help-controls .btn-icon-tool {
   min-width: 38px;
@@ -1532,6 +1749,11 @@ html.help-enabled #app-layout:not(.deck-col-hidden) .help-hide-when-deck-visible
   display: flex;
   align-items: center;
   justify-content: center;
+}
+/* Evita que a linha de busca esmague o bloco Ajuda / Interagir / Créditos
+   (wrapper só com `icon-btn-stack--tool-wide`, sem `icon-btn-stack`). */
+.search-area-top-row > .icon-btn-stack--tool-wide:not(.icon-btn-stack) {
+  flex-shrink: 0;
 }
 html:not(.help-enabled) .help-controls .icon-btn-stack:has(#btn-help-mouse) {
   display: none !important;
@@ -1837,9 +2059,348 @@ html.help-enabled .cardset-hint {
   padding-left: 8px;
   border-left: 2px solid var(--accent);
 }
+#card-tooltip .tt-set-line {
+  border-radius: 6px;
+  transition:
+    background-color 0.14s ease,
+    box-shadow 0.14s ease;
+}
+#card-tooltip .tt-set-line:hover {
+  background: color-mix(in srgb, var(--accent) 11%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 26%, transparent);
+}
+html.theme-white #card-tooltip .tt-set-line:hover {
+  background: color-mix(in srgb, var(--accent) 9%, transparent);
+}
 .tt-set-code {
   color: var(--accent);
   font-weight: 600;
+}
+.tt-set-name {
+  font-size: 10px;
+  opacity: 0.85;
+  margin-top: 2px;
+  line-height: 1.35;
+}
+.tt-set-store-link {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--accent);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.tt-set-store-link:hover {
+  text-decoration: underline;
+}
+/* Rich impressões fora da modal (ex.: mobile fullscreen): uma coluna, altura moderada */
+.tt-cardsets-block--rich .tt-cardsets-scroll {
+  max-height: min(42vh, 400px);
+}
+@media (max-width: 899px) {
+  #card-tooltip:not(.tt-in-modal) .tt-cardsets-block--rich .tt-cardsets-scroll {
+    max-height: min(38vh, 360px);
+  }
+}
+
+/* Modal: impressões em grelha (2–4 colunas) + altura limitada e scroll vertical fiável */
+.tooltip-details-modal-body #card-tooltip.tt-in-modal .tt-modal-sec--prints {
+  flex: 0 1 auto;
+  min-height: 0;
+  max-height: min(24vh, 210px);
+  overflow: hidden;
+}
+.tooltip-details-modal-body #card-tooltip.tt-in-modal .tt-modal-sec--prints .tt-cardsets-block--rich {
+  display: flex;
+  flex-direction: column;
+  max-height: min(24vh, 210px);
+  min-height: 0;
+  overflow: hidden;
+  margin: 0;
+}
+.tooltip-details-modal-body #card-tooltip.tt-in-modal .tt-cardsets-block--rich .tt-cardsets-head {
+  flex-shrink: 0;
+}
+.tooltip-details-modal-body #card-tooltip.tt-in-modal .tt-cardsets-block--rich .tt-cardsets-scroll {
+  flex: 0 0 auto;
+  height: min(15vh, 132px);
+  max-height: min(15vh, 132px);
+  min-height: 80px;
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px 12px;
+  align-content: start;
+  overflow-y: auto !important;
+  overflow-x: hidden;
+  scrollbar-gutter: stable;
+  -webkit-overflow-scrolling: touch;
+  padding-right: 6px;
+}
+.tooltip-details-modal-body #card-tooltip.tt-in-modal .tt-cardsets-block--rich .tt-cardsets-scroll .tt-set-line {
+  min-width: 0;
+  max-width: 100%;
+  white-space: normal;
+  overflow-x: visible;
+  margin-bottom: 0;
+  font-size: 10.5px;
+  line-height: 1.28;
+}
+@media (min-width: 1050px) {
+  .tooltip-details-modal-body #card-tooltip.tt-in-modal .tt-cardsets-block--rich .tt-cardsets-scroll {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    height: min(14vh, 124px);
+    max-height: min(14vh, 124px);
+  }
+}
+@media (min-width: 1400px) {
+  .tooltip-details-modal-body #card-tooltip.tt-in-modal .tt-cardsets-block--rich .tt-cardsets-scroll {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 4px 10px;
+    height: min(13vh, 118px);
+    max-height: min(13vh, 118px);
+  }
+}
+.tt-prices-expanded {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #fff;
+}
+.tt-prices-note {
+  margin: 0 0 8px;
+  font-size: 10px;
+  line-height: 1.45;
+  opacity: 0.82;
+  font-weight: 500;
+}
+.tt-prices-inline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+  row-gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+}
+a.tt-price-chip,
+span.tt-price-chip {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px 8px;
+  max-width: 100%;
+  color: #fff;
+  text-decoration: none;
+  font-weight: 600;
+}
+a.tt-price-chip {
+  border-radius: 6px;
+  transition:
+    background-color 0.14s ease,
+    box-shadow 0.14s ease;
+}
+a.tt-price-chip:hover,
+a.tt-price-chip:focus-visible {
+  text-decoration: none;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 32%, transparent);
+}
+a.tt-price-chip .tt-price-chip-label,
+span.tt-price-chip.tt-price-chip--nolink .tt-price-chip-label {
+  color: var(--accent);
+  font-weight: 700;
+}
+.tt-price-chip-amt {
+  font-variant-numeric: tabular-nums;
+  opacity: 0.95;
+  font-weight: 600;
+  color: #fff;
+}
+span.tt-price-chip--nolink {
+  cursor: default;
+  opacity: 0.92;
+}
+#card-tooltip button.tt-deck-search-link {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none;
+  appearance: none;
+  -webkit-appearance: none;
+  text-decoration: none !important;
+  border-radius: 5px;
+  transition:
+    background-color 0.15s ease,
+    box-shadow 0.15s ease,
+    filter 0.15s ease,
+    border-color 0.15s ease;
+}
+#card-tooltip span.tt-deck-search-link:not(.tt-format-chip):not(.tt-ban-badge) {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none;
+  text-decoration: none !important;
+  border-radius: 5px;
+  transition:
+    background-color 0.15s ease,
+    box-shadow 0.15s ease,
+    filter 0.15s ease,
+    border-color 0.15s ease;
+}
+/* Destaque consistente ao passar o rato (ou foco por teclado) em qualquer filtro clicável do detalhe da carta */
+#card-tooltip span.tt-deck-search-link:not(.tt-format-chip):not(.tt-ban-badge):hover,
+#card-tooltip span.tt-deck-search-link:not(.tt-format-chip):not(.tt-ban-badge):focus-visible,
+#card-tooltip button.tt-deck-search-link:hover,
+#card-tooltip button.tt-deck-search-link:focus-visible {
+  text-decoration: none !important;
+  background: color-mix(in srgb, var(--accent) 17%, transparent) !important;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 44%, transparent);
+}
+html.theme-white #card-tooltip span.tt-deck-search-link:not(.tt-format-chip):not(.tt-ban-badge):hover,
+html.theme-white #card-tooltip span.tt-deck-search-link:not(.tt-format-chip):not(.tt-ban-badge):focus-visible,
+html.theme-white #card-tooltip button.tt-deck-search-link:hover,
+html.theme-white #card-tooltip button.tt-deck-search-link:focus-visible {
+  background: color-mix(in srgb, var(--accent) 13%, transparent) !important;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 36%, transparent);
+}
+#card-tooltip span.tt-passcode-search,
+#card-tooltip span.tt-konami-search,
+#card-tooltip span.tt-md-banner-search,
+#card-tooltip span.tt-md-rarity-banner-search,
+#card-tooltip span.tt-genesys-points-search,
+#card-tooltip span.tt-date-search,
+#tooltip-text .tt-tooltip-formats span.tt-format-chip.tt-deck-search-link {
+  cursor: pointer;
+  text-decoration: none !important;
+}
+#card-tooltip span.tt-md-rarity-banner-search:hover,
+#card-tooltip span.tt-md-rarity-banner-search:focus-visible {
+  filter: brightness(1.08);
+  border-color: color-mix(in srgb, var(--accent) 52%, transparent) !important;
+}
+#tooltip-text .tt-tooltip-formats span.tt-format-chip.tt-deck-search-link:hover,
+#tooltip-text .tt-tooltip-formats span.tt-format-chip.tt-deck-search-link:focus-visible {
+  text-decoration: none !important;
+  filter: brightness(1.12) saturate(1.06);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 42%, transparent);
+  position: relative;
+  z-index: 1;
+}
+#card-tooltip .tt-md-banner-search {
+  display: inline-block;
+  vertical-align: baseline;
+}
+#card-tooltip span.tt-md-rarity-banner-search {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(0, 0, 0, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-variant-numeric: tabular-nums;
+}
+#card-tooltip .tt-md-rarity-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+#card-tooltip .tt-attr-head-search {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #ffffff;
+  text-align: left;
+}
+#card-tooltip .tt-level-search {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #ffffff;
+  margin-left: 5px;
+}
+#card-tooltip .tt-race-type-inner {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+#card-tooltip #tooltip-name span.tt-tooltip-name-search {
+  color: inherit;
+  font-weight: inherit;
+  font-size: inherit;
+}
+html.theme-white #card-tooltip button.tt-deck-search-link {
+  background: transparent !important;
+  border: none !important;
+  color: inherit !important;
+}
+html.theme-white #card-tooltip span.tt-deck-search-link:not(.tt-format-chip):not(.tt-ban-badge) {
+  border: none !important;
+  color: inherit !important;
+}
+#card-tooltip .tt-tooltip-ygoref {
+  border-radius: 6px;
+  transition:
+    background-color 0.14s ease,
+    box-shadow 0.14s ease;
+}
+#card-tooltip .tt-tooltip-ygoref:hover,
+#card-tooltip .tt-tooltip-ygoref:focus-visible {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 38%, transparent);
+}
+#card-tooltip .tt-tooltip-dates > span {
+  border-radius: 6px;
+  padding: 2px 4px;
+  transition:
+    background-color 0.14s ease,
+    box-shadow 0.14s ease;
+}
+#card-tooltip .tt-tooltip-dates > span:hover {
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+#card-tooltip .tt-link-marker-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 1px;
+  background: none;
+  border: none;
+  vertical-align: middle;
+}
+#card-tooltip .pendulum-scale-num.tt-deck-search-link {
+  background: none;
+  border: none;
+  padding: 0 2px;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.theme-white a.tt-price-chip,
+.theme-white span.tt-price-chip {
+  color: #1f2937;
+}
+.theme-white a.tt-price-chip .tt-price-chip-label,
+.theme-white span.tt-price-chip.tt-price-chip--nolink .tt-price-chip-label {
+  color: var(--accent);
+}
+.theme-white .tt-price-chip-amt {
+  color: #1f2937;
+}
+.theme-white .tt-prices-note {
+  color: #4b5563;
+  opacity: 1;
+}
+.theme-white .tt-prices-expanded {
+  color: #1f2937;
+}
+.theme-white .tt-set-store-link {
+  color: #2563eb;
 }
 .theme-white .tt-cardsets-block {
   border-top-color: var(--border);
@@ -1976,85 +2537,126 @@ html.theme-white #tooltip-text .tt-tooltip-formats {
   max-width: 100%;
   word-break: break-word;
 }
-#tooltip-text .tt-format-chip--c0 {
-  background: rgba(59, 130, 246, 0.22);
-  border-color: rgba(96, 165, 250, 0.55);
-  color: #bfdbfe;
+/* Cores por formato (referência visual chips “Formatos” no detalhe da carta). */
+#tooltip-text .tt-tooltip-formats .tt-format-chip.tt-format-chip--fmt-goat {
+  background: rgba(55, 65, 81, 0.55);
+  border-color: rgba(156, 163, 175, 0.85);
+  color: #e5e7eb;
 }
-#tooltip-text .tt-format-chip--c1 {
-  background: rgba(16, 185, 129, 0.2);
-  border-color: rgba(52, 211, 153, 0.5);
-  color: #a7f3d0;
+#tooltip-text .tt-tooltip-formats .tt-format-chip.tt-format-chip--fmt-speed-duel {
+  background: rgba(20, 83, 45, 0.55);
+  border-color: rgba(34, 197, 94, 0.8);
+  color: #bbf7d0;
 }
-#tooltip-text .tt-format-chip--c2 {
-  background: rgba(245, 158, 11, 0.22);
-  border-color: rgba(251, 191, 36, 0.55);
-  color: #fde68a;
+#tooltip-text .tt-tooltip-formats .tt-format-chip.tt-format-chip--fmt-ocg-goat {
+  background: rgba(113, 63, 18, 0.52);
+  border-color: rgba(253, 224, 71, 0.72);
+  color: #fef9c3;
 }
-#tooltip-text .tt-format-chip--c3 {
-  background: rgba(236, 72, 153, 0.2);
-  border-color: rgba(249, 168, 212, 0.5);
-  color: #fbcfe8;
+#tooltip-text .tt-tooltip-formats .tt-format-chip.tt-format-chip--fmt-duel-links {
+  background: rgba(69, 10, 10, 0.55);
+  border-color: rgba(244, 114, 182, 0.65);
+  color: #fce7f3;
 }
-#tooltip-text .tt-format-chip--c4 {
-  background: rgba(139, 92, 246, 0.22);
-  border-color: rgba(167, 139, 250, 0.55);
-  color: #ddd6fe;
+#tooltip-text .tt-tooltip-formats .tt-format-chip.tt-format-chip--fmt-common-charity {
+  background: rgba(59, 7, 100, 0.48);
+  border-color: rgba(216, 180, 254, 0.75);
+  color: #f3e8ff;
 }
-#tooltip-text .tt-format-chip--c5 {
-  background: rgba(14, 165, 233, 0.2);
-  border-color: rgba(56, 189, 248, 0.5);
-  color: #bae6fd;
+#tooltip-text .tt-tooltip-formats .tt-format-chip.tt-format-chip--fmt-edison {
+  background: rgba(15, 118, 110, 0.52);
+  border-color: rgba(45, 212, 191, 0.72);
+  color: #ccfbf1;
 }
-#tooltip-text .tt-format-chip--c6 {
-  background: rgba(244, 63, 94, 0.2);
-  border-color: rgba(251, 113, 133, 0.5);
-  color: #fecdd3;
+#tooltip-text .tt-tooltip-formats .tt-format-chip.tt-format-chip--fmt-tcg {
+  background: rgba(88, 28, 28, 0.55);
+  border-color: rgba(248, 113, 113, 0.78);
+  color: #fecaca;
 }
-#tooltip-text .tt-format-chip--c7 {
-  background: rgba(234, 179, 8, 0.18);
-  border-color: rgba(250, 204, 21, 0.5);
-  color: #fef08a;
+#tooltip-text .tt-tooltip-formats .tt-format-chip.tt-format-chip--fmt-ocg {
+  background: rgba(113, 63, 18, 0.52);
+  border-color: rgba(253, 224, 71, 0.72);
+  color: #fef9c3;
 }
-html.theme-white #tooltip-text .tt-format-chip--c0 {
-  background: rgba(219, 234, 254, 0.95);
-  border-color: #93c5fd;
-  color: #1e3a8a;
+#tooltip-text .tt-tooltip-formats .tt-format-chip.tt-format-chip--fmt-master-duel {
+  background: rgba(30, 58, 95, 0.58);
+  border-color: rgba(125, 211, 252, 0.78);
+  color: #e0f2fe;
 }
-html.theme-white #tooltip-text .tt-format-chip--c1 {
-  background: rgba(209, 250, 229, 0.95);
-  border-color: #6ee7b7;
-  color: #064e3b;
+#tooltip-text .tt-tooltip-formats .tt-format-chip.tt-format-chip--fmt-rush-duel {
+  background: rgba(91, 33, 182, 0.45);
+  border-color: rgba(196, 181, 253, 0.75);
+  color: #ede9fe;
 }
-html.theme-white #tooltip-text .tt-format-chip--c2 {
-  background: rgba(254, 243, 199, 0.95);
-  border-color: #fcd34d;
-  color: #78350f;
+#tooltip-text .tt-tooltip-formats .tt-format-chip.tt-format-chip--fmt-genesys {
+  background: rgba(113, 63, 18, 0.42);
+  border-color: rgba(250, 204, 21, 0.88);
+  color: #fffbeb;
 }
-html.theme-white #tooltip-text .tt-format-chip--c3 {
-  background: rgba(252, 231, 243, 0.98);
-  border-color: #f9a8d4;
-  color: #831843;
+#tooltip-text .tt-tooltip-formats .tt-format-chip.tt-format-chip--fmt-other {
+  background: rgba(71, 85, 105, 0.45);
+  border-color: rgba(148, 163, 184, 0.65);
+  color: #e2e8f0;
 }
-html.theme-white #tooltip-text .tt-format-chip--c4 {
-  background: rgba(237, 233, 254, 0.95);
-  border-color: #c4b5fd;
-  color: #4c1d95;
+html.theme-white #tooltip-text .tt-tooltip-formats .tt-format-chip.tt-format-chip--fmt-goat {
+  background: rgba(243, 244, 246, 0.98);
+  border-color: #94a3b8;
+  color: #1e293b;
 }
-html.theme-white #tooltip-text .tt-format-chip--c5 {
-  background: rgba(224, 242, 254, 0.95);
-  border-color: #7dd3fc;
-  color: #0c4a6e;
+html.theme-white #tooltip-text .tt-tooltip-formats .tt-format-chip.tt-format-chip--fmt-speed-duel {
+  background: rgba(220, 252, 231, 0.98);
+  border-color: #4ade80;
+  color: #14532d;
 }
-html.theme-white #tooltip-text .tt-format-chip--c6 {
-  background: rgba(255, 241, 242, 0.98);
-  border-color: #fda4af;
-  color: #881337;
-}
-html.theme-white #tooltip-text .tt-format-chip--c7 {
+html.theme-white #tooltip-text .tt-tooltip-formats .tt-format-chip.tt-format-chip--fmt-ocg-goat {
   background: rgba(254, 252, 232, 0.98);
   border-color: #facc15;
   color: #713f12;
+}
+html.theme-white #tooltip-text .tt-tooltip-formats .tt-format-chip.tt-format-chip--fmt-duel-links {
+  background: rgba(255, 241, 242, 0.98);
+  border-color: #fb7185;
+  color: #881337;
+}
+html.theme-white #tooltip-text .tt-tooltip-formats .tt-format-chip.tt-format-chip--fmt-common-charity {
+  background: rgba(250, 245, 255, 0.98);
+  border-color: #c084fc;
+  color: #581c87;
+}
+html.theme-white #tooltip-text .tt-tooltip-formats .tt-format-chip.tt-format-chip--fmt-edison {
+  background: rgba(204, 251, 241, 0.98);
+  border-color: #2dd4bf;
+  color: #115e59;
+}
+html.theme-white #tooltip-text .tt-tooltip-formats .tt-format-chip.tt-format-chip--fmt-tcg {
+  background: rgba(254, 226, 226, 0.98);
+  border-color: #f87171;
+  color: #7f1d1d;
+}
+html.theme-white #tooltip-text .tt-tooltip-formats .tt-format-chip.tt-format-chip--fmt-ocg {
+  background: rgba(254, 252, 232, 0.98);
+  border-color: #facc15;
+  color: #713f12;
+}
+html.theme-white #tooltip-text .tt-tooltip-formats .tt-format-chip.tt-format-chip--fmt-master-duel {
+  background: rgba(224, 242, 254, 0.98);
+  border-color: #38bdf8;
+  color: #0c4a6e;
+}
+html.theme-white #tooltip-text .tt-tooltip-formats .tt-format-chip.tt-format-chip--fmt-rush-duel {
+  background: rgba(237, 233, 254, 0.98);
+  border-color: #a78bfa;
+  color: #4c1d95;
+}
+html.theme-white #tooltip-text .tt-tooltip-formats .tt-format-chip.tt-format-chip--fmt-genesys {
+  background: rgba(254, 249, 195, 0.98);
+  border-color: #eab308;
+  color: #713f12;
+}
+html.theme-white #tooltip-text .tt-tooltip-formats .tt-format-chip.tt-format-chip--fmt-other {
+  background: rgba(241, 245, 249, 0.98);
+  border-color: #94a3b8;
+  color: #334155;
 }
 #tooltip-text .tt-cardsets-grid {
   line-height: 1.18;
@@ -2080,11 +2682,18 @@ html.theme-white #tooltip-text .tt-format-chip--c7 {
   font-weight: 600;
   opacity: 0.9;
 }
+.tt-cardsets-cell span.tt-cardsets-pr.tt-deck-search-link {
+  font-weight: 600;
+  opacity: 0.9;
+}
 html.theme-white .tt-cardsets-cell {
   color: #374151;
 }
 html.theme-white .tt-cardsets-cell .tt-cardsets-pr {
   color: #047857;
+}
+html.theme-white .tt-cardsets-cell span.tt-cardsets-pr.tt-deck-search-link {
+  color: #047857 !important;
 }
 
 .card-sets-panel {
@@ -2701,12 +3310,134 @@ html.theme-white .tooltip-details-modal-close {
 }
 .tooltip-details-modal-body #card-tooltip.tt-in-modal #tooltip-info-rows {
   font-size: 15px !important;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.tooltip-details-modal-body #card-tooltip.tt-in-modal .tt-modal-md-outside {
+  flex: 0 0 auto;
 }
 .tooltip-details-modal-body #card-tooltip.tt-in-modal .tt-row-split {
   font-size: 15px !important;
 }
+/* Modal de detalhes: blocos em cartões em vez de <hr> / border-top duros */
+.tooltip-details-modal-body #card-tooltip.tt-in-modal #tooltip-text {
+  border-top: none !important;
+}
+.tooltip-details-modal-body #card-tooltip.tt-in-modal .tt-modal-detail-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 2px;
+}
+.tooltip-details-modal-body #card-tooltip.tt-in-modal .tt-modal-sec {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  background: rgba(0, 0, 0, 0.2);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+.tooltip-details-modal-body #card-tooltip.tt-in-modal .tt-modal-sec--stats {
+  padding: 8px 10px;
+}
+.tooltip-details-modal-body #card-tooltip.tt-in-modal .tt-modal-sec--release-prices > div:first-child {
+  margin-top: 0 !important;
+}
+.tooltip-details-modal-body #card-tooltip.tt-in-modal .tt-modal-sec--release-link {
+  display: flex;
+  justify-content: flex-end;
+}
+.tooltip-details-modal-body #card-tooltip.tt-in-modal .tt-modal-sec--release-link > div {
+  margin-top: 0 !important;
+}
+.tooltip-details-modal-body #card-tooltip.tt-in-modal .tt-modal-sec .tt-cardsets-block,
+.tooltip-details-modal-body #card-tooltip.tt-in-modal .tt-modal-sec .tt-tooltip-formats,
+.tooltip-details-modal-body #card-tooltip.tt-in-modal .tt-modal-sec .tt-tooltip-dates {
+  border-top: none !important;
+  margin-top: 0;
+  padding-top: 0;
+}
+.tooltip-details-modal-body #card-tooltip.tt-in-modal .tt-modal-sec--prints .tt-cardsets-block {
+  margin-top: 0;
+}
+.tooltip-details-modal-body #card-tooltip.tt-in-modal .tt-modal-sec--ids > .tt-card-id-row:first-child {
+  margin-top: 0;
+}
+.tooltip-details-modal-body #card-tooltip.tt-in-modal #tooltip-text .tt-tooltip-formats + .tt-tooltip-dates {
+  border-top: none !important;
+  margin-top: 0;
+  padding-top: 0;
+}
+html.theme-white .tooltip-details-modal-body #card-tooltip.tt-in-modal .tt-modal-sec {
+  background: rgba(255, 255, 255, 0.94);
+  border-color: var(--border);
+  box-shadow: none;
+}
 .tooltip-details-modal-body #card-tooltip.tt-in-modal .tt-cardsets-grid {
   gap: 6px 10px;
+}
+
+/* Tooltip hover (desktop): mesmas secções em cartão que a modal (`tt-card-layout` em fillTooltipData). */
+#card-tooltip.tt-card-layout:not(.tt-in-modal) #tooltip-info-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+#card-tooltip.tt-card-layout:not(.tt-in-modal) #tooltip-text {
+  border-top: none !important;
+  padding-top: 8px;
+}
+#card-tooltip.tt-card-layout:not(.tt-in-modal) .tt-modal-detail-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+#card-tooltip.tt-card-layout:not(.tt-in-modal) .tt-modal-sec {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  background: rgba(0, 0, 0, 0.22);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+#card-tooltip.tt-card-layout:not(.tt-in-modal) .tt-modal-sec--stats {
+  padding: 6px 8px;
+}
+#card-tooltip.tt-card-layout:not(.tt-in-modal) .tt-modal-sec--release-prices > div:first-child {
+  margin-top: 0 !important;
+}
+#card-tooltip.tt-card-layout:not(.tt-in-modal) .tt-modal-sec--release-link {
+  display: flex;
+  justify-content: flex-end;
+}
+#card-tooltip.tt-card-layout:not(.tt-in-modal) .tt-modal-sec--release-link > div {
+  margin-top: 0 !important;
+}
+#card-tooltip.tt-card-layout:not(.tt-in-modal) .tt-modal-sec .tt-cardsets-block,
+#card-tooltip.tt-card-layout:not(.tt-in-modal) .tt-modal-sec .tt-tooltip-formats,
+#card-tooltip.tt-card-layout:not(.tt-in-modal) .tt-modal-sec .tt-tooltip-dates {
+  border-top: none !important;
+  margin-top: 0;
+  padding-top: 0;
+}
+#card-tooltip.tt-card-layout:not(.tt-in-modal) .tt-modal-sec--prints .tt-cardsets-block {
+  margin-top: 0;
+}
+#card-tooltip.tt-card-layout:not(.tt-in-modal) .tt-modal-sec--ids > .tt-card-id-row:first-child {
+  margin-top: 0;
+}
+html.theme-white #card-tooltip.tt-card-layout:not(.tt-in-modal) .tt-modal-sec {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: var(--border);
+  box-shadow: none;
+}
+#card-tooltip.tt-card-layout:not(.tt-in-modal) .tt-cardsets-grid {
+  gap: 4px 8px;
 }
 @media (max-width: 900px) {
   .tooltip-details-modal-body {
@@ -2790,6 +3521,8 @@ html.theme-white .csp-close {
 }
 .csp-body .tt-set-line {
   color: #fff;
+  white-space: normal;
+  overflow-x: visible;
 }
 html.theme-white .csp-body .tt-set-line {
   color: #374151;
@@ -5151,24 +5884,75 @@ html.theme-white .deck-section-head.deck-section-head--overlay {
 .deck-empty-hint {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px;
-  opacity: 0.8;
-  font-size: 11px;
+  justify-content: center;
+  gap: 10px;
+  padding: 16px 14px;
+  min-height: 108px;
+  box-sizing: border-box;
+  font-size: 12px;
+  font-weight: 600;
   grid-column: 1 / -1; /* em modo 2 colunas, ocupa a largura toda */
   min-width: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  border-radius: 10px;
+  margin: 6px 4px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+/* Cores por secção (alinhadas a `.deck-stat-chip--monster|extra|spell`). */
+.deck-section-body[data-deck-section='principal'] .deck-empty-hint {
+  background: linear-gradient(
+    165deg,
+    rgba(166, 82, 42, 0.38) 0%,
+    rgba(90, 42, 24, 0.5) 100%
+  );
+  border-color: rgba(200, 120, 70, 0.35);
+  color: #f0d0b0;
+}
+.deck-section-body[data-deck-section='extra'] .deck-empty-hint {
+  background: linear-gradient(
+    165deg,
+    rgba(22, 70, 135, 0.42) 0%,
+    rgba(12, 36, 72, 0.55) 100%
+  );
+  border-color: rgba(100, 160, 230, 0.35);
+  color: #c8dcff;
+}
+.deck-section-body[data-deck-section='side'] .deck-empty-hint {
+  background: linear-gradient(
+    165deg,
+    rgba(29, 125, 92, 0.38) 0%,
+    rgba(14, 62, 46, 0.52) 100%
+  );
+  border-color: rgba(80, 200, 150, 0.3);
+  color: #b8f0de;
 }
 .deck-empty-hint > i {
   flex: 0 0 auto;
-  opacity: 0.9;
+  opacity: 0.92;
+  font-size: 15px;
 }
 .deck-empty-hint > span {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+html.theme-white .deck-section-body[data-deck-section='principal'] .deck-empty-hint {
+  background: linear-gradient(165deg, rgba(166, 82, 42, 0.16) 0%, rgba(166, 82, 42, 0.26) 100%);
+  border-color: rgba(166, 82, 42, 0.35);
+  color: #7c2d12;
+}
+html.theme-white .deck-section-body[data-deck-section='extra'] .deck-empty-hint {
+  background: linear-gradient(165deg, rgba(22, 70, 135, 0.14) 0%, rgba(22, 70, 135, 0.24) 100%);
+  border-color: rgba(22, 70, 135, 0.35);
+  color: #1e3a8a;
+}
+html.theme-white .deck-section-body[data-deck-section='side'] .deck-empty-hint {
+  background: linear-gradient(165deg, rgba(29, 125, 92, 0.14) 0%, rgba(29, 125, 92, 0.24) 100%);
+  border-color: rgba(29, 125, 92, 0.35);
+  color: #14532d;
 }
 @media (min-width: 901px) {
   .app-container.deck-col-wide .deck-section-body--list {

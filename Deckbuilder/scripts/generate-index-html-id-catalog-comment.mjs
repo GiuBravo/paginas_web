@@ -159,8 +159,6 @@ const EXACT = {
   'group-subtype': 'Grupo subtipo (visível após tipo monstro).',
   'group-race': 'Grupo raça (visível após tipo monstro).',
   'monster-extras': 'Grupo atributo/nível/link/escala (monstro).',
-  'banlist-only-container': 'Checkbox “só banlist”.',
-  'enable-banlist-only': 'Input checkbox banlist-only.',
   'filter-haseffect-group': 'Grupo filtro “tem descrição”.',
   'manual-card-type': 'Select tipo manual OCR (AUTO, …).',
   'manual-rarity': 'Select raridade manual OCR.',

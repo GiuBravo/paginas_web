@@ -100,6 +100,7 @@ const MONOLITH_ATTR_ICON_SVG_URL = Object.freeze({
 const STATIC_ICON_YGO_LEVEL_PNG = deckbuilderIsMonolithWithoutAssets()
   ? 'https://ygoprodeck.com/wp-content/uploads/2017/01/level.png'
   : `${ICON_ROOT}/ui/ygo-level.png`;
+const STATIC_ICON_YGO_RANK_PNG = 'https://ms.yugipedia.com//4/4b/Rank.png';
 const STATIC_ICON_SPELL_FRAME_SVG = deckbuilderIsMonolithWithoutAssets()
   ? 'https://static.wikia.nocookie.net/yugioh/images/0/09/SPELL.svg'
   : `${ICON_ROOT}/ui/SPELL.svg`;
@@ -2437,11 +2438,7 @@ function initDeckValidationControls() {
    * @returns {string} Texto via `T(k)` ou o valor cru se não houver mapeamento.
    */
   function labelForDeckBanValue(v) {
-    const low = String(v || '')
-      .trim()
-      .toLowerCase();
-    const k = DECK_BANLIST_FORMAT_TO_I18N_KEY[low];
-    return k ? T(k) : String(v || '');
+    return getBanlistFormatDisplayLabel(v);
   }
   /**
    * Reconstrói opções do select a partir de `FILTER_BANLIST_DECK_SELECT_VALUES`, preservando valor anterior se ainda existir.
@@ -4765,6 +4762,253 @@ function isMasterDuelFormatFiltered() {
 }
 
 /**
+ * Pelo menos um chip de formato/banlist na busca é Master Duel (mostra filtro de raridade MD).
+ *
+ * @returns {boolean}
+ */
+function isMasterDuelBanlistChipActive() {
+  const bl = window.filterChipState.banlist || [];
+  for (let i = 0; i < bl.length; i++) {
+    const t = String(bl[i] || '')
+      .trim()
+      .toLowerCase();
+    if (
+      t === 'master duel' ||
+      t === 'masterduel' ||
+      t.includes('master duel') ||
+      t.includes('masterduel')
+    )
+      return true;
+  }
+  return false;
+}
+
+/**
+ * Há chip de formato/banlist TCG ou OCG na busca (mostra filtro de status na banlist clássica).
+ *
+ * @returns {boolean}
+ */
+function isTcgOrOcgBanlistChipActive() {
+  const bl = window.filterChipState.banlist || [];
+  for (let i = 0; i < bl.length; i++) {
+    const t = String(bl[i] || '')
+      .trim()
+      .toLowerCase();
+    if (t === 'tcg' || t === 'ocg') return true;
+  }
+  return false;
+}
+
+/**
+ * Normaliza entrada do filtro de status banlist TCG/OCG para token canónico.
+ *
+ * @param {unknown} raw
+ * @returns {'forbidden'|'limited'|'semi'|null}
+ */
+function normalizeTcgOcgBanlistStatusToken(raw) {
+  let q = String(raw ?? '')
+    .trim()
+    .toLowerCase();
+  if (!q) return null;
+  try {
+    q = q.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  } catch (_) {}
+  q = q.replace(/\s+/g, ' ');
+  if (
+    q === 'forbidden' ||
+    q === 'banned' ||
+    q === 'proibida' ||
+    q.includes('proibid') ||
+    q.includes('forbid')
+  )
+    return 'forbidden';
+  if (q === 'limited' || q === 'limitada') return 'limited';
+  if (q.includes('ilimit') || q.includes('unlimited')) return null;
+  if (q.includes('limitada') || q.includes('limited')) return 'limited';
+  if (
+    q === 'semi' ||
+    q === 'semi-limited' ||
+    q === 'semilimited' ||
+    q.replace(/\s+/g, '') === 'semilimitada' ||
+    q.includes('semi')
+  )
+    return 'semi';
+  return null;
+}
+
+/**
+ * Classifica texto de `banlist_info` para bucket de filtro.
+ *
+ * @param {unknown} status
+ * @returns {'forbidden'|'limited'|'semi'|null}
+ */
+function banlistInfoStatusToBucket(status) {
+  const s = String(status ?? '').trim();
+  if (s === 'Banned' || s === 'Forbidden') return 'forbidden';
+  if (s === 'Limited') return 'limited';
+  if (s === 'Semi-Limited') return 'semi';
+  return null;
+}
+
+/**
+ * Bucket de status na banlist para um formato (`tcg`/`ocg`/…) e carta.
+ *
+ * @param {object|null|undefined} card
+ * @param {string} banFmt Valor de chip (ex.: `tcg`).
+ * @returns {'forbidden'|'limited'|'semi'|null}
+ */
+function cardBanlistStatusBucketForFormat(card, banFmt) {
+  if (!card || typeof card !== 'object' || !card.banlist_info) return null;
+  const key = banlistInfoKeyForType(banFmt);
+  if (!key) return null;
+  return banlistInfoStatusToBucket(card.banlist_info[key]);
+}
+
+/**
+ * `true` se a carta tiver algum dos status pedidos em algum chip TCG/OCG ativo.
+ *
+ * @param {object} card
+ * @param {Set<string>} want `forbidden`/`limited`/`semi`
+ * @returns {boolean}
+ */
+function cardMatchesTcgOcgBanlistStatusChips(card, want) {
+  if (!want || !want.size) return true;
+  const chips = window.filterChipState.banlist || [];
+  for (let i = 0; i < chips.length; i++) {
+    const b = String(chips[i] || '').trim().toLowerCase();
+    if (b !== 'tcg' && b !== 'ocg') continue;
+    const bucket = cardBanlistStatusBucketForFormat(card, b);
+    if (bucket && want.has(bucket)) return true;
+  }
+  return false;
+}
+
+/**
+ * Rótulo traduzido para um token de status (`forbidden`/`limited`/`semi`).
+ *
+ * @param {string} token
+ * @returns {string}
+ */
+function tcgOcgBanlistStatusTokenLabel(token) {
+  const k = String(token || '').trim().toLowerCase();
+  if (k === 'forbidden') return T('filter.tcgocg_banstatus_opt_forbidden');
+  if (k === 'limited') return T('filter.tcgocg_banstatus_opt_limited');
+  if (k === 'semi') return T('filter.tcgocg_banstatus_opt_semi');
+  return token;
+}
+
+/**
+ * Mostra o grupo de status banlist TCG/OCG e limpa chips se o formato deixar de ser TCG/OCG.
+ *
+ * @returns {void}
+ */
+function syncTcgOcgBanlistStatusFilterGroupVisibility() {
+  const el = getEl('filter-tcgocg-banstatus-group');
+  if (!el) return;
+  const show = isTcgOrOcgBanlistChipActive();
+  if (show) {
+    el.style.removeProperty('display');
+  } else {
+    el.style.setProperty('display', 'none', 'important');
+    if (window.selectedTcgOcgBanlistStatuses && window.selectedTcgOcgBanlistStatuses.length) {
+      window.selectedTcgOcgBanlistStatuses = [];
+      renderTcgOcgBanlistStatusFilterChips();
+    }
+    setVal('filter-tcgocg-banstatus-input', '');
+  }
+}
+
+/**
+ * Redesenha chips de status banlist TCG/OCG.
+ *
+ * @returns {void}
+ */
+function renderTcgOcgBanlistStatusFilterChips() {
+  const box = getEl('filter-tcgocg-banstatus-chips');
+  const clearBtn = getEl('filter-tcgocg-banstatus-clear-chips');
+  if (!box) return;
+  const removeTitle = escAttr(T('chip.remove'));
+  const rs = window.selectedTcgOcgBanlistStatuses || [];
+  box.innerHTML = rs
+    .map((tok) => {
+      const k = normalizeTcgOcgBanlistStatusToken(tok);
+      if (!k) return '';
+      const lab = tcgOcgBanlistStatusTokenLabel(k);
+      return `<span class="cardset-chip cardset-chip--with-icon">${filterSuggestRowInnerHtml('tcgOcgBanStatus', { value: k, label: lab })}<button type="button" data-tcgocg-banstatus="${escAttr(k)}" title="${removeTitle}">&times;</button></span>`;
+    })
+    .join('');
+  const btns = box.querySelectorAll('button[data-tcgocg-banstatus]');
+  for (let bi = 0; bi < btns.length; bi++) {
+    const btn = btns[bi];
+    btn.onclick = () => {
+      const rk = btn.getAttribute('data-tcgocg-banstatus');
+      window.selectedTcgOcgBanlistStatuses = (window.selectedTcgOcgBanlistStatuses || []).filter(
+        (x) => String(normalizeTcgOcgBanlistStatusToken(x)) !== String(rk)
+      );
+      renderTcgOcgBanlistStatusFilterChips();
+      currentPage = 1;
+      performSearch(true);
+    };
+  }
+  if (clearBtn) setChipClearRowVisible('filter-tcgocg-banstatus-clear-chips', rs.length > 0);
+}
+
+/**
+ * Adiciona status banlist a partir de `#filter-tcgocg-banstatus-input` (até 3 valores distintos).
+ *
+ * @returns {void}
+ */
+function tryAddTcgOcgBanlistStatusFromInput() {
+  const inp = getEl('filter-tcgocg-banstatus-input');
+  if (!inp || !String(inp.value || '').trim()) {
+    showToast(T('toast.tcgocg_banstatus_pick'));
+    return;
+  }
+  const k = normalizeTcgOcgBanlistStatusToken(inp.value);
+  if (!k) {
+    showToast(T('toast.tcgocg_banstatus_pick'));
+    inp.value = '';
+    return;
+  }
+  if (!isTcgOrOcgBanlistChipActive()) {
+    inp.value = '';
+    return;
+  }
+  if (!window.selectedTcgOcgBanlistStatuses) window.selectedTcgOcgBanlistStatuses = [];
+  const seen = new Set(
+    window.selectedTcgOcgBanlistStatuses.map((x) => String(normalizeTcgOcgBanlistStatusToken(x)))
+  );
+  if (seen.has(k)) {
+    showToast(T('toast.tcgocg_banstatus_dup'));
+    inp.value = '';
+    return;
+  }
+  if (window.selectedTcgOcgBanlistStatuses.length >= 3) {
+    showToast(T('toast.tcgocg_banstatus_max'));
+    return;
+  }
+  window.selectedTcgOcgBanlistStatuses.push(k);
+  inp.value = '';
+  renderTcgOcgBanlistStatusFilterChips();
+  currentPage = 1;
+  performSearch(true);
+}
+
+/**
+ * Normaliza token de raridade Master Duel para `UR`/`SR`/`R`/`N`.
+ *
+ * @param {unknown} raw
+ * @returns {'UR'|'SR'|'R'|'N'|null}
+ */
+function normalizeMasterDuelFilterRarityToken(raw) {
+  const t = String(raw ?? '')
+    .trim()
+    .toUpperCase();
+  if (t === 'UR' || t === 'SR' || t === 'R' || t === 'N') return t;
+  return null;
+}
+
+/**
  * URL do ícone de raridade MD a partir do código `UR`/`SR`/…
  *
  * @param {string|null|undefined} md Sigla normalizada.
@@ -5792,8 +6036,7 @@ function clearLanguageSensitiveApiCaches() {
       'filter.ban_hint':
         'Suggestions may appear in Portuguese labels. To clear the Format, use <strong>Effacer Format</strong> below. One option at a time.',
       'filter.ban_label': 'Format / Liste limitée',
-      'filter.ban_ph': 'e.g. TCG Format (main)',
-      'filter.banlist_only': 'Afficher only cards on the Liste limitée',
+      'filter.ban_ph': 'e.g. TCG',
       'filter.staple_label': 'Carte phare',
       'filter.staple_hint':
         '<strong>Is staple</strong> uses <code>staple=yes</code>. <strong>Not staple</strong> Filtres client-side via <code>misc_info</code>; combine with name, type, dates, etc. (API has no <code>staple=no</code>).',
@@ -5853,10 +6096,29 @@ function clearLanguageSensitiveApiCaches() {
       'filter.price_max_ph': 'Maximum value',
       'filter.price_min_ph': 'Minimum value',
       'filter.price_chip_label': 'Minimum {min} · Maximum {max}',
+      'filter.genesys_pt_label': 'Genesys points',
+      'filter.genesys_pt_hint':
+        'With <strong>Genesys format</strong> in the filter above. One or more exact point values (union). Needs API data with <code>format=genesys</code>. When you focus the field, the browser suggests the <strong>51</strong> point values that exist on at least one catalog card.',
+      'filter.genesys_pt_ph': 'e.g. 10',
+      'filter.genesys_pt_clear': 'Clear Genesys point chips',
       'filter.race_clear': 'Effacer race/type',
       'filter.race_hint': 'One or more (API: comma). Suggestions depend on card type.',
       'filter.race_label': 'Race / spell or trap type',
       'filter.race_ph': 'e.g. Dragon…',
+      'filter.monster_race_clear': 'Effacer race',
+      'filter.monster_race_hint': 'Only when <strong>Monster</strong> is in card type. One or more (API: comma). Suggestions: monster races.',
+      'filter.monster_race_label': 'Race (monster)',
+      'filter.monster_race_ph': 'e.g. Dragon…',
+      'filter.spell_type_clear': 'Effacer spell types',
+      'filter.spell_type_hint':
+        'Only when <strong>Spell</strong> is in card type. Normal, Quick-Play, Continuous, etc. (API: <code>race</code>).',
+      'filter.spell_type_label': 'Spell type',
+      'filter.spell_type_ph': 'e.g. Quick-Play…',
+      'filter.trap_type_clear': 'Effacer trap types',
+      'filter.trap_type_hint':
+        'Only when <strong>Trap</strong> is in card type. Normal, Continuous, Counter (API: <code>race</code>).',
+      'filter.trap_type_label': 'Trap type',
+      'filter.trap_type_ph': 'e.g. Counter…',
       'filter.rarity_clear': 'Effacer rarities',
       'filter.rarity_hint':
         'English name as in the database (e.g. Ultra Rare). Suggestions come from the same <code>cardinfo</code> scan as set codes / types / races (first load may be slow). Rareté-only: scans full catalog. With other Filtres, applies only to the loaded result.',
@@ -5886,10 +6148,10 @@ function clearLanguageSensitiveApiCaches() {
       'filter.type_label': 'Carte type',
       'filter.level_opt': 'Niveau {n}',
       'filter.type_ph': 'e.g. Monstre…',
-      'filteropt.ban_goat': 'Goat Format (classic)',
-      'filteropt.ban_ocg': 'OCG Format (Japan)',
-      'filteropt.ban_tcg': 'TCG Format (main)',
-      'filteropt.ban_ocg_goat': 'OCG Goat (classic Japan)',
+      'filteropt.ban_goat': 'Goat',
+      'filteropt.ban_ocg': 'OCG',
+      'filteropt.ban_tcg': 'TCG',
+      'filteropt.ban_ocg_goat': 'OCG Goat',
       'filteropt.ban_speed_duel': 'Speed Duel',
       'filteropt.ban_rush_duel': 'Rush Duel',
       'filteropt.ban_duel_links': 'Duel Links',
@@ -6042,6 +6304,9 @@ function clearLanguageSensitiveApiCaches() {
       'toast.atk_dup': 'This ATK is already in the list.',
       'toast.atk_invalid': 'Invalid ATK.',
       'toast.atk_need': 'Set ATK in the Terrain (or use +/-) before adding.',
+      'toast.genesys_pt_dup': 'This Genesys point value is already in the list.',
+      'toast.genesys_pt_invalid': 'Invalid Genesys points.',
+      'toast.genesys_pt_need': 'Enter a Genesys point value before adding.',
       'toast.clipboard_no_image': 'Image clipboard not available.',
       'toast.csv_all_saved': 'Single CSV with all decks saved.',
       'toast.csv_saved': 'CSV saved.',
@@ -6367,8 +6632,7 @@ function clearLanguageSensitiveApiCaches() {
       'filter.ban_hint':
         'Suggestions may appear in Portuguese labels. To clear the Format, use <strong>Leeren Format</strong> below. One option at a time.',
       'filter.ban_label': 'Format / Banlist',
-      'filter.ban_ph': 'e.g. TCG Format (main)',
-      'filter.banlist_only': 'Anzeigen only cards on the banlist',
+      'filter.ban_ph': 'e.g. TCG',
       'filter.staple_label': 'Staple-Karte',
       'filter.staple_hint':
         '<strong>Is staple</strong> uses <code>staple=yes</code>. <strong>Not staple</strong> Filter client-side via <code>misc_info</code>; combine with name, type, dates, etc. (API has no <code>staple=no</code>).',
@@ -6428,10 +6692,29 @@ function clearLanguageSensitiveApiCaches() {
       'filter.price_max_ph': 'Maximum value',
       'filter.price_min_ph': 'Minimum value',
       'filter.price_chip_label': 'Minimum {min} · Maximum {max}',
+      'filter.genesys_pt_label': 'Genesys points',
+      'filter.genesys_pt_hint':
+        'With <strong>Genesys format</strong> in the filter above. One or more exact point values (union). Needs API data with <code>format=genesys</code>. When you focus the field, the browser suggests the <strong>51</strong> point values that exist on at least one catalog card.',
+      'filter.genesys_pt_ph': 'e.g. 10',
+      'filter.genesys_pt_clear': 'Clear Genesys point chips',
       'filter.race_clear': 'Leeren race/type',
       'filter.race_hint': 'One or more (API: comma). Suggestions depend on card type.',
       'filter.race_label': 'Race / spell or trap type',
       'filter.race_ph': 'e.g. Dragon…',
+      'filter.monster_race_clear': 'Leeren race',
+      'filter.monster_race_hint': 'Only when <strong>Monster</strong> is in card type. One or more (API: comma). Suggestions: monster races.',
+      'filter.monster_race_label': 'Race (monster)',
+      'filter.monster_race_ph': 'e.g. Dragon…',
+      'filter.spell_type_clear': 'Leeren spell types',
+      'filter.spell_type_hint':
+        'Only when <strong>Spell</strong> is in card type. Normal, Quick-Play, Continuous, etc. (API: <code>race</code>).',
+      'filter.spell_type_label': 'Spell type',
+      'filter.spell_type_ph': 'e.g. Quick-Play…',
+      'filter.trap_type_clear': 'Leeren trap types',
+      'filter.trap_type_hint':
+        'Only when <strong>Trap</strong> is in card type. Normal, Continuous, Counter (API: <code>race</code>).',
+      'filter.trap_type_label': 'Trap type',
+      'filter.trap_type_ph': 'e.g. Counter…',
       'filter.rarity_clear': 'Leeren rarities',
       'filter.rarity_hint':
         'English name as in the database (e.g. Ultra Rare). Suggestions come from the same <code>cardinfo</code> scan as set codes / types / races (first load may be slow). Seltenheit-only: scans full catalog. With other Filter, applies only to the loaded result.',
@@ -6461,10 +6744,10 @@ function clearLanguageSensitiveApiCaches() {
       'filter.type_label': 'Karte type',
       'filter.level_opt': 'Stufe {n}',
       'filter.type_ph': 'e.g. Monster…',
-      'filteropt.ban_goat': 'Goat Format (classic)',
-      'filteropt.ban_ocg': 'OCG Format (Japan)',
-      'filteropt.ban_tcg': 'TCG Format (main)',
-      'filteropt.ban_ocg_goat': 'OCG Goat (classic Japan)',
+      'filteropt.ban_goat': 'Goat',
+      'filteropt.ban_ocg': 'OCG',
+      'filteropt.ban_tcg': 'TCG',
+      'filteropt.ban_ocg_goat': 'OCG Goat',
       'filteropt.ban_speed_duel': 'Speed Duel',
       'filteropt.ban_rush_duel': 'Rush Duel',
       'filteropt.ban_duel_links': 'Duel Links',
@@ -6617,6 +6900,9 @@ function clearLanguageSensitiveApiCaches() {
       'toast.atk_dup': 'This ATK is already in the list.',
       'toast.atk_invalid': 'Invalid ATK.',
       'toast.atk_need': 'Set ATK in the field (or use +/-) before adding.',
+      'toast.genesys_pt_dup': 'This Genesys point value is already in the list.',
+      'toast.genesys_pt_invalid': 'Invalid Genesys points.',
+      'toast.genesys_pt_need': 'Enter a Genesys point value before adding.',
       'toast.clipboard_no_image': 'Image clipboard not available.',
       'toast.csv_all_saved': 'Single CSV with all decks saved.',
       'toast.csv_saved': 'CSV saved.',
@@ -6942,8 +7228,7 @@ function clearLanguageSensitiveApiCaches() {
       'filter.ban_hint':
         'Suggestions may appear in Portuguese labels. To clear the Formato, use <strong>Cancella Formato</strong> below. One option at a time.',
       'filter.ban_label': 'Formato / Banlist',
-      'filter.ban_ph': 'e.g. TCG Formato (main)',
-      'filter.banlist_only': 'Mostra only cards on the banlist',
+      'filter.ban_ph': 'es. TCG',
       'filter.staple_label': 'Carta staple',
       'filter.staple_hint':
         '<strong>Is staple</strong> uses <code>staple=yes</code>. <strong>Not staple</strong> Filtri client-side via <code>misc_info</code>; combine with name, type, dates, etc. (API has no <code>staple=no</code>).',
@@ -7003,10 +7288,29 @@ function clearLanguageSensitiveApiCaches() {
       'filter.price_max_ph': 'Maximum value',
       'filter.price_min_ph': 'Minimum value',
       'filter.price_chip_label': 'Minimum {min} · Maximum {max}',
+      'filter.genesys_pt_label': 'Genesys points',
+      'filter.genesys_pt_hint':
+        'With <strong>Genesys format</strong> in the filter above. One or more exact point values (union). Needs API data with <code>format=genesys</code>. When you focus the field, the browser suggests the <strong>51</strong> point values that exist on at least one catalog card.',
+      'filter.genesys_pt_ph': 'e.g. 10',
+      'filter.genesys_pt_clear': 'Clear Genesys point chips',
       'filter.race_clear': 'Cancella race/type',
       'filter.race_hint': 'One or more (API: comma). Suggestions depend on card type.',
       'filter.race_label': 'Race / spell or trap type',
       'filter.race_ph': 'e.g. Dragon…',
+      'filter.monster_race_clear': 'Cancella race',
+      'filter.monster_race_hint': 'Only when <strong>Monster</strong> is in card type. One or more (API: comma). Suggestions: monster races.',
+      'filter.monster_race_label': 'Race (monster)',
+      'filter.monster_race_ph': 'e.g. Dragon…',
+      'filter.spell_type_clear': 'Cancella spell types',
+      'filter.spell_type_hint':
+        'Only when <strong>Spell</strong> is in card type. Normal, Quick-Play, Continuous, etc. (API: <code>race</code>).',
+      'filter.spell_type_label': 'Spell type',
+      'filter.spell_type_ph': 'e.g. Quick-Play…',
+      'filter.trap_type_clear': 'Cancella trap types',
+      'filter.trap_type_hint':
+        'Only when <strong>Trap</strong> is in card type. Normal, Continuous, Counter (API: <code>race</code>).',
+      'filter.trap_type_label': 'Trap type',
+      'filter.trap_type_ph': 'e.g. Counter…',
       'filter.rarity_clear': 'Cancella rarities',
       'filter.rarity_hint':
         'English name as in the database (e.g. Ultra Rare). Suggestions come from the same <code>cardinfo</code> scan as set codes / types / races (first load may be slow). Rarità-only: scans full catalog. With other Filtri, applies only to the loaded result.',
@@ -7036,10 +7340,10 @@ function clearLanguageSensitiveApiCaches() {
       'filter.type_label': 'Carta type',
       'filter.level_opt': 'Livello {n}',
       'filter.type_ph': 'e.g. Mostro…',
-      'filteropt.ban_goat': 'Goat Formato (classic)',
-      'filteropt.ban_ocg': 'OCG Formato (Japan)',
-      'filteropt.ban_tcg': 'TCG Formato (main)',
-      'filteropt.ban_ocg_goat': 'OCG Goat (classic Japan)',
+      'filteropt.ban_goat': 'Goat',
+      'filteropt.ban_ocg': 'OCG',
+      'filteropt.ban_tcg': 'TCG',
+      'filteropt.ban_ocg_goat': 'OCG Goat',
       'filteropt.ban_speed_duel': 'Speed Duel',
       'filteropt.ban_rush_duel': 'Rush Duel',
       'filteropt.ban_duel_links': 'Duel Links',
@@ -7192,6 +7496,9 @@ function clearLanguageSensitiveApiCaches() {
       'toast.atk_dup': 'This ATK is already in the list.',
       'toast.atk_invalid': 'Invalid ATK.',
       'toast.atk_need': 'Set ATK in the field (or use +/-) before adding.',
+      'toast.genesys_pt_dup': 'This Genesys point value is already in the list.',
+      'toast.genesys_pt_invalid': 'Invalid Genesys points.',
+      'toast.genesys_pt_need': 'Enter a Genesys point value before adding.',
       'toast.clipboard_no_image': 'Image clipboard not available.',
       'toast.csv_all_saved': 'Single CSV with all decks saved.',
       'toast.csv_saved': 'CSV saved.',
@@ -7616,11 +7923,7 @@ const STRINGS = {
     en: 'Suggestions may appear in Portuguese labels. To clear the format, use <strong>Clear format</strong> below. One option at a time.',
   },
   'filter.ban_label': { pt: 'Formato / Banlist', en: 'Format / Banlist' },
-  'filter.ban_ph': { pt: 'Ex.: Formato TCG (principal)', en: 'e.g. TCG Format (main)' },
-  'filter.banlist_only': {
-    pt: 'Exibir somente cartas da Banlist',
-    en: 'Show only cards on the banlist',
-  },
+  'filter.ban_ph': { pt: 'Ex.: TCG', en: 'e.g. TCG' },
   'filter.staple_label': { pt: 'Staple', en: 'Staple' },
   'filter.staple_hint': {
     pt: '<strong>\u00c9 Staple</strong> usa <code>staple=yes</code> na API. <strong>N\u00e3o \u00e9 Staple</strong> filtra no resultado (<code>misc_info</code>); combine com nome, tipo, data, etc. (a API n\u00e3o aceita <code>staple=no</code>).',
@@ -7714,6 +8017,13 @@ const STRINGS = {
     pt: 'Valor M\u00ednimo {min} \u00b7 Valor M\u00e1ximo {max}',
     en: 'Minimum {min} \u00b7 Maximum {max}',
   },
+  'filter.genesys_pt_label': { pt: 'Pontos Genesys', en: 'Genesys points' },
+  'filter.genesys_pt_hint': {
+    pt: 'Com <strong>Formato Genesys</strong> no filtro de formato acima. Um ou mais valores exatos (uni\u00e3o: carta com qualquer um dos pontos). Os dados v\u00eam da API com <code>format=genesys</code>. Ao focar o campo, o navegador sugere os <strong>51</strong> valores de pontos que existem em alguma carta no cat\u00e1logo.',
+    en: 'With <strong>Genesys format</strong> in the format filter above. One or more exact point values (union: card matches any). Data requires <code>format=genesys</code> from the API. When you focus the field, the browser suggests the <strong>51</strong> point values that exist on at least one catalog card.',
+  },
+  'filter.genesys_pt_ph': { pt: 'Ex.: 10', en: 'e.g. 10' },
+  'filter.genesys_pt_clear': { pt: 'Limpar pontos Genesys', en: 'Clear Genesys point chips' },
   'filter.race_clear': { pt: 'Limpar ra\u00e7a/tipo', en: 'Clear race/type' },
   'filter.race_hint': {
     pt: 'Um ou v\u00e1rios (API: v\u00edrgula). Sugest\u00f5es mudam conforme o tipo de carta.',
@@ -7724,6 +8034,27 @@ const STRINGS = {
     en: 'Race / spell or trap type',
   },
   'filter.race_ph': { pt: 'Ex.: Drag\u00e3o\u2026', en: 'e.g. Dragon\u2026' },
+  'filter.monster_race_clear': { pt: 'Limpar ra\u00e7a', en: 'Clear race' },
+  'filter.monster_race_hint': {
+    pt: 'S\u00f3 com <strong>Monstro</strong> no tipo de carta. Um ou v\u00e1rios (API: v\u00edrgula). Sugest\u00f5es: ra\u00e7as de monstro.',
+    en: 'Only when <strong>Monster</strong> is in card type. One or more (API: comma). Suggestions: monster races.',
+  },
+  'filter.monster_race_label': { pt: 'Ra\u00e7a', en: 'Race' },
+  'filter.monster_race_ph': { pt: 'Ex.: Drag\u00e3o\u2026', en: 'e.g. Dragon\u2026' },
+  'filter.spell_type_clear': { pt: 'Limpar tipo de magia', en: 'Clear spell types' },
+  'filter.spell_type_hint': {
+    pt: 'S\u00f3 com <strong>Magia</strong> no tipo de carta. Normal, R\u00e1pida, Cont\u00ednua, etc. (API: <code>race</code>).',
+    en: 'Only when <strong>Spell</strong> is in card type. Normal, Quick-Play, Continuous, etc. (API: <code>race</code>).',
+  },
+  'filter.spell_type_label': { pt: 'Tipo de magia', en: 'Spell type' },
+  'filter.spell_type_ph': { pt: 'Ex.: R\u00e1pida\u2026', en: 'e.g. Quick-Play\u2026' },
+  'filter.trap_type_clear': { pt: 'Limpar tipo de armadilha', en: 'Clear trap types' },
+  'filter.trap_type_hint': {
+    pt: 'S\u00f3 com <strong>Armadilha</strong> no tipo de carta. Normal, Cont\u00ednua, Resposta (API: <code>race</code>).',
+    en: 'Only when <strong>Trap</strong> is in card type. Normal, Continuous, Counter (API: <code>race</code>).',
+  },
+  'filter.trap_type_label': { pt: 'Tipo de armadilha', en: 'Trap type' },
+  'filter.trap_type_ph': { pt: 'Ex.: Resposta\u2026', en: 'e.g. Counter\u2026' },
   'filter.rarity_clear': { pt: 'Limpar raridades', en: 'Clear rarities' },
   'filter.rarity_hint': {
     pt: 'Nome em ingl\u00eas como no banco (ex.: Ultra Rare). Sugest\u00f5es v\u00eam do mesmo scan de <code>cardinfo</code> que set codes / tipos / ra\u00e7as (pode demorar na 1\u00aa carga). S\u00f3 raridade: percorre o cat\u00e1logo completo. Com outros filtros, aplica-se s\u00f3 ao resultado j\u00e1 carregado.',
@@ -7731,6 +8062,36 @@ const STRINGS = {
   },
   'filter.rarity_label': { pt: 'Raridade (impress\u00e3o)', en: 'Rarity (printing)' },
   'filter.rarity_ph': { pt: 'Ex.: Secret Rare', en: 'e.g. Secret Rare' },
+  'filter.md_rarity_label': {
+    pt: 'Raridade (Master Duel)',
+    en: 'Master Duel rarity',
+  },
+  'filter.md_rarity_hint': {
+    pt: 'Com <strong>Master Duel</strong> no filtro de formato acima. Escolha UR/SR/R/N e use <strong>Adicionar</strong> — v\u00e1rios chips fazem uni\u00e3o (carta com qualquer uma das raridades). S\u00f3 raridade MD: percorre o cat\u00e1logo completo. Com outros filtros, aplica-se ao resultado j\u00e1 carregado (<code>md_rarity</code> / <code>misc_info</code>).',
+    en: 'With <strong>Master Duel</strong> in the format filter above. Pick UR/SR/R/N and use <strong>Add</strong> — multiple chips are a union (card matches any). MD rarity only: scans the full catalog. With other filters, applies to the loaded result (<code>md_rarity</code> / <code>misc_info</code>).',
+  },
+  'filter.md_rarity_clear': { pt: 'Limpar raridades Master Duel', en: 'Clear Master Duel rarity chips' },
+  'filter.md_rarity_opt_none': { pt: 'Escolher raridade\u2026', en: 'Choose rarity\u2026' },
+  'filter.md_rarity_opt_ur': { pt: 'UR \u2014 Ultra Rara', en: 'UR \u2014 Ultra Rare' },
+  'filter.md_rarity_opt_sr': { pt: 'SR \u2014 Super Rara', en: 'SR \u2014 Super Rare' },
+  'filter.md_rarity_opt_r': { pt: 'R \u2014 Rara', en: 'R \u2014 Rare' },
+  'filter.md_rarity_opt_n': { pt: 'N \u2014 Normal', en: 'N \u2014 Normal' },
+  'filter.tcgocg_banstatus_label': {
+    pt: 'Status na banlist (TCG / OCG)',
+    en: 'Banlist status (TCG / OCG)',
+  },
+  'filter.tcgocg_banstatus_hint': {
+    pt: 'Com <strong>TCG</strong> ou <strong>OCG</strong> no filtro de formato acima. Escolha o status e use <strong>Adicionar</strong> \u2014 v\u00e1rios chips fazem uni\u00e3o (carta com qualquer um dos status). Aplica-se ao resultado j\u00e1 carregado (<code>banlist_info</code>).',
+    en: 'With <strong>TCG</strong> or <strong>OCG</strong> in the format filter above. Pick a status and use <strong>Add</strong> \u2014 multiple chips are a union (card matches any). Applies to the loaded result (<code>banlist_info</code>).',
+  },
+  'filter.tcgocg_banstatus_clear': {
+    pt: 'Limpar status banlist TCG/OCG',
+    en: 'Clear TCG/OCG banlist status chips',
+  },
+  'filter.tcgocg_banstatus_ph': { pt: 'Escolher status\u2026', en: 'Choose status\u2026' },
+  'filter.tcgocg_banstatus_opt_forbidden': { pt: 'Proibida', en: 'Forbidden' },
+  'filter.tcgocg_banstatus_opt_limited': { pt: 'Limitada', en: 'Limited' },
+  'filter.tcgocg_banstatus_opt_semi': { pt: 'Semi limitada', en: 'Semi-Limited' },
   'filter.region_clear': { pt: 'Limpar regi\u00e3o', en: 'Clear region' },
   'filter.region_hint': {
     pt: 'Adicione <strong>TCG</strong> ou <strong>OCG</strong> para filtrar por lan\u00e7amento; o per\u00edodo (de/at\u00e9) aparece abaixo. Com era acima, as datas preenchem-se ao escolher a regi\u00e3o.',
@@ -7776,18 +8137,18 @@ const STRINGS = {
   'filter.type_label': { pt: 'Tipo de carta', en: 'Card type' },
   'filter.level_opt': { pt: 'N\u00edvel {n}', en: 'Level {n}' },
   'filter.type_ph': { pt: 'Ex.: Monstro\u2026', en: 'e.g. Monster\u2026' },
-  'filteropt.ban_goat': { pt: 'Formato Goat (cl\u00e1ssico)', en: 'Goat Format (classic)' },
-  'filteropt.ban_ocg': { pt: 'Formato OCG (Jap\u00e3o)', en: 'OCG Format (Japan)' },
-  'filteropt.ban_tcg': { pt: 'Formato TCG (principal)', en: 'TCG Format (main)' },
+  'filteropt.ban_goat': { pt: 'Goat', en: 'Goat' },
+  'filteropt.ban_ocg': { pt: 'OCG', en: 'OCG' },
+  'filteropt.ban_tcg': { pt: 'TCG', en: 'TCG' },
   'filteropt.ban_ocg_goat': {
-    pt: 'Formato OCG Goat (cl\u00e1ssico no Jap\u00e3o)',
-    en: 'OCG Goat (classic Japan)',
+    pt: 'OCG Goat',
+    en: 'OCG Goat',
   },
-  'filteropt.ban_speed_duel': { pt: 'Formato Speed Duel', en: 'Speed Duel' },
-  'filteropt.ban_rush_duel': { pt: 'Formato Rush Duel', en: 'Rush Duel' },
-  'filteropt.ban_duel_links': { pt: 'Formato Duel Links', en: 'Duel Links' },
-  'filteropt.ban_master_duel': { pt: 'Formato Master Duel', en: 'Master Duel' },
-  'filteropt.ban_genesys': { pt: 'Formato Genesys', en: 'Genesys' },
+  'filteropt.ban_speed_duel': { pt: 'Speed Duel', en: 'Speed Duel' },
+  'filteropt.ban_rush_duel': { pt: 'Rush Duel', en: 'Rush Duel' },
+  'filteropt.ban_duel_links': { pt: 'Duel Links', en: 'Duel Links' },
+  'filteropt.ban_master_duel': { pt: 'Master Duel', en: 'Master Duel' },
+  'filteropt.ban_genesys': { pt: 'Genesys', en: 'Genesys' },
   'filteropt.date_ocg': {
     pt: 'OCG \u2014 lan\u00e7amento japon\u00eas',
     en: 'OCG \u2014 Japanese release',
@@ -7896,6 +8257,18 @@ const STRINGS = {
   },
   'ui.close': { pt: 'Fechar', en: 'Close' },
   'ui.sets_partial': { pt: '{max} de {total}', en: '{max} of {total}' },
+  'ui.prints_listing_link': {
+    pt: 'P\u00e1gina do produto ',
+    en: 'Product page ',
+  },
+  'ui.price_search_store': {
+    pt: 'Buscar nesta loja',
+    en: 'Search this store',
+  },
+  'ui.price_avg_api_note': {
+    pt: 'Valores s\u00e3o m\u00e9dias agregadas da API (n\u00e3o correspondem a uma \u00fanica raridade). Os links abrem a busca da loja pelo nome em ingl\u00eas; no eBay inclui-se a raridade mais alta listada como palavra-chave.',
+    en: 'Values are API-wide averages (not tied to one printing). Links open each store\u2019s search using the English card name; eBay also adds the top listed rarity as a keyword.',
+  },
   'ui.spell_attr': { pt: 'MAGIA', en: 'SPELL' },
   'ui.trap_attr': { pt: 'ARMADILHA', en: 'TRAP' },
   'chip.remove': { pt: 'Remover', en: 'Remove' },
@@ -7996,6 +8369,10 @@ const STRINGS = {
     pt: 'A pesquisar por raridade no cat\u00e1logo completo (v\u00e1rios pedidos)\u2026',
     en: 'Searching rarity across the full catalog (several requests)\u2026',
   },
+  'search.md_rarity_scan': {
+    pt: 'A filtrar por raridade Master Duel no cat\u00e1logo completo (v\u00e1rios pedidos)\u2026',
+    en: 'Filtering by Master Duel rarity across the full catalog (several requests)\u2026',
+  },
   'search.price_full_scan': {
     pt: 'A filtrar por pre\u00e7o no cat\u00e1logo completo (v\u00e1rios pedidos)\u2026',
     en: 'Filtering by price across the full catalog (several requests)\u2026',
@@ -8031,6 +8408,15 @@ const STRINGS = {
   'toast.atk_need': {
     pt: 'Defina um ATK no campo (ou use +/-) antes de adicionar.',
     en: 'Set ATK in the field (or use +/-) before adding.',
+  },
+  'toast.genesys_pt_dup': {
+    pt: 'Este valor de pontos Genesys j\u00e1 est\u00e1 na lista.',
+    en: 'This Genesys point value is already in the list.',
+  },
+  'toast.genesys_pt_invalid': { pt: 'Pontos Genesys inv\u00e1lidos.', en: 'Invalid Genesys points.' },
+  'toast.genesys_pt_need': {
+    pt: 'Indique um valor de pontos Genesys antes de adicionar.',
+    en: 'Enter a Genesys point value before adding.',
   },
   'toast.clipboard_no_image': {
     pt: '\u00c1rea de transfer\u00eancia de imagem n\u00e3o dispon\u00edvel.',
@@ -8172,6 +8558,30 @@ const STRINGS = {
   'toast.rarity_dup': { pt: 'Raridade j\u00e1 selecionada.', en: 'Rarity already selected.' },
   'toast.rarity_max': { pt: 'M\u00e1ximo 12 raridades.', en: 'Maximum 12 rarities.' },
   'toast.rarity_short': { pt: 'Raridade muito curta.', en: 'Rarity text too short.' },
+  'toast.md_rarity_pick': {
+    pt: 'Escolha UR, SR, R ou N no menu antes de adicionar.',
+    en: 'Pick UR, SR, R, or N from the menu before adding.',
+  },
+  'toast.md_rarity_dup': {
+    pt: 'Esta raridade Master Duel j\u00e1 est\u00e1 na lista.',
+    en: 'This Master Duel rarity is already selected.',
+  },
+  'toast.md_rarity_max': {
+    pt: 'J\u00e1 est\u00e3o as quatro raridades Master Duel selecionadas.',
+    en: 'All four Master Duel rarities are already selected.',
+  },
+  'toast.tcgocg_banstatus_pick': {
+    pt: 'Escolha Proibida, Limitada ou Semi limitada antes de adicionar.',
+    en: 'Pick Forbidden, Limited, or Semi-Limited before adding.',
+  },
+  'toast.tcgocg_banstatus_dup': {
+    pt: 'Este status j\u00e1 est\u00e1 na lista.',
+    en: 'This status is already selected.',
+  },
+  'toast.tcgocg_banstatus_max': {
+    pt: 'J\u00e1 est\u00e3o os tr\u00eas status selecionados.',
+    en: 'All three statuses are already selected.',
+  },
   'toast.save_failed': {
     pt: 'N\u00e3o foi poss\u00edvel salvar (armazenamento bloqueado, privado ou cheio).',
     en: 'Could not save (storage blocked, private, or full).',
@@ -8183,6 +8593,14 @@ const STRINGS = {
   'toast.set_not_found': {
     pt: 'Set n\u00e3o encontrado. Confira o nome ou as sugest\u00f5es.',
     en: 'Set not found. Check the name or suggestions.',
+  },
+  'toast.tooltip_search_fail': {
+    pt: 'N\u00e3o foi poss\u00edvel aplicar a busca a partir do tooltip.',
+    en: 'Could not run the search from the card details panel.',
+  },
+  'toast.tooltip_search_format': {
+    pt: 'Este formato n\u00e3o est\u00e1 dispon\u00edvel como filtro de busca.',
+    en: 'This format is not available as a search filter.',
   },
   'toast.setcode_dup': { pt: 'C\u00f3digo j\u00e1 selecionado.', en: 'Code already selected.' },
   'toast.setcode_max': { pt: 'M\u00e1ximo 16 c\u00f3digos de set.', en: 'Maximum 16 set codes.' },
@@ -8337,6 +8755,10 @@ const STRINGS = {
   'ui.delete_deck_aria': { pt: 'Apagar deck salvo', en: 'Delete saved deck' },
   'ui.delete_deck_title': { pt: 'Apagar deck salvo selecionado', en: 'Delete selected saved deck' },
   'ui.details_title': { pt: 'Detalhes da carta', en: 'Card details' },
+  'ui.tooltip_search_title': {
+    pt: 'Buscar no site com este crit\u00e9rio',
+    en: 'Search the site with this criterion',
+  },
   'ui.export_back': { pt: '\u2190 Voltar', en: '\u2190 Back' },
   'ui.export_btn': { pt: 'EXPORTAR PARA\u2026', en: 'EXPORT TO\u2026' },
   'ui.export_busy': { pt: 'A processar\u2026', en: 'Processing\u2026' },
@@ -10283,11 +10705,23 @@ window.selectedSetCodes = [];
  */
 window.selectedRarities = [];
 /**
+ * Raridades Master Duel (UR/SR/R/N) nos chips de filtro; só aplicável com formato MD nos chips.
+ * @type {string[]}
+ */
+window.selectedMdRarities = [];
+/**
+ * Status de banlist clássica (TCG/OCG) nos chips; valores canónicos `forbidden` / `limited` / `semi`.
+ * @type {string[]}
+ */
+window.selectedTcgOcgBanlistStatuses = [];
+/**
  * Chips de filtro por categoria (tipo, raça, nível, …); mutado pela UI; reposto por {@link window.resetFilters}.
  * @type {{
  *   typeCategory: string[],
  *   subtype: string[],
  *   race: string[],
+ *   spellRace: string[],
+ *   trapRace: string[],
  *   attribute: string[],
  *   level: string[],
  *   linkval: string[],
@@ -10305,6 +10739,8 @@ window.filterChipState = {
   typeCategory: [],
   subtype: [],
   race: [],
+  spellRace: [],
+  trapRace: [],
   attribute: [],
   level: [],
   linkval: [],
@@ -10318,10 +10754,10 @@ window.filterChipState = {
   hasEffect: [],
 };
 /**
- * Filtros multi-termo / faixas (fname, descrição, ATK, DEF, preço); estado global em `window` (ver {@link window.resetFilters}).
- * @type {{ fname: string[], desc: string[], atk: string[], def: string[], priceRanges: Array<{ id: string, min: string, max: string }> }}
+ * Filtros multi-termo / faixas (fname, descrição, ATK, DEF, preço, pontos Genesys exatos); estado global em `window` (ver {@link window.resetFilters}).
+ * @type {{ fname: string[], desc: string[], atk: string[], def: string[], priceRanges: Array<{ id: string, min: string, max: string }>, genesysPt: string[] }}
  */
-window.multiTextFilters = { fname: [], desc: [], atk: [], def: [], priceRanges: [] };
+window.multiTextFilters = { fname: [], desc: [], atk: [], def: [], priceRanges: [], genesysPt: [] };
 /** Timer do debounce da busca ao digitar (ver `performSearch`).
  * @type {ReturnType<typeof setTimeout>|undefined}
  */
@@ -10957,21 +11393,21 @@ const FILTER_DATE_REGION_LABEL_LOWER_TO_V = Object.freeze(
 );
 
 /**
- * Entradas do filtro de formato/banlist na busca: alimentam parâmetro `format` na API e, quando marcado “somente banlist”, também `banlist`.
+ * Entradas do filtro de formato/banlist na busca: alimentam parâmetro `format` na API.
  * Inclui formatos alternativos (Speed Duel, Master Duel, Genesys, …), não só TCG/OCG/Goat.
  *
  * @constant {ReadonlyArray<{ v: string, label: string }>}
  */
 const FILTER_BANLIST_LABELS = [
-  { v: 'tcg', label: 'Formato TCG (principal)' },
-  { v: 'ocg', label: 'Formato OCG (Japão)' },
-  { v: 'goat', label: 'Formato Goat (clássico)' },
-  { v: 'ocg goat', label: 'Formato OCG Goat (clássico no Japão)' },
-  { v: 'speed duel', label: 'Formato Speed Duel' },
-  { v: 'rush duel', label: 'Formato Rush Duel' },
-  { v: 'duel links', label: 'Formato Duel Links' },
-  { v: 'master duel', label: 'Formato Master Duel' },
-  { v: 'genesys', label: 'Formato Genesys' },
+  { v: 'tcg', label: 'TCG' },
+  { v: 'ocg', label: 'OCG' },
+  { v: 'goat', label: 'Goat' },
+  { v: 'ocg goat', label: 'OCG Goat' },
+  { v: 'speed duel', label: 'Speed Duel' },
+  { v: 'rush duel', label: 'Rush Duel' },
+  { v: 'duel links', label: 'Duel Links' },
+  { v: 'master duel', label: 'Master Duel' },
+  { v: 'genesys', label: 'Genesys' },
 ];
 
 /** HTML `<option>` para datalist de formato/banlist (rótulos PT).
@@ -11007,6 +11443,23 @@ const FILTER_BANLIST_LABEL_LOWER_TO_V = Object.freeze(
       if (!e) continue;
       m[String(e.label).toLowerCase()] = e.v;
     }
+    // Rótulos PT antigos (chips / URL / preferências) ainda resolvem.
+    m['formato tcg (principal)'] = 'tcg';
+    m['formato ocg (japão)'] = 'ocg';
+    m['formato goat (clássico)'] = 'goat';
+    m['formato ocg goat (clássico no japão)'] = 'ocg goat';
+    m['formato speed duel'] = 'speed duel';
+    m['formato rush duel'] = 'rush duel';
+    m['formato duel links'] = 'duel links';
+    m['formato master duel'] = 'master duel';
+    m['formato genesys'] = 'genesys';
+    m['tcg format (main)'] = 'tcg';
+    m['ocg format (japan)'] = 'ocg';
+    m['goat format (classic)'] = 'goat';
+    m['ocg goat (classic japan)'] = 'ocg goat';
+    m['tcg formato (main)'] = 'tcg';
+    m['ocg formato (japan)'] = 'ocg';
+    m['goat formato (classic)'] = 'goat';
     return m;
   })()
 );
@@ -11035,6 +11488,20 @@ const DECK_BANLIST_FORMAT_TO_I18N_KEY = Object.freeze({
   'master duel': 'filteropt.ban_master_duel',
   genesys: 'filteropt.ban_genesys',
 });
+
+/**
+ * Rótulo traduzido do formato/banlist (mesmo mapa do select do deck) para tooltip e UI.
+ *
+ * @param {string|null|undefined} raw Valor canônico (`tcg`, `master duel`, …).
+ * @returns {string}
+ */
+function getBanlistFormatDisplayLabel(raw) {
+  const low = String(raw || '')
+    .trim()
+    .toLowerCase();
+  const k = DECK_BANLIST_FORMAT_TO_I18N_KEY[low];
+  return k ? T(k) : String(raw || '').trim();
+}
 
 /** Opções do filtro Staple (`yes`|`no`) com rótulos PT para datalist/UI.
  * @constant {ReadonlyArray<{ v: string, label: string }>}
@@ -11477,14 +11944,14 @@ const FILTER_CHIP_ATTR_EN_SHORT = Object.freeze({
  * @constant {Readonly<Record<string, string>>}
  */
 const FILTER_CHIP_LINKMARKER_PT = Object.freeze({
-  'top-left': 'Sup-Esq',
+  'top-left': 'Superior Esquerdo',
   top: 'Cima',
-  'top-right': 'Sup-Dir',
-  left: 'Esq',
-  right: 'Dir',
-  'bottom-left': 'Inf-Esq',
+  'top-right': 'Superior Direito',
+  left: 'Esquerda',
+  right: 'Direita',
+  'bottom-left': 'Inferior Esquerdo',
   bottom: 'Baixo',
-  'bottom-right': 'Inf-Dir',
+  'bottom-right': 'Inferior Direito',
 });
 
 /** Link marker → rótulo curto FR.
@@ -11559,6 +12026,53 @@ function getFilterTypeCategories() {
 }
 
 /**
+ * `race` na API para uma categoria de carta (cada UI tem chips separados).
+ *
+ * @param {'Monster'|'Spell Card'|'Trap Card'} cat
+ * @returns {string}
+ */
+function getApiRaceParamForTypeCategory(cat) {
+  const st = window.filterChipState;
+  if (!st) return '';
+  if (cat === 'Monster') return (st.race || []).join(',');
+  if (cat === 'Spell Card') return (st.spellRace || []).join(',');
+  if (cat === 'Trap Card') return (st.trapRace || []).join(',');
+  return '';
+}
+
+/**
+ * Há algum chip de raça/subtipo spell/trap aplicado.
+ *
+ * @returns {boolean}
+ */
+function hasAnyRaceChipFilter() {
+  const st = window.filterChipState;
+  if (!st) return false;
+  return (
+    ((st.race || []).length > 0 ? 1 : 0) +
+      ((st.spellRace || []).length > 0 ? 1 : 0) +
+      ((st.trapRace || []).length > 0 ? 1 : 0) >
+    0
+  );
+}
+
+/**
+ * Remove chips de raça que não batem com as chaves API da categoria.
+ *
+ * @param {'race'|'spellRace'|'trapRace'} key
+ * @param {'Monster'|'Spell Card'|'Trap Card'} cat
+ * @returns {void}
+ */
+function sanitizeRaceChipArrayForCategory(key, cat) {
+  const st = window.filterChipState;
+  if (!st || !FILTER_RACES[cat]) return;
+  const arr = st[key];
+  if (!arr || !arr.length) return;
+  const valid = new Set(raceApiKeysForCategory(cat));
+  st[key] = arr.filter((x) => valid.has(x));
+}
+
+/**
  * @returns {string} Primeiro subtipo de monstro (`type` API) nos chips ou string vazia.
  */
 function getFilterSubtype() {
@@ -11573,12 +12087,6 @@ function getFilterSubtypes() {
   return window.filterChipState.subtype || [];
 }
 
-/**
- * @returns {string} Parâmetro `race` da API: valores separados por vírgula conforme chips.
- */
-function getFilterRaceParam() {
-  return (window.filterChipState.race || []).join(',');
-}
 function getFilterAttrParam() {
   return (window.filterChipState.attribute || []).join(',');
 }
@@ -11681,6 +12189,36 @@ function syncDatePeriodGroupVisibility() {
 }
 
 /**
+ * Mostra o grupo de filtro por pontos Genesys quando o chip de formato Genesys está ativo.
+ *
+ * @returns {void}
+ */
+function syncGenesysPointsFilterGroupVisibility() {
+  const el = getEl('filter-genesys-pt-group');
+  if (!el) return;
+  const bl = window.filterChipState.banlist || [];
+  let show = false;
+  for (let i = 0; i < bl.length; i++) {
+    if (String(bl[i]).trim().toLowerCase() === 'genesys') {
+      show = true;
+      break;
+    }
+  }
+  if (show) {
+    el.style.removeProperty('display');
+    ensureGenesysPointsFilterDatalist();
+  } else {
+    el.style.setProperty('display', 'none', 'important');
+    const m = window.multiTextFilters;
+    if (m && (m.genesysPt || []).length) {
+      m.genesysPt = [];
+      renderMultiTextChips('genesysPt');
+      setVal('filter-genesys-pt', '');
+    }
+  }
+}
+
+/**
  * Valida string `YYYY-MM-DD` no calendário gregoriano (inclui checagem de overflow de mês/dia).
  *
  * @param {unknown} s Texto cru.
@@ -11728,7 +12266,7 @@ function getActiveFilterValidationHints() {
       }
     }
   }
-  const mtf = window.multiTextFilters || { priceRanges: [] };
+  const mtf = window.multiTextFilters || { fname: [], desc: [], atk: [], def: [], priceRanges: [], genesysPt: [] };
   const pMin = String(getVal('filter-price-min', '') || '').trim();
   const pMax = String(getVal('filter-price-max', '') || '').trim();
   const hasChips = (mtf.priceRanges || []).length > 0;
@@ -11792,8 +12330,13 @@ function filterChipLabel(key, val) {
     return translateCardTypeUiStr(val, L);
   }
   if (key === 'race') {
-    const cat = getFilterTypeCategory();
-    return getRaceDisplayLabel(cat, val);
+    return getRaceDisplayLabel('Monster', val);
+  }
+  if (key === 'spellRace') {
+    return getRaceDisplayLabel('Spell Card', val);
+  }
+  if (key === 'trapRace') {
+    return getRaceDisplayLabel('Trap Card', val);
   }
   if (key === 'attribute') {
     const L = getUiLang();
@@ -11880,7 +12423,9 @@ function setChipClearRowVisible(buttonId, visible) {
 const COMBO_FILTER_CHIP_PAINT_ROWS = Object.freeze([
   Object.freeze(['typeCategory', 'filter-type-chips', 'filter-type-clear']),
   Object.freeze(['subtype', 'filter-subtype-chips', 'filter-subtype-clear']),
-  Object.freeze(['race', 'filter-race-chips', 'filter-race-clear']),
+  Object.freeze(['race', 'filter-monster-race-chips', 'filter-monster-race-clear']),
+  Object.freeze(['spellRace', 'filter-spell-race-chips', 'filter-spell-race-clear']),
+  Object.freeze(['trapRace', 'filter-trap-race-chips', 'filter-trap-race-clear']),
   Object.freeze(['attribute', 'filter-attribute-chips', 'filter-attribute-clear']),
   Object.freeze(['level', 'filter-level-chips', 'filter-level-clear']),
   Object.freeze(['linkval', 'filter-linkval-chips', 'filter-linkval-clear']),
@@ -11913,10 +12458,8 @@ function paintComboFilterChips() {
     const keyEsc = escAttr(key);
     box.innerHTML = arr
       .map((v) => {
-        const lab = filterChipLabel(key, v);
-        const safeL = escAttr(lab);
         const safeV = escAttr(v);
-        return `<span class="cardset-chip">${safeL}<button type="button" class="chip-remove-btn" data-fc-key="${keyEsc}" data-fc-val="${safeV}" title="${removeTitle}">&times;</button></span>`;
+        return `<span class="cardset-chip cardset-chip--with-icon">${filterChipContentHtml(key, v)}<button type="button" class="chip-remove-btn" data-fc-key="${keyEsc}" data-fc-val="${safeV}" title="${removeTitle}">&times;</button></span>`;
       })
       .join('');
     const crm = box.querySelectorAll('.chip-remove-btn');
@@ -11928,6 +12471,15 @@ function paintComboFilterChips() {
     if (clr) setChipClearRowVisible(clrId, arr.length > 0);
   }
   syncDatePeriodGroupVisibility();
+  syncGenesysPointsFilterGroupVisibility();
+  syncMasterDuelRarityFilterGroupVisibility();
+  syncTcgOcgBanlistStatusFilterGroupVisibility();
+  const banBox = getEl('filter-banlist-chips');
+  const banClr = getEl('filter-banlist-clear');
+  if (banClr && banBox) {
+    const hasBl = (window.filterChipState.banlist || []).length > 0;
+    setChipClearRowVisible('filter-banlist-clear', hasBl);
+  }
 }
 
 /**
@@ -11941,9 +12493,14 @@ function removeComboFilterChip(key, val) {
   const st = window.filterChipState;
   if (!st[key]) return;
   st[key] = st[key].filter((x) => x !== val);
+  if (key === 'banlist' && String(val).toLowerCase() === 'genesys' && window.multiTextFilters) {
+    window.multiTextFilters.genesysPt = [];
+  }
   if (key === 'typeCategory') {
     st.subtype = [];
     st.race = [];
+    st.spellRace = [];
+    st.trapRace = [];
     st.attribute = [];
     st.level = [];
     st.linkval = [];
@@ -11965,27 +12522,35 @@ function removeComboFilterChip(key, val) {
   syncMonsterFilterGroups();
   refreshSubtypeRaceDatalists();
   paintComboFilterChips();
-  toggleBanlistCheckbox();
   currentPage = 1;
   performSearch(true);
 }
 
 /**
- * Mostra/oculta grupos de UI só relevantes para monstros e zera filtros dependentes se “Monstro” não estiver selecionado.
+ * Mostra/oculta grupos de UI por categoria: subtipo/nível/etc. só com Monstro; raça com Monstro
+ * ou com Magia/Armadilha (subtipo spell/trap via parâmetro `race` na API).
  *
  * @returns {void}
  */
 function syncMonsterFilterGroups() {
   const cats = getFilterTypeCategories();
   const hasMonster = (cats || []).includes('Monster');
+  const hasSpell = (cats || []).includes('Spell Card');
+  const hasTrap = (cats || []).includes('Trap Card');
   document.documentElement.classList.toggle('has-monster-type', hasMonster);
-  // Subtipo, raça e extras só fazem sentido quando "Monstro" está entre os tipos filtrados.
+  // Subtipo de monstro e extras (ATK/DEF, etc.) só com "Monstro". Raça / subtipo spell-trap com Monstro ou só Magia/Armadilha.
   const groupSubtype = getEl('group-subtype');
   if (groupSubtype) groupSubtype.style.display = hasMonster ? 'flex' : 'none';
   const monsterExtras = getEl('monster-extras');
   if (monsterExtras) monsterExtras.style.display = hasMonster ? 'block' : 'none';
-  const groupRace = getEl('group-race');
-  if (groupRace) groupRace.style.display = hasMonster ? 'flex' : 'none';
+  document.documentElement.classList.toggle('has-spell-type-filter', hasSpell);
+  document.documentElement.classList.toggle('has-trap-type-filter', hasTrap);
+  const groupMonsterRace = getEl('group-monster-race');
+  if (groupMonsterRace) groupMonsterRace.style.display = hasMonster ? 'flex' : 'none';
+  const groupSpellRace = getEl('group-spell-race');
+  if (groupSpellRace) groupSpellRace.style.display = hasSpell ? 'flex' : 'none';
+  const groupTrapRace = getEl('group-trap-race');
+  if (groupTrapRace) groupTrapRace.style.display = hasTrap ? 'flex' : 'none';
   const heGroup = getEl('filter-haseffect-group');
   if (heGroup) {
     if (!hasMonster) {
@@ -12000,7 +12565,6 @@ function syncMonsterFilterGroups() {
   }
 
   if (!hasMonster) {
-    // Evita filtros dependentes ativos enquanto ocultos (ex.: via URL/import).
     const st = window.filterChipState || {};
     st.subtype = [];
     st.race = [];
@@ -12009,10 +12573,9 @@ function syncMonsterFilterGroups() {
     st.linkval = [];
     st.linkmarker = [];
     st.scale = [];
-
     const _clrComboIds = [
       'filter-subtype-input',
-      'filter-race-input',
+      'filter-monster-race-input',
       'filter-attribute-input',
       'filter-level-input',
       'filter-linkval-input',
@@ -12020,9 +12583,20 @@ function syncMonsterFilterGroups() {
       'filter-scale-input',
     ];
     for (let _ci = 0; _ci < _clrComboIds.length; _ci++) setVal(_clrComboIds[_ci], '');
-
     setVal('filter-atk', '');
     setVal('filter-def', '');
+  } else sanitizeRaceChipArrayForCategory('race', 'Monster');
+
+  {
+    const st = window.filterChipState || {};
+    if (!hasSpell) {
+      st.spellRace = [];
+      setVal('filter-spell-race-input', '');
+    } else sanitizeRaceChipArrayForCategory('spellRace', 'Spell Card');
+    if (!hasTrap) {
+      st.trapRace = [];
+      setVal('filter-trap-race-input', '');
+    } else sanitizeRaceChipArrayForCategory('trapRace', 'Trap Card');
   }
 }
 
@@ -12033,7 +12607,6 @@ function syncMonsterFilterGroups() {
  */
 function refreshSubtypeRaceDatalists() {
   const subDl = getEl('datalist-filter-subtype');
-  const raceDl = getEl('datalist-filter-race');
   const cats = getFilterTypeCategories();
   const hasMonster = (cats || []).includes('Monster');
   const cat = hasMonster ? 'Monster' : getFilterTypeCategory();
@@ -12055,21 +12628,26 @@ function refreshSubtypeRaceDatalists() {
       subDl.innerHTML = out.join('');
     } else subDl.innerHTML = '';
   }
-  if (raceDl) {
-    raceDl.innerHTML = '';
-    if (cat && FILTER_RACES[cat]) {
-      const seen = new Set();
-      const raceOpts = [];
-      for (const apiKey of raceApiKeysForCategory(cat)) {
-        const pt = getRaceDisplayLabel(cat, apiKey);
-        const k = pt.toLowerCase();
-        if (seen.has(k)) continue;
-        seen.add(k);
-        raceOpts.push(`<option value="${escAttr(pt)}"></option>`);
-      }
-      raceDl.innerHTML = raceOpts.join('');
+  const fillRaceDl = (dlId, rc) => {
+    const raceDl = getEl(dlId);
+    if (!raceDl || !FILTER_RACES[rc]) {
+      if (raceDl) raceDl.innerHTML = '';
+      return;
     }
-  }
+    const seen = new Set();
+    const raceOpts = [];
+    for (const apiKey of raceApiKeysForCategory(rc)) {
+      const pt = getRaceDisplayLabel(rc, apiKey);
+      const k = pt.toLowerCase();
+      if (seen.has(k)) continue;
+      seen.add(k);
+      raceOpts.push(`<option value="${escAttr(pt)}"></option>`);
+    }
+    raceDl.innerHTML = raceOpts.join('');
+  };
+  fillRaceDl('datalist-filter-monster-race', 'Monster');
+  fillRaceDl('datalist-filter-spell-race', 'Spell Card');
+  fillRaceDl('datalist-filter-trap-race', 'Trap Card');
 }
 
 /**
@@ -12323,6 +12901,36 @@ function fillStaticComboDatalists() {
   if (scDl) {
     scDl.innerHTML = DATALIST_SCALE_OPTIONS_HTML;
   }
+  const mdRarityDl = getEl('datalist-filter-md-rarity');
+  if (mdRarityDl) {
+    mdRarityDl.innerHTML = '';
+    const mdOrder = ['UR', 'SR', 'R', 'N'];
+    const mdI18n = { UR: 'filter.md_rarity_opt_ur', SR: 'filter.md_rarity_opt_sr', R: 'filter.md_rarity_opt_r', N: 'filter.md_rarity_opt_n' };
+    for (let _mdi = 0; _mdi < mdOrder.length; _mdi++) {
+      const code = mdOrder[_mdi];
+      const op = document.createElement('option');
+      op.value = code;
+      op.label = T(mdI18n[code]);
+      mdRarityDl.appendChild(op);
+    }
+  }
+  const tcgBanDl = getEl('datalist-filter-tcgocg-banstatus');
+  if (tcgBanDl) {
+    tcgBanDl.innerHTML = '';
+    const stOrder = ['forbidden', 'limited', 'semi'];
+    const stI18n = {
+      forbidden: 'filter.tcgocg_banstatus_opt_forbidden',
+      limited: 'filter.tcgocg_banstatus_opt_limited',
+      semi: 'filter.tcgocg_banstatus_opt_semi',
+    };
+    for (let _si = 0; _si < stOrder.length; _si++) {
+      const code = stOrder[_si];
+      const op = document.createElement('option');
+      op.value = code;
+      op.label = T(stI18n[code]);
+      tcgBanDl.appendChild(op);
+    }
+  }
 }
 
 /**
@@ -12448,6 +13056,17 @@ function resolveLinkMarkerInput(raw) {
 }
 
 /**
+ * Converte chave canônica do filtro (`top-left`) para o valor usado nos SVGs da carta (`Top-Left`).
+ *
+ * @param {string|null|undefined} key Chave canônica do filtro de marcador Link.
+ * @returns {string}
+ */
+function linkMarkerFilterKeyToCardMarker(key) {
+  const k = String(key || '').trim().toLowerCase();
+  return FILTER_CHIP_LINKMARKER_EN[k] || '';
+}
+
+/**
  * Escala de Pêndulo `0`–`13`; permite prefixos `scale`/`escala`. Apenas com tipo Monstro ativo.
  *
  * @param {unknown} raw
@@ -12532,30 +13151,50 @@ function resolveSubtypeInput(raw) {
 }
 
 /**
- * Resolve raça ou subtipo spell/trap para chave API conforme categoria atual e {@link raceApiKeysForCategory}.
+ * Resolve texto do utilizador para chave API `race` numa categoria fixa (Monstro / Magia / Armadilha).
  *
  * @param {string} raw
+ * @param {'Monster'|'Spell Card'|'Trap Card'} cat
  * @returns {string|null}
  */
-function resolveRaceInput(raw) {
-  const cat = getFilterTypeCategory();
+function resolveRaceInputForCategory(raw, cat) {
   if (!cat || !FILTER_RACES[cat]) return null;
   const q = raw.trim();
   if (!q) return null;
   const low = q.toLowerCase();
   const keys = raceApiKeysForCategory(cat);
-  for (const k of keys) {
+  for (let _ki = 0; _ki < keys.length; _ki++) {
+    const k = keys[_ki];
     if (k === q) return k;
     if (k.toLowerCase() === low) return k;
+  }
+  for (let _ki = 0; _ki < keys.length; _ki++) {
+    const k = keys[_ki];
     const lab = getRaceDisplayLabel(cat, k);
     if (lab.toLowerCase() === low) return k;
   }
-  const partials = keys.filter((k) => {
-    const lab = getRaceDisplayLabel(cat, k);
-    return k.toLowerCase().includes(low) || lab.toLowerCase().includes(low);
-  });
+  const partials = keys.filter(
+    (k) =>
+      k.toLowerCase().includes(low) || getRaceDisplayLabel(cat, k).toLowerCase().includes(low)
+  );
   if (partials.length === 1) return partials[0];
   return null;
+}
+
+/** @param {string} raw @returns {string|null} */
+function resolveMonsterRaceInput(raw) {
+  if (!getFilterTypeCategories().includes('Monster')) return null;
+  return resolveRaceInputForCategory(raw, 'Monster');
+}
+/** @param {string} raw @returns {string|null} */
+function resolveSpellRaceInput(raw) {
+  if (!getFilterTypeCategories().includes('Spell Card')) return null;
+  return resolveRaceInputForCategory(raw, 'Spell Card');
+}
+/** @param {string} raw @returns {string|null} */
+function resolveTrapRaceInput(raw) {
+  if (!getFilterTypeCategories().includes('Trap Card')) return null;
+  return resolveRaceInputForCategory(raw, 'Trap Card');
 }
 
 /**
@@ -12991,20 +13630,22 @@ function snapshotDeckbuilderFilterBaseline() {
   return {
     filterChipState: deepClonePlain(window.filterChipState),
     multiTextFilters: deepClonePlain(
-      window.multiTextFilters || { fname: [], desc: [], atk: [], def: [], priceRanges: [] }
+      window.multiTextFilters || { fname: [], desc: [], atk: [], def: [], priceRanges: [], genesysPt: [] }
     ),
     selectedCardsetNames: (window.selectedCardsetNames || []).slice(),
     selectedSetCodes: (window.selectedSetCodes || []).slice(),
     selectedRarities: (window.selectedRarities || []).slice(),
+    selectedMdRarities: (window.selectedMdRarities || []).slice(),
+    selectedTcgOcgBanlistStatuses: (window.selectedTcgOcgBanlistStatuses || []).slice(),
     searchInput: String(getVal('search-input', '') ?? ''),
     filterDesc: String(getVal('filter-desc', '') ?? ''),
     filterAtk: String(getVal('filter-atk', '') ?? ''),
     filterDef: String(getVal('filter-def', '') ?? ''),
     dateStart: String(getVal('date-start', '') ?? ''),
     dateEnd: String(getVal('date-end', '') ?? ''),
-    banlistOnly: isChecked('enable-banlist-only'),
     filterPriceMin: String(getVal('filter-price-min', '') ?? ''),
     filterPriceMax: String(getVal('filter-price-max', '') ?? ''),
+    filterGenesysPt: String(getVal('filter-genesys-pt', '') ?? ''),
     currentPage,
   };
 }
@@ -13023,20 +13664,24 @@ function restoreDeckbuilderFilterBaseline(snap, opts) {
   window.selectedCardsetNames = (snap.selectedCardsetNames || []).slice();
   window.selectedSetCodes = (snap.selectedSetCodes || []).slice();
   window.selectedRarities = (snap.selectedRarities || []).slice();
+  window.selectedMdRarities = (snap.selectedMdRarities || []).slice();
+  window.selectedTcgOcgBanlistStatuses = (snap.selectedTcgOcgBanlistStatuses || []).slice();
   setVal('search-input', snap.searchInput);
   setVal('filter-desc', snap.filterDesc);
   setVal('filter-atk', snap.filterAtk);
   setVal('filter-def', snap.filterDef);
   setVal('date-start', snap.dateStart);
   setVal('date-end', snap.dateEnd);
-  setChecked('enable-banlist-only', !!snap.banlistOnly);
   setVal('filter-price-min', snap.filterPriceMin);
   setVal('filter-price-max', snap.filterPriceMax);
+  setVal('filter-genesys-pt', snap.filterGenesysPt != null ? snap.filterGenesysPt : '');
   currentPage = snap.currentPage;
   syncMonsterFilterGroups();
   refreshSubtypeRaceDatalists();
   syncDatePeriodGroupVisibility();
-  toggleBanlistCheckbox();
+  syncGenesysPointsFilterGroupVisibility();
+  syncMasterDuelRarityFilterGroupVisibility();
+  syncTcgOcgBanlistStatusFilterGroupVisibility();
   if (!opts || !opts.keepSnapshot) filterPreviewBaselineSnapshot = null;
 }
 
@@ -13054,6 +13699,8 @@ const COMBO_FILTER_PREVIEW_ROW_CFG = Object.freeze({
       if (prevVal !== nextVal) {
         window.filterChipState.subtype = [];
         window.filterChipState.race = [];
+        window.filterChipState.spellRace = [];
+        window.filterChipState.trapRace = [];
         if (nextVal !== 'Monster') {
           window.filterChipState.attribute = [];
           window.filterChipState.level = [];
@@ -13066,7 +13713,9 @@ const COMBO_FILTER_PREVIEW_ROW_CFG = Object.freeze({
     },
   },
   subtype: { max: 99, resolve: resolveSubtypeInput, key: 'subtype', after: () => {} },
-  race: { max: 99, resolve: resolveRaceInput, key: 'race', after: () => {} },
+  race: { max: 99, resolve: resolveMonsterRaceInput, key: 'race', after: () => {} },
+  spellRace: { max: 99, resolve: resolveSpellRaceInput, key: 'spellRace', after: () => {} },
+  trapRace: { max: 99, resolve: resolveTrapRaceInput, key: 'trapRace', after: () => {} },
   attribute: { max: 7, resolve: resolveAttributeInput, key: 'attribute', after: () => {} },
   level: { max: 99, resolve: resolveLevelInput, key: 'level', after: () => {} },
   linkval: { max: 99, resolve: resolveLinkValInput, key: 'linkval', after: () => {} },
@@ -13094,9 +13743,7 @@ const COMBO_FILTER_PREVIEW_ROW_CFG = Object.freeze({
     max: 3,
     resolve: resolveBanlistInput,
     key: 'banlist',
-    after: () => {
-      toggleBanlistCheckbox();
-    },
+    after: () => {},
   },
   archetype: {
     max: 99,
@@ -13183,6 +13830,60 @@ function applyRarityPreviewRow(raw) {
 }
 
 /**
+ * Pré-visualização hover: acrescenta um valor de pontos Genesys a {@link window.multiTextFilters.genesysPt} (após restore do baseline).
+ *
+ * @param {unknown} raw Valor sugerido (inteiro ≥ 0).
+ * @returns {boolean}
+ */
+function applyGenesysPtPreviewRow(raw) {
+  const n = int10(String(raw || '').trim(), NaN);
+  if (!Number.isFinite(n) || n < 0) return false;
+  const s = String(Math.trunc(n));
+  if (!window.multiTextFilters.genesysPt) window.multiTextFilters.genesysPt = [];
+  if (window.multiTextFilters.genesysPt.includes(s)) return false;
+  if (window.multiTextFilters.genesysPt.length >= GENESYS_PT_FILTER_MAX_CHIPS) return false;
+  window.multiTextFilters.genesysPt.push(s);
+  return true;
+}
+
+/**
+ * Pré-visualização hover: acrescenta uma raridade MD a {@link window.selectedMdRarities} (após restore do baseline).
+ *
+ * @param {unknown} raw Valor `UR`/`SR`/`R`/`N`.
+ * @returns {boolean}
+ */
+function applyMdRarityPreviewRow(raw) {
+  const k = normalizeMasterDuelFilterRarityToken(raw);
+  if (!k) return false;
+  if (!window.selectedMdRarities) window.selectedMdRarities = [];
+  const seen = new Set(window.selectedMdRarities.map((x) => String(x).toUpperCase()));
+  if (seen.has(k)) return false;
+  if (window.selectedMdRarities.length >= 4) return false;
+  window.selectedMdRarities.push(k);
+  return true;
+}
+
+/**
+ * Pré-visualização hover: acrescenta um status banlist TCG/OCG a {@link window.selectedTcgOcgBanlistStatuses}.
+ *
+ * @param {unknown} raw Valor canónico `forbidden`/`limited`/`semi` (ou texto normalizável).
+ * @returns {boolean}
+ */
+function applyTcgOcgBanStatusPreviewRow(raw) {
+  if (!isTcgOrOcgBanlistChipActive()) return false;
+  const k = normalizeTcgOcgBanlistStatusToken(raw);
+  if (!k) return false;
+  if (!window.selectedTcgOcgBanlistStatuses) window.selectedTcgOcgBanlistStatuses = [];
+  const seen = new Set(
+    window.selectedTcgOcgBanlistStatuses.map((x) => String(normalizeTcgOcgBanlistStatusToken(x)))
+  );
+  if (seen.has(k)) return false;
+  if (window.selectedTcgOcgBanlistStatuses.length >= 3) return false;
+  window.selectedTcgOcgBanlistStatuses.push(k);
+  return true;
+}
+
+/**
  * Hover numa linha do painel flutuante: grava baseline na 1ª vez, aplica filtro pré-visualizado e dispara {@link performSearch} com sync de URL suspenso.
  *
  * @param {string} kind Tipo do campo (`cardset`, `type`, `banlist`, …).
@@ -13197,6 +13898,9 @@ function onFilterComboSuggestRowEnter(kind, valueText) {
   if (kind === 'cardset') ok = applyCardsetPreviewRow(valueText);
   else if (kind === 'setcode') ok = applySetcodePreviewRow(valueText);
   else if (kind === 'rarity') ok = applyRarityPreviewRow(valueText);
+  else if (kind === 'genesysPt') ok = applyGenesysPtPreviewRow(valueText);
+  else if (kind === 'mdRarity') ok = applyMdRarityPreviewRow(valueText);
+  else if (kind === 'tcgOcgBanStatus') ok = applyTcgOcgBanStatusPreviewRow(valueText);
   else ok = applyComboFilterPreviewRow(kind, valueText);
   if (!ok) return;
   filterPreviewSearchSeq++;
@@ -13332,6 +14036,9 @@ function commitFilterComboPick(kind, rawText, inp) {
     renderCardsetFilterChips();
     renderSetcodeFilterChips();
     renderRarityFilterChips();
+    renderMdRarityFilterChips();
+    renderTcgOcgBanlistStatusFilterChips();
+    paintAllMultiTextChips();
     syncDatePeriodGroupVisibility();
     currentPage = 1;
     sortAndRender();
@@ -13349,6 +14056,9 @@ function commitFilterComboPick(kind, rawText, inp) {
   if (kind === 'cardset') tryAddCardsetFromInput();
   else if (kind === 'setcode') tryAddSetcodeFromInput();
   else if (kind === 'rarity') tryAddRarityFromInput();
+  else if (kind === 'genesysPt') tryAddGenesysPtChip();
+  else if (kind === 'mdRarity') tryAddMdRarityFromInput();
+  else if (kind === 'tcgOcgBanStatus') tryAddTcgOcgBanlistStatusFromInput();
   else tryAddComboFilter(kind);
 }
 
@@ -13419,7 +14129,186 @@ function suggestRowHoverAccentFromFilterRow(kind, value, label) {
     }
     return colorKey ? RESULT_TYPE_COLORS[colorKey] || null : null;
   }
+  if (kind === 'mdRarity') {
+    const k = normalizeMasterDuelFilterRarityToken(v);
+    if (k === 'UR') return '#a855f7';
+    if (k === 'SR') return '#f97316';
+    if (k === 'R') return '#3b82f6';
+    if (k === 'N') return '#94a3b8';
+    return null;
+  }
+  if (kind === 'tcgOcgBanStatus') {
+    const k = normalizeTcgOcgBanlistStatusToken(v);
+    if (k === 'forbidden') return '#dc2626';
+    if (k === 'limited') return '#f59e0b';
+    if (k === 'semi') return '#eab308';
+    return null;
+  }
   return null;
+}
+
+/**
+ * Resolve o ícone exibido à esquerda de uma sugestão de filtro, reaproveitando os ícones já usados nos cards.
+ *
+ * @param {string} kind Chave do filtro (`type`, `subtype`, `race`, ...).
+ * @param {string} value Valor da opção do `<datalist>`.
+ * @param {string} label Rótulo exibido na lista.
+ * @returns {{ url?: string, html?: string, alt: string, className?: string }|null}
+ */
+function filterSuggestRowIconMeta(kind, value, label) {
+  const raw = String(value || label || '').trim();
+  if (!raw) return null;
+  const alt = String(label || value || '').trim();
+  if (kind === 'type') {
+    const cat = resolveTypeCategoryInput(raw) || resolveTypeCategoryInput(String(label || '').trim());
+    if (cat === 'Spell Card') {
+      return {
+        html: `<span class="filter-suggest-dual-icon"><img src="${escAttr(STATIC_ICON_SPELL_FRAME_SVG)}" alt="" loading="lazy"><img class="filter-suggest-icon--card-type" src="${escAttr(ygoMonsterTypeIconUrl('Spell Card'))}" alt="" loading="lazy"></span>`,
+        alt,
+      };
+    }
+    if (cat === 'Trap Card') {
+      return {
+        html: `<span class="filter-suggest-dual-icon"><img src="${escAttr(STATIC_ICON_TRAP_FRAME_SVG)}" alt="" loading="lazy"><img class="filter-suggest-icon--card-type" src="${escAttr(ygoMonsterTypeIconUrl('Trap Card'))}" alt="" loading="lazy"></span>`,
+        alt,
+      };
+    }
+    if (cat === 'Monster') return { url: ygoMonsterTypeIconUrl('Effect Monster'), alt };
+    return null;
+  }
+  if (kind === 'subtype') {
+    const subtype = resolveSubtypeInput(raw);
+    if (subtype === 'Token') {
+      return { url: ygoMonsterTypeIconUrl('Synchro Monster'), alt, className: 'filter-suggest-icon--card-type' };
+    }
+    return subtype ? { url: ygoMonsterTypeIconUrl(subtype), alt, className: 'filter-suggest-icon--card-type' } : null;
+  }
+  if (kind === 'race' || kind === 'spellRace' || kind === 'trapRace') {
+    const apiRace =
+      kind === 'spellRace'
+        ? resolveRaceInputForCategory(raw, 'Spell Card')
+        : kind === 'trapRace'
+          ? resolveRaceInputForCategory(raw, 'Trap Card')
+          : resolveRaceInputForCategory(raw, 'Monster');
+    return apiRace ? { url: ygoRaceIconUrl(apiRace), alt } : null;
+  }
+  if (kind === 'attribute') {
+    const attr = resolveAttributeInput(raw);
+    return attr ? { url: ygoAttribIconUrl(sanitizeYgoCdnAttribFileSegment(attr)), alt } : null;
+  }
+  if (kind === 'level') {
+    return {
+      html: `<span class="filter-suggest-dual-icon filter-suggest-dual-icon--level"><img src="${escAttr(starIcon)}" alt="" loading="lazy"><img src="${escAttr(STATIC_ICON_YGO_RANK_PNG)}" alt="" loading="lazy"></span>`,
+      alt,
+    };
+  }
+  if (kind === 'linkval') return { url: ygoMonsterTypeIconUrl('Link Monster'), alt, className: 'filter-suggest-icon--card-type' };
+  if (kind === 'linkmarker') {
+    const marker = linkMarkerFilterKeyToCardMarker(resolveLinkMarkerInput(raw));
+    const html = marker ? getLinkMarkersHtml([marker], 20) : '';
+    return html ? { html, alt } : null;
+  }
+  if (kind === 'scale') {
+    const scale = resolveScaleInput(raw);
+    const html = scale != null ? getPendulumScaleFilterIconHtml(scale, 14) : '';
+    return html ? { html, alt } : null;
+  }
+  if (kind === 'era') return { html: '<i class="fa-solid fa-calendar-days" aria-hidden="true"></i>', alt };
+  if (kind === 'dateRegion') {
+    const v = String(value || '').trim().toLowerCase();
+    const iconCls = v === 'ocg' || /jap|ocg/i.test(String(label || '')) ? 'fa-torii-gate' : 'fa-earth-americas';
+    return { html: `<i class="fa-solid ${iconCls}" aria-hidden="true"></i>`, alt };
+  }
+  if (kind === 'mdRarity') {
+    const md = normalizeMasterDuelFilterRarityToken(raw);
+    const url = md ? masterDuelRarityIconUrl(md) : '';
+    return url ? { url, alt: md || alt } : null;
+  }
+  if (kind === 'tcgOcgBanStatus') {
+    const status = normalizeTcgOcgBanlistStatusToken(raw);
+    if (status === 'forbidden') return { html: '<i class="fa-solid fa-ban" aria-hidden="true"></i>', alt };
+    if (status === 'limited') return { html: '<i class="fa-solid fa-1" aria-hidden="true"></i>', alt };
+    if (status === 'semi') return { html: '<i class="fa-solid fa-2" aria-hidden="true"></i>', alt };
+  }
+  return null;
+}
+
+/**
+ * Ícone compacto para o filtro de escala: cada losango carrega seu próprio número ao lado.
+ *
+ * @param {unknown} scale Valor de escala resolvido.
+ * @param {number} [sizePx=14] Largura base de cada losango.
+ * @returns {string}
+ */
+function getPendulumScaleFilterIconHtml(scale, sizePx = 14) {
+  const raw = String(scale ?? '').trim();
+  if (!raw) return '';
+  const w = Number(sizePx) > 0 ? Number(sizePx) : 14;
+  const h = Math.round(w * 1.22);
+  const path = 'M11 1.5 L20.5 13.5 L11 25.5 L1.5 13.5 Z';
+  const leftSvg = `<svg class="pendulum-diamond" width="${w}" height="${h}" viewBox="0 0 22 27" aria-hidden="true"><path d="${path}" fill="#0d47a1" stroke="#90caf9" stroke-width="0.65" stroke-linejoin="round"/></svg>`;
+  const rightSvg = `<svg class="pendulum-diamond" width="${w}" height="${h}" viewBox="0 0 22 27" aria-hidden="true"><path d="${path}" fill="#b71c1c" stroke="#ffcdd2" stroke-width="0.65" stroke-linejoin="round"/></svg>`;
+  const n = escapeHtml(raw);
+  return `<span class="filter-pendulum-scale-icon"><span class="filter-pendulum-scale-side">${leftSvg}<span>${n}</span></span><span class="filter-pendulum-scale-side">${rightSvg}<span>${n}</span></span></span>`;
+}
+
+/**
+ * Conteúdo HTML de uma linha de sugestão de filtro com ícone opcional.
+ *
+ * @param {string} kind Chave do filtro.
+ * @param {{ value: string, label: string }} row Linha coletada do datalist.
+ * @returns {string}
+ */
+function filterSuggestRowInnerHtml(kind, row) {
+  let label = String(row.label || row.value || '');
+  if (kind === 'linkmarker') {
+    const markerKey = resolveLinkMarkerInput(row.value) || resolveLinkMarkerInput(row.label);
+    if (markerKey) label = filterChipLabel('linkmarker', markerKey);
+  }
+  const icon = filterSuggestRowIconMeta(kind, row.value, row.label);
+  const labelHtml =
+    kind === 'scale' ? '' : `<span class="filter-suggest-label">${escapeHtml(label)}</span>`;
+  if (!icon) return labelHtml;
+  if (icon.url) {
+    const cls = icon.className ? ` filter-suggest-icon ${icon.className}` : ' filter-suggest-icon';
+    return `<img class="${cls.trim()}" src="${escAttr(icon.url)}" alt="${escAttr(icon.alt || '')}" loading="lazy" onerror="this.style.display='none'">${labelHtml}`;
+  }
+  if (icon.html) return `<span class="filter-suggest-html-icon" aria-hidden="true">${icon.html}</span>${labelHtml}`;
+  return labelHtml;
+}
+
+/**
+ * Mapeia chave do estado de chips para o tipo de ícone usado nas sugestões.
+ *
+ * @param {string} key Campo em `filterChipState`.
+ * @returns {string}
+ */
+function filterChipIconKind(key) {
+  if (key === 'typeCategory') return 'type';
+  return key;
+}
+
+/**
+ * Conteúdo HTML de um chip de filtro fixado com ícone opcional.
+ *
+ * @param {string} key Campo em `filterChipState`.
+ * @param {string} val Valor armazenado no chip.
+ * @returns {string}
+ */
+function filterChipContentHtml(key, val) {
+  const lab = filterChipLabel(key, val);
+  const icon = filterSuggestRowIconMeta(filterChipIconKind(key), val, lab);
+  const labelHtml = `<span class="filter-chip-label">${escapeHtml(lab)}</span>`;
+  if (!icon) return labelHtml;
+  if (icon.url) {
+    const cls = icon.className ? ` filter-chip-icon ${icon.className}` : ' filter-chip-icon';
+    return `<img class="${cls.trim()}" src="${escAttr(icon.url)}" alt="" loading="lazy" onerror="this.style.display='none'">${labelHtml}`;
+  }
+  if (icon.html) {
+    const suffix = key === 'scale' ? '' : labelHtml;
+    return `<span class="filter-chip-html-icon" aria-hidden="true">${icon.html}</span>${suffix}`;
+  }
+  return labelHtml;
 }
 
 /**
@@ -13465,12 +14354,18 @@ function refreshFilterComboSuggestPanel(inp, kind) {
   for (let rw = 0; rw < rows.length; rw++) {
     const row = rows[rw];
     const div = document.createElement('div');
-    div.className = 'filter-combo-suggest-row';
+    div.className = 'filter-combo-suggest-row filter-combo-suggest-row--with-icon';
     div.setAttribute('role', 'option');
     const accent = suggestRowHoverAccentFromFilterRow(kind, row.value, row.label);
     if (accent) div.style.setProperty('--suggest-row-accent', accent);
     else div.style.removeProperty('--suggest-row-accent');
-    div.textContent = row.label || row.value;
+    if (kind === 'tcgOcgBanStatus') {
+      const lab =
+        String(row.label || '').trim() || tcgOcgBanlistStatusTokenLabel(normalizeTcgOcgBanlistStatusToken(row.value));
+      div.innerHTML = filterSuggestRowInnerHtml(kind, { value: row.value, label: lab });
+    } else {
+      div.innerHTML = filterSuggestRowInnerHtml(kind, row);
+    }
     div.addEventListener('mouseenter', () => onFilterComboSuggestRowEnter(kind, row.value));
     div.addEventListener('mousedown', (e) => {
       e.preventDefault();
@@ -13506,7 +14401,9 @@ function initFilterComboSuggestBehavior() {
   const bindings = [
     ['filter-type-input', 'type'],
     ['filter-subtype-input', 'subtype'],
-    ['filter-race-input', 'race'],
+    ['filter-monster-race-input', 'race'],
+    ['filter-spell-race-input', 'spellRace'],
+    ['filter-trap-race-input', 'trapRace'],
     ['filter-attribute-input', 'attribute'],
     ['filter-level-input', 'level'],
     ['filter-linkval-input', 'linkval'],
@@ -13521,6 +14418,9 @@ function initFilterComboSuggestBehavior() {
     ['filter-cardset-input', 'cardset'],
     ['filter-setcode-input', 'setcode'],
     ['filter-rarity-input', 'rarity'],
+    ['filter-genesys-pt', 'genesysPt'],
+    ['filter-md-rarity-input', 'mdRarity'],
+    ['filter-tcgocg-banstatus-input', 'tcgOcgBanStatus'],
   ];
   for (let _bf = 0; _bf < bindings.length; _bf++) {
     const _bp = bindings[_bf];
@@ -14256,6 +15156,8 @@ const TRY_ADD_COMBO_FILTER_CFG = Object.freeze({
       if (prevVal !== nextVal) {
         window.filterChipState.subtype = [];
         window.filterChipState.race = [];
+        window.filterChipState.spellRace = [];
+        window.filterChipState.trapRace = [];
         if (nextVal !== 'Monster') {
           window.filterChipState.attribute = [];
           window.filterChipState.level = [];
@@ -14278,10 +15180,24 @@ const TRY_ADD_COMBO_FILTER_CFG = Object.freeze({
     after: () => {},
   },
   race: {
-    input: 'filter-race-input',
+    input: 'filter-monster-race-input',
     max: 99,
-    resolve: resolveRaceInput,
+    resolve: resolveMonsterRaceInput,
     key: 'race',
+    after: () => {},
+  },
+  spellRace: {
+    input: 'filter-spell-race-input',
+    max: 99,
+    resolve: resolveSpellRaceInput,
+    key: 'spellRace',
+    after: () => {},
+  },
+  trapRace: {
+    input: 'filter-trap-race-input',
+    max: 99,
+    resolve: resolveTrapRaceInput,
+    key: 'trapRace',
     after: () => {},
   },
   attribute: {
@@ -14344,9 +15260,7 @@ const TRY_ADD_COMBO_FILTER_CFG = Object.freeze({
     max: 3,
     resolve: resolveBanlistInput,
     key: 'banlist',
-    after: () => {
-      toggleBanlistCheckbox();
-    },
+    after: () => {},
   },
   archetype: {
     input: 'filter-archetype-input',
@@ -14442,9 +15356,18 @@ function tryAddComboFilter(kind) {
  */
 function clearComboFilterGroup(key) {
   window.filterChipState[key] = [];
+  if (key === 'banlist' && window.multiTextFilters) {
+    window.multiTextFilters.genesysPt = [];
+  }
+  if (key === 'banlist') {
+    window.selectedMdRarities = [];
+    window.selectedTcgOcgBanlistStatuses = [];
+  }
   if (key === 'typeCategory') {
     window.filterChipState.subtype = [];
     window.filterChipState.race = [];
+    window.filterChipState.spellRace = [];
+    window.filterChipState.trapRace = [];
     window.filterChipState.attribute = [];
     window.filterChipState.level = [];
     window.filterChipState.linkval = [];
@@ -14461,7 +15384,8 @@ function clearComboFilterGroup(key) {
   syncMonsterFilterGroups();
   refreshSubtypeRaceDatalists();
   paintComboFilterChips();
-  toggleBanlistCheckbox();
+  renderMdRarityFilterChips();
+  renderTcgOcgBanlistStatusFilterChips();
   currentPage = 1;
   performSearch(true);
 }
@@ -14479,7 +15403,9 @@ function wireComboFilterControls() {
   const binds = [
     ['filter-type-add', 'filter-type-input', 'type'],
     ['filter-subtype-add', 'filter-subtype-input', 'subtype'],
-    ['filter-race-add', 'filter-race-input', 'race'],
+    ['filter-monster-race-add', 'filter-monster-race-input', 'race'],
+    ['filter-spell-race-add', 'filter-spell-race-input', 'spellRace'],
+    ['filter-trap-race-add', 'filter-trap-race-input', 'trapRace'],
     ['filter-attribute-add', 'filter-attribute-input', 'attribute'],
     ['filter-level-add', 'filter-level-input', 'level'],
     ['filter-linkval-add', 'filter-linkval-input', 'linkval'],
@@ -14516,10 +15442,83 @@ function wireComboFilterControls() {
       });
     }
   }
+  const gptAdd = getEl('filter-genesys-pt-add-chip');
+  const gptInpWire = getEl('filter-genesys-pt');
+  if (gptAdd) gptAdd.onclick = () => tryAddGenesysPtChip();
+  if (gptInpWire) {
+    gptInpWire.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        tryAddGenesysPtChip();
+      }
+    });
+    gptInpWire.addEventListener('input', (e) => {
+      if (e.inputType === 'insertReplacementText') tryAddGenesysPtChip();
+    });
+    gptInpWire.addEventListener('change', () => {
+      if (comboInputMatchesDatalistPick(gptInpWire)) tryAddGenesysPtChip();
+    });
+  }
+  const mdRAdd = getEl('filter-md-rarity-add-chip');
+  const mdRClr = getEl('filter-md-rarity-clear-chips');
+  const mdRInpWire = getEl('filter-md-rarity-input');
+  if (mdRAdd) mdRAdd.onclick = () => tryAddMdRarityFromInput();
+  if (mdRClr) {
+    mdRClr.onclick = () => {
+      window.selectedMdRarities = [];
+      if (mdRInpWire) mdRInpWire.value = '';
+      renderMdRarityFilterChips();
+      currentPage = 1;
+      performSearch(true);
+    };
+  }
+  if (mdRInpWire) {
+    mdRInpWire.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        tryAddMdRarityFromInput();
+      }
+    });
+    mdRInpWire.addEventListener('input', (e) => {
+      if (e.inputType === 'insertReplacementText') tryAddMdRarityFromInput();
+    });
+    mdRInpWire.addEventListener('change', () => {
+      if (comboInputMatchesDatalistPick(mdRInpWire)) tryAddMdRarityFromInput();
+    });
+  }
+  const tcgBsAdd = getEl('filter-tcgocg-banstatus-add-chip');
+  const tcgBsClr = getEl('filter-tcgocg-banstatus-clear-chips');
+  const tcgBsInpWire = getEl('filter-tcgocg-banstatus-input');
+  if (tcgBsAdd) tcgBsAdd.onclick = () => tryAddTcgOcgBanlistStatusFromInput();
+  if (tcgBsClr) {
+    tcgBsClr.onclick = () => {
+      window.selectedTcgOcgBanlistStatuses = [];
+      if (tcgBsInpWire) tcgBsInpWire.value = '';
+      renderTcgOcgBanlistStatusFilterChips();
+      currentPage = 1;
+      performSearch(true);
+    };
+  }
+  if (tcgBsInpWire) {
+    tcgBsInpWire.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        tryAddTcgOcgBanlistStatusFromInput();
+      }
+    });
+    tcgBsInpWire.addEventListener('input', (e) => {
+      if (e.inputType === 'insertReplacementText') tryAddTcgOcgBanlistStatusFromInput();
+    });
+    tcgBsInpWire.addEventListener('change', () => {
+      if (comboInputMatchesDatalistPick(tcgBsInpWire)) tryAddTcgOcgBanlistStatusFromInput();
+    });
+  }
   const _comboClears = [
     ['filter-type-clear', 'typeCategory'],
     ['filter-subtype-clear', 'subtype'],
-    ['filter-race-clear', 'race'],
+    ['filter-monster-race-clear', 'race'],
+    ['filter-spell-race-clear', 'spellRace'],
+    ['filter-trap-race-clear', 'trapRace'],
     ['filter-attribute-clear', 'attribute'],
     ['filter-level-clear', 'level'],
     ['filter-linkval-clear', 'linkval'],
@@ -14778,31 +15777,6 @@ function getBanIconHtml(card, type) {
   return `<img src="${escAttr(iconUrl)}" style="width: 18px; height: 18px; vertical-align: middle;" title="${escAttr(String(status))}">`;
 }
 
-/**
- * Mostra ou oculta o checkbox “somente banlist” conforme formato nos chips — só TCG/OCG/Goat suportam parâmetro `banlist` na API.
- *
- * @returns {void}
- */
-function toggleBanlistCheckbox() {
-  const banlistType = getBanlistTypeFromState();
-  const container = getEl('banlist-only-container');
-  if (!container) return;
-  // `banlist` (API) só aceita tcg/ocg/goat. Para outros formatos, o filtro usa apenas `format`.
-  const supportsBanlist = banlistType === 'tcg' || banlistType === 'ocg' || banlistType === 'goat';
-  if (banlistType === '' || !supportsBanlist) {
-    container.style.display = 'none';
-    setChecked('enable-banlist-only', false);
-  } else {
-    container.style.display = 'block';
-  }
-}
-
-/**
- * Cedo no carregamento: ajusta visibilidade do filtro “somente banlist” antes da primeira busca completa.
- * Registo: `DOMContentLoaded` em `document`.
- */
-window.addEventListener('DOMContentLoaded', toggleBanlistCheckbox);
-
 /** Prefixo dos query params serializados dos filtros do deckbuilder (`flt_tc`, …).
  * @constant {string}
  */
@@ -14933,7 +15907,7 @@ function pushUniqueWithLimit(out, seen, v, limit) {
 function buildDeckbuilderFilterUrlSearchParams() {
   const out = new URLSearchParams();
   const st = window.filterChipState || {};
-  const mtf = window.multiTextFilters || { fname: [], desc: [], atk: [], def: [], priceRanges: [] };
+  const mtf = window.multiTextFilters || { fname: [], desc: [], atk: [], def: [], priceRanges: [], genesysPt: [] };
   const appendMulti = (key, arr) => {
     const av = arr || [];
     for (let _av = 0; _av < av.length; _av++) {
@@ -14948,6 +15922,8 @@ function buildDeckbuilderFilterUrlSearchParams() {
   setCsv('tc', st.typeCategory);
   setCsv('st', st.subtype);
   setCsv('rc', st.race);
+  setCsv('spr', st.spellRace);
+  setCsv('tpr', st.trapRace);
   setCsv('at', st.attribute);
   setCsv('lv', st.level);
   setCsv('lk', st.linkval);
@@ -14964,6 +15940,16 @@ function buildDeckbuilderFilterUrlSearchParams() {
   appendMulti(filterUrlParamKey('cs'), window.selectedCardsetNames || []);
   appendMulti(filterUrlParamKey('sc'), window.selectedSetCodes || []);
   appendMulti(filterUrlParamKey('rr'), window.selectedRarities || []);
+  const _mdrCsv = (window.selectedMdRarities || [])
+    .map((x) => normalizeMasterDuelFilterRarityToken(String(x)))
+    .filter(Boolean)
+    .join(',');
+  if (_mdrCsv) out.set(filterUrlParamKey('mdr'), _mdrCsv);
+  const _btsCsv = (window.selectedTcgOcgBanlistStatuses || [])
+    .map((x) => normalizeTcgOcgBanlistStatusToken(String(x)))
+    .filter(Boolean)
+    .join(',');
+  if (_btsCsv) out.set(filterUrlParamKey('bts'), _btsCsv);
   appendMulti(filterUrlParamKey('fc'), mtf.fname || []);
   appendMulti(filterUrlParamKey('dc'), mtf.desc || []);
   appendMulti(filterUrlParamKey('atk'), mtf.atk || []);
@@ -14975,6 +15961,8 @@ function buildDeckbuilderFilterUrlSearchParams() {
     const hi = pr && pr.max != null ? String(pr.max).trim() : '';
     if (lo || hi) out.append(filterUrlParamKey('pr'), `${lo}:${hi}`);
   }
+  const _gptList = (mtf.genesysPt || []).map((x) => String(x).trim()).filter(Boolean);
+  if (_gptList.length) out.set(filterUrlParamKey('gpt'), _gptList.join(','));
   const q = sanitizeUrlFilterText(getVal('search-input', ''), 280);
   if (q) out.set(filterUrlParamKey('q'), q);
   const dq = sanitizeUrlFilterText(getVal('filter-desc', ''), 600);
@@ -14995,8 +15983,6 @@ function buildDeckbuilderFilterUrlSearchParams() {
     if (ds && isValidCalendarIsoDate(ds)) out.set(filterUrlParamKey('ds'), ds);
     if (de && isValidCalendarIsoDate(de)) out.set(filterUrlParamKey('de'), de);
   }
-  const bonly = isChecked('enable-banlist-only');
-  if (bonly && (st.banlist || []).length) out.set(filterUrlParamKey('bo'), '1');
   // Página atual (paginação) — mantida na URL para compartilhamento.
   try {
     const pg = Number(currentPage);
@@ -15152,6 +16138,8 @@ function applyDeckbuilderFiltersFromUrl(sp) {
     typeCategory: [],
     subtype: [],
     race: [],
+    spellRace: [],
+    trapRace: [],
     attribute: [],
     level: [],
     linkval: [],
@@ -15164,10 +16152,12 @@ function applyDeckbuilderFiltersFromUrl(sp) {
     staple: [],
     hasEffect: [],
   };
-  window.multiTextFilters = { fname: [], desc: [], atk: [], def: [], priceRanges: [] };
+  window.multiTextFilters = { fname: [], desc: [], atk: [], def: [], priceRanges: [], genesysPt: [] };
   window.selectedCardsetNames = [];
   window.selectedSetCodes = [];
   window.selectedRarities = [];
+  window.selectedMdRarities = [];
+  window.selectedTcgOcgBanlistStatuses = [];
 
   setVal('search-input', '');
   setVal('filter-desc', '');
@@ -15178,7 +16168,9 @@ function applyDeckbuilderFiltersFromUrl(sp) {
   const _urlClrIds = [
     'filter-type-input',
     'filter-subtype-input',
-    'filter-race-input',
+    'filter-monster-race-input',
+    'filter-spell-race-input',
+    'filter-trap-race-input',
     'filter-attribute-input',
     'filter-level-input',
     'filter-linkval-input',
@@ -15193,16 +16185,16 @@ function applyDeckbuilderFiltersFromUrl(sp) {
     'filter-cardset-input',
     'filter-setcode-input',
     'filter-rarity-input',
+    'filter-md-rarity-input',
+    'filter-tcgocg-banstatus-input',
   ];
   for (let _uci = 0; _uci < _urlClrIds.length; _uci++) {
     const el = getEl(_urlClrIds[_uci]);
     if (el) el.value = '';
   }
-  setChecked('enable-banlist-only', false);
 
   const si = getEl('search-input');
   const fdesc = getEl('filter-desc');
-  const bchk = getEl('enable-banlist-only');
 
   // Ordenação (resultados + deck) a partir da URL (antes da pesquisa/primeiro render).
   try {
@@ -15264,19 +16256,54 @@ function applyDeckbuilderFiltersFromUrl(sp) {
   }
 
   const rcRaw = sp.get(filterUrlParamKey('rc'));
-  if (rcRaw) {
-    const cat = getFilterTypeCategory();
-    const cats = getFilterTypeCategories();
-    const raceCat = cat || (cats.includes('Monster') ? 'Monster' : '');
-    const keySet = new Set(raceCat ? raceApiKeysForCategory(raceCat) : []);
-    const outR = [];
+  const sprRaw = sp.get(filterUrlParamKey('spr'));
+  const tprRaw = sp.get(filterUrlParamKey('tpr'));
+  const catsForRace = getFilterTypeCategories();
+  const keyM = new Set(raceApiKeysForCategory('Monster'));
+  const keyS = new Set(raceApiKeysForCategory('Spell Card'));
+  const keyT = new Set(raceApiKeysForCategory('Trap Card'));
+  const fillRaceCsv = (raw, stateKey, valid) => {
+    if (!raw) return;
+    const out = [];
     const seen = new Set();
-    const _toksRc = splitCommaList(rcRaw);
-    for (let _uti = 0; _uti < _toksRc.length; _uti++) {
-      const tok = _toksRc[_uti];
-      if (keySet.has(tok)) pushUniqueWithLimit(outR, seen, tok, null);
+    const _toks = splitCommaList(raw);
+    for (let _uti = 0; _uti < _toks.length; _uti++) {
+      const tok = _toks[_uti];
+      if (valid.has(tok)) pushUniqueWithLimit(out, seen, tok, null);
     }
-    window.filterChipState.race = outR;
+    window.filterChipState[stateKey] = out;
+  };
+  if (sprRaw) fillRaceCsv(sprRaw, 'spellRace', keyS);
+  if (tprRaw) fillRaceCsv(tprRaw, 'trapRace', keyT);
+  if (rcRaw) {
+    if (sprRaw || tprRaw) {
+      fillRaceCsv(rcRaw, 'race', keyM);
+    } else {
+      const outM = [];
+      const outS = [];
+      const outT = [];
+      const seenM = new Set();
+      const seenS = new Set();
+      const seenT = new Set();
+      const _toksRc = splitCommaList(rcRaw);
+      for (let _uti = 0; _uti < _toksRc.length; _uti++) {
+        const tok = _toksRc[_uti];
+        const canM = keyM.has(tok) && catsForRace.includes('Monster');
+        const canS = keyS.has(tok) && catsForRace.includes('Spell Card');
+        const canT = keyT.has(tok) && catsForRace.includes('Trap Card');
+        if (canS && canT) {
+          const iS = catsForRace.indexOf('Spell Card');
+          const iT = catsForRace.indexOf('Trap Card');
+          if (iS >= 0 && (iT < 0 || iS <= iT)) pushUniqueWithLimit(outS, seenS, tok, null);
+          else if (iT >= 0) pushUniqueWithLimit(outT, seenT, tok, null);
+        } else if (canM) pushUniqueWithLimit(outM, seenM, tok, null);
+        else if (canS) pushUniqueWithLimit(outS, seenS, tok, null);
+        else if (canT) pushUniqueWithLimit(outT, seenT, tok, null);
+      }
+      window.filterChipState.race = outM;
+      window.filterChipState.spellRace = outS;
+      window.filterChipState.trapRace = outT;
+    }
   }
 
   const atRaw = sp.get(filterUrlParamKey('at'));
@@ -15501,6 +16528,46 @@ function applyDeckbuilderFiltersFromUrl(sp) {
       max: hi,
     });
   }
+  const gptCsv = (sp.get(filterUrlParamKey('gpt')) || '').trim();
+  if (gptCsv) {
+    if (!window.multiTextFilters.genesysPt) window.multiTextFilters.genesysPt = [];
+    const __seenGp = new Set();
+    const _toksGp = splitCommaList(gptCsv);
+    for (let _gpi = 0; _gpi < _toksGp.length; _gpi++) {
+      const tok = _toksGp[_gpi];
+      const n = int10(tok, NaN);
+      if (!Number.isFinite(n) || n < 0) continue;
+      const s = String(Math.trunc(n));
+      if (__seenGp.has(s)) continue;
+      __seenGp.add(s);
+      window.multiTextFilters.genesysPt.push(s);
+    }
+  }
+
+  const mdrCsv = (sp.get(filterUrlParamKey('mdr')) || '').trim();
+  if (mdrCsv) {
+    const __seenMdr = new Set();
+    const _toksMdr = splitCommaList(mdrCsv);
+    for (let _mdi = 0; _mdi < _toksMdr.length; _mdi++) {
+      const k = normalizeMasterDuelFilterRarityToken(_toksMdr[_mdi]);
+      if (!k || __seenMdr.has(k)) continue;
+      __seenMdr.add(k);
+      window.selectedMdRarities.push(k);
+    }
+  }
+
+  const btsCsv = (sp.get(filterUrlParamKey('bts')) || '').trim();
+  if (btsCsv && isTcgOrOcgBanlistChipActive()) {
+    window.selectedTcgOcgBanlistStatuses = [];
+    const __seenBts = new Set();
+    const _toksBts = splitCommaList(btsCsv);
+    for (let _bti = 0; _bti < _toksBts.length; _bti++) {
+      const k = normalizeTcgOcgBanlistStatusToken(_toksBts[_bti]);
+      if (!k || __seenBts.has(k)) continue;
+      __seenBts.add(k);
+      window.selectedTcgOcgBanlistStatuses.push(k);
+    }
+  }
 
   const qv = sanitizeUrlFilterText(sp.get(filterUrlParamKey('q')), 280);
   if (si && qv) si.value = qv;
@@ -15526,14 +16593,6 @@ function applyDeckbuilderFiltersFromUrl(sp) {
   if (dsU && isValidCalendarIsoDate(dsU)) setVal('date-start', dsU);
   if (deU && isValidCalendarIsoDate(deU)) setVal('date-end', deU);
 
-  if (
-    bchk &&
-    sp.get(filterUrlParamKey('bo')) === '1' &&
-    (window.filterChipState.banlist || []).length
-  ) {
-    setChecked('enable-banlist-only', true);
-  }
-
   // Página atual (paginação).
   try {
     const pgRaw = (sp.get(filterUrlParamKey('pg')) || '').trim();
@@ -15542,10 +16601,11 @@ function applyDeckbuilderFiltersFromUrl(sp) {
   } catch (_) {}
 
   paintComboFilterChips();
-  toggleBanlistCheckbox();
   renderCardsetFilterChips();
   renderSetcodeFilterChips();
   renderRarityFilterChips();
+  renderMdRarityFilterChips();
+  renderTcgOcgBanlistStatusFilterChips();
   paintAllMultiTextChips();
 }
 
@@ -16401,6 +17461,111 @@ function tryAddRarityFromInput() {
   renderRarityFilterChips();
   currentPage = 1;
   performSearch(true);
+}
+
+/**
+ * Mostra o grupo de raridade MD e limpa chips se o formato Master Duel deixar de estar nos chips.
+ *
+ * @returns {void}
+ */
+function syncMasterDuelRarityFilterGroupVisibility() {
+  const el = getEl('filter-md-rarity-group');
+  if (!el) return;
+  const show = isMasterDuelBanlistChipActive();
+  if (show) {
+    el.style.removeProperty('display');
+  } else {
+    el.style.setProperty('display', 'none', 'important');
+    if (window.selectedMdRarities && window.selectedMdRarities.length) {
+      window.selectedMdRarities = [];
+      renderMdRarityFilterChips();
+    }
+    setVal('filter-md-rarity-input', '');
+  }
+}
+
+/**
+ * Redesenha chips de raridade Master Duel (`window.selectedMdRarities`).
+ *
+ * @returns {void}
+ */
+function renderMdRarityFilterChips() {
+  const box = getEl('filter-md-rarity-chips');
+  const clearBtn = getEl('filter-md-rarity-clear-chips');
+  if (!box) return;
+  const removeTitle = escAttr(T('chip.remove'));
+  const rs = window.selectedMdRarities || [];
+  box.innerHTML = rs
+    .map((r) => {
+      const k = normalizeMasterDuelFilterRarityToken(r);
+      if (!k) return '';
+      const iconUrl = masterDuelRarityIconUrl(k);
+      const img = iconUrl
+        ? `<img class="md-rarity-chip-icon" src="${escAttr(iconUrl)}" alt="${escAttr(k)}" loading="lazy">`
+        : '';
+      return `<span class="cardset-chip cardset-chip--md-rarity">${img}<span>${escapeHtml(k)}</span><button type="button" data-md-rarity="${escAttr(k)}" title="${removeTitle}">&times;</button></span>`;
+    })
+    .join('');
+  const btns = box.querySelectorAll('button[data-md-rarity]');
+  for (let bi = 0; bi < btns.length; bi++) {
+    const btn = btns[bi];
+    btn.onclick = () => {
+      const rk = btn.getAttribute('data-md-rarity');
+      window.selectedMdRarities = (window.selectedMdRarities || []).filter((x) => String(x).toUpperCase() !== String(rk).toUpperCase());
+      renderMdRarityFilterChips();
+      currentPage = 1;
+      performSearch(true);
+    };
+  }
+  if (clearBtn) setChipClearRowVisible('filter-md-rarity-clear-chips', rs.length > 0);
+}
+
+/**
+ * Adiciona raridade MD a partir de `#filter-md-rarity-input` (até 4 valores distintos).
+ *
+ * @returns {void}
+ */
+function tryAddMdRarityFromInput() {
+  const inp = getEl('filter-md-rarity-input');
+  if (!inp || !String(inp.value || '').trim()) {
+    showToast(T('toast.md_rarity_pick'));
+    return;
+  }
+  const k = normalizeMasterDuelFilterRarityToken(inp.value);
+  if (!k) {
+    showToast(T('toast.md_rarity_pick'));
+    inp.value = '';
+    return;
+  }
+  if (!window.selectedMdRarities) window.selectedMdRarities = [];
+  const seen = new Set(window.selectedMdRarities.map((x) => String(x).toUpperCase()));
+  if (seen.has(k)) {
+    showToast(T('toast.md_rarity_dup'));
+    inp.value = '';
+    return;
+  }
+  if (window.selectedMdRarities.length >= 4) {
+    showToast(T('toast.md_rarity_max'));
+    return;
+  }
+  window.selectedMdRarities.push(k);
+  inp.value = '';
+  renderMdRarityFilterChips();
+  currentPage = 1;
+  performSearch(true);
+}
+
+/**
+ * Verifica se a carta tem raridade Master Duel em {@link pickMasterDuelRarity} dentro do conjunto.
+ *
+ * @param {object} card
+ * @param {Set<string>} wantUpper `UR`/`SR`/…
+ * @returns {boolean}
+ */
+function cardMatchesMasterDuelRarityChips(card, wantUpper) {
+  if (!wantUpper || !wantUpper.size) return true;
+  const md = pickMasterDuelRarity(card);
+  return !!(md && wantUpper.has(md));
 }
 
 /**
@@ -17305,9 +18470,9 @@ function wireMultiTextChipButtons(container) {
 }
 
 /**
- * Repinta chips de um grupo de `window.multiTextFilters` (`fname`, `desc`, `atk`, `def`, `price`).
+ * Repinta chips de um grupo de `window.multiTextFilters` (`fname`, `desc`, `atk`, `def`, `price`, `genesysPt`).
  *
- * @param {'fname'|'desc'|'atk'|'def'|'price'} kind Qual painel atualizar.
+ * @param {'fname'|'desc'|'atk'|'def'|'price'|'genesysPt'} kind Qual painel atualizar.
  * @returns {void}
  */
 function renderMultiTextChips(kind) {
@@ -17387,6 +18552,22 @@ function renderMultiTextChips(kind) {
       .join('');
     wireMultiTextChipButtons(box);
     if (clr) setChipClearRowVisible('filter-price-clear-chips', (m.priceRanges || []).length > 0);
+    return;
+  }
+  if (kind === 'genesysPt') {
+    const box = getEl('filter-genesys-pt-chips');
+    const clr = getEl('filter-genesys-pt-clear-chips');
+    if (!box) return;
+    const removeTitle = escAttr(T('chip.remove'));
+    const labBase = T('opt.sort.genesys_points');
+    box.innerHTML = (m.genesysPt || [])
+      .map((s) => {
+        const safe = escAttr(String(s));
+        return `<span class="cardset-chip cardset-chip--genesys-pt">${escAttr(labBase)}: ${safe}<button type="button" class="mt-chip-x" data-mt="genesysPt" data-mt-val="${safe}" title="${removeTitle}">&times;</button></span>`;
+      })
+      .join('');
+    wireMultiTextChipButtons(box);
+    if (clr) setChipClearRowVisible('filter-genesys-pt-clear-chips', (m.genesysPt || []).length > 0);
   }
 }
 
@@ -17401,12 +18582,13 @@ function paintAllMultiTextChips() {
   renderMultiTextChips('atk');
   renderMultiTextChips('def');
   renderMultiTextChips('price');
+  renderMultiTextChips('genesysPt');
 }
 
 /**
  * Remove um chip confirmado e relança a busca na página 1.
  *
- * @param {'fname'|'desc'|'atk'|'def'|'price'} kind Tipo do filtro.
+ * @param {'fname'|'desc'|'atk'|'def'|'price'|'genesysPt'} kind Tipo do filtro.
  * @param {string} val Valor do chip (vazio para `price`).
  * @param {string|null|undefined} id Identificador estável do intervalo de preço quando `kind === 'price'`.
  * @returns {void}
@@ -17415,7 +18597,7 @@ function removeMultiTextChip(kind, val, id) {
   const m = window.multiTextFilters;
   if (kind === 'price') {
     m.priceRanges = (m.priceRanges || []).filter((r) => String(r.id) !== String(id));
-  } else if (m[kind]) {
+  } else if (Array.isArray(m[kind])) {
     m[kind] = m[kind].filter((x) => x !== val);
   }
   paintAllMultiTextChips();
@@ -17570,9 +18752,41 @@ function tryAddPriceRangeChip() {
 }
 
 /**
+ * Confirma valor em `#filter-genesys-pt` como chip de pontos Genesys exatos (não negativo).
+ *
+ * @returns {void}
+ */
+function tryAddGenesysPtChip() {
+  const raw = String(getVal('filter-genesys-pt', '')).trim();
+  if (!raw) {
+    showToast(T('toast.genesys_pt_need'));
+    return;
+  }
+  const n = int10(raw, NaN);
+  if (!Number.isFinite(n) || n < 0) {
+    showToast(T('toast.genesys_pt_invalid'));
+    return;
+  }
+  const s = String(Math.trunc(n));
+  if (!window.multiTextFilters.genesysPt) window.multiTextFilters.genesysPt = [];
+  if (window.multiTextFilters.genesysPt.includes(s)) {
+    showToast(T('toast.genesys_pt_dup'));
+    return;
+  }
+  if (window.multiTextFilters.genesysPt.length >= GENESYS_PT_FILTER_MAX_CHIPS) {
+    showToast(T('toast.filter_limit'));
+    return;
+  }
+  window.multiTextFilters.genesysPt.push(s);
+  setVal('filter-genesys-pt', '');
+  paintAllMultiTextChips();
+  performSearch(true);
+}
+
+/**
  * Esvazia um grupo de filtros multi e volta à página 1 com nova pesquisa.
  *
- * @param {'fname'|'desc'|'atk'|'def'|'price'} kind Grupo a limpar.
+ * @param {'fname'|'desc'|'atk'|'def'|'price'|'genesysPt'} kind Grupo a limpar.
  * @returns {void}
  */
 function clearMultiTextGroup(kind) {
@@ -17582,6 +18796,7 @@ function clearMultiTextGroup(kind) {
   else if (kind === 'desc') m.desc = [];
   else if (kind === 'atk') m.atk = [];
   else if (kind === 'def') m.def = [];
+  else if (kind === 'genesysPt') m.genesysPt = [];
   paintAllMultiTextChips();
   currentPage = 1;
   performSearch(true);
@@ -17682,27 +18897,34 @@ const __linkMarkersHtmlByMarkersArray = new WeakMap();
  *
  * @param {Array<string>|null|undefined} markers Posições tipo `Top`, `Bottom-Right`, …
  * @param {number} [sizePx=14] Largura/altura em px de cada ícone.
+ * @param {boolean} [deckSearchLinks=false] Se verdadeiro, cada seta vira botão que aplica filtro de marcador.
  * @returns {string} HTML ou string vazia.
  */
-function getLinkMarkersHtml(markers, sizePx = 14) {
+function getLinkMarkersHtml(markers, sizePx = 14, deckSearchLinks = false) {
   if (!markers || !markers.length) return '';
   const sz = Number(sizePx) > 0 ? Number(sizePx) : 14;
   let bySize = __linkMarkersHtmlByMarkersArray.get(markers);
-  if (bySize && bySize.has(sz)) return bySize.get(sz);
-  const html = `<span class="link-markers-band" aria-label="Marcadores de link">${sortLinkMarkers(
-    markers
-  )
+  if (bySize && bySize.has(sz) && !deckSearchLinks) return bySize.get(sz);
+  const inner = sortLinkMarkers(markers)
     .map((m) => {
       const deg = LINK_MARKER_ROTATION[m] != null ? LINK_MARKER_ROTATION[m] : 0;
       const tip = escAttr(String(m || '').replace(/-/g, ' '));
-      return `<span class="link-marker-icon" title="${tip}"><svg width="${sz}" height="${sz}" viewBox="0 0 24 24" aria-hidden="true" style="transform:rotate(${deg}deg);transform-origin:50% 50%"><path d="M12 3.5 L20.5 19.5 L14.2 16.8 L12 21 L9.8 16.8 L3.5 19.5 Z" fill="#d62828" stroke="#ff9b9b" stroke-width="0.45" stroke-linejoin="round"/></svg></span>`;
+      const svg = `<svg width="${sz}" height="${sz}" viewBox="0 0 24 24" aria-hidden="true" style="transform:rotate(${deg}deg);transform-origin:50% 50%"><path d="M12 3.5 L20.5 19.5 L14.2 16.8 L12 21 L9.8 16.8 L3.5 19.5 Z" fill="#d62828" stroke="#ff9b9b" stroke-width="0.45" stroke-linejoin="round"/></svg>`;
+      if (deckSearchLinks) {
+        const tSearch = escAttr(T('ui.tooltip_search_title'));
+        return ttDeckSearchSpan({ k: 'link_marker', lm: String(m || '') }, 'tt-link-marker-btn', svg, tSearch);
+      }
+      return `<span class="link-marker-icon" title="${tip}">${svg}</span>`;
     })
-    .join('')}</span>`;
-  if (!bySize) {
-    bySize = new Map();
-    __linkMarkersHtmlByMarkersArray.set(markers, bySize);
+    .join('');
+  const html = `<span class="link-markers-band" aria-label="Marcadores de link">${inner}</span>`;
+  if (!deckSearchLinks) {
+    if (!bySize) {
+      bySize = new Map();
+      __linkMarkersHtmlByMarkersArray.set(markers, bySize);
+    }
+    bySize.set(sz, html);
   }
-  bySize.set(sz, html);
   return html;
 }
 
@@ -17799,9 +19021,10 @@ function pickPrintRarityRankForSort(card) {
  *
  * @param {unknown} scale Valor bruto da escala (string ou número).
  * @param {number} [sizePx=13] Largura base do SVG em px.
+ * @param {boolean} [deckSearchLinks=false] Se verdadeiro, o valor numérico abre busca por escala.
  * @returns {string} Fragmento ou vazio se sem escala.
  */
-function getPendulumScaleHtml(scale, sizePx = 13) {
+function getPendulumScaleHtml(scale, sizePx = 13, deckSearchLinks = false) {
   if (scale === undefined || scale === null) return '';
   const raw = String(scale).trim();
   if (raw === '') return '';
@@ -17811,7 +19034,48 @@ function getPendulumScaleHtml(scale, sizePx = 13) {
   const path = 'M11 1.5 L20.5 13.5 L11 25.5 L1.5 13.5 Z';
   const leftSvg = `<svg class="pendulum-diamond" width="${w}" height="${h}" viewBox="0 0 22 27" aria-hidden="true"><path d="${path}" fill="#0d47a1" stroke="#90caf9" stroke-width="0.65" stroke-linejoin="round"/></svg>`;
   const rightSvg = `<svg class="pendulum-diamond" width="${w}" height="${h}" viewBox="0 0 22 27" aria-hidden="true"><path d="${path}" fill="#b71c1c" stroke="#ffcdd2" stroke-width="0.65" stroke-linejoin="round"/></svg>`;
-  return `<span class="pendulum-scale-band" title="Escala de Pêndulo: ${s}">${leftSvg}<span class="pendulum-scale-num">${s}</span>${rightSvg}</span>`;
+  const tTip = escAttr(T('ui.tooltip_search_title'));
+  const numDisp = escapeHtml(raw);
+  const numInner = deckSearchLinks
+    ? ttDeckSearchSpan({ k: 'pendulum_scale', scale: raw }, 'pendulum-scale-num', numDisp, tTip)
+    : `<span class="pendulum-scale-num">${numDisp}</span>`;
+  return `<span class="pendulum-scale-band" title="Escala de Pêndulo: ${s}">${leftSvg}${numInner}${rightSvg}</span>`;
+}
+
+/**
+ * Valores distintos de `genesys_points` que aparecem em pelo menos uma carta no catálogo YGOPRODeck
+ * (`cardinfo.php?misc=yes&format=genesys`, scan paginado de todas as linhas). São 51 valores (0–100, nem todos os inteiros).
+ * Para regenerar: percorrer `cardinfo` com esse `format` e reunir inteiros de `genesys_points` / `misc_info[0].genesys_points`.
+ *
+ * @constant {Readonly<number[]>}
+ */
+const GENESYS_POINTS_CATALOG_VALUES = Object.freeze([
+  0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16, 18, 20, 21, 22, 25, 27, 30, 33, 35, 40, 50, 51, 55, 60, 61, 65, 66, 67,
+  68, 70, 75, 76, 77, 80, 81, 85, 86, 87, 88, 91, 93, 94, 95, 97, 100,
+]);
+
+/** Máximo de chips de pontos Genesys no filtro (pré-visualização + confirmação). */
+const GENESYS_PT_FILTER_MAX_CHIPS = 64;
+
+/** Já aplicámos opções ao datalist de pontos Genesys. */
+let __genesysPointsFilterDatalistPopulated = false;
+
+/**
+ * Preenche `#datalist-filter-genesys-pt` com {@link GENESYS_POINTS_CATALOG_VALUES} (uma vez).
+ *
+ * @returns {void}
+ */
+function ensureGenesysPointsFilterDatalist() {
+  if (__genesysPointsFilterDatalistPopulated) return;
+  const dl = getEl('datalist-filter-genesys-pt');
+  if (!dl) return;
+  const arr = GENESYS_POINTS_CATALOG_VALUES;
+  const parts = new Array(arr.length);
+  for (let i = 0; i < arr.length; i++) {
+    parts[i] = `<option value="${escAttr(String(arr[i]))}"></option>`;
+  }
+  dl.innerHTML = parts.join('');
+  __genesysPointsFilterDatalistPopulated = true;
 }
 
 /** Memoização por carta do inteiro Genesys usado em ordenação. */
@@ -19462,6 +20726,10 @@ function syncHelpDisabledInlineAddFilterLayout() {
       g.classList.toggle('filter-group--inline-add', isInlineAdd);
     }
   } catch (_) {}
+  try {
+    syncGenesysPointsFilterGroupVisibility();
+    syncMasterDuelRarityFilterGroupVisibility();
+  } catch (_) {}
 }
 
 /**
@@ -20190,31 +21458,219 @@ function pickBestPrintingRarity(card) {
   return best;
 }
 
+/**
+ * Nome em inglês para pesquisa em lojas (TCGPlayer, Cardmarket, etc.).
+ *
+ * @param {object|null|undefined} card
+ * @returns {string}
+ */
+function cardEnglishSearchName(card) {
+  return String((card && (card.name_en || card.name)) || '').trim();
+}
+
+/**
+ * Linhas de loja com URL de busca (a API não devolve URL por raridade; o eBay inclui a raridade «melhor» como palavra-chave).
+ *
+ * @param {object|null|undefined} card
+ * @returns {{ key: string, label: string, url: string, priceKey: string, currency: string }[]}
+ */
+function buildCardStoreSearchRows(card) {
+  const name = cardEnglishSearchName(card);
+  if (!name) return [];
+  const enc = encodeURIComponent(name);
+  const rarity = pickBestPrintingRarity(card);
+  const raritySeg = rarity ? ` ${rarity}` : '';
+  return [
+    {
+      key: 'tcgplayer',
+      label: 'TCGplayer',
+      url: `https://www.tcgplayer.com/search/yugioh/product?q=${enc}`,
+      priceKey: 'tcgplayer_price',
+      currency: 'USD',
+    },
+    {
+      key: 'cardmarket',
+      label: 'Cardmarket',
+      url: `https://www.cardmarket.com/en/YuGiOh/Products/Search?searchString=${enc}&perSite=20`,
+      priceKey: 'cardmarket_price',
+      currency: 'EUR',
+    },
+    {
+      key: 'coolstuffinc',
+      label: 'CoolStuffInc',
+      url: `https://www.coolstuffinc.com/main_search.php?pa=search&page=1&num_results=24&q=${enc}`,
+      priceKey: 'coolstuffinc_price',
+      currency: 'USD',
+    },
+    {
+      key: 'ebay',
+      label: 'eBay',
+      url: `https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent(`${name} yugioh${raritySeg}`)}`,
+      priceKey: 'ebay_price',
+      currency: 'USD',
+    },
+    {
+      key: 'amazon',
+      label: 'Amazon',
+      url: `https://www.amazon.com/s?k=${encodeURIComponent(`${name} yugioh card`)}`,
+      priceKey: 'amazon_price',
+      currency: 'USD',
+    },
+  ];
+}
+
+/**
+ * Bloco HTML de preços no tooltip: compacto (hover) ou expandido (modal / mobile).
+ *
+ * @param {object|null|undefined} card
+ * @param {boolean} expanded
+ * @returns {string}
+ */
+function buildTooltipPricesHtml(card, expanded) {
+  const p = getCardPricesFirst(card) || {};
+  const formatP = (val) => (!val || floatNum(val, NaN) === 0 ? T('price.not_found') : `${val}`);
+  if (!expanded) {
+    return `<div class="tt-release-prices-inner tt-release-prices-inner--compact" style="margin-top: 4px; display: flex; flex-wrap: wrap; gap: 8px; font-size: 11px; color: #fff; font-weight: 500;">
+            <span title="TCGplayer"><i class="fa-solid fa-store" style="color:var(--accent); font-size: 11px;"></i> TCG: ${escapeHtml(formatP(p.tcgplayer_price))}</span>
+            <span title="Cardmarket"><i class="fa-solid fa-m" style="color:var(--accent); font-size: 11px;"></i> CM: ${escapeHtml(formatP(p.cardmarket_price))}</span>
+            <span title="CoolStuffInc"><i class="fa-solid fa-bag-shopping" style="color:var(--accent); font-size: 11px;"></i> CSI: ${escapeHtml(formatP(p.coolstuffinc_price))}</span>
+            <span title="eBay"><i class="fa-brands fa-ebay" style="color:var(--accent); font-size: 14px;"></i> ${escapeHtml(formatP(p.ebay_price))}</span>
+            <span title="Amazon"><i class="fa-brands fa-amazon" style="color:var(--accent); font-size: 13px;"></i> ${escapeHtml(formatP(p.amazon_price))}</span>
+        </div>`;
+  }
+  const rows = buildCardStoreSearchRows(card);
+  const iconForKey = (key) => {
+    if (key === 'tcgplayer')
+      return '<i class="fa-solid fa-store" style="color:var(--accent);font-size:11px;" aria-hidden="true"></i>';
+    if (key === 'cardmarket')
+      return '<i class="fa-solid fa-m" style="color:var(--accent);font-size:11px;" aria-hidden="true"></i>';
+    if (key === 'coolstuffinc')
+      return '<i class="fa-solid fa-bag-shopping" style="color:var(--accent);font-size:11px;" aria-hidden="true"></i>';
+    if (key === 'ebay')
+      return '<i class="fa-brands fa-ebay" style="color:var(--accent);font-size:14px;" aria-hidden="true"></i>';
+    if (key === 'amazon')
+      return '<i class="fa-brands fa-amazon" style="color:var(--accent);font-size:13px;" aria-hidden="true"></i>';
+    return '';
+  };
+  const curSym = (c) => (c === 'EUR' ? '€' : '$');
+  const chips = rows
+    .map((row) => {
+      const priceDisp = escapeHtml(formatP(p[row.priceKey]));
+      const cur = escapeHtml(curSym(row.currency));
+      const label = escapeHtml(row.label);
+      const ic = iconForKey(row.key);
+      const amt = `<span class="tt-price-chip-amt">${cur}${priceDisp}</span>`;
+      if (!row.url) {
+        return `<span class="tt-price-chip tt-price-chip--nolink" title="${escAttr(row.label)}">${ic}<span class="tt-price-chip-label">${label}</span> ${amt}</span>`;
+      }
+      return `<a class="tt-price-chip" href="${escAttr(row.url)}" target="_blank" rel="noopener noreferrer" title="${escAttr(row.label)}">${ic}<span class="tt-price-chip-label">${label}</span> ${amt}</a>`;
+    })
+    .join('');
+  const note = `<p class="tt-prices-note">${escapeHtml(T('ui.price_avg_api_note'))}</p>`;
+  return `<div class="tt-prices-expanded">${note}<div class="tt-prices-inline">${chips}</div></div>`;
+}
+
 /** Teto de linhas de `card_sets` renderizadas no tooltip; lista completa em {@link openCardSetsPanel}. */
 const TOOLTIP_CARDSETS_MAX = 18;
+
+/**
+ * Interpreta `set_price` de uma impressão (número, moeda opcional) para filtro de preço USD na busca.
+ *
+ * @param {unknown} raw Valor da API (`card_sets[].set_price`).
+ * @returns {{ min: string, max: string }|null} Intervalo pontual `min === max` ou `null` se não for número utilizável.
+ */
+function parsePrintingPriceForTooltipFilter(raw) {
+  const s0 = String(raw ?? '').trim();
+  if (!s0) return null;
+  let s = s0.replace(/[$€£¥]/gi, '').trim().replace(/\s+/g, '');
+  if (!s) return null;
+  let norm = s;
+  if (/^\d+[.,]\d{3}([.,]\d+)?$/.test(s)) {
+    norm = s.replace(/\./g, '').replace(',', '.');
+  } else if (s.includes(',') && !s.includes('.')) {
+    norm = s.replace(',', '.');
+  }
+  const n = floatNum(norm, NaN);
+  if (!Number.isFinite(n) || n < 0) return null;
+  const t = String(Math.round(n * 10000) / 10000).replace(/\.?0+$/, '');
+  const token = t === '' ? '0' : t;
+  return { min: token, max: token };
+}
+
+/**
+ * Span clicável para busca no deckbuilder (sem estilo de botão nativo).
+ *
+ * @param {Record<string, unknown>} spec Payload `{ k, ... }` para {@link applyDeckSearchFromTooltipSpec}.
+ * @param {string} extraClasses Classes extra (ex.: `tt-format-chip tt-format-chip--fmt-tcg`).
+ * @param {string} innerHtml Conteúdo interno já escapado.
+ * @param {string} titleEsc Valor de `title` já passado por {@link escAttr}.
+ * @returns {string}
+ */
+function ttDeckSearchSpan(spec, extraClasses, innerHtml, titleEsc) {
+  const cls = extraClasses ? `tt-deck-search-link ${extraClasses}` : 'tt-deck-search-link';
+  return `<span class="${cls}" role="button" tabindex="0" data-ts="${tooltipSearchEncodeSpec(spec)}" title="${titleEsc}">${innerHtml}</span>`;
+}
 
 /**
  * HTML em blocos `<div class="tt-set-line">` para painel ou trechos longos (código, raridade, preço opcional, nome expansão).
  *
  * @param {object|null|undefined} card Objeto com `card_sets`.
  * @param {number} [max] Se &gt; 0, faz `slice`; senão usa todas.
+ * @param {boolean} [withSearchLinks=false] Botões que aplicam filtros de código / raridade / set.
  * @returns {string} Fragmento HTML ou vazio.
  */
-function formatCardSetsLinesHtml(card, max) {
+function formatCardSetsLinesHtml(card, max, withSearchLinks) {
   if (!card || !card.card_sets || !card.card_sets.length) return '';
   const list = typeof max === 'number' && max > 0 ? card.card_sets.slice(0, max) : card.card_sets;
+  const tSearch = escAttr(T('ui.tooltip_search_title'));
   return list
     .map((s) => {
-      const code = escAttr(s.set_code || '—');
-      const rar = escAttr(s.set_rarity || '—');
-      const sp =
-        s.set_price !== undefined && s.set_price !== null && String(s.set_price).trim() !== ''
-          ? ` · <span class="tt-set-price" style="opacity:0.95;">${escAttr(String(s.set_price))}</span>`
-          : '';
+      const codePlain = s.set_code || '—';
+      const code = escapeHtml(codePlain);
+      const rarRaw = s.set_rarity != null ? String(s.set_rarity) : '';
+      const rar = escapeHtml(setRarityForTooltip(s.set_rarity));
+      let sp = '';
+      if (s.set_price !== undefined && s.set_price !== null && String(s.set_price).trim() !== '') {
+        const prDisp = escapeHtml(String(s.set_price));
+        const prSpec = withSearchLinks ? parsePrintingPriceForTooltipFilter(s.set_price) : null;
+        if (withSearchLinks && prSpec) {
+          sp = ` · ${ttDeckSearchSpan(
+            { k: 'printing_price', min: prSpec.min, max: prSpec.max },
+            'tt-set-price tt-set-price-search',
+            prDisp,
+            tSearch
+          )}`;
+        } else {
+          sp = ` · <span class="tt-set-price" style="opacity:0.95;">${prDisp}</span>`;
+        }
+      }
       const sname = s.set_name
-        ? `<div style="font-size:10px;opacity:0.85;margin-top:2px;">${escAttr(s.set_name)}</div>`
+        ? `<div class="tt-set-name">${
+            withSearchLinks && s.set_name
+              ? ttDeckSearchSpan({ k: 'cardset', name: s.set_name }, 'tt-set-name-search', escapeHtml(s.set_name), tSearch)
+              : escapeHtml(s.set_name)
+          }</div>`
         : '';
-      return `<div class="tt-set-line"><span class="tt-set-code">${code}</span> — <span>${rar}</span>${sp}${sname}</div>`;
+      const rawUrl = s.set_url != null ? String(s.set_url).trim() : '';
+      let linkExtra = '';
+      if (rawUrl) {
+        try {
+          const u = new URL(rawUrl);
+          if (u.protocol === 'https:' || u.protocol === 'http:')
+            linkExtra = ` <a class="tt-set-store-link" href="${escAttr(u.href)}" target="_blank" rel="noopener noreferrer">${escapeHtml(T('ui.prints_listing_link'))}<i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i></a>`;
+        } catch (_) {
+          /* URL inválida da API — ignorar */
+        }
+      }
+      const codeCell =
+        withSearchLinks && codePlain && codePlain !== '—'
+          ? ttDeckSearchSpan({ k: 'setcode', code: codePlain }, 'tt-set-code', code, tSearch)
+          : `<span class="tt-set-code">${code}</span>`;
+      const rarCell =
+        withSearchLinks && rarRaw.trim().length >= 3
+          ? ` — ${ttDeckSearchSpan({ k: 'rarity', rarity: rarRaw }, 'tt-set-rar-search', rar, tSearch)}`
+          : ` — <span>${rar}</span>`;
+      return `<div class="tt-set-line">${codeCell}${rarCell}${sp}${linkExtra}${sname}</div>`;
     })
     .join('');
 }
@@ -20224,21 +21680,43 @@ function formatCardSetsLinesHtml(card, max) {
  *
  * @param {object|null|undefined} card Objeto com `card_sets`.
  * @param {number} [max] Limite opcional de entradas.
+ * @param {boolean} [withSearchLinks=false]
  * @returns {string}
  */
-function formatCardSetsTooltipGridHtml(card, max) {
+function formatCardSetsTooltipGridHtml(card, max, withSearchLinks) {
   if (!card || !card.card_sets || !card.card_sets.length) return '';
   const list = typeof max === 'number' && max > 0 ? card.card_sets.slice(0, max) : card.card_sets;
+  const tSearch = escAttr(T('ui.tooltip_search_title'));
   return list
     .map((s) => {
-      const code = escAttr(s.set_code || '—');
+      const codePlain = s.set_code || '—';
+      const code = escAttr(codePlain);
+      const rarRaw = s.set_rarity != null ? String(s.set_rarity) : '';
       const rar = escAttr(setRarityForTooltip(s.set_rarity));
       const prRaw =
         s.set_price !== undefined && s.set_price !== null && String(s.set_price).trim() !== ''
-          ? `${String(s.set_price)}`
+          ? String(s.set_price)
           : '—';
-      const pr = escAttr(prRaw);
-      return `<span class="tt-cardsets-cell" role="listitem"><span class="tt-cardsets-code">${code}</span> <span class="tt-cardsets-rar">${rar}</span> <span class="tt-cardsets-pr">${pr}</span></span>`;
+      const prEsc = escapeHtml(prRaw);
+      const prSpec = withSearchLinks && prRaw !== '—' ? parsePrintingPriceForTooltipFilter(prRaw) : null;
+      const prCell =
+        withSearchLinks && prSpec
+          ? ttDeckSearchSpan(
+              { k: 'printing_price', min: prSpec.min, max: prSpec.max },
+              'tt-cardsets-pr tt-cardsets-pr-search',
+              prEsc,
+              tSearch
+            )
+          : `<span class="tt-cardsets-pr">${prEsc}</span>`;
+      const codeHtml =
+        withSearchLinks && codePlain && codePlain !== '—'
+          ? ttDeckSearchSpan({ k: 'setcode', code: codePlain }, 'tt-cardsets-code', code, tSearch)
+          : `<span class="tt-cardsets-code">${code}</span>`;
+      const rarHtml =
+        withSearchLinks && rarRaw.trim().length >= 3
+          ? ttDeckSearchSpan({ k: 'rarity', rarity: rarRaw }, 'tt-cardsets-rar', rar, tSearch)
+          : `<span class="tt-cardsets-rar">${rar}</span>`;
+      return `<span class="tt-cardsets-cell" role="listitem">${codeHtml} ${rarHtml} ${prCell}</span>`;
     })
     .join('');
 }
@@ -20265,7 +21743,7 @@ function openCardSetsPanel(card) {
   if (!panel || !title || !body) return;
   const cspName = displayNameForApiCard(full);
   title.textContent = T('ui.card_sets_title', { name: cspName });
-  body.innerHTML = formatCardSetsLinesHtml(full);
+  body.innerHTML = formatCardSetsLinesHtml(full, undefined, true);
   panel.classList.add('is-open');
   panel.setAttribute('aria-hidden', 'false');
   document.body.style.overflow = 'hidden';
@@ -20314,7 +21792,409 @@ window.openCardSetsPanel = openCardSetsPanel;
 window.closeCardSetsPanel = closeCardSetsPanel;
 
 /**
- * Preenche `#card-tooltip`: layout mobile vs desktop, nome, imagem, beta/arquétipo, banlist, stats, texto e impressões.
+ * Codifica payload JSON para `data-ts` em `.tt-deck-search-link`.
+ *
+ * @param {Record<string, unknown>} spec
+ * @returns {string}
+ */
+function tooltipSearchEncodeSpec(spec) {
+  try {
+    return escAttr(encodeURIComponent(JSON.stringify(spec)));
+  } catch (_) {
+    return escAttr(encodeURIComponent('{}'));
+  }
+}
+
+/**
+ * Classe CSS estável por formato para chips em detalhes da carta (`tt-format-chip--fmt-*`).
+ * Usa {@link resolveBanlistInput} quando reconhece o rótulo; senão gera slug ASCII a partir do texto da API.
+ *
+ * @param {string} label Valor em `misc_info[0].formats` / `formats`.
+ * @returns {string}
+ */
+function tooltipFormatChipFmtClass(label) {
+  const trimmed = String(label || '').trim();
+  if (!trimmed) return 'tt-format-chip--fmt-other';
+  const canon = resolveBanlistInput(trimmed);
+  if (canon) return 'tt-format-chip--fmt-' + canon.replace(/\s+/g, '-');
+  const deaccent = trimmed
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+  const slug = deaccent
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  if (!slug || !/^[a-z0-9-]+$/.test(slug)) return 'tt-format-chip--fmt-other';
+  return 'tt-format-chip--fmt-' + slug;
+}
+
+/**
+ * Zera filtros do deckbuilder na UI sem disparar busca nem sincronizar URL (antes de uma busca guiada pelo tooltip).
+ *
+ * @returns {void}
+ */
+function resetDeckbuilderFiltersNoSearch() {
+  setVal('search-input', '');
+  setVal('filter-desc', '');
+  setVal('search-qty', '1');
+  setVal('filter-atk', '');
+  setVal('filter-def', '');
+  const hoje = new Date().toISOString().split('T')[0];
+  setVal('date-start', FIRST_KNOWN_RELEASE_ISO.ocg);
+  setVal('date-end', hoje);
+  window.filterChipState = {
+    typeCategory: [],
+    subtype: [],
+    race: [],
+    spellRace: [],
+    trapRace: [],
+    attribute: [],
+    level: [],
+    era: [],
+    linkval: [],
+    linkmarker: [],
+    scale: [],
+    dateRegion: [],
+    banlist: [],
+    archetype: [],
+    staple: [],
+    hasEffect: [],
+  };
+  window.multiTextFilters = { fname: [], desc: [], atk: [], def: [], priceRanges: [], genesysPt: [] };
+  const _resetComboIds = [
+    'filter-type-input',
+    'filter-subtype-input',
+    'filter-monster-race-input',
+    'filter-spell-race-input',
+    'filter-trap-race-input',
+    'filter-attribute-input',
+    'filter-level-input',
+    'filter-linkval-input',
+    'filter-linkmarker-input',
+    'filter-scale-input',
+    'filter-archetype-input',
+    'filter-era-input',
+    'filter-date-region-input',
+    'filter-banlist-input',
+    'filter-staple-input',
+    'filter-haseffect-input',
+    'filter-tcgocg-banstatus-input',
+  ];
+  for (let _ri = 0; _ri < _resetComboIds.length; _ri++) setVal(_resetComboIds[_ri], '');
+  syncMonsterFilterGroups();
+  refreshSubtypeRaceDatalists();
+  paintComboFilterChips();
+  setVal('filter-price-min', '');
+  setVal('filter-price-max', '');
+  setVal('filter-genesys-pt', '');
+  window.selectedCardsetNames = [];
+  window.selectedSetCodes = [];
+  window.selectedRarities = [];
+  window.selectedMdRarities = [];
+  window.selectedTcgOcgBanlistStatuses = [];
+  setVal('filter-cardset-input', '');
+  setVal('filter-setcode-input', '');
+  setVal('filter-rarity-input', '');
+  setVal('filter-md-rarity-input', '');
+  setVal('filter-tcgocg-banstatus-input', '');
+  renderCardsetFilterChips();
+  renderSetcodeFilterChips();
+  renderRarityFilterChips();
+  renderMdRarityFilterChips();
+  renderTcgOcgBanlistStatusFilterChips();
+  paintAllMultiTextChips();
+}
+
+/**
+ * Chave de atributo API (`light`, …) a partir de `card.attribute`.
+ *
+ * @param {object|null|undefined} card
+ * @returns {string|null}
+ */
+function tooltipApiAttributeKeyFromCard(card) {
+  const a = card && card.attribute;
+  if (a == null || String(a).trim() === '') return null;
+  const low = String(a).trim().toLowerCase();
+  if (FILTER_ATTR_API_KEYS_SET.has(low)) return low;
+  return resolveAttributeInput(String(a)) || null;
+}
+
+/**
+ * Aplica filtros de busca a partir de um clique no tooltip/modal de detalhes e relança a pesquisa.
+ *
+ * @param {Record<string, unknown>} spec Objeto `{ k: string, ... }` vindo de `data-ts`.
+ * @returns {void}
+ */
+function applyDeckSearchFromTooltipSpec(spec) {
+  if (!spec || typeof spec !== 'object') return;
+  const k = spec.k;
+  if (!k || typeof k !== 'string') return;
+  const allowedKinds = new Set([
+    'monster_attr',
+    'type_category',
+    'monster_level',
+    'monster_race',
+    'monster_subtype',
+    'linkval',
+    'link_marker',
+    'pendulum_scale',
+    'archetype',
+    'banlist',
+    'banlist_status',
+    'setcode',
+    'cardset',
+    'rarity',
+    'passcode',
+    'konami_digits',
+    'atk_eq',
+    'def_eq',
+    'master_duel',
+    'genesys_points_eq',
+    'search_name',
+    'release_date',
+    'spell_trap_race',
+    'printing_price',
+  ]);
+  if (!allowedKinds.has(k)) return;
+  try {
+    resetDeckbuilderFiltersNoSearch();
+    const st = window.filterChipState;
+    const push1 = (key, val, max = 99) => {
+      if (val == null || val === '') return;
+      const s = String(val);
+      if (!st[key]) st[key] = [];
+      if (st[key].includes(s)) return;
+      if (st[key].length >= max) return;
+      st[key].push(s);
+    };
+    switch (k) {
+      case 'monster_attr': {
+        push1('typeCategory', 'Monster');
+        const at = String(spec.attribute || '').toLowerCase();
+        if (FILTER_ATTR_API_KEYS_SET.has(at)) push1('attribute', at);
+        break;
+      }
+      case 'type_category': {
+        const tc = String(spec.tc || '');
+        if (FILTER_TYPE_DL_V_SET.has(tc)) push1('typeCategory', tc);
+        break;
+      }
+      case 'monster_level': {
+        push1('typeCategory', 'Monster');
+        const lv = resolveLevelInput(String(spec.lv != null ? spec.lv : ''));
+        if (lv) push1('level', lv);
+        break;
+      }
+      case 'monster_race': {
+        push1('typeCategory', 'Monster');
+        const r = resolveMonsterRaceInput(String(spec.race || ''));
+        if (r) push1('race', r);
+        break;
+      }
+      case 'monster_subtype': {
+        push1('typeCategory', 'Monster');
+        const sub = resolveSubtypeInput(String(spec.subtype || ''));
+        if (sub) push1('subtype', sub);
+        break;
+      }
+      case 'linkval': {
+        push1('typeCategory', 'Monster');
+        const lk = resolveLinkValInput(String(spec.lk != null ? spec.lk : ''));
+        if (lk) push1('linkval', lk);
+        break;
+      }
+      case 'link_marker': {
+        push1('typeCategory', 'Monster');
+        const rawLm = String(spec.lm || '').trim();
+        const lm =
+          resolveLinkMarkerInput(rawLm.replace(/-/g, ' ')) || resolveLinkMarkerInput(rawLm);
+        if (lm) push1('linkmarker', lm);
+        break;
+      }
+      case 'pendulum_scale': {
+        push1('typeCategory', 'Monster');
+        const ps = resolveScaleInput(String(spec.scale != null ? spec.scale : ''));
+        if (ps) push1('scale', ps);
+        break;
+      }
+      case 'archetype': {
+        const ar = resolveArchetypeNameFromInput(String(spec.name || '').trim());
+        if (ar) push1('archetype', ar);
+        else showToast(T('toast.value_unknown'));
+        break;
+      }
+      case 'banlist': {
+        const bn = resolveBanlistInput(String(spec.fmt || '').trim());
+        if (bn) push1('banlist', bn);
+        else showToast(T('toast.tooltip_search_format'));
+        break;
+      }
+      case 'banlist_status': {
+        const bn = resolveBanlistInput(String(spec.fmt || '').trim());
+        if (bn) push1('banlist', bn);
+        else showToast(T('toast.tooltip_search_format'));
+        const bucket = normalizeTcgOcgBanlistStatusToken(spec.bucket);
+        if (bucket && (bn === 'tcg' || bn === 'ocg')) {
+          window.selectedTcgOcgBanlistStatuses = [bucket];
+        }
+        break;
+      }
+      case 'setcode': {
+        const code = normalizeSetCodeInput(spec.code);
+        if (code.length >= 3) {
+          if (!window.selectedSetCodes) window.selectedSetCodes = [];
+          window.selectedSetCodes.push(code);
+        } else showToast(T('toast.setcode_short'));
+        break;
+      }
+      case 'cardset': {
+        const nm = resolveCardsetNameFromInput(String(spec.name || '').trim());
+        if (nm) {
+          if (!window.selectedCardsetNames) window.selectedCardsetNames = [];
+          window.selectedCardsetNames.push(nm);
+        } else showToast(allCardsetsCatalog.length ? T('toast.set_not_found') : T('toast.sets_loading'));
+        break;
+      }
+      case 'rarity': {
+        if (!applyRarityPreviewRow(spec.rarity)) showToast(T('toast.rarity_short'));
+        break;
+      }
+      case 'passcode': {
+        const id = String(spec.id || '').trim();
+        if (/^\d{5,}$/.test(id)) {
+          if (!window.multiTextFilters.fname) window.multiTextFilters.fname = [];
+          window.multiTextFilters.fname.push(id);
+        }
+        break;
+      }
+      case 'konami_digits': {
+        let kid = String(spec.kid || '').trim();
+        if (!/^\d+$/.test(kid)) break;
+        if (kid.length < 5) kid = kid.padStart(5, '0');
+        if (!window.multiTextFilters.fname) window.multiTextFilters.fname = [];
+        window.multiTextFilters.fname.push(kid);
+        break;
+      }
+      case 'atk_eq': {
+        push1('typeCategory', 'Monster');
+        const n = int10(spec.n, NaN);
+        if (Number.isFinite(n)) {
+          const v = makeApiNumericFilterValue('eq', n);
+          if (v) {
+            if (!window.multiTextFilters.atk) window.multiTextFilters.atk = [];
+            window.multiTextFilters.atk.push(v);
+          }
+        }
+        break;
+      }
+      case 'def_eq': {
+        push1('typeCategory', 'Monster');
+        const n = int10(spec.n, NaN);
+        if (Number.isFinite(n)) {
+          const v = makeApiNumericFilterValue('eq', n);
+          if (v) {
+            if (!window.multiTextFilters.def) window.multiTextFilters.def = [];
+            window.multiTextFilters.def.push(v);
+          }
+        }
+        break;
+      }
+      case 'master_duel': {
+        push1('banlist', 'master duel');
+        const mdF = normalizeMasterDuelFilterRarityToken(spec.md != null ? spec.md : spec.rarity);
+        if (mdF) {
+          window.selectedMdRarities = [mdF];
+        }
+        break;
+      }
+      case 'genesys_points_eq': {
+        const n = int10(spec.pts, NaN);
+        if (!Number.isFinite(n)) break;
+        const s = String(Math.trunc(n));
+        push1('banlist', 'genesys');
+        if (!window.multiTextFilters.genesysPt) window.multiTextFilters.genesysPt = [];
+        if (!window.multiTextFilters.genesysPt.includes(s)) window.multiTextFilters.genesysPt.push(s);
+        setVal('sort-by', 'genesys_points');
+        setUiPref(UI_PREF_KEYS.resultsSort, 'genesys_points');
+        if (typeof syncNativeCustomSelectTrigger === 'function') syncNativeCustomSelectTrigger('sort-by');
+        break;
+      }
+      case 'search_name': {
+        const q = String(spec.q || '').trim();
+        if (q) setVal('search-input', q);
+        break;
+      }
+      case 'release_date': {
+        const iso = String(spec.iso || '').trim();
+        const reg = spec.region === 'ocg' ? 'ocg' : 'tcg';
+        if (!iso || !isValidCalendarIsoDate(iso)) break;
+        push1('dateRegion', reg);
+        setVal('date-start', iso);
+        setVal('date-end', iso);
+        break;
+      }
+      case 'spell_trap_race': {
+        const tc = String(spec.tc || '');
+        if (!FILTER_TYPE_DL_V_SET.has(tc)) break;
+        push1('typeCategory', tc);
+        const rawR = String(spec.race || '').trim();
+        const rSpell = tc === 'Spell Card' ? resolveSpellRaceInput(rawR) : null;
+        const rTrap = tc === 'Trap Card' ? resolveTrapRaceInput(rawR) : null;
+        const r = rSpell || rTrap;
+        if (r) {
+          if (tc === 'Spell Card') push1('spellRace', r);
+          else if (tc === 'Trap Card') push1('trapRace', r);
+        }
+        break;
+      }
+      case 'printing_price': {
+        const mn = String(spec.min != null ? spec.min : '').trim();
+        const mx = String(spec.max != null ? spec.max : '').trim();
+        const lo = mn || mx;
+        const hi = mx || mn;
+        if (!lo && !hi) break;
+        if (lo && hi) {
+          const a = floatNum(lo, NaN),
+            b = floatNum(hi, NaN);
+          if (Number.isFinite(a) && Number.isFinite(b) && a > b) break;
+        }
+        if (!window.multiTextFilters.priceRanges) window.multiTextFilters.priceRanges = [];
+        window.multiTextFilters.priceRanges.push({
+          id: `tt-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
+          min: lo,
+          max: hi,
+        });
+        break;
+      }
+    }
+    syncMonsterFilterGroups();
+    refreshSubtypeRaceDatalists();
+    paintComboFilterChips();
+    renderCardsetFilterChips();
+    renderSetcodeFilterChips();
+    renderRarityFilterChips();
+    renderMdRarityFilterChips();
+    paintAllMultiTextChips();
+    renderTcgOcgBanlistStatusFilterChips();
+    closeTooltipDetailsModal();
+    hideTooltip();
+    currentPage = 1;
+    const col = getEl('col-results');
+    if (col) {
+      try {
+        col.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      } catch (_) {}
+    }
+    void performSearch(true).finally(() => pushDeckbuilderFilterUrlToHistory());
+  } catch (e) {
+    console.warn(e);
+    showToast(T('toast.tooltip_search_fail'));
+  }
+}
+
+/**
+ * Preenche `#card-tooltip`: layout mobile vs desktop, nome, imagem, beta/arquétipo, banlist, stats e texto.
+ * No hover desktop omite impressões, chips de formato e preços (mantém datas de lançamento e IDs).
  *
  * @param {object|null|undefined} card Objeto carta da API ou mesclado.
  * @returns {void}
@@ -20328,6 +22208,11 @@ function fillTooltipData(card) {
       ? card.desc_pt || card.desc || ''
       : card.desc || card.desc_pt || '';
   const isMobile = window.innerWidth < 900;
+  const inDetailsModal = tt.classList.contains('tt-in-modal');
+  const richTooltipDetails = inDetailsModal || isMobile;
+  /** Hover em desktop: tooltip mais compacto (não tapa outras cartas). Modal / mobile mantêm tudo. */
+  const hideHeavyTooltipMeta = !inDetailsModal && !isMobile;
+  const ttSearchTitleEsc = escAttr(T('ui.tooltip_search_title'));
   const colorKey = getTypeColorKeyFromCardType(card.type);
   const cardColor = RESULT_TYPE_COLORS[colorKey] || 'var(--accent)';
   const typeBgHex = RESULT_TYPE_COLORS[colorKey] || null;
@@ -20401,7 +22286,18 @@ function fillTooltipData(card) {
   tt.style.borderLeft = isMobile ? 'none' : `6px solid ${cardColor}`;
   const nameElement = getEl('tooltip-name');
   if (nameElement) {
-    nameElement.innerText = displayNameForApiCard(card);
+    const displayNm = displayNameForApiCard(card);
+    const nameQ = String(displayNm || '').trim();
+    if (richTooltipDetails && nameQ) {
+      nameElement.innerHTML = ttDeckSearchSpan(
+        { k: 'search_name', q: nameQ },
+        'tt-tooltip-name-search',
+        escapeHtml(displayNm),
+        ttSearchTitleEsc
+      );
+    } else {
+      nameElement.textContent = displayNm;
+    }
     nameElement.style.color = cardColor;
     nameElement.style.fontSize = isMobile ? '1.3em' : '1.0em';
     nameElement.style.fontWeight = 'bold';
@@ -20413,7 +22309,15 @@ function fillTooltipData(card) {
   if (betaRowEl) {
     if (shouldShowBetaNameInTooltip(card)) {
       const beta = getCardBetaNameForTooltip(card);
-      betaRowEl.innerHTML = `<span class="tt-beta-name-label">${escapeHtml(T('ui.tooltip_beta_name'))}</span><span class="tt-beta-name-value">${escapeHtml(beta)}</span>`;
+      const betaValHtml = richTooltipDetails
+        ? ttDeckSearchSpan(
+            { k: 'search_name', q: String(beta).trim() },
+            'tt-beta-name-value tt-beta-name-search',
+            escapeHtml(beta),
+            ttSearchTitleEsc
+          )
+        : `<span class="tt-beta-name-value">${escapeHtml(beta)}</span>`;
+      betaRowEl.innerHTML = `<span class="tt-beta-name-label">${escapeHtml(T('ui.tooltip_beta_name'))}</span>${betaValHtml}`;
       betaRowEl.style.display = 'block';
       betaRowEl.setAttribute('aria-hidden', 'false');
     } else {
@@ -20427,7 +22331,11 @@ function fillTooltipData(card) {
   if (archRowEl) {
     if (archListTt.length) {
       const archJoined = archListTt
-        .map((a) => `<span>${escAttr(a)}</span>`)
+        .map((a) =>
+          richTooltipDetails
+            ? ttDeckSearchSpan({ k: 'archetype', name: a }, 'tt-arch-search', escapeHtml(String(a)), ttSearchTitleEsc)
+            : `<span>${escapeHtml(String(a))}</span>`
+        )
         .join(' <span style="opacity:.55">·</span> ');
       archRowEl.innerHTML = `<span style="color:var(--accent);font-weight:600;">${T('ui.archetype_prefix')}</span> ${archJoined}`;
       archRowEl.style.display = 'block';
@@ -20459,14 +22367,35 @@ function fillTooltipData(card) {
     }
     const banContainer = document.createElement('div');
     banContainer.className = 'tt-ban-container';
-    banContainer.innerHTML = `<div class="tt-ban-badge ${cssClass}">${icon} <span>${label}</span></div>`;
+    const fmtEsc = escapeHtml(getBanlistFormatDisplayLabel(banlistType));
+    const statusBucket = banlistInfoStatusToBucket(status);
+    const fmtRaw = String(banlistType || '').trim();
+    const badgeInner = `${icon} <span class="tt-ban-status">${escapeHtml(
+      label
+    )}</span><span class="tt-ban-format"> · ${fmtEsc}</span>`;
+    if (richTooltipDetails && statusBucket && fmtRaw) {
+      banContainer.innerHTML = ttDeckSearchSpan(
+        { k: 'banlist_status', fmt: fmtRaw, bucket: statusBucket },
+        `tt-ban-badge ${cssClass}`,
+        badgeInner,
+        ttSearchTitleEsc
+      );
+    } else {
+      banContainer.innerHTML = `<div class="tt-ban-badge ${cssClass}">${badgeInner}</div>`;
+    }
     const archAnchor = getEl('tooltip-archetype-row');
     if (archAnchor) archAnchor.after(banContainer);
     else if (nameElement) nameElement.after(banContainer);
     else tt.prepend(banContainer);
   }
-  let infoHtml = `<div style="display: flex; flex-direction: column; gap: 8px; width: 100%;">`;
-  const separatorHtml = `<hr style="border: 0; border-top: 1px solid #444; margin: 4px 0; opacity: 1;">`;
+  const useCardSectionLayout = inDetailsModal || !isMobile;
+  const separatorHtml = useCardSectionLayout
+    ? ''
+    : `<hr style="border: 0; border-top: 1px solid #444; margin: 4px 0; opacity: 1;">`;
+  const statsColOpen = `<div style="display: flex; flex-direction: column; gap: 8px; width: 100%;">`;
+  let infoHtml = useCardSectionLayout
+    ? `<div class="tt-modal-sec tt-modal-sec--stats">${statsColOpen}`
+    : statsColOpen;
   const gpRawTt =
     card && card.genesys_points != null
       ? card.genesys_points
@@ -20474,17 +22403,37 @@ function fillTooltipData(card) {
         ? card.misc_info[0].genesys_points
         : null;
   const gpValTt = gpRawTt == null ? null : Number(gpRawTt);
+  const gpLblShort = !siteUiIsPt() ? 'GENESYS POINTS' : 'PONTOS GENESYS';
+  let gpPillHtml = '';
   if (Number.isFinite(gpValTt) && gpValTt > 0) {
-    infoHtml += `<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:11px; font-weight:800; letter-spacing:.03em;">
-                            <span style="display:inline-flex; align-items:center; gap:6px; padding:3px 8px; border-radius:999px; border:1px solid rgba(255,255,255,0.18); background:rgba(0,0,0,0.18);">
-                                <i class="fa-solid fa-star" style="color:var(--accent); font-size:12px;"></i>
-                                <span style="color:#fff;">${!siteUiIsPt() ? 'GENESYS POINTS' : 'PONTOS GENESYS'}:</span>
-                                <span style="color:var(--accent);">${Math.trunc(gpValTt)}</span>
-                            </span>
-                        </div>`;
+    const gpTrunc = Math.trunc(gpValTt);
+    const gpInnerPlain =
+      `<span style="display:inline-flex; align-items:center; gap:6px;">` +
+      `<i class="fa-solid fa-star" style="color:var(--accent); font-size:12px;"></i>` +
+      `<span style="color:#fff;">${escapeHtml(gpLblShort)}:</span>` +
+      `<span style="color:var(--accent);">${escapeHtml(String(gpTrunc))}</span></span>`;
+    if (richTooltipDetails) {
+      gpPillHtml =
+        `<span style="display:inline-flex; align-items:center; padding:3px 8px; border-radius:999px; border:1px solid rgba(255,255,255,0.18); background:rgba(0,0,0,0.18); font-size:11px; font-weight:800; letter-spacing:.03em;">` +
+        ttDeckSearchSpan(
+          { k: 'genesys_points_eq', pts: gpTrunc },
+          'tt-genesys-points-search',
+          gpInnerPlain,
+          ttSearchTitleEsc
+        ) +
+        `</span>`;
+    } else {
+      gpPillHtml =
+        `<span style="display:inline-flex; align-items:center; padding:3px 8px; border-radius:999px; border:1px solid rgba(255,255,255,0.18); background:rgba(0,0,0,0.18); font-size:11px; font-weight:800; letter-spacing:.03em;">` +
+        gpInnerPlain +
+        `</span>`;
+    }
   }
   const mdRarityTt = pickMasterDuelRarity(card);
-  if (mdRarityTt) {
+  // Linha MASTER DUEL + raridade: só quando o formato da listagem/detalhe for Master Duel.
+  const showMasterDuelTooltipLine = Boolean(mdRarityTt) && isMasterDuelFormatFiltered();
+  let mdOutsideModalHtml = '';
+  if (showMasterDuelTooltipLine) {
     const mdIcon = masterDuelRarityIconUrl(mdRarityTt);
     const mdBg =
       mdRarityTt === 'UR'
@@ -20502,22 +22451,42 @@ function fillTooltipData(card) {
           : mdRarityTt === 'R'
             ? 'rgba(59, 130, 246, 0.38)'
             : 'rgba(148, 163, 184, 0.38)';
-    infoHtml += `<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:11px; font-weight:900; letter-spacing:.03em;">
-                            <span style="display:inline-flex; align-items:center; gap:8px; padding:3px 10px; border-radius:999px; border:1px solid ${mdBd}; background:${mdBg};">
-                                <span style="opacity:.9;">MASTER DUEL</span>
-                                <span style="display:inline-flex; align-items:center; gap:6px; background:rgba(0,0,0,0.18); border:1px solid rgba(255,255,255,0.14); padding:2px 8px; border-radius:999px; font-variant-numeric:tabular-nums;">
+    const mdMasterSeg = richTooltipDetails
+      ? ttDeckSearchSpan(
+          { k: 'master_duel' },
+          'tt-md-banner-search',
+          '<span style="opacity:.9;">MASTER DUEL</span>',
+          ttSearchTitleEsc
+        )
+      : `<span style="opacity:.9;">MASTER DUEL</span>`;
+    const mdRarityInner = `<span class="tt-md-rarity-pill"><img src="${escAttr(mdIcon)}" alt="${escAttr(mdRarityTt)}" style="width:16px;height:16px;object-fit:contain;vertical-align:-2px;"><span>${escapeHtml(mdRarityTt)}</span></span>`;
+    const mdRaritySeg = richTooltipDetails
+      ? ttDeckSearchSpan({ k: 'master_duel', md: mdRarityTt }, 'tt-md-rarity-banner-search', mdRarityInner, ttSearchTitleEsc)
+      : `<span style="display:inline-flex; align-items:center; gap:6px; background:rgba(0,0,0,0.18); border:1px solid rgba(255,255,255,0.14); padding:2px 8px; border-radius:999px; font-variant-numeric:tabular-nums;">
                                     <img src="${escAttr(mdIcon)}" alt="${escAttr(mdRarityTt)}" style="width:16px;height:16px;object-fit:contain;vertical-align:-2px;">
                                     <span>${escapeHtml(mdRarityTt)}</span>
-                                </span>
-                            </span>
+                                </span>`;
+    const mdTrail = gpPillHtml ? `<span style="display:inline-flex; align-items:center; margin-left:4px;">${gpPillHtml}</span>` : '';
+    const mdLineHtml = `<div class="tt-tooltip-md-line" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:11px; font-weight:900; letter-spacing:.03em;">
+                            <span style="display:inline-flex; align-items:center; gap:8px; padding:3px 10px; border-radius:999px; border:1px solid ${mdBd}; background:${mdBg};">
+                                ${mdMasterSeg}
+                                ${mdRaritySeg}
+                            </span>${mdTrail}
                         </div>`;
+    if (useCardSectionLayout) mdOutsideModalHtml = `<div class="tt-modal-md-outside">${mdLineHtml}</div>`;
+    else infoHtml += mdLineHtml;
+  } else if (gpPillHtml) {
+    const mdLineHtmlGp = `<div class="tt-tooltip-md-line" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:11px; font-weight:900; letter-spacing:.03em;">${gpPillHtml}</div>`;
+    if (useCardSectionLayout) mdOutsideModalHtml = `<div class="tt-modal-md-outside">${mdLineHtmlGp}</div>`;
+    else infoHtml += mdLineHtmlGp;
   }
-  // (MD) Tooltip: manter só a primeira linha (Master Duel).
   const ft = getFrameType(card);
   const cardTypeRawTt = String(card.type || '');
   const cardTypeUTt = cardTypeRawTt.toUpperCase();
   const cardTypeLTt = cardTypeRawTt.toLowerCase();
   const isLinkTt = frameTypeIsLink(ft) || cardTypeLTt.includes('link');
+  const isSpellCardForTt = frameTypeIsSpell(ft) || cardTypeRawTt.includes('Spell');
+  const isTrapCardForTt = frameTypeIsTrap(ft) || cardTypeRawTt.includes('Trap');
   if (
     card.attribute ||
     frameTypeIsSpell(ft) ||
@@ -20538,22 +22507,36 @@ function fillTooltipData(card) {
         : frameTypeIsTrap(ft) || cardTypeRawTt.includes('Trap')
           ? T('ui.trap_attr')
           : attrDisplayName(card.attribute ? card.attribute.toUpperCase() : '');
+    const apiAttrKeyRow = tooltipApiAttributeKeyFromCard(card);
+    const attrHeadInner = `<img src="${escAttr(iconUrl)}" style="width:20px; height:20px; object-fit:contain;" alt=""><span>${escapeHtml(labelText)}</span>`;
+    const attrHeadHtml =
+      richTooltipDetails && apiAttrKeyRow && !isSpellCardForTt && !isTrapCardForTt
+        ? ttDeckSearchSpan({ k: 'monster_attr', attribute: apiAttrKeyRow }, 'tt-attr-head-search', attrHeadInner, ttSearchTitleEsc)
+        : richTooltipDetails && isSpellCardForTt
+          ? ttDeckSearchSpan({ k: 'type_category', tc: 'Spell Card' }, 'tt-spell-type-search tt-attr-head-search', attrHeadInner, ttSearchTitleEsc)
+          : richTooltipDetails && isTrapCardForTt
+            ? ttDeckSearchSpan({ k: 'type_category', tc: 'Trap Card' }, 'tt-trap-type-search tt-attr-head-search', attrHeadInner, ttSearchTitleEsc)
+            : `<div style="display: flex; align-items: center; gap: 4px; color: #ffffff;">${attrHeadInner}</div>`;
     infoHtml += `<div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
-                            <div style="display: flex; align-items: center; gap: 4px; color: #ffffff;">
-                                <img src="${escAttr(iconUrl)}" style="width:20px; height:20px; object-fit:contain;">
-                                <span>${escapeHtml(labelText)}</span>
-                            </div>`;
+                            ${attrHeadHtml}`;
     if (cardHasPendulumScale(card)) {
-      infoHtml += getPendulumScaleHtml(card.scale, isMobile ? 16 : 15);
+      infoHtml += getPendulumScaleHtml(card.scale, isMobile ? 16 : 15, richTooltipDetails);
     }
     if ((card.level || card.rank) && !isLinkTt) {
-      infoHtml += `<div style="display: flex; align-items: center; gap: 4px; color: #ffffff; margin-left: 5px;">
-                                <img src="${escAttr(starIcon)}" style="width:16px; height:16px; ${frameTypeIsXyz(ft) || cardTypeUTt.includes('XYZ') ? 'filter:invert(1) brightness(0.5);' : ''}">
-                                <span>${escapeHtml(String(card.level != null ? card.level : card.rank != null ? card.rank : ''))}</span>
+      const lvVal = card.level != null ? card.level : card.rank != null ? card.rank : '';
+      const lvStr = escapeHtml(String(lvVal));
+      const starHtml = `<img src="${escAttr(starIcon)}" style="width:16px; height:16px; ${frameTypeIsXyz(ft) || cardTypeUTt.includes('XYZ') ? 'filter:invert(1) brightness(0.5);' : ''}" alt="">`;
+      const lvInner = `${starHtml}<span>${lvStr}</span>`;
+      const lvSeg =
+        richTooltipDetails && lvStr !== ''
+          ? ttDeckSearchSpan({ k: 'monster_level', lv: lvVal }, 'tt-level-search', lvInner, ttSearchTitleEsc)
+          : `<div style="display: flex; align-items: center; gap: 4px; color: #ffffff; margin-left: 5px;">
+                                ${starHtml}<span>${lvStr}</span>
                             </div>`;
+      infoHtml += lvSeg;
     }
     if (isLinkTt && card.linkmarkers && card.linkmarkers.length) {
-      infoHtml += `<div style="display: flex; align-items: center; margin-left: 4px;">${getLinkMarkersHtml(card.linkmarkers, isMobile ? 17 : 16)}</div>`;
+      infoHtml += `<div style="display: flex; align-items: center; margin-left: 4px;">${getLinkMarkersHtml(card.linkmarkers, isMobile ? 17 : 16, richTooltipDetails)}</div>`;
     }
     infoHtml += `</div>`;
   }
@@ -20561,25 +22544,76 @@ function fillTooltipData(card) {
   const raceTraduzida = !siteUiIsPt()
     ? card.race || T('ui.race_unknown')
     : RACE_PT_LABEL[card.race] || card.race || T('ui.race_unknown');
+  const isMonsterCardForTt =
+    !frameTypeIsSpell(ft) &&
+    !frameTypeIsTrap(ft) &&
+    !cardTypeRawTt.includes('Spell') &&
+    !cardTypeRawTt.includes('Trap') &&
+    String(card.type || '')
+      .toLowerCase()
+      .includes('monster');
+  const spellTrapTcApi = isSpellCardForTt ? 'Spell Card' : isTrapCardForTt ? 'Trap Card' : '';
+  const tipoParts = String(tipoTexto || '')
+    .split(/\s*\/\s*/)
+    .map((x) => x.trim())
+    .filter(Boolean);
+  const raceInner = `<img src="${escAttr(ygoRaceIconUrl(card.race))}" style="width: 14px; height: 14px;" onerror="this.style.display='none'"><span>${escapeHtml(String(raceTraduzida ?? ''))}</span>`;
+  const raceGroupHtml =
+    richTooltipDetails && isMonsterCardForTt && card.race
+      ? `<span class="card-race-type-group card-race-type-group--with-slash">${ttDeckSearchSpan({ k: 'monster_race', race: card.race }, 'tt-race-search tt-race-type-inner', raceInner, ttSearchTitleEsc)}</span>`
+      : richTooltipDetails && (isSpellCardForTt || isTrapCardForTt) && card.race && spellTrapTcApi
+        ? `<span class="card-race-type-group card-race-type-group--with-slash">${ttDeckSearchSpan({ k: 'spell_trap_race', tc: spellTrapTcApi, race: card.race }, 'tt-spell-race-search tt-race-type-inner', raceInner, ttSearchTitleEsc)}</span>`
+        : `<span class="card-race-type-group card-race-type-group--with-slash">${raceInner}</span>`;
+  const typeIconHtml = `<img src="${escAttr(ygoMonsterTypeIconUrl(card.type))}" style="width: 14px; height: 14px; border-radius: 2px;" onerror="this.style.display='none'">`;
+  const typeInnerPlain = `${typeIconHtml}<span>${escapeHtml(String(tipoTexto ?? ''))}</span>`;
+  let typeGroupHtml;
+  if (richTooltipDetails && isMonsterCardForTt && card.type) {
+    typeGroupHtml = `<span class="card-race-type-group">${ttDeckSearchSpan({ k: 'monster_subtype', subtype: card.type }, 'tt-subtype-search tt-race-type-inner', typeInnerPlain, ttSearchTitleEsc)}</span>`;
+  } else if (richTooltipDetails && (isSpellCardForTt || isTrapCardForTt) && spellTrapTcApi) {
+    if (tipoParts.length >= 2 && card.race) {
+      const p0 = tipoParts[0];
+      const p1 = tipoParts.slice(1).join(' / ');
+      const splitInner = `${typeIconHtml}${ttDeckSearchSpan({ k: 'type_category', tc: spellTrapTcApi }, 'tt-spell-type-split', escapeHtml(p0), ttSearchTitleEsc)}<span style="opacity:.55"> / </span>${ttDeckSearchSpan({ k: 'spell_trap_race', tc: spellTrapTcApi, race: card.race }, 'tt-spell-race-split', escapeHtml(p1), ttSearchTitleEsc)}`;
+      typeGroupHtml = `<span class="card-race-type-group"><span class="tt-race-type-inner" style="display:inline-flex;align-items:center;gap:4px;flex-wrap:wrap;">${splitInner}</span></span>`;
+    } else if (card.race) {
+      typeGroupHtml = `<span class="card-race-type-group">${ttDeckSearchSpan({ k: 'spell_trap_race', tc: spellTrapTcApi, race: card.race }, 'tt-spell-type-combo tt-race-type-inner', typeInnerPlain, ttSearchTitleEsc)}</span>`;
+    } else {
+      typeGroupHtml = `<span class="card-race-type-group">${ttDeckSearchSpan({ k: 'type_category', tc: spellTrapTcApi }, 'tt-spell-type-cat tt-race-type-inner', typeInnerPlain, ttSearchTitleEsc)}</span>`;
+    }
+  } else {
+    typeGroupHtml = `<span class="card-race-type-group">${typeInnerPlain}</span>`;
+  }
   infoHtml += `<div class="card-race-type-row" style="color: #ffffff; font-size: 11px; margin-bottom: 8px;">
                         <span>[</span>
-                        <span class="card-race-type-group card-race-type-group--with-slash">
-                        <img src="${escAttr(ygoRaceIconUrl(card.race))}" style="width: 14px; height: 14px;" onerror="this.style.display='none'">
-                        <span>${escapeHtml(String(raceTraduzida ?? ''))}</span>
-                        </span>
-                        <span class="card-race-type-group">
-                        <img src="${escAttr(ygoMonsterTypeIconUrl(card.type))}" style="width: 14px; height: 14px; border-radius: 2px;" onerror="this.style.display='none'">
-                        <span>${escapeHtml(String(tipoTexto ?? ''))}</span>
-                        </span>
+                        ${raceGroupHtml}
+                        ${typeGroupHtml}
                         <span> ]</span>
                     </div>`;
   if (card.atk !== undefined) {
+    const atkStr = escapeHtml(String(card.atk != null ? card.atk : ''));
+    const atkN = int10(card.atk, NaN);
+    const atkValHtml =
+      richTooltipDetails && Number.isFinite(atkN)
+        ? `<button type="button" class="tt-deck-search-link tt-atk-search" data-ts="${tooltipSearchEncodeSpec({ k: 'atk_eq', n: atkN })}" title="${ttSearchTitleEsc}" style="color:#ffffff;background:none;border:none;padding:0;cursor:pointer;font:inherit;">${atkStr}</button>`
+        : `<span style="color: #ffffff;">${atkStr}</span>`;
+    const defStr = escapeHtml(String(card.def != null ? card.def : ''));
+    const defN = int10(card.def, NaN);
+    const defValHtml =
+      richTooltipDetails && !isLinkTt && Number.isFinite(defN)
+        ? `<button type="button" class="tt-deck-search-link tt-def-search" data-ts="${tooltipSearchEncodeSpec({ k: 'def_eq', n: defN })}" title="${ttSearchTitleEsc}" style="color:#ffffff;background:none;border:none;padding:0;cursor:pointer;font:inherit;">${defStr}</button>`
+        : `<span style="color: #ffffff;">${defStr}</span>`;
+    const linkStr = escapeHtml(String(card.linkval != null ? card.linkval : ''));
+    const linkN = int10(card.linkval, NaN);
+    const linkValHtml =
+      richTooltipDetails && isLinkTt && Number.isFinite(linkN)
+        ? `<button type="button" class="tt-deck-search-link tt-linkval-search" data-ts="${tooltipSearchEncodeSpec({ k: 'linkval', lk: linkN })}" title="${ttSearchTitleEsc}" style="color:#ffffff;background:none;border:none;padding:0;cursor:pointer;font:inherit;">LINK-${linkStr}</button>`
+        : `<span>LINK-${linkStr}</span>`;
     infoHtml += `
             <div style="display: flex; gap: 15px; margin-bottom: 8px; font-size: 13px; font-weight: bold;">
                 <div style="display: flex; align-items: center; gap: 5px;">
                     <i class="fas fa-fist-raised" style="color: #4d94ff;"></i>
                     <span style="color: #4d94ff;">ATK/</span>
-                    <span style="color: #ffffff;">${escapeHtml(String(card.atk != null ? card.atk : ''))}</span>
+                    ${atkValHtml}
                 </div>
                 ${
                   !isLinkTt
@@ -20587,33 +22621,44 @@ function fillTooltipData(card) {
                     <div style="display: flex; align-items: center; gap: 5px;">
                         <i class="fas fa-shield-alt" style="color: #ff4d4d;"></i>
                         <span style="color: #ff4d4d;">DEF/</span>
-                        <span style="color: #ffffff;">${escapeHtml(String(card.def != null ? card.def : ''))}</span>
+                        ${defValHtml}
                     </div>
                 `
                     : `
                     <div style="display: flex; align-items: center; gap: 5px; color: #ffffff;">
-                        <span>LINK-${escapeHtml(String(card.linkval != null ? card.linkval : ''))}</span>
+                        ${linkValHtml}
                     </div>
                 `
                 }
             </div>`;
   }
   infoHtml += `</div>`;
+  if (useCardSectionLayout) infoHtml += `</div>`;
+  if (useCardSectionLayout && mdOutsideModalHtml) infoHtml = mdOutsideModalHtml + infoHtml;
   setHtml('tooltip-info-rows', infoHtml);
   let tcgDate = 'N/A',
     ocgDate = 'N/A';
+  let tcgIsoRaw = '',
+    ocgIsoRaw = '';
   if (card.misc_info && card.misc_info[0]) {
+    const m0 = card.misc_info[0];
+    const tcgRaw = m0.tcg_date != null ? String(m0.tcg_date).trim() : '';
+    const ocgRaw = m0.ocg_date != null ? String(m0.ocg_date).trim() : '';
+    if (tcgRaw && isValidCalendarIsoDate(tcgRaw)) tcgIsoRaw = tcgRaw;
+    if (ocgRaw && isValidCalendarIsoDate(ocgRaw)) ocgIsoRaw = ocgRaw;
     tcgDate =
       typeof formatDateBR !== 'undefined'
-        ? formatDateBR(card.misc_info[0].tcg_date)
-        : card.misc_info[0].tcg_date;
+        ? formatDateBR(m0.tcg_date)
+        : m0.tcg_date != null
+          ? String(m0.tcg_date)
+          : 'N/A';
     ocgDate =
       typeof formatDateBR !== 'undefined'
-        ? formatDateBR(card.misc_info[0].ocg_date)
-        : card.misc_info[0].ocg_date;
+        ? formatDateBR(m0.ocg_date)
+        : m0.ocg_date != null
+          ? String(m0.ocg_date)
+          : 'N/A';
   }
-  const p = getCardPricesFirst(card) || {};
-  const formatP = (val) => (!val || floatNum(val, NaN) === 0 ? T('price.not_found') : `${val}`);
   const cardIdDisplay = card.id !== undefined && card.id !== null ? String(card.id) : '—';
   const konamiRaw =
     card.misc_info &&
@@ -20623,26 +22668,24 @@ function fillTooltipData(card) {
       ? String(card.misc_info[0].konami_id)
       : '';
   const konamiDisplay = konamiRaw ? escapeHtml(konamiRaw) : '—';
-  const idHtml = `${separatorHtml}<div class="tt-card-id-row">
-            <span class="tt-card-id-pair"><span class="tt-card-id-label">ID</span><span class="tt-card-id-value">${escapeHtml(String(cardIdDisplay))}</span></span>
-            <span class="tt-card-id-pair"><span class="tt-konami-id-label">Konami</span><span class="tt-konami-id-value">${konamiDisplay}</span></span>
+  const passcodeIdHtml =
+    richTooltipDetails && /^\d{5,}$/.test(String(cardIdDisplay).trim())
+      ? ttDeckSearchSpan(
+          { k: 'passcode', id: String(cardIdDisplay).trim() },
+          'tt-passcode-search',
+          escapeHtml(String(cardIdDisplay)),
+          ttSearchTitleEsc
+        )
+      : escapeHtml(String(cardIdDisplay));
+  const konamiIdHtml =
+    richTooltipDetails && konamiRaw && /^\d+$/.test(konamiRaw.trim())
+      ? ttDeckSearchSpan({ k: 'konami_digits', kid: konamiRaw.trim() }, 'tt-konami-search', escapeHtml(konamiRaw), ttSearchTitleEsc)
+      : konamiDisplay;
+  const cardIdRowsHtml = `<div class="tt-card-id-row">
+            <span class="tt-card-id-pair"><span class="tt-card-id-label">ID</span><span class="tt-card-id-value">${passcodeIdHtml}</span></span>
+            <span class="tt-card-id-pair"><span class="tt-konami-id-label">Konami</span><span class="tt-konami-id-value">${konamiIdHtml}</span></span>
         </div>`;
-  const gpRaw =
-    card && card.genesys_points != null
-      ? card.genesys_points
-      : card && card.misc_info && card.misc_info[0] && card.misc_info[0].genesys_points != null
-        ? card.misc_info[0].genesys_points
-        : null;
-  const gpVal = gpRaw == null ? null : Number(gpRaw);
-  const genesysHtml =
-    Number.isFinite(gpVal) && gpVal > 0
-      ? `<div class="tt-card-id-row" style="margin-top:6px;">
-                   <span class="tt-card-id-pair">
-                       <span class="tt-card-id-label">${!siteUiIsPt() ? 'Genesys Points' : 'Pontos Genesys'}</span>
-                       <span class="tt-card-id-value">${Math.trunc(gpVal)}</span>
-                   </span>
-               </div>`
-      : '';
+  const idHtml = `${separatorHtml}${cardIdRowsHtml}`;
   const rawFormats =
     card.misc_info && card.misc_info[0] && Array.isArray(card.misc_info[0].formats)
       ? card.misc_info[0].formats
@@ -20661,9 +22704,12 @@ function fillTooltipData(card) {
     }
     if (list.length) {
       const chips = list
-        .map(
-          (s, i) => `<span class="tt-format-chip tt-format-chip--c${i % 8}">${escapeHtml(s)}</span>`
-        )
+        .map((s) => {
+          const fmtCls = tooltipFormatChipFmtClass(s);
+          return richTooltipDetails
+            ? ttDeckSearchSpan({ k: 'banlist', fmt: s }, `tt-format-chip ${fmtCls}`, escapeHtml(s), ttSearchTitleEsc)
+            : `<span class="tt-format-chip ${fmtCls}">${escapeHtml(s)}</span>`;
+        })
         .join('');
       formatsHtml = `<div class="tt-tooltip-formats">
                     <span style="color:var(--accent);font-weight:600;">${escapeHtml(T('ui.tooltip_formats'))}</span>
@@ -20671,18 +22717,20 @@ function fillTooltipData(card) {
                 </div>`;
     }
   }
-  const datesHtml = `<div class="tt-tooltip-dates"><span>📅 TCG: ${escapeHtml(String(tcgDate))}</span><span>📅 OCG: ${escapeHtml(String(ocgDate))}</span></div>`;
-  const pricesHtml = `<div style="margin-top: 4px; display: flex; flex-wrap: wrap; gap: 8px; font-size: 11px; color: #fff; font-weight: 500;">
-            <span title="TCGPlayer"><i class="fa-solid fa-store" style="color:var(--accent); font-size: 11px;"></i> TCG: ${escapeHtml(formatP(p.tcgplayer_price))}</span>
-            <span title="Cardmarket"><i class="fa-solid fa-m" style="color:var(--accent); font-size: 11px;"></i> CM: ${escapeHtml(formatP(p.cardmarket_price))}</span>
-            <span title="CoolStuffInc"><i class="fa-solid fa-bag-shopping" style="color:var(--accent); font-size: 11px;"></i> CSI: ${escapeHtml(formatP(p.coolstuffinc_price))}</span>
-            <span title="eBay"><i class="fa-brands fa-ebay" style="color:var(--accent); font-size: 14px;"></i> ${escapeHtml(formatP(p.ebay_price))}</span>
-            <span title="Amazon"><i class="fa-brands fa-amazon" style="color:var(--accent); font-size: 13px;"></i> ${escapeHtml(formatP(p.amazon_price))}</span>
-        </div>`;
+  const tcgDateBody =
+    richTooltipDetails && tcgIsoRaw
+      ? ttDeckSearchSpan({ k: 'release_date', region: 'tcg', iso: tcgIsoRaw }, 'tt-date-search', escapeHtml(String(tcgDate)), ttSearchTitleEsc)
+      : escapeHtml(String(tcgDate));
+  const ocgDateBody =
+    richTooltipDetails && ocgIsoRaw
+      ? ttDeckSearchSpan({ k: 'release_date', region: 'ocg', iso: ocgIsoRaw }, 'tt-date-search', escapeHtml(String(ocgDate)), ttSearchTitleEsc)
+      : escapeHtml(String(ocgDate));
+  const datesHtml = `<div class="tt-tooltip-dates"><span>📅 TCG: ${tcgDateBody}</span><span>📅 OCG: ${ocgDateBody}</span></div>`;
+  const pricesHtml = buildTooltipPricesHtml(card, richTooltipDetails);
   const ygoRefUrl = __tooltipShowYgoprodeckRef ? getYgoprodeckCardUrl(card) : '';
   const ygoRefHtml = ygoRefUrl
     ? `<div style="margin-top: 10px; display:flex; justify-content:flex-end;">
-                    <a href="${escAttr(ygoRefUrl)}" target="_blank" rel="noopener noreferrer" style="display:inline-flex; align-items:center; gap:8px; font-size:11px; color: var(--accent); text-decoration:none; font-weight:600;">
+                    <a class="tt-tooltip-ygoref" href="${escAttr(ygoRefUrl)}" target="_blank" rel="noopener noreferrer" style="display:inline-flex; align-items:center; gap:8px; font-size:11px; color: var(--accent); text-decoration:none; font-weight:600;">
                         <i class="fa-solid fa-arrow-up-right-from-square"></i>
                         <span>${!siteUiIsPt() ? 'View on YGOPRODeck' : 'Ver no YGOPRODeck'}</span>
                     </a>
@@ -20691,30 +22739,57 @@ function fillTooltipData(card) {
   let setsBlock = '';
   if (card.card_sets && card.card_sets.length) {
     const nSets = card.card_sets.length;
-    const setsCountLabel =
-      nSets > TOOLTIP_CARDSETS_MAX
-        ? T('ui.sets_partial', { max: TOOLTIP_CARDSETS_MAX, total: nSets })
-        : String(nSets);
-    const lines = formatCardSetsLinesHtml(card, TOOLTIP_CARDSETS_MAX);
     const printsHead = `${T('ui.prints_sets_head')} `;
-    if (isMobile) {
-      setsBlock = `<div class="tt-cardsets-block">
+    if (richTooltipDetails) {
+      const setsCountLabel = String(nSets);
+      const lines = formatCardSetsLinesHtml(card, undefined, richTooltipDetails);
+      setsBlock = `<div class="tt-cardsets-block tt-cardsets-block--rich${inDetailsModal ? ' tt-cardsets-block--in-modal' : ''}">
                     <div class="tt-cardsets-head">
                         <span style="font-weight:bold;color:var(--accent);"><i class="fa-solid fa-layer-group"></i> ${printsHead}<span style="opacity:0.85;font-weight:600;">(${setsCountLabel})</span></span>
                     </div>
                     <div class="tt-cardsets-scroll" tabindex="0" role="region" aria-label="${escAttr(T('ui.csp_scroll_aria'))}">${lines}</div>
                 </div>`;
     } else {
-      const gridInner = formatCardSetsTooltipGridHtml(card, TOOLTIP_CARDSETS_MAX);
+      const setsCountLabel =
+        nSets > TOOLTIP_CARDSETS_MAX
+          ? T('ui.sets_partial', { max: TOOLTIP_CARDSETS_MAX, total: nSets })
+          : String(nSets);
+      const gridInner = formatCardSetsTooltipGridHtml(card, TOOLTIP_CARDSETS_MAX, richTooltipDetails);
       setsBlock = `<div class="tt-cardsets-block tt-cardsets-block--compact"><div class="tt-cardsets-head"><span style="font-weight:bold;color:var(--accent);"><i class="fa-solid fa-layer-group"></i> ${printsHead}<span style="opacity:0.85;font-weight:600;">(${setsCountLabel})</span></span></div><div class="tt-cardsets-grid" role="list" aria-label="${escAttr(T('ui.csp_prints_aria'))}">${gridInner}</div></div>`;
     }
   }
   let formattedDescription = escapeHtml(description).replace(/\n/g, '<br>');
   formattedDescription = formattedDescription.replace(/(?:<br\s*\/?>|\s)+$/gi, '');
-  setHtml(
-    'tooltip-text',
-    `<div class="tt-tooltip-desc" style="word-wrap: break-word;">${formattedDescription}</div>${setsBlock}${idHtml}${genesysHtml}${formatsHtml}${datesHtml}${separatorHtml}${pricesHtml}${ygoRefHtml}`
-  );
+  const descBlock = `<div class="tt-tooltip-desc" style="word-wrap: break-word;">${formattedDescription}</div>`;
+  const releasePricesPart = hideHeavyTooltipMeta
+    ? ''
+    : `${separatorHtml}<div class="tt-release-prices">${pricesHtml}</div>`;
+  const releaseTailNonModal = `<div class="tt-release-dates">${datesHtml}</div>${releasePricesPart}${ygoRefHtml ? `${separatorHtml}<div class="tt-release-link">${ygoRefHtml}</div>` : ''}`;
+  const printsSectionHtml =
+    setsBlock && !hideHeavyTooltipMeta
+      ? `<section class="tt-modal-sec tt-modal-sec--prints">${setsBlock}</section>`
+      : '';
+  const formatsSectionHtml =
+    formatsHtml && !hideHeavyTooltipMeta
+      ? `<section class="tt-modal-sec tt-modal-sec--formats">${formatsHtml}</section>`
+      : '';
+  const pricesSectionHtml = hideHeavyTooltipMeta
+    ? ''
+    : `<section class="tt-modal-sec tt-modal-sec--release-prices">${pricesHtml}</section>`;
+  const tooltipTextSectioned = `<div class="tt-modal-detail-body">
+      <section class="tt-modal-sec tt-modal-sec--effect">${descBlock}</section>
+      ${printsSectionHtml}
+      <section class="tt-modal-sec tt-modal-sec--ids">${cardIdRowsHtml}</section>
+      ${formatsSectionHtml}
+      <section class="tt-modal-sec tt-modal-sec--release-dates">${datesHtml}</section>
+      ${pricesSectionHtml}
+      ${ygoRefHtml ? `<section class="tt-modal-sec tt-modal-sec--release-link">${ygoRefHtml}</section>` : ''}
+    </div>`;
+  const tooltipTextInner = useCardSectionLayout
+    ? tooltipTextSectioned
+    : `${descBlock}${hideHeavyTooltipMeta ? '' : setsBlock}${idHtml}${hideHeavyTooltipMeta ? '' : formatsHtml}${releaseTailNonModal}`;
+  if (tt) tt.classList.toggle('tt-card-layout', useCardSectionLayout && !inDetailsModal);
+  setHtml('tooltip-text', tooltipTextInner);
 }
 
 /**
@@ -21456,7 +23531,9 @@ window.onload = () => {
       case 'filter-setcode-input':
       case 'filter-rarity-input':
       case 'filter-subtype-input':
-      case 'filter-race-input':
+      case 'filter-monster-race-input':
+      case 'filter-spell-race-input':
+      case 'filter-trap-race-input':
         void ensureCardinfoCatalogFromApi();
         break;
       default:
@@ -21507,6 +23584,7 @@ window.onload = () => {
   }
   renderSetcodeFilterChips();
   renderRarityFilterChips();
+  renderMdRarityFilterChips();
   wireComboFilterControls();
   paintAllMultiTextChips();
   const fNameAdd = getEl('filter-fname-add-chip');
@@ -21573,6 +23651,53 @@ window.onload = () => {
         tryAddPriceRangeChip();
       }
     });
+  }
+  const gptClr = getEl('filter-genesys-pt-clear-chips');
+  if (gptClr) gptClr.onclick = () => clearMultiTextGroup('genesysPt');
+  if (!window.__ttDeckSearchClickBound) {
+    window.__ttDeckSearchClickBound = true;
+    const runDeckSearchFromTooltipTarget = (el) => {
+      if (!el) return;
+      const raw = el.getAttribute('data-ts');
+      if (raw == null || raw === '') return;
+      let spec;
+      try {
+        spec = JSON.parse(decodeURIComponent(raw));
+      } catch (_) {
+        return;
+      }
+      applyDeckSearchFromTooltipSpec(spec);
+    };
+    document.addEventListener('click', (ev) => {
+      const btn = ev.target.closest('.tt-deck-search-link');
+      if (!btn) return;
+      const ttRoot = getEl('card-tooltip');
+      if (!ttRoot || !ttRoot.contains(btn)) return;
+      const raw = btn.getAttribute('data-ts');
+      if (raw == null || raw === '') return;
+      try {
+        JSON.parse(decodeURIComponent(raw));
+      } catch (_) {
+        return;
+      }
+      ev.preventDefault();
+      ev.stopPropagation();
+      runDeckSearchFromTooltipTarget(btn);
+    });
+    document.addEventListener(
+      'keydown',
+      (ev) => {
+        if (ev.key !== 'Enter' && ev.key !== ' ') return;
+        const el = ev.target && ev.target.closest ? ev.target.closest('.tt-deck-search-link[role="button"]') : null;
+        if (!el || !ev.target || el !== ev.target) return;
+        const ttRootKb = getEl('card-tooltip');
+        if (!ttRootKb || !ttRootKb.contains(el)) return;
+        ev.preventDefault();
+        ev.stopPropagation();
+        runDeckSearchFromTooltipTarget(el);
+      },
+      true
+    );
   }
   void (async () => {
     try {
@@ -21904,6 +24029,9 @@ function updateResultsLoadingProgress(n, requestId) {
  *   monsterNoSubtype?: boolean,
  *   stapleChip?: string,
  *   hasEffectChip?: string,
+ *   genesysPtsExact?: Set<number>|null,
+ *   mdRarityWant?: Set<string>|null,
+ *   tcgOcgBanStatusWant?: Set<string>|null,
  * }} spec Campos opcionais conforme ramos em {@link computeUnexpandedSearchResults}.
  * @returns {void}
  */
@@ -21920,6 +24048,9 @@ function narrowFinalSearchResultsInPlace(finalData, spec) {
   const monsterNoSubtype = spec.monsterNoSubtype;
   const stapleChip = spec.stapleChip;
   const hasEffectChip = spec.hasEffectChip;
+  const genesysPtsExact = spec.genesysPtsExact;
+  const mdRarityWant = spec.mdRarityWant;
+  const tcgOcgBanStatusWant = spec.tcgOcgBanStatusWant;
 
   let w = 0;
   for (let i = 0; i < finalData.length; i++) {
@@ -21993,6 +24124,19 @@ function narrowFinalSearchResultsInPlace(finalData, spec) {
     if (hasEffectChip === 'true' && !cardHasEffectFromMisc(card)) continue;
     if (hasEffectChip === 'false' && cardHasEffectFromMisc(card)) continue;
 
+    if (genesysPtsExact && genesysPtsExact.size) {
+      const gp = pickGenesysPointsForSort(card);
+      if (!genesysPtsExact.has(gp)) continue;
+    }
+
+    if (mdRarityWant && mdRarityWant.size) {
+      if (!cardMatchesMasterDuelRarityChips(card, mdRarityWant)) continue;
+    }
+
+    if (tcgOcgBanStatusWant && tcgOcgBanStatusWant.size) {
+      if (!cardMatchesTcgOcgBanlistStatusChips(card, tcgOcgBanStatusWant)) continue;
+    }
+
     finalData[w++] = card;
   }
   finalData.length = w;
@@ -22026,7 +24170,10 @@ async function computeUnexpandedSearchResults(initial, requestId) {
   const attr = getFilterAttrParam();
   const levels = getFilterLevels();
   const lv = getFilterLevel(); // compat
-  const race = getFilterRaceParam();
+  const raceMonster = getApiRaceParamForTypeCategory('Monster');
+  const raceSpell = getApiRaceParamForTypeCategory('Spell Card');
+  const raceTrap = getApiRaceParamForTypeCategory('Trap Card');
+  const raceFiltersCombined = hasAnyRaceChipFilter();
   const linkVals = getFilterLinkVals();
   const linkMarkerParam = getFilterLinkMarkerParam();
   const scales = getFilterPendulumScales();
@@ -22040,12 +24187,10 @@ async function computeUnexpandedSearchResults(initial, requestId) {
   const useApiDateFilter = dateEnabled && !(eraKeys && eraKeys.length);
   const dateRegionApiLoop = useApiDateFilter ? dateRegions : [null];
   const banlistTypes = getBanlistTypesFromState();
-  const banlistType = getBanlistTypeFromState(); // compat (primeiro)
-  const banlistOnly = !!getEl('enable-banlist-only')?.checked;
   const pMinInput = String(getVal('filter-price-min', ''));
   const pMaxInput = String(getVal('filter-price-max', ''));
 
-  const mtf = window.multiTextFilters || { fname: [], desc: [], atk: [], def: [], priceRanges: [] };
+  const mtf = window.multiTextFilters || { fname: [], desc: [], atk: [], def: [], priceRanges: [], genesysPt: [] };
   const fnameListRaw = chipListWithLiveText(mtf.fname, q, 3);
   const numericOnlyTokens = fnameListRaw
     .map((s) => String(s ?? '').trim())
@@ -22068,6 +24213,8 @@ async function computeUnexpandedSearchResults(initial, requestId) {
   const hasLegacyPrice = !!(pMinInput || pMaxInput);
   const hasChipPrices = (mtf.priceRanges || []).length > 0;
   const hasPriceFilter = hasLegacyPrice || hasChipPrices;
+  const genesysPtList = (mtf.genesysPt || []).map((x) => String(x).trim()).filter(Boolean);
+  const hasGenesysPtNarrow = genesysPtList.length > 0;
   const setNames = window.selectedCardsetNames || [];
   const hasSetFilter = setNames.length > 0;
   const archFilters = getFilterArchetypeChips();
@@ -22076,6 +24223,14 @@ async function computeUnexpandedSearchResults(initial, requestId) {
   const rarities = window.selectedRarities || [];
   const hasSetcodeFilter = setcodes.length > 0;
   const hasRarityFilter = rarities.length > 0;
+  const mdRarities = (window.selectedMdRarities || [])
+    .map((x) => normalizeMasterDuelFilterRarityToken(x))
+    .filter(Boolean);
+  const hasMdRarityFilter = mdRarities.length > 0;
+  const tcgBanStatuses = (window.selectedTcgOcgBanlistStatuses || [])
+    .map((x) => normalizeTcgOcgBanlistStatusToken(x))
+    .filter(Boolean);
+  const hasTcgOcgBanstatusFilter = tcgBanStatuses.length > 0 && isTcgOrOcgBanlistChipActive();
   const stapleChip = (window.filterChipState.staple || [])[0];
   const hasEffectChip = (window.filterChipState.hasEffect || [])[0];
 
@@ -22085,7 +24240,7 @@ async function computeUnexpandedSearchResults(initial, requestId) {
     hasDescQuery ||
     (typeCats && typeCats.length) ||
     (subtypes && subtypes.length) ||
-    race ||
+    raceFiltersCombined ||
     attr ||
     (levels && levels.length) ||
     (banlistTypes && banlistTypes.length) ||
@@ -22096,7 +24251,8 @@ async function computeUnexpandedSearchResults(initial, requestId) {
     (mtf.def || []).length ||
     (linkVals && linkVals.length) ||
     (scales && scales.length) ||
-    !!linkMarkerParam;
+    !!linkMarkerParam ||
+    hasGenesysPtNarrow;
 
   const narrowing = narrowingBase || !!stapleChip || !!hasEffectChip;
 
@@ -22104,15 +24260,16 @@ async function computeUnexpandedSearchResults(initial, requestId) {
     narrowing ||
     hasPriceFilter ||
     dateEnabled ||
-    banlistOnly ||
     hasSetcodeFilter ||
-    hasRarityFilter;
+    hasRarityFilter ||
+    hasMdRarityFilter ||
+    hasTcgOcgBanstatusFilter;
 
   // Para decidir caminhos sem varrer o catálogo: "outros filtros" excluindo o campo Nome/Descrição.
   const narrowingBaseNoText =
     (typeCats && typeCats.length) ||
     (subtypes && subtypes.length) ||
-    race ||
+    raceFiltersCombined ||
     attr ||
     (levels && levels.length) ||
     (banlistTypes && banlistTypes.length) ||
@@ -22123,15 +24280,17 @@ async function computeUnexpandedSearchResults(initial, requestId) {
     (mtf.def || []).length ||
     (linkVals && linkVals.length) ||
     (scales && scales.length) ||
-    !!linkMarkerParam;
+    !!linkMarkerParam ||
+    hasGenesysPtNarrow;
   const narrowingNoText = narrowingBaseNoText || !!stapleChip || !!hasEffectChip;
   const hasOtherFiltersNoText =
     narrowingNoText ||
     hasPriceFilter ||
     dateEnabled ||
-    banlistOnly ||
     hasSetcodeFilter ||
-    hasRarityFilter;
+    hasRarityFilter ||
+    hasMdRarityFilter ||
+    hasTcgOcgBanstatusFilter;
 
   if (getEl('ocr-container')?.style.display === 'block') return { kind: 'skip' };
 
@@ -22144,20 +24303,38 @@ async function computeUnexpandedSearchResults(initial, requestId) {
     !narrowingBase &&
     !hasSetcodeFilter &&
     !hasRarityFilter &&
+    !hasMdRarityFilter &&
+    !hasTcgOcgBanstatusFilter &&
     !hasPriceFilter &&
     !dateEnabled &&
-    !banlistOnly &&
-    !hasEffectChip;
+    !hasEffectChip &&
+    !hasGenesysPtNarrow;
 
-  const rarityOnlyPath = hasRarityFilter && !narrowing && !hasSetcodeFilter;
+  const rarityOnlyPath =
+    hasRarityFilter &&
+    !narrowing &&
+    !hasSetcodeFilter &&
+    !hasGenesysPtNarrow &&
+    !hasMdRarityFilter &&
+    !hasTcgOcgBanstatusFilter;
+  /** Só raridade MD: a API não filtra — varremos o catálogo (como em só raridade de impressão). */
+  const mdRarityOnlyPath =
+    hasMdRarityFilter &&
+    !narrowing &&
+    !hasSetcodeFilter &&
+    !hasGenesysPtNarrow &&
+    !hasRarityFilter &&
+    !hasTcgOcgBanstatusFilter;
   /** Só USD: a API não filtra por preço — varremos o catálogo (como em só raridade). */
   const priceOnlyPath =
     hasPriceFilter &&
     !narrowing &&
     !hasSetcodeFilter &&
     !hasRarityFilter &&
+    !hasMdRarityFilter &&
+    !hasTcgOcgBanstatusFilter &&
     !dateEnabled &&
-    !banlistOnly;
+    !hasGenesysPtNarrow;
 
   let p = new URLSearchParams();
   const multiTypeMode = typeCats && typeCats.length > 1;
@@ -22169,7 +24346,9 @@ async function computeUnexpandedSearchResults(initial, requestId) {
     else if (type !== 'Monster') p.append('type', type);
   }
   if (!multiTypeMode) {
-    if (race) p.append('race', race);
+    if (type === 'Monster' && raceMonster) p.append('race', raceMonster);
+    else if (type === 'Spell Card' && raceSpell) p.append('race', raceSpell);
+    else if (type === 'Trap Card' && raceTrap) p.append('race', raceTrap);
     // nível pode ser multi: tratado mais abaixo via loop
     if (levels && levels.length === 1 && levels[0]) p.append('level', levels[0]);
     if (attr) p.append('attribute', attr);
@@ -22202,6 +24381,7 @@ async function computeUnexpandedSearchResults(initial, requestId) {
   if (
     !setcodesOnlyPath &&
     !rarityOnlyPath &&
+    !mdRarityOnlyPath &&
     !priceOnlyPath &&
     comboCount > MULTI_SEARCH_MAX_COMBO
   ) {
@@ -22278,6 +24458,14 @@ async function computeUnexpandedSearchResults(initial, requestId) {
       for (const card of bigMap.values()) {
         if (cardMatchesRarityFilters(card, rarities, wantRarity)) finalData.push(card);
       }
+    } else if (mdRarityOnlyPath) {
+      showToast(T('search.md_rarity_scan'));
+      const bigMap = await fetchAllCardsPaginatedMerged(reportProgress);
+      const wantMd = new Set(mdRarities);
+      finalData = [];
+      for (const card of bigMap.values()) {
+        if (cardMatchesMasterDuelRarityChips(card, wantMd)) finalData.push(card);
+      }
     } else if (priceOnlyPath) {
       showToast(T('search.price_full_scan'));
       const bigMap = await fetchAllCardsPaginatedMerged(reportProgress);
@@ -22294,8 +24482,7 @@ async function computeUnexpandedSearchResults(initial, requestId) {
           // Base params para (banlist x categoria)
           const pBase = new URLSearchParams(p);
           if (banFmt) {
-            if (banlistOnly) pBase.append('banlist', banFmt);
-            else pBase.append('format', banFmt);
+            pBase.append('format', banFmt);
           }
 
           // Loop de níveis só faz sentido para Monster-only (ou quando a categoria é Monster)
@@ -22370,6 +24557,12 @@ async function computeUnexpandedSearchResults(initial, requestId) {
                       pReqDr.set('startdate', dateStart || '1900-01-01');
                       pReqDr.set('enddate', dateEnd || '9999-12-31');
                       pReqDr.set('dateregion', dr);
+                    }
+                    if (multiTypeMode) {
+                      pReqDr.delete('race');
+                      if (cat === 'Monster' && raceMonster) pReqDr.set('race', raceMonster);
+                      else if (cat === 'Spell Card' && raceSpell) pReqDr.set('race', raceSpell);
+                      else if (cat === 'Trap Card' && raceTrap) pReqDr.set('race', raceTrap);
                     }
                     const baselineIds = mergedById.size;
                     const m = await fetchMergedCardinfoDualLoop(
@@ -22509,8 +24702,30 @@ async function computeUnexpandedSearchResults(initial, requestId) {
       narrowRarityCtx = { rarities, wantRarity };
     }
 
+    let narrowMdRarityWant = null;
+    if (hasMdRarityFilter && !mdRarityOnlyPath) {
+      narrowMdRarityWant = new Set(mdRarities);
+      if (narrowMdRarityWant.size === 0) narrowMdRarityWant = null;
+    }
+
+    let narrowTcgOcgBanStatusWant = null;
+    if (hasTcgOcgBanstatusFilter) {
+      narrowTcgOcgBanStatusWant = new Set(tcgBanStatuses);
+      if (narrowTcgOcgBanStatusWant.size === 0) narrowTcgOcgBanStatusWant = null;
+    }
+
     const narrowMonsterNoSubtype =
       !multiTypeMode && type === 'Monster' && !(subtypes && subtypes.length);
+
+    let genesysPtsExact = null;
+    if (genesysPtList.length) {
+      genesysPtsExact = new Set();
+      for (let _gpx = 0; _gpx < genesysPtList.length; _gpx++) {
+        const n = int10(genesysPtList[_gpx], NaN);
+        if (Number.isFinite(n)) genesysPtsExact.add(Math.trunc(n));
+      }
+      if (genesysPtsExact.size === 0) genesysPtsExact = null;
+    }
 
     if (
       finalData.length &&
@@ -22519,11 +24734,14 @@ async function computeUnexpandedSearchResults(initial, requestId) {
         priceMode ||
         narrowDateCtx ||
         narrowRarityCtx ||
+        narrowMdRarityWant ||
+        narrowTcgOcgBanStatusWant ||
         narrowMonsterNoSubtype ||
         stapleChip === 'yes' ||
         stapleChip === 'no' ||
         hasEffectChip === 'true' ||
-        hasEffectChip === 'false')
+        hasEffectChip === 'false' ||
+        (genesysPtsExact && genesysPtsExact.size > 0))
     ) {
       narrowFinalSearchResultsInPlace(finalData, {
         idUnion: narrowSearchSetcodeIdUnion,
@@ -22537,6 +24755,9 @@ async function computeUnexpandedSearchResults(initial, requestId) {
         monsterNoSubtype: narrowMonsterNoSubtype,
         stapleChip,
         hasEffectChip,
+        genesysPtsExact,
+        mdRarityWant: narrowMdRarityWant,
+        tcgOcgBanStatusWant: narrowTcgOcgBanStatusWant,
       });
     }
 
@@ -26695,66 +28916,7 @@ window.importDeckFile = async (input) => {
  */
 window.resetFilters = () => {
   requestCardSurfaceFeedback('filter_reset');
-  setVal('search-input', '');
-  setVal('filter-desc', '');
-  setVal('search-qty', '1');
-  setVal('filter-atk', '');
-  setVal('filter-def', '');
-  const hoje = new Date().toISOString().split('T')[0];
-  setVal('date-start', FIRST_KNOWN_RELEASE_ISO.ocg);
-  setVal('date-end', hoje);
-  window.filterChipState = {
-    typeCategory: [],
-    subtype: [],
-    race: [],
-    attribute: [],
-    level: [],
-    era: [],
-    linkval: [],
-    linkmarker: [],
-    scale: [],
-    dateRegion: [],
-    banlist: [],
-    archetype: [],
-    staple: [],
-    hasEffect: [],
-  };
-  window.multiTextFilters = { fname: [], desc: [], atk: [], def: [], priceRanges: [] };
-  const _resetComboIds = [
-    'filter-type-input',
-    'filter-subtype-input',
-    'filter-race-input',
-    'filter-attribute-input',
-    'filter-level-input',
-    'filter-linkval-input',
-    'filter-linkmarker-input',
-    'filter-scale-input',
-    'filter-archetype-input',
-    'filter-era-input',
-    'filter-date-region-input',
-    'filter-banlist-input',
-    'filter-staple-input',
-    'filter-haseffect-input',
-  ];
-  for (let _ri = 0; _ri < _resetComboIds.length; _ri++) setVal(_resetComboIds[_ri], '');
-  syncMonsterFilterGroups();
-  refreshSubtypeRaceDatalists();
-  paintComboFilterChips();
-  const banlistOnly = getEl('enable-banlist-only');
-  if (banlistOnly) banlistOnly.checked = false;
-  toggleBanlistCheckbox();
-  setVal('filter-price-min', '');
-  setVal('filter-price-max', '');
-  window.selectedCardsetNames = [];
-  window.selectedSetCodes = [];
-  window.selectedRarities = [];
-  setVal('filter-cardset-input', '');
-  setVal('filter-setcode-input', '');
-  setVal('filter-rarity-input', '');
-  renderCardsetFilterChips();
-  renderSetcodeFilterChips();
-  renderRarityFilterChips();
-  paintAllMultiTextChips();
+  resetDeckbuilderFiltersNoSearch();
   currentPage = 1;
   void performSearch(true).then(() => pushDeckbuilderFilterUrlToHistory());
 };
