@@ -1510,6 +1510,7 @@ html:not(.help-enabled) .filter-action-row .icon-btn-stack--tool .theme-row-labe
   z-index: 10002;
   max-height: min(42vh, 340px);
   overflow-y: auto;
+  overscroll-behavior: contain;
   background: var(--panel-bg);
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -6511,11 +6512,18 @@ html.theme-white .deck-import-overlay-track {
   transform: translateX(-50%);
   z-index: 10080;
   pointer-events: none;
+  width: min(560px, calc(100vw - 24px));
+  max-width: calc(100vw - 24px);
+  box-sizing: border-box;
+  padding: 0 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 .toast {
   background: var(--success);
   color: white;
-  padding: 12px 20px;
+  padding: 12px 16px;
   border-radius: 30px;
   font-size: 12px;
   font-weight: bold;
@@ -6525,9 +6533,26 @@ html.theme-white .deck-import-overlay-track {
     slideUp 0.3s ease,
     fadeOut 0.5s ease 1.5s forwards;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 10px;
-  white-space: nowrap;
+  white-space: normal;
+  max-width: 100%;
+  width: 100%;
+  box-sizing: border-box;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  line-height: 1.35;
+  hyphens: auto;
+}
+.toast > span:first-child {
+  flex-shrink: 0;
+  line-height: 1.2;
+  margin-top: 1px;
+}
+.toast.toast--long {
+  font-size: 11px;
+  padding: 10px 14px;
+  border-radius: 14px;
 }
 .toast.toast-error {
   background: #ef4444;

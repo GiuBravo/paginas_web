@@ -11,11 +11,9 @@
   2) Corpo inicial — overlays e diálogos fora de #app-layout: #card-tooltip, tooltips de validação/
      estatísticas, #card-sets-panel, #toast-container, modais (#deck-name-modal, #deck-swap-modal,
      #random-main-modal, #help-mouse-modal, #credits-modal, #tooltip-details-modal).
-  3) #app-layout — grelha principal: #col-filters (filtros), #col-results (busca + #results-view),
+  3) #app-layout — grelha principal: #col-filters (filtros + #ocr-container), #col-results (busca + #results-view),
      #col-preview (fila do deck, #deck-items, exportação, PDF, etc.).
   4) <script type="module" src="/src/main.js"> — lógica monolítica; handlers `onclick="…"` exigem funções em `window`.
-  5) #ocr-container e nós associados — UI fullscreen do scanner/OCR (após o script por legado;
-     o mesmo nó é referido em main.js).
 
   Ordem de leitura da documentação: README.md (raiz) → docs/DOCUMENTACAO.md → docs/MAIN_JS.md → …
   Mapa de secções e IDs notáveis: docs/INDEX_HTML.md
@@ -23,7 +21,7 @@
   Total: 308 ids. Ordem alfabética; descrições em PT-BR para navegação humana.
 
   • app-layout — Raiz do layout em 3 colunas; classes alternam deck/filtros visíveis.
-  • btn-close-ocr — Fechar scanner OCR.
+  • btn-close-ocr — Fechar scanner OCR (visível no mobile; no desktop ≥900px use o botão Escanear para fechar).
   • btn-credits — Abre modal de créditos.
   • btn-deck-delete-saved — Apagar deck guardado selecionado.
   • btn-deck-order — Ordenar deck pelo critério selecionado.
@@ -285,7 +283,7 @@
   • manual-rarity — Select raridade manual OCR.
   • monster-extras — Grupo atributo/nível/link/escala (monstro).
   • ocr-canvas-internal — Canvas interno processamento (oculto).
-  • ocr-container — Fullscreen scanner/OCR.
+  • ocr-container — Scanner/OCR (coluna filtros no desktop; fullscreen no mobile).
   • ocr-log — Consola de log OCR.
   • ocr-video — Elemento vídeo câmara.
   • order-icon — Ícone seta ordenação.
@@ -9559,6 +9557,239 @@ html.theme-white .toast.toast-error {
             </div>
           </div>
         </div>
+    <!-- === Scanner / OCR (posição/tamanho via CSS em main.js: mobile fullscreen, desktop só #col-filters) === -->
+    <div id="ocr-container" style="display: none">
+      <div class="ocr-layout-column">
+        <div
+          id="ocr-preview-wrap"
+          style="
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            z-index: 1000001;
+          "
+        >
+          <canvas
+            id="preview-canvas"
+            style="width: 100%; height: 80px; border: 2px solid #0f0; background: #000"
+          ></canvas>
+          <div
+            id="vision-label"
+            style="
+              color: #0f0;
+              font-size: 11px;
+              text-align: center;
+              font-family: monospace;
+              margin-top: 5px;
+              background: rgba(0, 0, 0, 0.5);
+            "
+          >
+            STATUS: ANALYZING...
+          </div>
+        </div>
+        <div class="ocr-camera-slot">
+          <video
+            id="ocr-video"
+            style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.8"
+            autoplay
+            playsinline
+          ></video>
+          <div
+            id="scanner-visual"
+            style="
+              position: absolute;
+              top: 22%;
+              left: 50%;
+              transform: translateX(-50%);
+              width: 55%;
+              height: 42px;
+              border: 3px solid #2ecc71;
+              border-radius: 8px;
+              z-index: 10;
+              pointer-events: none;
+              background: rgba(46, 204, 113, 0.2);
+            "
+          >
+            <div
+              style="
+                position: absolute;
+                top: -28px;
+                width: 100%;
+                text-align: center;
+                color: #2ecc71;
+                font-size: 11px;
+                font-weight: bold;
+                background: rgba(0, 0, 0, 0.8);
+                padding: 3px 10px;
+                border-radius: 20px;
+                white-space: nowrap;
+              "
+            >
+              <span data-i18n="ocr.crosshair">🎯 MIRA NO NOME DA CARTA</span>
+            </div>
+          </div>
+        </div>
+        <div
+          id="ocr-manual-panel"
+          style="
+            position: absolute;
+            top: 30%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80%;
+            z-index: 1000002;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+          "
+        >
+        <div
+          style="color: #2ecc71; font-size: 12px; margin-bottom: 5px"
+          data-i18n="ocr.manual.title"
+        >
+          ⚙️ Configuração Manual
+        </div>
+        <select
+          id="manual-card-type"
+          style="
+            width: 100%;
+            padding: 6px;
+            margin-bottom: 8px;
+            background: #111;
+            color: #fff;
+            border: 1px solid #2ecc71;
+          "
+        >
+          <option value="AUTO" selected data-i18n-opt="ocr.manual.auto">Auto (detectar)</option>
+          <option value="Magia" data-i18n-opt="ocr.type.spell">Magia</option>
+          <option value="Armadilha" data-i18n-opt="ocr.type.trap">Armadilha</option>
+          <option value="Monstro Normal" data-i18n-opt="ocr.type.normal">Monstro Normal</option>
+          <option value="Monstro Efeito" data-i18n-opt="ocr.type.effect">Monstro Efeito</option>
+          <option value="Monstro Sincro" data-i18n-opt="ocr.type.synchro">Monstro Sincro</option>
+          <option value="Monstro Xyz" data-i18n-opt="ocr.type.xyz">Monstro Xyz</option>
+          <option value="Monstro Link" data-i18n-opt="ocr.type.link">Monstro Link</option>
+          <option value="Monstro Fusão" data-i18n-opt="ocr.type.fusion">Monstro Fusão</option>
+          <option value="Monstro Ritual" data-i18n-opt="ocr.type.ritual">Monstro Ritual</option>
+          <option value="Monstro Pêndulo" data-i18n-opt="ocr.type.pendulum">Monstro Pêndulo</option>
+          <option value="Ficha" data-i18n-opt="ocr.type.token">Ficha</option>
+        </select>
+        <select
+          id="manual-rarity"
+          style="
+            width: 100%;
+            padding: 6px;
+            background: #111;
+            color: #fff;
+            border: 1px solid #2ecc71;
+          "
+        >
+          <option value="Comum" data-i18n-opt="ocr.rarity.common">Comum</option>
+          <option value="Rara" data-i18n-opt="ocr.rarity.rare">Rara</option>
+          <option value="Super Rara" data-i18n-opt="ocr.rarity.super">Super Rara</option>
+          <option value="Ultra Rara" data-i18n-opt="ocr.rarity.ultra">Ultra Rara</option>
+          <option value="Secreta" data-i18n-opt="ocr.rarity.secret">Secreta</option>
+        </select>
+        <div
+          style="
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+            align-items: stretch;
+          "
+        >
+          <button
+            type="button"
+            id="btn-open-calibrator"
+            style="
+              flex: 1;
+              display: inline-flex;
+              align-items: center;
+              justify-content: center;
+              gap: 6px;
+              padding: 8px 10px;
+              background: rgba(17, 17, 17, 0.95);
+              color: #2ecc71;
+              border: 1px solid #2ecc71;
+              border-radius: 6px;
+              font-weight: 600;
+              font-size: 11px;
+              cursor: pointer;
+            "
+          >
+            <i class="fas fa-sliders-h" aria-hidden="true"></i>
+            <span data-i18n="ocr.btn.calibrate">CALIBRAR OCR</span>
+          </button>
+          <button
+            type="button"
+            id="btn-close-ocr"
+            style="
+              flex: 1;
+              display: inline-flex;
+              align-items: center;
+              justify-content: center;
+              gap: 6px;
+              padding: 8px 10px;
+              background: rgba(17, 17, 17, 0.95);
+              color: #ff6b6b;
+              border: 1px solid rgba(255, 107, 107, 0.55);
+              border-radius: 6px;
+              font-weight: 600;
+              font-size: 11px;
+              cursor: pointer;
+            "
+            data-i18n="ocr.btn.close"
+          >
+            FECHAR
+          </button>
+        </div>
+      </div>
+      </div>
+      <!--
+        === DEV OCR (ferramentas de desenvolvimento, desativadas) ===
+        Reative os handlers em src/main.js (bloco "DEV OCR" com copyLogs / exportOcrDebug / takeScreenshot).
+        Opcional: envolver de novo em <div style="position:absolute;top:400px;right:10px;display:flex;flex-direction:column;gap:12px;z-index:1000002">
+
+        <button
+          onclick="copyLogs()"
+          style="background:#3498db;color:white;border:none;padding:12px;border-radius:5px;font-weight:bold;"
+          data-i18n="ocr.btn.copy_logs"
+        >COPIAR LOGS</button>
+        <button
+          onclick="exportOcrDebug()"
+          style="background:#2c3e50;color:white;border:none;padding:12px;border-radius:5px;font-weight:bold;"
+          data-i18n="ocr.btn.debug"
+        >EXPORTAR DEBUG (JSON)</button>
+        <button
+          onclick="takeScreenshot()"
+          style="background:#f1c40f;color:black;border:none;padding:12px;border-radius:5px;font-weight:bold;"
+          data-i18n="ocr.btn.printbot"
+        >PRINT ROBÔ</button>
+      -->
+      <div
+        id="ocr-log"
+        style="
+          position: absolute;
+          bottom: 0;
+          left: 0;
+          width: 100%;
+          height: 150px;
+          background: rgba(0, 0, 0, 0.9);
+          color: #2ecc71;
+          font-family: monospace;
+          font-size: 11px;
+          overflow-y: auto;
+          padding: 10px;
+          z-index: 20;
+          border-top: 1px solid #2ecc71;
+        "
+      >
+        > Engine Standby...
+      </div>
+      <canvas id="ocr-canvas-internal" style="display: none"></canvas>
+    </div>
       </div>
 
       <!-- === Coluna central: busca, paginação, #results-view === -->
@@ -10865,7 +11096,7 @@ html.theme-white .toast.toast-error {
 
         <script>
 window.__DECKBUILDER_MONOLITH__=true;
-window.__LOC_WITH_DOCS__=42812;
+window.__LOC_WITH_DOCS__=43082;
 window.__DECKBUILDER_MONOLITH__=true;
 /**
  * @fileoverview DeckBuilder GiuBravo — lógica cliente monolítica carregada como script global.
@@ -19402,6 +19633,10 @@ const STRINGS = {
   },
   'toast.ocr_ok': { pt: 'Calibrado! Leitura: "{text}"', en: 'Calibrated! Reading: "{text}"' },
   'toast.ocr_wait': { pt: 'Aguarde o carregamento do OCR', en: 'Wait for OCR to finish loading' },
+  'toast.ocr_tess_load_fail': {
+    pt: 'N\u00e3o foi poss\u00edvel carregar o Tesseract (rede ou ficheiros bloqueados). A pr\u00e9-visualiza\u00e7\u00e3o da c\u00e2mara mant\u00e9m-se; tente recarregar a p\u00e1gina.',
+    en: 'Could not load Tesseract (network or files blocked). Camera preview stays open; try reloading the page.',
+  },
   'toast.pdf_saved': { pt: 'PDF salvo.', en: 'PDF saved.' },
   'toast.pick_saved_delete': {
     pt: 'Escolha um deck salvo para apagar.',
@@ -32423,252 +32658,7 @@ function buildTooltipPricesHtml(card, expanded) {
   const curSym = (c) => (c === 'EUR' ? '€' : '
 
 
-    <!-- === Scanner / OCR (fullscreen); mantido após main.js no markup legado === -->
-    <div
-      id="ocr-container"
-      style="
-        display: none;
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        z-index: 999999;
-        background: #000;
-      "
-    >
-      <video
-        id="ocr-video"
-        style="position: absolute; width: 100%; height: 100%; object-fit: cover; opacity: 0.8"
-        autoplay
-        playsinline
-      ></video>
-      <div
-        style="
-          position: absolute;
-          top: 10px;
-          left: 50%;
-          transform: translateX(-50%);
-          width: 90%;
-          z-index: 1000001;
-        "
-      >
-        <canvas
-          id="preview-canvas"
-          style="width: 100%; height: 80px; border: 2px solid #0f0; background: #000"
-        ></canvas>
-        <div
-          id="vision-label"
-          style="
-            color: #0f0;
-            font-size: 11px;
-            text-align: center;
-            font-family: monospace;
-            margin-top: 5px;
-            background: rgba(0, 0, 0, 0.5);
-          "
-        >
-          STATUS: ANALYZING...
-        </div>
-      </div>
-      <div
-        id="scanner-visual"
-        style="
-          position: absolute;
-          top: 22%;
-          left: 50%;
-          transform: translateX(-50%);
-          width: 55%;
-          height: 42px;
-          border: 3px solid #2ecc71;
-          border-radius: 8px;
-          z-index: 10;
-          pointer-events: none;
-          background: rgba(46, 204, 113, 0.2);
-        "
-      >
-        <div
-          style="
-            position: absolute;
-            top: -28px;
-            width: 100%;
-            text-align: center;
-            color: #2ecc71;
-            font-size: 11px;
-            font-weight: bold;
-            background: rgba(0, 0, 0, 0.8);
-            padding: 3px 10px;
-            border-radius: 20px;
-            white-space: nowrap;
-          "
-        >
-          <span data-i18n="ocr.crosshair">🎯 MIRA NO NOME DA CARTA</span>
-        </div>
-      </div>
-      <div
-        style="
-          position: absolute;
-          top: 30%;
-          left: 50%;
-          transform: translateX(-50%);
-          width: 80%;
-          z-index: 1000002;
-          background: rgba(0, 0, 0, 0.8);
-          padding: 10px;
-          border-radius: 8px;
-          text-align: center;
-        "
-      >
-        <div
-          style="color: #2ecc71; font-size: 12px; margin-bottom: 5px"
-          data-i18n="ocr.manual.title"
-        >
-          ⚙️ Configuração Manual
-        </div>
-        <select
-          id="manual-card-type"
-          style="
-            width: 100%;
-            padding: 6px;
-            margin-bottom: 8px;
-            background: #111;
-            color: #fff;
-            border: 1px solid #2ecc71;
-          "
-        >
-          <option value="AUTO" selected data-i18n-opt="ocr.manual.auto">Auto (detectar)</option>
-          <option value="Magia" data-i18n-opt="ocr.type.spell">Magia</option>
-          <option value="Armadilha" data-i18n-opt="ocr.type.trap">Armadilha</option>
-          <option value="Monstro Normal" data-i18n-opt="ocr.type.normal">Monstro Normal</option>
-          <option value="Monstro Efeito" data-i18n-opt="ocr.type.effect">Monstro Efeito</option>
-          <option value="Monstro Sincro" data-i18n-opt="ocr.type.synchro">Monstro Sincro</option>
-          <option value="Monstro Xyz" data-i18n-opt="ocr.type.xyz">Monstro Xyz</option>
-          <option value="Monstro Link" data-i18n-opt="ocr.type.link">Monstro Link</option>
-          <option value="Monstro Fusão" data-i18n-opt="ocr.type.fusion">Monstro Fusão</option>
-          <option value="Monstro Ritual" data-i18n-opt="ocr.type.ritual">Monstro Ritual</option>
-          <option value="Monstro Pêndulo" data-i18n-opt="ocr.type.pendulum">Monstro Pêndulo</option>
-          <option value="Ficha" data-i18n-opt="ocr.type.token">Ficha</option>
-        </select>
-        <select
-          id="manual-rarity"
-          style="
-            width: 100%;
-            padding: 6px;
-            background: #111;
-            color: #fff;
-            border: 1px solid #2ecc71;
-          "
-        >
-          <option value="Comum" data-i18n-opt="ocr.rarity.common">Comum</option>
-          <option value="Rara" data-i18n-opt="ocr.rarity.rare">Rara</option>
-          <option value="Super Rara" data-i18n-opt="ocr.rarity.super">Super Rara</option>
-          <option value="Ultra Rara" data-i18n-opt="ocr.rarity.ultra">Ultra Rara</option>
-          <option value="Secreta" data-i18n-opt="ocr.rarity.secret">Secreta</option>
-        </select>
-      </div>
-      <div
-        style="
-          position: absolute;
-          top: 400px;
-          right: 10px;
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-          z-index: 1000002;
-        "
-      >
-        <button
-          onclick="copyLogs()"
-          style="
-            background: #3498db;
-            color: white;
-            border: none;
-            padding: 12px;
-            border-radius: 5px;
-            font-weight: bold;
-          "
-          data-i18n="ocr.btn.copy_logs"
-        >
-          COPIAR LOGS
-        </button>
-        <button
-          onclick="exportOcrDebug()"
-          style="
-            background: #2c3e50;
-            color: white;
-            border: none;
-            padding: 12px;
-            border-radius: 5px;
-            font-weight: bold;
-          "
-          data-i18n="ocr.btn.debug"
-        >
-          EXPORTAR DEBUG (JSON)
-        </button>
-        <button
-          onclick="takeScreenshot()"
-          style="
-            background: #f1c40f;
-            color: black;
-            border: none;
-            padding: 12px;
-            border-radius: 5px;
-            font-weight: bold;
-          "
-          data-i18n="ocr.btn.printbot"
-        >
-          PRINT ROBÔ
-        </button>
-        <button
-          id="btn-open-calibrator"
-          style="
-            background: #9b59b6;
-            color: white;
-            border: none;
-            padding: 12px;
-            border-radius: 5px;
-            font-weight: bold;
-          "
-        >
-          <i class="fas fa-sliders-h"></i> <span data-i18n="ocr.btn.calibrate">CALIBRAR OCR</span>
-        </button>
-        <button
-          id="btn-close-ocr"
-          style="
-            background: #e74c3c;
-            color: white;
-            border: none;
-            padding: 12px;
-            border-radius: 5px;
-            font-weight: bold;
-          "
-          data-i18n="ocr.btn.close"
-        >
-          FECHAR
-        </button>
-      </div>
-      <div
-        id="ocr-log"
-        style="
-          position: absolute;
-          bottom: 0;
-          left: 0;
-          width: 100%;
-          height: 150px;
-          background: rgba(0, 0, 0, 0.9);
-          color: #2ecc71;
-          font-family: monospace;
-          font-size: 11px;
-          overflow-y: auto;
-          padding: 10px;
-          z-index: 20;
-          border-top: 1px solid #2ecc71;
-        "
-      >
-        > Engine Standby...
-      </div>
-      <canvas id="ocr-canvas-internal" style="display: none"></canvas>
-    </div>
+
   </body>
 </html>
 );
@@ -35411,7 +35401,8 @@ async function computeUnexpandedSearchResults(initial, requestId) {
     hasMdRarityFilter ||
     hasTcgOcgBanstatusFilter;
 
-  if (getEl('ocr-container')?.style.display === 'block') return { kind: 'skip' };
+  const ocrDisp = getEl('ocr-container')?.style.display;
+  if (ocrDisp === 'block' || ocrDisp === 'flex') return { kind: 'skip' };
 
   if (!initial && !hasFnameQuery && !hasDescQuery && !hasOtherFilters) {
     return { kind: 'clear' };
@@ -40066,6 +40057,8 @@ let scannerFoundCardIds = new Set();
 let scannerFoundCardById = new Map();
 /** Cooldown curto após match para não inundar a API. */
 let processingCooldown = false;
+/** Evita chamadas concorrentes a {@link startScanner} (duplo clique / propagacao). */
+let scannerStartInFlight = false;
 /** Texto da última query `smartSearch` (throttle ~900 ms). */
 let lastApiSearchCleaned = '';
 let lastApiSearchTime = 0;
@@ -41354,7 +41347,8 @@ async function processFrameWithFallbackPasses(video, cropRect) {
  * @returns {Promise<void>}
  */
 async function processOcrFrame() {
-  if (!isOcrActive || isProcessing || processingCooldown) {
+  if (!isOcrActive) return;
+  if (isProcessing || processingCooldown) {
     requestAnimationFrame(processOcrFrame);
     return;
   }
@@ -41411,6 +41405,76 @@ async function processOcrFrame() {
   }, 400);
 }
 
+/** Timer debounce para {@link onOcrWindowResize}. */
+let ocrResizeTimer = 0;
+/** Indica se o listener global de resize do OCR está activo. */
+let ocrResizeListenerBound = false;
+
+function onOcrWindowResize() {
+  window.clearTimeout(ocrResizeTimer);
+  ocrResizeTimer = window.setTimeout(() => {
+    layoutOcrPanelIntoFiltersColumn();
+  }, 120);
+}
+
+/**
+ * Regista um único listener de `resize` para recalcular o painel OCR.
+ * @returns {void}
+ */
+function bindOcrResizeForScanner() {
+  if (ocrResizeListenerBound) return;
+  window.addEventListener('resize', onOcrWindowResize, { passive: true });
+  ocrResizeListenerBound = true;
+}
+
+/**
+ * Remove o listener de resize do OCR.
+ * @returns {void}
+ */
+function unbindOcrResizeForScanner() {
+  if (!ocrResizeListenerBound) return;
+  window.removeEventListener('resize', onOcrWindowResize);
+  window.clearTimeout(ocrResizeTimer);
+  ocrResizeTimer = 0;
+  ocrResizeListenerBound = false;
+}
+
+/**
+ * Posiciona `#ocr-container` com base na caixa real de `#col-filters` (evita “fullscreen” por CSS/iframe).
+ * @returns {void}
+ */
+function layoutOcrPanelIntoFiltersColumn() {
+  const col = getEl('col-filters');
+  const panel = getEl('ocr-container');
+  if (!col || !panel) return;
+  const disp = String(panel.style.display || '');
+  if (!disp || disp === 'none') return;
+  const cr = col.getBoundingClientRect();
+  const vw = typeof window.innerWidth === 'number' ? window.innerWidth : cr.width;
+  const vh = typeof window.innerHeight === 'number' ? window.innerHeight : 700;
+  /** Viewport estreito OU coluna de filtros larga demais (grelha “mobile” empilhada / iframe). */
+  const useStripLayout = vw <= 900 || cr.width > 520;
+  panel.style.boxSizing = 'border-box';
+  panel.style.position = 'absolute';
+  panel.style.top = '0';
+  panel.style.maxHeight = `${Math.floor(Math.min(vh * 0.95, Math.max(cr.height, vh * 0.5)))}px`;
+  if (useStripLayout) {
+    const cap = Math.min(360, Math.max(260, Math.floor(cr.width)), Math.floor(vw - 16));
+    const wpx = Math.max(260, cap);
+    panel.style.width = `${wpx}px`;
+    panel.style.left = '50%';
+    panel.style.right = 'auto';
+    panel.style.transform = 'translateX(-50%)';
+    panel.style.height = 'auto';
+  } else {
+    panel.style.width = '100%';
+    panel.style.left = '0';
+    panel.style.right = '0';
+    panel.style.transform = 'none';
+    panel.style.height = '100%';
+  }
+}
+
 // ==================== INICIAR SCANNER ====================
 
 /**
@@ -41418,9 +41482,16 @@ async function processOcrFrame() {
  * @returns {Promise<void>}
  */
 async function startScanner() {
+  if (scannerStartInFlight) return;
+  scannerStartInFlight = true;
   const container = getEl('ocr-container');
   const video = getEl('ocr-video');
-  if (container) container.style.display = 'block';
+  const isDesktop = typeof window.matchMedia === 'function' && window.matchMedia('(min-width: 900px)').matches;
+  if (isDesktop) {
+    try {
+      applyFiltersColumnVisibility(false);
+    } catch (_) {}
+  }
   scannerFoundCards = [];
   scannerFoundCardIds = new Set();
   scannerFoundCardById = new Map();
@@ -41437,8 +41508,22 @@ async function startScanner() {
   }
   try {
     addOcrLog('🎥 Iniciando câmera...');
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'environment', width: { ideal: 1280 } },
+    const videoConstraints = isDesktop
+      ? { width: { ideal: 1280 }, height: { ideal: 720 } }
+      : { facingMode: 'environment', width: { ideal: 1280 } };
+    const stream = await navigator.mediaDevices.getUserMedia({ video: videoConstraints });
+    if (container) {
+      container.style.display = isDesktop ? 'flex' : 'block';
+    }
+    try {
+      document.documentElement.classList.add('ocr-scanner-active');
+    } catch (_) {}
+    setScannerToolbarButtonActive(true);
+    bindOcrResizeForScanner();
+    layoutOcrPanelIntoFiltersColumn();
+    requestAnimationFrame(() => {
+      layoutOcrPanelIntoFiltersColumn();
+      requestAnimationFrame(() => layoutOcrPanelIntoFiltersColumn());
     });
     video.srcObject = stream;
     await video.play();
@@ -41461,36 +41546,63 @@ async function startScanner() {
         addOcrLog(`🔍 Zoom: ${zoom}x`);
       }
     } catch (e) {}
-    video.addEventListener('click', async (e) => {
-      try {
-        const track = stream.getVideoTracks()[0];
-        if (track && track.applyConstraints) {
-          await track.applyConstraints({ advanced: [{ focusMode: 'manual', focusDistance: 1.0 }] });
-          addOcrLog('🔍 Foco manual');
-          setTimeout(async () => {
-            try {
-              await track.applyConstraints({ advanced: [{ focusMode: 'continuous' }] });
-            } catch (e) {}
-          }, 3000);
-        }
-      } catch (e) {}
-    });
+    if (video.dataset.ocrFocusBound !== '1') {
+      video.dataset.ocrFocusBound = '1';
+      video.addEventListener('click', async () => {
+        try {
+          const src = video.srcObject;
+          if (!src) return;
+          const track = src.getVideoTracks()[0];
+          if (track && track.applyConstraints) {
+            await track.applyConstraints({ advanced: [{ focusMode: 'manual', focusDistance: 1.0 }] });
+            addOcrLog('🔍 Foco manual');
+            setTimeout(async () => {
+              try {
+                await track.applyConstraints({ advanced: [{ focusMode: 'continuous' }] });
+              } catch (e) {}
+            }, 3000);
+          }
+        } catch (e) {}
+      });
+    }
     if (!ocrWorker) {
       addOcrLog('🧠 Carregando Tesseract...');
-      ocrWorker = await Tesseract.createWorker();
-      await ocrWorker.loadLanguage('eng');
-      await ocrWorker.initialize('eng');
-      await ocrWorker.setParameters({
-        tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 ,:ÁÉÍÓÚÂÊÎÔÛÃÕÇ',
-        tessedit_pageseg_mode: '7',
-      });
-      addOcrLog('✅ OCR pronto!');
+      try {
+        ocrWorker = await Tesseract.createWorker();
+        await ocrWorker.loadLanguage('eng');
+        await ocrWorker.initialize('eng');
+        await ocrWorker.setParameters({
+          tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 ,:ÁÉÍÓÚÂÊÎÔÛÃÕÇ',
+          tessedit_pageseg_mode: '7',
+        });
+        addOcrLog('✅ OCR pronto!');
+      } catch (tessErr) {
+        ocrWorker = null;
+        const tessMsg = tessErr && tessErr.message ? tessErr.message : String(tessErr);
+        addOcrLog(`❌ Tesseract: ${tessMsg}`);
+        try {
+          showToast(T('toast.ocr_tess_load_fail'));
+        } catch (_) {
+          showToast('Tesseract: falha de rede ou ficheiros.');
+        }
+        isOcrActive = false;
+        return;
+      }
     }
     isOcrActive = true;
     addOcrLog('🔍 Escaneando...');
     requestAnimationFrame(processOcrFrame);
   } catch (err) {
-    addOcrLog(`❌ Erro: ${err.message}`);
+    addOcrLog(`❌ Erro: ${err && err.message ? err.message : String(err)}`);
+    if (container) container.setAttribute('style', 'display: none');
+    unbindOcrResizeForScanner();
+    try {
+      document.documentElement.classList.remove('ocr-scanner-active');
+    } catch (_) {}
+    setScannerToolbarButtonActive(false);
+    stopScanner();
+  } finally {
+    scannerStartInFlight = false;
   }
 }
 
@@ -41533,10 +41645,10 @@ window.forceAddToQueue = (cardId) => {
   }
 };
 
-/**
+/* --- DEV OCR: reative estes handlers junto aos botões em index.html ---
  * Copia texto bruto de `#ocr-log` para a área de transferência.
  * @returns {void}
- */
+ *
 window.copyLogs = () => {
   const logElement = getEl('ocr-log');
   if (logElement) {
@@ -41545,10 +41657,9 @@ window.copyLogs = () => {
   }
 };
 
-/**
  * Descarrega JSON com buffer de debug OCR e último snapshot (`ocr_debug_<timestamp>.json`).
  * @returns {void}
- */
+ *
 window.exportOcrDebug = () => {
   const payload = {
     exportedAt: new Date().toISOString(),
@@ -41564,10 +41675,9 @@ window.exportOcrDebug = () => {
   showToast(T('toast.debug_exported'));
 };
 
-/**
  * Gera PNG composto (pré-visualização + trecho de log + snapshot) e também chama {@link window.exportOcrDebug}.
  * @returns {void}
- */
+ *
 window.takeScreenshot = () => {
   const previewCanvas = getEl('preview-canvas');
   const canvas = document.createElement('canvas');
@@ -41602,10 +41712,66 @@ window.takeScreenshot = () => {
     link.referrerPolicy = 'no-referrer';
   } catch (_) {}
   link.click();
-  // Também exporta o JSON junto (mais útil pra análise)
   window.exportOcrDebug?.();
   showToast(T('toast.screenshot_saved'));
 };
+--- fim DEV OCR --- */
+
+/**
+ * Estado visual do botão da toolbar que abre o scanner (`#btn-open-scanner`).
+ * @param {boolean} on
+ * @returns {void}
+ */
+function setScannerToolbarButtonActive(on) {
+  const b = getEl('btn-open-scanner');
+  if (!b) return;
+  b.classList.toggle('active', !!on);
+  b.setAttribute('aria-pressed', on ? 'true' : 'false');
+}
+
+/**
+ * @returns {boolean} `true` se `#ocr-container` está visível (display ≠ none).
+ */
+function isOcrContainerVisible() {
+  const c = getEl('ocr-container');
+  const d = c && c.style && c.style.display;
+  return !!(c && d && d !== 'none');
+}
+
+/**
+ * Encerra câmera/OCR, oculta o painel e atualiza resultados (equivalente a fechar o scanner).
+ * @returns {void}
+ */
+function closeScannerUi() {
+  unbindOcrResizeForScanner();
+  try {
+    document.documentElement.classList.remove('ocr-scanner-active');
+  } catch (_) {}
+  stopScanner();
+  const c = getEl('ocr-container');
+  if (c) c.setAttribute('style', 'display: none');
+  setScannerToolbarButtonActive(false);
+  if (scannerFoundCards.length > 0) {
+    clearRandomPickState();
+    searchResults = scannerFoundCards.map((card) => ({
+      ...card,
+      current_image: card.card_images[0],
+      variant_idx: 0,
+      is_variant: card.card_images.length > 1,
+    }));
+    currentPage = 1;
+    if (typeof sortAndRender === 'function') sortAndRender();
+    showToast(T('toast.scanner_cards', { n: scannerFoundCards.length }));
+  } else {
+    const resultsView = getEl('results-view');
+    if (resultsView) {
+      resultsView.innerHTML =
+        "<div style='grid-column:1/-1; text-align:center; padding:20px; color:#e74c3c;'>🤖 " +
+        T('ocr.no_cards') +
+        '</div>';
+    }
+  }
+}
 
 // ==================== EVENT LISTENERS ====================
 
@@ -41630,6 +41796,10 @@ function setupCalibratorButton() {
 document.addEventListener('click', (e) => {
   if (e.target.id === 'btn-open-scanner' || e.target.closest('#btn-open-scanner')) {
     e.preventDefault();
+    if (isOcrContainerVisible()) {
+      closeScannerUi();
+      return;
+    }
     const resultsView = getEl('results-view');
     if (resultsView)
       resultsView.innerHTML =
@@ -41642,29 +41812,7 @@ document.addEventListener('click', (e) => {
     setTimeout(setupCalibratorButton, 1000);
   }
   if (e.target.id === 'btn-close-ocr' || e.target.closest('#btn-close-ocr')) {
-    stopScanner();
-    const c = getEl('ocr-container');
-    if (c) c.style.display = 'none';
-    if (scannerFoundCards.length > 0) {
-      clearRandomPickState();
-      searchResults = scannerFoundCards.map((card) => ({
-        ...card,
-        current_image: card.card_images[0],
-        variant_idx: 0,
-        is_variant: card.card_images.length > 1,
-      }));
-      currentPage = 1;
-      if (typeof sortAndRender === 'function') sortAndRender();
-      showToast(T('toast.scanner_cards', { n: scannerFoundCards.length }));
-    } else {
-      const resultsView = getEl('results-view');
-      if (resultsView) {
-        resultsView.innerHTML =
-          "<div style='grid-column:1/-1; text-align:center; padding:20px; color:#e74c3c;'>🤖 " +
-          T('ocr.no_cards') +
-          '</div>';
-      }
-    }
+    closeScannerUi();
   }
 });
 
@@ -41676,6 +41824,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
 const styleScanner = document.createElement('style');
 styleScanner.textContent = `
+    #col-filters {
+        position: relative;
+    }
+    /* Por defeito = desktop: OCR só cobre a coluna de filtros (nunca o viewport inteiro). */
+    #col-filters #ocr-container {
+        box-sizing: border-box;
+        background: #000;
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        width: 100%;
+        height: 100%;
+        max-height: 100%;
+        z-index: 20;
+        flex-direction: column;
+        align-items: stretch;
+        justify-content: flex-start;
+        overflow-x: hidden;
+        overflow-y: auto;
+        padding: 6px 5px 96px;
+    }
+    #btn-open-scanner.active {
+        box-shadow: 0 0 0 2px rgba(46, 204, 113, 0.45);
+    }
     #scanner-visual {
         width: 55% !important;
         height: 42px !important;
@@ -41701,6 +41875,87 @@ styleScanner.textContent = `
         border: 1px solid #2ecc71;
         border-radius: 4px;
         min-height: 50px;
+    }
+    /* Sem scanner: slot de vídeo ocupa fundo da coluna; com scanner (classe em html) passa a coluna empilhada. */
+    .ocr-layout-column {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+    .ocr-camera-slot {
+        position: absolute;
+        inset: 0;
+        z-index: 1;
+    }
+    html.ocr-scanner-active #col-filters .ocr-layout-column {
+        position: relative !important;
+        width: 100% !important;
+        height: auto !important;
+        min-height: 0 !important;
+        margin: 0 !important;
+        flex: 0 0 auto !important;
+    }
+    html.ocr-scanner-active #col-filters .ocr-camera-slot {
+        position: relative !important;
+        width: 100%;
+        height: clamp(96px, min(22dvh, 28vw), 200px);
+        flex: 0 0 auto;
+        border-radius: 8px;
+        overflow: hidden;
+        border: 1px solid rgba(46, 204, 113, 0.65);
+        box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
+        order: 2;
+    }
+    html.ocr-scanner-active #col-filters #ocr-preview-wrap {
+        position: relative !important;
+        top: auto !important;
+        left: auto !important;
+        transform: none !important;
+        width: 100% !important;
+        z-index: 1000001;
+        order: 1;
+        margin-bottom: 6px;
+    }
+    html.ocr-scanner-active #col-filters #ocr-manual-panel {
+        position: relative !important;
+        top: auto !important;
+        left: auto !important;
+        transform: none !important;
+        width: 100% !important;
+        margin-top: 10px;
+        order: 3;
+        z-index: 1000002;
+    }
+    html.ocr-scanner-active #col-filters #scanner-visual {
+        top: 50% !important;
+        transform: translate(-50%, -50%) !important;
+        width: 62% !important;
+    }
+    html.ocr-scanner-active #col-filters #ocr-log {
+        height: 92px !important;
+        font-size: 10px !important;
+        padding: 6px !important;
+    }
+    /* Em ≤900px a grelha mobile faz .col = 100% da página: limita a coluna de filtros para o OCR não “engolir” o ecrã. */
+    @media (max-width: 900px) {
+        html.ocr-scanner-active #app-layout > #col-filters {
+            max-width: 360px;
+            width: 100% !important;
+            margin-left: auto !important;
+            margin-right: auto !important;
+            min-height: min(92dvh, 900px);
+            position: relative !important;
+            z-index: 6;
+            box-sizing: border-box;
+        }
+    }
+    @media (min-width: 900px) {
+        #btn-close-ocr {
+            display: none !important;
+        }
     }
     .focus-hint {
         position: absolute;
@@ -42422,251 +42677,6 @@ document.head.appendChild(mobileStyle);
     </script>
 
 
-    <!-- === Scanner / OCR (fullscreen); mantido após main.js no markup legado === -->
-    <div
-      id="ocr-container"
-      style="
-        display: none;
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        z-index: 999999;
-        background: #000;
-      "
-    >
-      <video
-        id="ocr-video"
-        style="position: absolute; width: 100%; height: 100%; object-fit: cover; opacity: 0.8"
-        autoplay
-        playsinline
-      ></video>
-      <div
-        style="
-          position: absolute;
-          top: 10px;
-          left: 50%;
-          transform: translateX(-50%);
-          width: 90%;
-          z-index: 1000001;
-        "
-      >
-        <canvas
-          id="preview-canvas"
-          style="width: 100%; height: 80px; border: 2px solid #0f0; background: #000"
-        ></canvas>
-        <div
-          id="vision-label"
-          style="
-            color: #0f0;
-            font-size: 11px;
-            text-align: center;
-            font-family: monospace;
-            margin-top: 5px;
-            background: rgba(0, 0, 0, 0.5);
-          "
-        >
-          STATUS: ANALYZING...
-        </div>
-      </div>
-      <div
-        id="scanner-visual"
-        style="
-          position: absolute;
-          top: 22%;
-          left: 50%;
-          transform: translateX(-50%);
-          width: 55%;
-          height: 42px;
-          border: 3px solid #2ecc71;
-          border-radius: 8px;
-          z-index: 10;
-          pointer-events: none;
-          background: rgba(46, 204, 113, 0.2);
-        "
-      >
-        <div
-          style="
-            position: absolute;
-            top: -28px;
-            width: 100%;
-            text-align: center;
-            color: #2ecc71;
-            font-size: 11px;
-            font-weight: bold;
-            background: rgba(0, 0, 0, 0.8);
-            padding: 3px 10px;
-            border-radius: 20px;
-            white-space: nowrap;
-          "
-        >
-          <span data-i18n="ocr.crosshair">🎯 MIRA NO NOME DA CARTA</span>
-        </div>
-      </div>
-      <div
-        style="
-          position: absolute;
-          top: 30%;
-          left: 50%;
-          transform: translateX(-50%);
-          width: 80%;
-          z-index: 1000002;
-          background: rgba(0, 0, 0, 0.8);
-          padding: 10px;
-          border-radius: 8px;
-          text-align: center;
-        "
-      >
-        <div
-          style="color: #2ecc71; font-size: 12px; margin-bottom: 5px"
-          data-i18n="ocr.manual.title"
-        >
-          ⚙️ Configuração Manual
-        </div>
-        <select
-          id="manual-card-type"
-          style="
-            width: 100%;
-            padding: 6px;
-            margin-bottom: 8px;
-            background: #111;
-            color: #fff;
-            border: 1px solid #2ecc71;
-          "
-        >
-          <option value="AUTO" selected data-i18n-opt="ocr.manual.auto">Auto (detectar)</option>
-          <option value="Magia" data-i18n-opt="ocr.type.spell">Magia</option>
-          <option value="Armadilha" data-i18n-opt="ocr.type.trap">Armadilha</option>
-          <option value="Monstro Normal" data-i18n-opt="ocr.type.normal">Monstro Normal</option>
-          <option value="Monstro Efeito" data-i18n-opt="ocr.type.effect">Monstro Efeito</option>
-          <option value="Monstro Sincro" data-i18n-opt="ocr.type.synchro">Monstro Sincro</option>
-          <option value="Monstro Xyz" data-i18n-opt="ocr.type.xyz">Monstro Xyz</option>
-          <option value="Monstro Link" data-i18n-opt="ocr.type.link">Monstro Link</option>
-          <option value="Monstro Fusão" data-i18n-opt="ocr.type.fusion">Monstro Fusão</option>
-          <option value="Monstro Ritual" data-i18n-opt="ocr.type.ritual">Monstro Ritual</option>
-          <option value="Monstro Pêndulo" data-i18n-opt="ocr.type.pendulum">Monstro Pêndulo</option>
-          <option value="Ficha" data-i18n-opt="ocr.type.token">Ficha</option>
-        </select>
-        <select
-          id="manual-rarity"
-          style="
-            width: 100%;
-            padding: 6px;
-            background: #111;
-            color: #fff;
-            border: 1px solid #2ecc71;
-          "
-        >
-          <option value="Comum" data-i18n-opt="ocr.rarity.common">Comum</option>
-          <option value="Rara" data-i18n-opt="ocr.rarity.rare">Rara</option>
-          <option value="Super Rara" data-i18n-opt="ocr.rarity.super">Super Rara</option>
-          <option value="Ultra Rara" data-i18n-opt="ocr.rarity.ultra">Ultra Rara</option>
-          <option value="Secreta" data-i18n-opt="ocr.rarity.secret">Secreta</option>
-        </select>
-      </div>
-      <div
-        style="
-          position: absolute;
-          top: 400px;
-          right: 10px;
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-          z-index: 1000002;
-        "
-      >
-        <button
-          onclick="copyLogs()"
-          style="
-            background: #3498db;
-            color: white;
-            border: none;
-            padding: 12px;
-            border-radius: 5px;
-            font-weight: bold;
-          "
-          data-i18n="ocr.btn.copy_logs"
-        >
-          COPIAR LOGS
-        </button>
-        <button
-          onclick="exportOcrDebug()"
-          style="
-            background: #2c3e50;
-            color: white;
-            border: none;
-            padding: 12px;
-            border-radius: 5px;
-            font-weight: bold;
-          "
-          data-i18n="ocr.btn.debug"
-        >
-          EXPORTAR DEBUG (JSON)
-        </button>
-        <button
-          onclick="takeScreenshot()"
-          style="
-            background: #f1c40f;
-            color: black;
-            border: none;
-            padding: 12px;
-            border-radius: 5px;
-            font-weight: bold;
-          "
-          data-i18n="ocr.btn.printbot"
-        >
-          PRINT ROBÔ
-        </button>
-        <button
-          id="btn-open-calibrator"
-          style="
-            background: #9b59b6;
-            color: white;
-            border: none;
-            padding: 12px;
-            border-radius: 5px;
-            font-weight: bold;
-          "
-        >
-          <i class="fas fa-sliders-h"></i> <span data-i18n="ocr.btn.calibrate">CALIBRAR OCR</span>
-        </button>
-        <button
-          id="btn-close-ocr"
-          style="
-            background: #e74c3c;
-            color: white;
-            border: none;
-            padding: 12px;
-            border-radius: 5px;
-            font-weight: bold;
-          "
-          data-i18n="ocr.btn.close"
-        >
-          FECHAR
-        </button>
-      </div>
-      <div
-        id="ocr-log"
-        style="
-          position: absolute;
-          bottom: 0;
-          left: 0;
-          width: 100%;
-          height: 150px;
-          background: rgba(0, 0, 0, 0.9);
-          color: #2ecc71;
-          font-family: monospace;
-          font-size: 11px;
-          overflow-y: auto;
-          padding: 10px;
-          z-index: 20;
-          border-top: 1px solid #2ecc71;
-        "
-      >
-        > Engine Standby...
-      </div>
-      <canvas id="ocr-canvas-internal" style="display: none"></canvas>
-    </div>
+
   </body>
 </html>

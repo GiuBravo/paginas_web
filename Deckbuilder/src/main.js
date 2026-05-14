@@ -137,14 +137,28 @@ function ygoRaceIconUrl(race) {
 }
 
 /**
+ * Nome de ficheiro no CDN YGOPRODeck para ícone de `type` (nem sempre coincide com `card.type` da API).
+ *
+ * @param {string} apiOrUiType Ex.: `"Token"`, `"Xyz Monster"`.
+ * @returns {string}
+ */
+function ygoCdnTypeIconFileBaseName(apiOrUiType) {
+  const k0 = String(apiOrUiType || '').trim();
+  if (!k0) return '';
+  if (k0 === 'Token') return 'Token Monster';
+  if (/^xyz monster$/i.test(k0)) return 'XYZ Monster';
+  return k0;
+}
+
+/**
  * URL do JPG de ícone da linha de tipo (`type`) no CDN YGOPRODeck (`"Effect Monster"`, `"Continuous Spell Card"`, …).
  *
  * @param {string|null|undefined} monsterType Valor `type` da API (ex.: `"Dragon"`); null → `''`.
  * @returns {string}
  */
 function ygoMonsterTypeIconUrl(monsterType) {
-  const k = monsterType == null ? '' : String(monsterType);
-  if (!k.trim()) return '';
+  const k = ygoCdnTypeIconFileBaseName(monsterType == null ? '' : String(monsterType));
+  if (!k) return '';
   let u = __ygoMonsterTypeIconUrlCache.get(k);
   if (u !== undefined) return u;
   // Sempre CDN: `assets/icons/types/` só existe após vendor opcional; o monólito já usava este URL.
@@ -7896,6 +7910,22 @@ const STRINGS = {
   },
   'ocr.no_cards': { pt: 'Nenhuma carta detectada.', en: 'No cards detected.' },
   'ocr.scanner_active': { pt: 'MODO SCANNER ATIVO', en: 'SCANNER MODE ACTIVE' },
+  'ocr.scanner_active_title': {
+    pt: 'Modo scanner ativado',
+    en: 'Scanner mode on',
+  },
+  'ocr.scanner_aim_placeholder': {
+    pt: '\uD83C\uDFAF Aponte a mira ao NOME da carta',
+    en: '\uD83C\uDFAF Aim the reticle at the CARD name',
+  },
+  'ocr.scanner_aim_title': {
+    pt: 'Aponte a mira ao NOME da carta.',
+    en: 'Aim at the CARD NAME.',
+  },
+  'ocr.no_cards_title': {
+    pt: 'Nenhuma carta detectada.',
+    en: 'No cards detected.',
+  },
   'filter.add': { pt: 'Adicionar', en: 'Add' },
   'filter.attr_clear': { pt: 'Limpar atributos', en: 'Clear attributes' },
   'filter.attr_hint': {
@@ -8167,8 +8197,8 @@ const STRINGS = {
   'ocr.btn.debug': { pt: 'EXPORTAR DEBUG (JSON)', en: 'EXPORT DEBUG (JSON)' },
   'ocr.btn.printbot': { pt: 'PRINT ROB\u00d4', en: 'PRINT BOT' },
   'ocr.crosshair': {
-    pt: '\uD83C\uDFAF MIRA NO NOME DA CARTA',
-    en: '\uD83C\uDFAF AIM AT CARD NAME',
+    pt: '\uD83C\uDFAF Mire no nome da carta',
+    en: '\uD83C\uDFAF Aim at card name',
   },
   'ocr.manual.auto': { pt: 'Auto (detectar)', en: 'Auto (detect)' },
   'ocr.manual.title': {
@@ -8191,6 +8221,110 @@ const STRINGS = {
   'ocr.type.token': { pt: 'Ficha', en: 'Token' },
   'ocr.type.trap': { pt: 'Armadilha', en: 'Trap' },
   'ocr.type.xyz': { pt: 'Monstro Xyz', en: 'Xyz Monster' },
+  'ocr.focus_tap': {
+    pt: '\uD83D\uDCF7 Toque no ecr\u00e3 para focar',
+    en: '\uD83D\uDCF7 Tap the screen to focus',
+  },
+  'ocr.status.initial': { pt: 'ESTADO: A analisar\u2026', en: 'STATUS: Analyzing\u2026' },
+  'ocr.log.engine_standby': { pt: '> Motor em espera\u2026', en: '> Engine standby\u2026' },
+  'ocr.log.camera_start': { pt: '\uD83C\uDFA5 A iniciar a c\u00e2mara\u2026', en: '\uD83C\uDFA5 Starting camera\u2026' },
+  'ocr.log.focus_continuous': { pt: '\uD83C\uDFAF Foco cont\u00ednuo', en: '\uD83C\uDFAF Continuous focus' },
+  'ocr.log.focus_auto': { pt: '\uD83C\uDFAF Foco autom\u00e1tico', en: '\uD83C\uDFAF Auto focus' },
+  'ocr.log.zoom': { pt: '\uD83D\uDD0D Zoom: {zoom}x', en: '\uD83D\uDD0D Zoom: {zoom}x' },
+  'ocr.log.focus_manual': { pt: '\uD83D\uDD0D Foco manual', en: '\uD83D\uDD0D Manual focus' },
+  'ocr.log.tesseract_loading': { pt: '\uD83E\uDDE0 A carregar Tesseract\u2026', en: '\uD83E\uDDE0 Loading Tesseract\u2026' },
+  'ocr.log.tesseract_ready': { pt: '\u2705 OCR pronto!', en: '\u2705 OCR ready!' },
+  'ocr.log.tesseract_fail': { pt: '\u274C Tesseract: {msg}', en: '\u274C Tesseract: {msg}' },
+  'ocr.log.scanning': { pt: '\uD83D\uDD0D A digitalizar\u2026', en: '\uD83D\uDD0D Scanning\u2026' },
+  'ocr.log.error': { pt: '\u274C Erro: {msg}', en: '\u274C Error: {msg}' },
+  'ocr.log.reading': { pt: '\uD83D\uDCD6 \u201c{text}\u201d', en: '\uD83D\uDCD6 \u201c{text}\u201d' },
+  'ocr.log.card_added': { pt: '\u2705 {name}', en: '\u2705 {name}' },
+  'ocr.vision.type_rarity': {
+    pt: 'TIPO: {type} | RARIDADE: {rarity}',
+    en: 'TYPE: {type} | RARITY: {rarity}',
+  },
+  'ocr.vision.calibrating': {
+    pt: 'A CALIBRAR | TIPO: {type} | RARIDADE: {rarity}',
+    en: 'CALIBRATING | TYPE: {type} | RARITY: {rarity}',
+  },
+  'ocr.vision.k_type': { pt: 'Tipo', en: 'Type' },
+  'ocr.vision.k_rarity': { pt: 'Raridade', en: 'Rarity' },
+  'ocr.vision.calibrating_badge': { pt: 'A calibrar\u2026', en: 'Calibrating\u2026' },
+  'ocr.log.calib_optimized': {
+    pt: '\u2705 Calibra\u00e7\u00e3o otimizada para {type} ({rarity})',
+    en: '\u2705 Calibration optimized for {type} ({rarity})',
+  },
+  'ocr.log.calib_best_read': {
+    pt: '\uD83D\uDCD6 Melhor leitura: \u201c{text}\u201d',
+    en: '\uD83D\uDCD6 Best reading: \u201c{text}\u201d',
+  },
+  'ocr.event.calib_match': {
+    pt: '\uD83C\uDFAF Calibra\u00e7\u00e3o: correspond\u00eancia com {name}',
+    en: '\uD83C\uDFAF Calibration: match for {name}',
+  },
+  'ocr.log.type_detected': { pt: '\uD83E\uDDED Tipo detectado: {type}', en: '\uD83E\uDDED Type detected: {type}' },
+  'ocr.log.type_detected_fallback': {
+    pt: '\uD83E\uDDED Tipo detectado: {type} (alternativa)',
+    en: '\uD83E\uDDED Type detected: {type} (fallback)',
+  },
+  'ocr.progress.testing': {
+    pt: '\uD83D\uDD27 A testar configura\u00e7\u00f5es\u2026 (toque para cancelar)',
+    en: '\uD83D\uDD27 Testing settings\u2026 (tap to cancel)',
+  },
+  'ocr.progress.testing_count': {
+    pt: '\uD83D\uDD27 A testar configura\u00e7\u00f5es\u2026 {cur}/{total}',
+    en: '\uD83D\uDD27 Testing settings\u2026 {cur}/{total}',
+  },
+  'ocr.event.calib_cancel': {
+    pt: '\uD83D\uDED1 Calibra\u00e7\u00e3o cancelada',
+    en: '\uD83D\uDED1 Calibration cancelled',
+  },
+  'ocr.progress.cancelling': {
+    pt: '\uD83D\uDED1 A cancelar\u2026 (aguarde o teste atual)',
+    en: '\uD83D\uDED1 Cancelling\u2026 (wait for current test)',
+  },
+  'ocr.log.calib_not_ready': {
+    pt: '\u23F3 Calibrador ainda n\u00e3o inicializado. Tente de novo.',
+    en: '\u23F3 Calibrator not ready yet. Try again.',
+  },
+  'ocr.log.calib_start': {
+    pt: '\uD83D\uDD27 A iniciar calibra\u00e7\u00e3o autom\u00e1tica\u2026',
+    en: '\uD83D\uDD27 Starting automatic calibration\u2026',
+  },
+  'ocr.log.calib_no_camera': { pt: '\u274C A c\u00e2mara n\u00e3o est\u00e1 ativa', en: '\u274C Camera is not active' },
+  'ocr.log.calib_selected': {
+    pt: '\uD83D\uDCCB Tipo: {type}, Raridade: {rarity}',
+    en: '\uD83D\uDCCB Type: {type}, Rarity: {rarity}',
+  },
+  'ocr.log.calib_resumed': {
+    pt: '\uD83D\uDD04 Digitaliza\u00e7\u00e3o retomada ap\u00f3s cancelamento',
+    en: '\uD83D\uDD04 Scanning resumed after cancellation',
+  },
+  'ocr.log.calib_err': {
+    pt: '\u274C Erro durante calibra\u00e7\u00e3o: {msg}',
+    en: '\u274C Error during calibration: {msg}',
+  },
+  'ocr.log.calib_done': { pt: '\u2705 Calibra\u00e7\u00e3o conclu\u00edda!', en: '\u2705 Calibration complete!' },
+  'ocr.log.calib_best_settings': {
+    pt: '\uD83D\uDCCA Melhor: contraste={contrast}, brilho={brightness}, limiar={threshold}',
+    en: '\uD83D\uDCCA Best: contrast={contrast}, brightness={brightness}, threshold={threshold}',
+  },
+  'ocr.log.calib_reading': {
+    pt: '\uD83D\uDCD6 Leitura obtida: \u201c{text}\u201d',
+    en: '\uD83D\uDCD6 Reading: \u201c{text}\u201d',
+  },
+  'ocr.log.calib_no_ideal': {
+    pt: '\u26A0\uFE0F N\u00e3o foi poss\u00edvel encontrar uma configura\u00e7\u00e3o ideal',
+    en: '\u26A0\uFE0F Could not find an ideal configuration',
+  },
+  'ocr.log.scanner_first_calib': {
+    pt: '\u274C Ative o digitalizador primeiro! Toque em \u00ab{action}\u00bb',
+    en: '\u274C Enable the scanner first! Tap \u201c{action}\u201d',
+  },
+  'ocr.log.ocr_not_loaded': {
+    pt: '\u26A0\uFE0F OCR ainda n\u00e3o carregou, aguarde alguns segundos\u2026',
+    en: '\u26A0\uFE0F OCR has not finished loading, wait a few seconds\u2026',
+  },
   'ui.card_generic': { pt: 'Carta', en: 'Card' },
   'price.not_found': { pt: 'N\u00e3o encontrado', en: 'Not found' },
   'ban.banned': { pt: 'Banida', en: 'Forbidden' },
@@ -8534,6 +8668,10 @@ const STRINGS = {
   },
   'toast.ocr_ok': { pt: 'Calibrado! Leitura: "{text}"', en: 'Calibrated! Reading: "{text}"' },
   'toast.ocr_wait': { pt: 'Aguarde o carregamento do OCR', en: 'Wait for OCR to finish loading' },
+  'toast.ocr_tess_load_fail': {
+    pt: 'N\u00e3o foi poss\u00edvel carregar o Tesseract (rede ou ficheiros bloqueados). A pr\u00e9-visualiza\u00e7\u00e3o da c\u00e2mara mant\u00e9m-se; tente recarregar a p\u00e1gina.',
+    en: 'Could not load Tesseract (network or files blocked). Camera preview stays open; try reloading the page.',
+  },
   'toast.pdf_saved': { pt: 'PDF salvo.', en: 'PDF saved.' },
   'toast.pick_saved_delete': {
     pt: 'Escolha um deck salvo para apagar.',
@@ -14179,7 +14317,7 @@ function filterSuggestRowIconMeta(kind, value, label) {
   if (kind === 'subtype') {
     const subtype = resolveSubtypeInput(raw);
     if (subtype === 'Token') {
-      return { url: ygoMonsterTypeIconUrl('Synchro Monster'), alt, className: 'filter-suggest-icon--card-type' };
+      return { url: ygoMonsterTypeIconUrl('Token'), alt, className: 'filter-suggest-icon--card-type' };
     }
     return subtype ? { url: ygoMonsterTypeIconUrl(subtype), alt, className: 'filter-suggest-icon--card-type' } : null;
   }
@@ -14230,7 +14368,94 @@ function filterSuggestRowIconMeta(kind, value, label) {
     if (status === 'limited') return { html: '<i class="fa-solid fa-1" aria-hidden="true"></i>', alt };
     if (status === 'semi') return { html: '<i class="fa-solid fa-2" aria-hidden="true"></i>', alt };
   }
+  if (kind === 'ocrManualType') {
+    if (raw === 'AUTO') {
+      return { html: '<i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i>', alt };
+    }
+    if (raw === 'Magia') {
+      return {
+        html: `<span class="filter-suggest-dual-icon"><img src="${escAttr(STATIC_ICON_SPELL_FRAME_SVG)}" alt="" loading="lazy"><img class="filter-suggest-icon--card-type" src="${escAttr(ygoMonsterTypeIconUrl('Spell Card'))}" alt="" loading="lazy"></span>`,
+        alt,
+      };
+    }
+    if (raw === 'Armadilha') {
+      return {
+        html: `<span class="filter-suggest-dual-icon"><img src="${escAttr(STATIC_ICON_TRAP_FRAME_SVG)}" alt="" loading="lazy"><img class="filter-suggest-icon--card-type" src="${escAttr(ygoMonsterTypeIconUrl('Trap Card'))}" alt="" loading="lazy"></span>`,
+        alt,
+      };
+    }
+    const apiT = ocrManualSelectValueToApiCardType(raw);
+    if (apiT) return { url: ygoMonsterTypeIconUrl(apiT), alt, className: 'filter-suggest-icon--card-type' };
+    return null;
+  }
+  if (kind === 'ocrManualRarity') {
+    const md = ocrManualSelectRarityToMdCode(raw);
+    const url = md ? masterDuelRarityIconUrl(md) : '';
+    if (url) return { url, alt };
+    return { html: '<i class="fa-solid fa-gem" aria-hidden="true"></i>', alt };
+  }
   return null;
+}
+
+/**
+ * Valor de `#manual-card-type` → `type` da API (ícones CDN), exceto Magia/Armadilha/AUTO.
+ *
+ * @param {string} val
+ * @returns {string|null}
+ */
+function ocrManualSelectValueToApiCardType(val) {
+  const map = {
+    Magia: 'Spell Card',
+    Armadilha: 'Trap Card',
+    'Monstro Normal': 'Normal Monster',
+    'Monstro Efeito': 'Effect Monster',
+    'Monstro Sincro': 'Synchro Monster',
+    'Monstro Xyz': 'Xyz Monster',
+    'Monstro Link': 'Link Monster',
+    'Monstro Fusão': 'Fusion Monster',
+    'Monstro Ritual': 'Ritual Monster',
+    'Monstro Pêndulo': 'Pendulum Effect Monster',
+    Ficha: 'Token',
+  };
+  const v = String(val || '').trim();
+  return map[v] || null;
+}
+
+/**
+ * Raridade do painel OCR manual → código Master Duel para ícone.
+ *
+ * @param {string} val
+ * @returns {'UR'|'SR'|'R'|'N'|null}
+ */
+function ocrManualSelectRarityToMdCode(val) {
+  const map = {
+    Comum: 'N',
+    Rara: 'R',
+    'Super Rara': 'SR',
+    'Ultra Rara': 'UR',
+    Secreta: 'UR',
+  };
+  const v = String(val || '').trim();
+  if (map[v]) return map[v];
+  return normalizeMasterDuelFilterRarityToken(v);
+}
+
+/**
+ * HTML só do ícone (sem rótulo) para linhas OCR / chips de visão.
+ *
+ * @param {'ocrManualType'|'ocrManualRarity'} ocrKind
+ * @param {string} value
+ * @returns {string}
+ */
+function ocrManualRowIconInnerHtml(ocrKind, value) {
+  const icon = filterSuggestRowIconMeta(ocrKind, value, value);
+  if (!icon) return '';
+  if (icon.url) {
+    const cls = icon.className ? `filter-suggest-icon ${icon.className}` : 'filter-suggest-icon';
+    return `<img class="${cls.trim()}" src="${escAttr(icon.url)}" alt="" loading="lazy" onerror="this.style.display='none'">`;
+  }
+  if (icon.html) return `<span class="filter-suggest-html-icon" aria-hidden="true">${icon.html}</span>`;
+  return '';
 }
 
 /**
@@ -14260,6 +14485,12 @@ function getPendulumScaleFilterIconHtml(scale, sizePx = 14) {
  * @returns {string}
  */
 function filterSuggestRowInnerHtml(kind, row) {
+  if (kind === 'ocrManualType' || kind === 'ocrManualRarity') {
+    const label = String(row.label || row.value || '').trim();
+    const iconOnly = ocrManualRowIconInnerHtml(kind, String(row.value || ''));
+    const labelHtml = `<span class="filter-suggest-label">${escapeHtml(label)}</span>`;
+    return iconOnly ? `${iconOnly}${labelHtml}` : labelHtml;
+  }
   let label = String(row.label || row.value || '');
   if (kind === 'linkmarker') {
     const markerKey = resolveLinkMarkerInput(row.value) || resolveLinkMarkerInput(row.label);
@@ -14321,6 +14552,18 @@ function filterChipContentHtml(key, val) {
  */
 function suggestRowHoverAccentFromNativeSelectOption(kind, text, value) {
   if (kind === 'api-lang') return null;
+  if (kind === 'ocr-manual-rarity') return null;
+  if (kind === 'ocr-manual-type') {
+    const tv = String(value || '').trim();
+    const apiT = ocrManualSelectValueToApiCardType(tv);
+    if (apiT) {
+      const colorKey = getTypeColorKeyFromCardType(apiT);
+      return colorKey ? RESULT_TYPE_COLORS[colorKey] || null : null;
+    }
+    if (tv === 'Magia') return RESULT_TYPE_COLORS[getTypeColorKeyFromCardType('Spell Card')] || null;
+    if (tv === 'Armadilha') return RESULT_TYPE_COLORS[getTypeColorKeyFromCardType('Trap Card')] || null;
+    return null;
+  }
   const t = String(text || '').trim();
   const tv = String(value || '').trim();
   const colorKey = getTypeColorKeyFromCardType(t) || getTypeColorKeyFromCardType(tv);
@@ -14648,7 +14891,7 @@ async function applyNativeSelectSavedDeckPreview(id, gen) {
 }
 
 /**
- * Garante o painel flutuante `#ui-native-custom-select-panel` e o listener de `mouseleave` para fechar com revert opcional.
+ * Garante o painel flutuante `#ui-native-custom-select-panel` (fecho fora via {@link armNativeCustomSelectOutsidePointerClose}).
  *
  * @returns {HTMLElement}
  */
@@ -14660,22 +14903,11 @@ function ensureNativeCustomSelectPanel() {
   panel.className = 'ui-native-custom-select-panel';
   panel.setAttribute('role', 'listbox');
   document.body.appendChild(panel);
-  panel.addEventListener('mouseleave', (e) => {
-    const rel = e.relatedTarget;
-    if (
-      rel &&
-      nativeCustomSelectCtx &&
-      (rel === nativeCustomSelectCtx.btn ||
-        (nativeCustomSelectCtx.btn && nativeCustomSelectCtx.btn.contains(rel)))
-    )
-      return;
-    void hideNativeCustomSelectPanel(!!nativeCustomSelectBaseline);
-  });
   return panel;
 }
 
 /**
- * Posiciona o painel logo abaixo do botão âncora; largura mínima maior exceto para `api-lang` (bandeiras).
+ * Posiciona o painel junto ao botão âncora: preferência por baixo; se não couber, abre por cima e limita `max-height` ao viewport.
  *
  * @param {HTMLElement|null|undefined} anchor Botão trigger do select custom.
  * @returns {void}
@@ -14684,11 +14916,82 @@ function positionNativeCustomSelectPanel(anchor) {
   const panel = getEl('ui-native-custom-select-panel');
   if (!panel || !anchor) return;
   const r = anchor.getBoundingClientRect();
-  panel.style.left = `${Math.round(r.left)}px`;
-  panel.style.top = `${Math.round(r.bottom + 2)}px`;
   const kind = nativeCustomSelectCtx && nativeCustomSelectCtx.kind;
+  const vv = typeof window !== 'undefined' && window.visualViewport ? window.visualViewport : null;
+  const vw =
+    vv && vv.width > 0
+      ? vv.width
+      : typeof window.innerWidth === 'number'
+        ? window.innerWidth
+        : document.documentElement && document.documentElement.clientWidth
+          ? document.documentElement.clientWidth
+          : 800;
+  const vh =
+    vv && vv.height > 0
+      ? vv.height
+      : typeof window.innerHeight === 'number'
+        ? window.innerHeight
+        : document.documentElement && document.documentElement.clientHeight
+          ? document.documentElement.clientHeight
+          : 600;
+  const vOffTop = vv && Number.isFinite(vv.offsetTop) ? vv.offsetTop : 0;
+  const vOffLeft = vv && Number.isFinite(vv.offsetLeft) ? vv.offsetLeft : 0;
+  const pad = 8;
+  const bottomLimit = vOffTop + vh - pad;
+  const rightLimit = vOffLeft + vw - pad;
   if (kind === 'api-lang') panel.style.width = `${Math.round(Math.max(r.width, 1))}px`;
   else panel.style.width = `${Math.round(Math.max(r.width, 160))}px`;
+  panel.style.removeProperty('bottom');
+  panel.style.display = 'block';
+
+  const hardCap = Math.min(vh * 0.55, 420);
+  const spaceBelow = Math.max(0, bottomLimit - r.bottom);
+  const spaceAbove = Math.max(0, r.top - vOffTop - pad);
+  const contentH = Math.max(panel.scrollHeight, 1);
+
+  let maxH = Math.min(hardCap, contentH, spaceBelow);
+  panel.style.maxHeight = `${Math.floor(Math.max(1, maxH))}px`;
+
+  let top = r.bottom + 2;
+  let pr = panel.getBoundingClientRect();
+  if (pr.bottom > bottomLimit) {
+    maxH = Math.min(hardCap, contentH, spaceAbove);
+    panel.style.maxHeight = `${Math.floor(Math.max(1, maxH))}px`;
+    pr = panel.getBoundingClientRect();
+    top = r.top - pr.height - 2;
+    if (top < vOffTop + pad) {
+      top = vOffTop + pad;
+      const cap = Math.max(80, bottomLimit - top);
+      panel.style.maxHeight = `${Math.floor(Math.min(maxH, cap))}px`;
+      pr = panel.getBoundingClientRect();
+    }
+  }
+
+  let left = r.left;
+  if (pr.width > 0) {
+    if (left + pr.width > rightLimit) left = rightLimit - pr.width;
+    if (left < vOffLeft + pad) left = vOffLeft + pad;
+  }
+  panel.style.left = `${Math.round(left)}px`;
+  panel.style.top = `${Math.round(top)}px`;
+
+  pr = panel.getBoundingClientRect();
+  if (pr.bottom > bottomLimit) {
+    const overflow = pr.bottom - bottomLimit;
+    const curMax = parseFloat(String(panel.style.maxHeight || '').replace(/px$/i, '')) || pr.height;
+    const shrunk = Math.max(80, Math.floor(curMax - overflow - 2));
+    panel.style.maxHeight = `${shrunk}px`;
+    pr = panel.getBoundingClientRect();
+    top = Math.max(vOffTop + pad, bottomLimit - pr.height);
+    panel.style.top = `${Math.round(top)}px`;
+  }
+  if (pr.top < vOffTop + pad) {
+    panel.style.top = `${Math.round(vOffTop + pad)}px`;
+    pr = panel.getBoundingClientRect();
+    if (pr.bottom > bottomLimit) {
+      panel.style.maxHeight = `${Math.floor(Math.max(80, bottomLimit - pr.top - 2))}px`;
+    }
+  }
 }
 
 /**
@@ -14699,13 +15002,22 @@ function positionNativeCustomSelectPanel(anchor) {
 function bindNativeCustomSelectScrollReposition() {
   if (nativeCustomSelectScrollBound) return;
   nativeCustomSelectScrollBound = true;
-  const repos = () => {
+  const repos = (/** @type {Event} */ e) => {
     const panel = getEl('ui-native-custom-select-panel');
     if (
       !panel ||
       panel.style.display === 'none' ||
       !nativeCustomSelectCtx ||
       !nativeCustomSelectCtx.btn
+    )
+      return;
+    if (
+      e &&
+      e.type === 'scroll' &&
+      e.target &&
+      e.target !== window &&
+      e.target !== document &&
+      panel.contains(/** @type {Node} */ (e.target))
     )
       return;
     positionNativeCustomSelectPanel(nativeCustomSelectCtx.btn);
@@ -14715,14 +15027,50 @@ function bindNativeCustomSelectScrollReposition() {
 }
 
 /**
+ * Remove o listener global que fecha o select custom ao clicar fora.
+ *
+ * @returns {void}
+ */
+function disarmNativeCustomSelectOutsidePointerClose() {
+  if (!nativeCustomSelectOutsideDown) return;
+  document.removeEventListener('pointerdown', nativeCustomSelectOutsideDown, true);
+  nativeCustomSelectOutsideDown = null;
+}
+
+/**
+ * Liga `pointerdown` em captura para fechar ao clicar fora (evita fechar ao mover o rato para a scrollbar do painel).
+ *
+ * @returns {void}
+ */
+function armNativeCustomSelectOutsidePointerClose() {
+  disarmNativeCustomSelectOutsidePointerClose();
+  nativeCustomSelectOutsideDown = (e) => {
+    const panel = getEl('ui-native-custom-select-panel');
+    if (!panel || panel.style.display === 'none' || !nativeCustomSelectCtx) return;
+    const t = /** @type {unknown} */ (e.target);
+    if (!(t instanceof Node)) return;
+    if (panel.contains(t)) return;
+    if (nativeCustomSelectCtx.btn && nativeCustomSelectCtx.btn.contains(t)) return;
+    void hideNativeCustomSelectPanel(!!nativeCustomSelectBaseline);
+  };
+  document.addEventListener('pointerdown', nativeCustomSelectOutsideDown, true);
+}
+
+/**
  * Fecha painel custom, incrementa geração de pré-visualização e opcionalmente restaura baseline capturado ao abrir.
  *
  * @param {boolean} revertPreview Se deve chamar {@link restoreNativeSelectPreview}.
  * @returns {Promise<void>}
  */
 async function hideNativeCustomSelectPanel(revertPreview) {
+  disarmNativeCustomSelectOutsidePointerClose();
   const panel = getEl('ui-native-custom-select-panel');
-  if (panel) panel.style.display = 'none';
+  if (panel) {
+    panel.style.display = 'none';
+    try {
+      panel.style.removeProperty('max-height');
+    } catch (_) {}
+  }
   nativeSelectPreviewGen++;
   if (nativeCustomSelectCtx && nativeCustomSelectCtx.btn)
     nativeCustomSelectCtx.btn.setAttribute('aria-expanded', 'false');
@@ -14740,6 +15088,7 @@ async function hideNativeCustomSelectPanel(revertPreview) {
  * @returns {Promise<void>}
  */
 async function onNativeCustomSelectRowEnter(kind, value) {
+  if (kind === 'ocr-manual-type' || kind === 'ocr-manual-rarity') return;
   if (!nativeCustomSelectBaseline) nativeCustomSelectBaseline = snapshotNativeSelectPreview(kind);
   else await restoreNativeSelectPreview(nativeCustomSelectBaseline);
   nativeSelectPreviewGen++;
@@ -14777,6 +15126,7 @@ async function commitNativeCustomSelect(kind, value) {
   const hadPreview = !!nativeCustomSelectBaseline;
   nativeCustomSelectBaseline = null;
   nativeSelectPreviewGen++;
+  disarmNativeCustomSelectOutsidePointerClose();
   const panel = getEl('ui-native-custom-select-panel');
   if (panel) panel.style.display = 'none';
   const ctx = nativeCustomSelectCtx;
@@ -14810,6 +15160,14 @@ async function commitNativeCustomSelect(kind, value) {
     updateUI();
   } else if (kind === 'api-lang') {
     setApiCardLang(value);
+  } else if (kind === 'ocr-manual-type' || kind === 'ocr-manual-rarity') {
+    try {
+      if (document.documentElement.classList.contains('ocr-scanner-active')) {
+        const mt = String(getVal('manual-card-type', 'AUTO'));
+        const rr = String(getVal('manual-rarity', 'Comum'));
+        setVisionTypeRarity(mt, rr, { calibrating: false });
+      }
+    } catch (_) {}
   }
   if (ctx && ctx.selId) syncNativeCustomSelectTrigger(ctx.selId);
 }
@@ -14839,6 +15197,11 @@ function refreshNativeCustomSelectPanel() {
       div.innerHTML = API_LANG_FLAG_SVG[code] || '';
       div.setAttribute('title', T('lang.opt_' + code));
       div.setAttribute('aria-label', T('lang.opt_' + code));
+    } else if (kind === 'ocr-manual-type' || kind === 'ocr-manual-rarity') {
+      div.classList.add('filter-combo-suggest-row--with-icon', 'filter-combo-suggest-row--ocr-manual');
+      const lab = String(o.textContent || v || '—').trim();
+      const ik = kind === 'ocr-manual-type' ? 'ocrManualType' : 'ocrManualRarity';
+      div.innerHTML = filterSuggestRowInnerHtml(ik, { value: v, label: lab });
     } else {
       div.textContent = o.textContent || v || '—';
     }
@@ -14858,8 +15221,17 @@ function refreshNativeCustomSelectPanel() {
     });
     panel.appendChild(div);
   }
-  positionNativeCustomSelectPanel(ctx.btn);
   panel.style.display = 'block';
+  positionNativeCustomSelectPanel(ctx.btn);
+  const rafBtn = ctx.btn;
+  requestAnimationFrame(() => {
+    if (
+      nativeCustomSelectCtx &&
+      nativeCustomSelectCtx.btn === rafBtn &&
+      panel.style.display !== 'none'
+    )
+      positionNativeCustomSelectPanel(rafBtn);
+  });
 }
 
 /**
@@ -14876,6 +15248,7 @@ function openNativeCustomSelectPanel(ctxIn) {
   }
   nativeCustomSelectCtx.btn.setAttribute('aria-expanded', 'true');
   refreshNativeCustomSelectPanel();
+  armNativeCustomSelectOutsidePointerClose();
 }
 
 /**
@@ -14892,6 +15265,18 @@ function syncNativeCustomSelectTrigger(selId) {
     const code = String(sel.value || '').toLowerCase();
     btn.innerHTML = API_LANG_FLAG_SVG[code] || '';
     const lab = T('lang.opt_' + code);
+    btn.setAttribute('title', lab);
+    btn.setAttribute('aria-label', lab);
+    return;
+  }
+  if (selId === 'manual-card-type' || selId === 'manual-rarity') {
+    const si = sel.selectedIndex;
+    const opt = si >= 0 && sel.options[si] ? sel.options[si] : null;
+    const v = opt ? String(opt.value || '') : '';
+    const lab = (opt && opt.textContent && opt.textContent.trim()) || v || '—';
+    const ik = selId === 'manual-card-type' ? 'ocrManualType' : 'ocrManualRarity';
+    btn.innerHTML = filterSuggestRowInnerHtml(ik, { value: v, label: lab });
+    btn.classList.add('ocr-manual-select-trigger');
     btn.setAttribute('title', lab);
     btn.setAttribute('aria-label', lab);
     return;
@@ -15054,6 +15439,8 @@ function syncAllNativeCustomSelectTriggers() {
   syncNativeCustomSelectTrigger('deck-banlist-select');
   syncNativeCustomSelectTrigger('deck-sort-by');
   syncNativeCustomSelectTrigger('select-api-card-lang');
+  syncNativeCustomSelectTrigger('manual-card-type');
+  syncNativeCustomSelectTrigger('manual-rarity');
 }
 
 /**
@@ -15082,6 +15469,8 @@ function initNativeSelectCustomUi() {
     { selId: 'deck-banlist-select', kind: 'deck-banlist' },
     { selId: 'deck-sort-by', kind: 'deck-sort' },
     { selId: 'select-api-card-lang', kind: 'api-lang' },
+    { selId: 'manual-card-type', kind: 'ocr-manual-type' },
+    { selId: 'manual-rarity', kind: 'ocr-manual-rarity' },
   ];
   for (let _cfg = 0; _cfg < configs.length; _cfg++) {
     const { selId, kind } = configs[_cfg];
@@ -15095,6 +15484,8 @@ function initNativeSelectCustomUi() {
     else if (selId === 'deck-banlist-select')
       wrap.classList.add('custom-select-wrap--deck-banlist');
     else if (selId === 'select-api-card-lang') wrap.classList.add('custom-select-wrap--api-lang');
+    else if (selId === 'manual-card-type' || selId === 'manual-rarity')
+      wrap.classList.add('custom-select-wrap--ocr-manual');
     if (sel.id === 'sort-by') {
       wrap.style.flex = '0 0 auto';
       wrap.classList.add('custom-select-wrap--results-sort');
@@ -15820,6 +16211,8 @@ let nativeCustomSelectBaseline = null;
 let nativeSelectPreviewGen = 0;
 /** Contexto do painel de select nativo custom (select + botão + kind). */
 let nativeCustomSelectCtx = null;
+/** Listener `pointerdown` em captura para fechar select custom ao clicar fora. */
+let nativeCustomSelectOutsideDown = null;
 /** Scroll/resize já ligados ao painel de select custom. */
 let nativeCustomSelectScrollBound = false;
 
@@ -19799,9 +20192,12 @@ function showToast(msg, opts) {
   const variant = opts && opts.variant ? String(opts.variant) : 'success';
   toast.className = `toast${variant === 'error' ? ' toast-error' : ''}`;
   const ic = variant === 'error' ? '✖' : '✔';
+  const long = String(msg).length > 90;
+  if (long) toast.classList.add('toast--long');
   toast.innerHTML = `<span>${ic}</span> ${escapeHtml(msg)}`;
   container.appendChild(toast);
-  setTimeout(() => toast.remove(), 2000);
+  const ttl = long ? 4200 : 2000;
+  setTimeout(() => toast.remove(), ttl);
 }
 
 /**
@@ -24292,7 +24688,8 @@ async function computeUnexpandedSearchResults(initial, requestId) {
     hasMdRarityFilter ||
     hasTcgOcgBanstatusFilter;
 
-  if (getEl('ocr-container')?.style.display === 'block') return { kind: 'skip' };
+  const ocrDisp = getEl('ocr-container')?.style.display;
+  if (ocrDisp === 'block' || ocrDisp === 'flex') return { kind: 'skip' };
 
   if (!initial && !hasFnameQuery && !hasDescQuery && !hasOtherFilters) {
     return { kind: 'clear' };
@@ -24942,6 +25339,56 @@ function pickRandomFilteredCard() {
 }
 
 /**
+ * HTML do estado vazio centrado em `#results-view` (ícone + título + fragmento opcional), mesmo padrão de "Nenhuma carta encontrada".
+ *
+ * @param {{ title: string, emoji?: string, hintHtml?: string }} opts
+ * @returns {string}
+ */
+function buildResultsViewEmptyStateHtml(opts) {
+  const title = String(opts.title || '');
+  const emoji = opts.emoji != null ? String(opts.emoji) : '🔍';
+  const hintHtml = opts.hintHtml || '';
+  return `<div class="results-state-placeholder" style="grid-column: 1/-1; padding: 60px 20px; text-align: center; opacity: 0.6;">
+                <div style="font-size: 3em; margin-bottom: 15px; line-height: 1;" aria-hidden="true">${emoji}</div>
+                <b style="font-size: 1.2em; color: var(--accent);">${escapeHtml(title)}</b>
+                ${hintHtml}
+            </div>`;
+}
+
+/**
+ * Preenche `#results-view` com o estado vazio do scanner: “modo scanner ativado” (mesmo bloco que “nenhuma carta”) + linha com a dica de mira, ou só “sem deteções” ao fechar.
+ *
+ * @param {'aim'|'no-cards'} variant
+ * @returns {void}
+ */
+function paintOcrScannerEmptyResultsView(variant) {
+  const container = getEl('results-view');
+  if (!container) return;
+  const isNoCards = variant === 'no-cards';
+  const title = T(isNoCards ? 'ocr.no_cards_title' : 'ocr.scanner_active_title');
+  const emoji = '\uD83E\uDD16';
+  const hintHtml = isNoCards
+    ? ''
+    : `<div style="margin-top:14px;font-size:0.95em;line-height:1.4;opacity:0.82;">${escapeHtml(
+        T('ocr.scanner_aim_title')
+      )}</div>`;
+  container.innerHTML = buildResultsViewEmptyStateHtml({ title, emoji, hintHtml });
+  try {
+    const viewMode = normalizeViewMode4(currentView, 'list');
+    container.className = buildMainResultsViewClassName(viewMode);
+  } catch (_) {}
+  const infoEl = getEl('result-info');
+  const pageTotalEl = getEl('page-total');
+  const pageJumpEl = getEl('page-jump');
+  if (infoEl) infoEl.innerText = title;
+  if (pageTotalEl) pageTotalEl.innerText = T('ui.pagination_page_total', { t: 1 });
+  if (pageJumpEl) pageJumpEl.value = 1;
+  try {
+    refreshViewControlsHeaderCompact();
+  } catch (_) {}
+}
+
+/**
  * Reconstrói `#results-view` conforme {@link currentView}: fatia paginada de {@link searchResults}, estados vazio/carregando,
  * modo lista ou grelha com cartões interativos. Em lista chama {@link fitResultsListLayoutAfterRender} e pode re-invocar-se para overflow em fullscreen.
  *
@@ -24950,6 +25397,15 @@ function pickRandomFilteredCard() {
 function renderResults() {
   const container = getEl('results-view');
   if (!container) return;
+  if (document.documentElement.classList.contains('ocr-scanner-active') && !__insideOcrResultsRender) {
+    updateScannerResultsUI();
+    maybePaintSuggestionSurfaceAnimations();
+    if (!isUpdatingUi) {
+      const rr = consumeCardSurfaceFeedback();
+      applyCardSurfaceFeedback(rr);
+    }
+    return;
+  }
   container.innerHTML = '';
   const viewMode = normalizeViewMode4(currentView, 'list');
   const viewLayout = viewModeLayout(viewMode);
@@ -24990,11 +25446,11 @@ function renderResults() {
     if (pageTotalEl) pageTotalEl.innerText = T('ui.pagination_page_total', { t: 1 });
     if (pageJumpEl) pageJumpEl.value = 1;
     refreshViewControlsHeaderCompact();
-    container.innerHTML = `<div style="grid-column: 1/-1; padding: 60px 20px; text-align: center; opacity: 0.6;">
-                <div style="font-size: 3em; margin-bottom: 15px;">🔍</div>
-                <b style="font-size: 1.2em; color: var(--accent);">${escapeHtml(T('results.none'))}</b>
-                ${hintBlock}
-            </div>`;
+    container.innerHTML = buildResultsViewEmptyStateHtml({
+      title: T('results.none'),
+      emoji: '🔍',
+      hintHtml: hintBlock,
+    });
     maybePaintSuggestionSurfaceAnimations();
     if (!isUpdatingUi) {
       const rr = consumeCardSurfaceFeedback();
@@ -28931,6 +29387,21 @@ getEl('filter-price-max')?.addEventListener('input', () => {
 });
 
 // ==================== MÓDULO OCR - VERSÃO CORRIGIDA ====================
+/**
+ * Caminhos explícitos do Tesseract.js v4 (worker / core / lang).
+ * O worker 4.0.1 faz `importScripts(corePath)` e espera o global **`TesseractCoreWASM`** no script do core.
+ * Em `tesseract.js-core@4.0.3+` o bundle passou a expor só `TesseractCore`, o que provoca `Failed to load TesseractCore`.
+ * Por isso o core fica fixo em **4.0.1** (alinhado com `^4.0.1` no package do tesseract.js).
+ * @see https://github.com/naptha/tesseract.js/blob/master/docs/local-installation.md
+ */
+const TESSERACT_CDN_JS = 'https://cdn.jsdelivr.net/npm';
+const TESSERACT_CORE_VER = '4.0.1';
+const TESSERACT_WORKER_OPTIONS = Object.freeze({
+  workerPath: `${TESSERACT_CDN_JS}/tesseract.js@4.0.1/dist/worker.min.js`,
+  corePath: `${TESSERACT_CDN_JS}/tesseract.js-core@${TESSERACT_CORE_VER}/tesseract-core.wasm.js`,
+  langPath: 'https://tessdata.projectnaptha.com/4.0.0',
+  gzip: true,
+});
 /** Worker Tesseract (`Tesseract.createWorker()`); `null` até o primeiro scan bem-sucedido. */
 let ocrWorker = null;
 /** Quando verdadeiro, o loop {@link processOcrFrame} continua ativo. */
@@ -28947,6 +29418,10 @@ let scannerFoundCardIds = new Set();
 let scannerFoundCardById = new Map();
 /** Cooldown curto após match para não inundar a API. */
 let processingCooldown = false;
+/** Evita chamadas concorrentes a {@link startScanner} (duplo clique / propagacao). */
+let scannerStartInFlight = false;
+/** Evita recursão quando {@link updateScannerResultsUI} delega a {@link renderResults} com `searchResults` temporário. */
+let __insideOcrResultsRender = false;
 /** Texto da última query `smartSearch` (throttle ~900 ms). */
 let lastApiSearchCleaned = '';
 let lastApiSearchTime = 0;
@@ -29622,10 +30097,11 @@ function isStrongMatch(ocrCleaned, card) {
 function addOcrLog(msg) {
   const logBox = getEl('ocr-log');
   if (!logBox) return;
-  const t = new Date().toLocaleTimeString('pt-BR', { hour12: false });
+  const loc = getUiLang() === 'pt' ? 'pt-BR' : 'en-US';
+  const t = new Date().toLocaleTimeString(loc, { hour12: false });
   const div = document.createElement('div');
   div.style.cssText =
-    'border-bottom:1px solid #333; padding:2px; font-size:11px; color:#2ecc71; font-family:monospace;';
+    'border-bottom:1px solid #333; padding:3px 0; font-size:12px; color:#9cf0b8; font-family:ui-monospace,Consolas,monospace;';
   div.textContent = `[${t}] ${msg}`;
   logBox.prepend(div);
   if (logBox.childElementCount > 40) logBox.removeChild(logBox.lastChild);
@@ -29689,13 +30165,57 @@ function safeRound(n, d = 2) {
 }
 
 /**
- * Atualiza rótulo `#vision-label` (tipo/raridade ou estado da visão).
+ * Atualiza rótulo `#vision-label`: texto simples (estado inicial, mensagens) ou {@link setVisionTypeRarity}.
+ *
  * @param {string} text
  * @returns {void}
  */
 function setVisionStatus(text) {
   const el = getEl('vision-label');
-  if (el) el.innerText = text;
+  if (!el) return;
+  el.classList.remove('ocr-vision-label--chips');
+  const t = String(text ?? '');
+  el.innerHTML = `<span class="ocr-vision-label__plain">${escapeHtml(t)}</span>`;
+}
+
+/**
+ * Mostra tipo e raridade em chips com ícones (painel OCR).
+ *
+ * @param {string} type Valor de `#manual-card-type` ou detetado.
+ * @param {string} rarity Valor de `#manual-rarity`.
+ * @param {{ calibrating?: boolean }} [opts]
+ * @returns {void}
+ */
+function setVisionTypeRarity(type, rarity, opts) {
+  const el = getEl('vision-label');
+  if (!el) return;
+  const calibrating = !!(opts && opts.calibrating);
+  el.classList.add('ocr-vision-label--chips');
+  const typeStr = String(type || '');
+  const rarityStr = String(rarity || '');
+  const typeIcon = ocrManualRowIconInnerHtml('ocrManualType', typeStr);
+  const rarityIcon = ocrManualRowIconInnerHtml('ocrManualRarity', rarityStr);
+  const kType = escapeHtml(T('ocr.vision.k_type'));
+  const kRar = escapeHtml(T('ocr.vision.k_rarity'));
+  const typeEsc = escapeHtml(typeStr);
+  const rarityEsc = escapeHtml(rarityStr);
+  const calibBadge = calibrating
+    ? `<div class="ocr-vision-calib-badge" role="status">${escapeHtml(T('ocr.vision.calibrating_badge'))}</div>`
+    : '';
+  el.innerHTML = `
+    ${calibBadge}
+    <div class="ocr-vision-chips">
+      <div class="ocr-vision-chip ocr-vision-chip--type">
+        <span class="ocr-vision-chip__k">${kType}</span>
+        <span class="ocr-vision-chip__icon">${typeIcon}</span>
+        <span class="ocr-vision-chip__v">${typeEsc}</span>
+      </div>
+      <div class="ocr-vision-chip ocr-vision-chip--rarity">
+        <span class="ocr-vision-chip__k">${kRar}</span>
+        <span class="ocr-vision-chip__icon">${rarityIcon}</span>
+        <span class="ocr-vision-chip__v">${rarityEsc}</span>
+      </div>
+    </div>`;
 }
 
 /**
@@ -29720,40 +30240,44 @@ function showScannerToast(cardName) {
 }
 
 /**
- * Reconstrói sugestões em `#search-results` a partir de {@link scannerFoundCards} (imagem, preço, botão adicionar).
+ * Reconstrói `#results-view` durante o scanner OCR: delega a {@link renderResults} para o mesmo aspeto que as sugestões normais.
  * @returns {void}
  */
 function updateScannerResultsUI() {
-  const container = getEl('search-results');
+  const container = getEl('results-view');
   if (!container) return;
-  if (container.innerHTML.includes('Scanner ativo') || container.innerHTML.includes('Aponte')) {
-    container.innerHTML = '';
+  if (!document.documentElement.classList.contains('ocr-scanner-active')) return;
+  if (scannerFoundCards.length === 0) {
+    paintOcrScannerEmptyResultsView('aim');
+    return;
   }
-  for (let sci = 0; sci < scannerFoundCards.length; sci++) {
-    const card = scannerFoundCards[sci];
-    const cardName = displayNameForApiCard(card);
-    const cidNum = sanitizeYuGiOhCardId(card.id);
-    if (cidNum == null) continue;
-    const usdOcr = getTcgplayerPriceUsd(card);
-    const priceOcrStr = usdOcr > 0 ? `${usdOcr.toFixed(2)}` : 'N/A';
-    const smallUrl = String(card.card_images[0].image_url_small || '')
-      .trim()
-      .slice(0, 2048);
-    const div = document.createElement('div');
-    div.className = 'suggestion-item';
-    div.style.borderLeft = '3px solid #2ecc71';
-    div.style.marginBottom = '8px';
-    div.style.padding = '8px';
-    div.innerHTML = `
-            <img src="${escAttr(smallUrl)}" style="width: 60px;">
-            <div class="card-info-box">
-                <div class="card-name" style="color:#2ecc71; font-size:14px;">${escapeHtml(cardName)}</div>
-                <div class="info-row" style="font-size:11px;">💰 ${escapeHtml(priceOcrStr)}</div>
-                <button type="button" onclick="forceAddToQueue(${cidNum})" style="background:#2ecc71; color:#000; border:none; border-radius:4px; padding:4px 12px; margin-top:6px; cursor:pointer; font-weight:bold;">${escapeHtml(T('ui.queue_add_ocr'))}</button>
-            </div>
-        `;
-    bindSuggestionItemDnD(div, { id: card.id, imgId: card.card_images[0].id, name: cardName });
-    container.appendChild(div);
+  __insideOcrResultsRender = true;
+  const savedResults = searchResults;
+  const savedPage = currentPage;
+  try {
+    searchResults = [];
+    for (let sci = 0; sci < scannerFoundCards.length; sci++) {
+      const card = scannerFoundCards[sci];
+      const imgs = card && card.card_images;
+      const first = Array.isArray(imgs) && imgs.length ? imgs[0] : null;
+      if (!first) continue;
+      searchResults.push({
+        ...card,
+        current_image: first,
+        variant_idx: 0,
+        is_variant: imgs.length > 1,
+      });
+    }
+    if (searchResults.length === 0) {
+      paintOcrScannerEmptyResultsView('aim');
+      return;
+    }
+    currentPage = 1;
+    renderResults();
+  } finally {
+    searchResults = savedResults;
+    currentPage = savedPage;
+    __insideOcrResultsRender = false;
   }
 }
 
@@ -30065,7 +30589,7 @@ async function processFrameWithFallbackPasses(video, cropRect) {
     cardType = await detectCardTypeFromImage(video, cropRect);
   }
   lastDetectedCardType = cardType;
-  setVisionStatus(`TIPO: ${cardType} | RARIDADE: ${rarity}`);
+  setVisionTypeRarity(cardType, rarity, { calibrating: false });
 
   const base = calibrator
     ? calibrator.getCalibration(cardType, rarity)
@@ -30235,7 +30759,8 @@ async function processFrameWithFallbackPasses(video, cropRect) {
  * @returns {Promise<void>}
  */
 async function processOcrFrame() {
-  if (!isOcrActive || isProcessing || processingCooldown) {
+  if (!isOcrActive) return;
+  if (isProcessing || processingCooldown) {
     requestAnimationFrame(processOcrFrame);
     return;
   }
@@ -30263,7 +30788,7 @@ async function processOcrFrame() {
 
     const outcome = await processFrameWithFallbackPasses(video, cropRect);
     if (outcome && outcome.cleaned) {
-      if (outcome.cleaned !== lastMatchedText) addOcrLog(`📖 "${outcome.cleaned}"`);
+      if (outcome.cleaned !== lastMatchedText) addOcrLog(T('ocr.log.reading', { text: outcome.cleaned }));
       if (outcome.card) {
         const cardName = displayNameForApiCard(outcome.card);
         triggerScanHaptic(outcome.card.id);
@@ -30274,7 +30799,7 @@ async function processOcrFrame() {
           lastMatchedText = cardName;
           lastMatchTime = Date.now();
           showScannerToast(cardName);
-          addOcrLog(`✅ ${cardName}`);
+          addOcrLog(T('ocr.log.card_added', { name: cardName }));
           updateScannerResultsUI();
           processingCooldown = true;
           setTimeout(() => {
@@ -30292,6 +30817,146 @@ async function processOcrFrame() {
   }, 400);
 }
 
+/** Timer debounce para {@link onOcrWindowResize}. */
+let ocrResizeTimer = 0;
+/** Indica se o listener global de resize do OCR está activo. */
+let ocrResizeListenerBound = false;
+/** Handler partilhado para `visualViewport` (Brave/Android). */
+let ocrVisualViewportHandler = null;
+
+function onOcrWindowResize() {
+  try {
+    window.requestAnimationFrame(() => layoutOcrPanelIntoFiltersColumn());
+  } catch (_) {
+    try {
+      layoutOcrPanelIntoFiltersColumn();
+    } catch (__) {}
+  }
+  window.clearTimeout(ocrResizeTimer);
+  ocrResizeTimer = window.setTimeout(() => {
+    layoutOcrPanelIntoFiltersColumn();
+  }, 100);
+}
+
+/**
+ * Regista listeners de `resize` e `visualViewport` para recalcular o painel OCR (Brave mexe na altura útil ao fazer scroll).
+ *
+ * @returns {void}
+ */
+function bindOcrResizeForScanner() {
+  if (ocrResizeListenerBound) return;
+  ocrResizeListenerBound = true;
+  window.addEventListener('resize', onOcrWindowResize, { passive: true });
+  try {
+    const vv = typeof window !== 'undefined' ? window.visualViewport : null;
+    if (vv) {
+      ocrVisualViewportHandler = () => onOcrWindowResize();
+      vv.addEventListener('resize', ocrVisualViewportHandler, { passive: true });
+      vv.addEventListener('scroll', ocrVisualViewportHandler, { passive: true });
+    }
+  } catch (_) {
+    ocrVisualViewportHandler = null;
+  }
+}
+
+/**
+ * Remove os listeners de resize do OCR.
+ *
+ * @returns {void}
+ */
+function unbindOcrResizeForScanner() {
+  if (!ocrResizeListenerBound) return;
+  window.removeEventListener('resize', onOcrWindowResize);
+  try {
+    const vv = typeof window !== 'undefined' ? window.visualViewport : null;
+    if (vv && ocrVisualViewportHandler) {
+      vv.removeEventListener('resize', ocrVisualViewportHandler);
+      vv.removeEventListener('scroll', ocrVisualViewportHandler);
+    }
+  } catch (_) {}
+  ocrVisualViewportHandler = null;
+  ocrResizeListenerBound = false;
+  window.clearTimeout(ocrResizeTimer);
+  ocrResizeTimer = 0;
+}
+
+/**
+ * Posiciona `#ocr-container` com base na caixa real de `#col-filters` (evita “fullscreen” por CSS/iframe).
+ * @returns {void}
+ */
+function layoutOcrPanelIntoFiltersColumn() {
+  const col = getEl('col-filters');
+  const panel = getEl('ocr-container');
+  if (!col || !panel) return;
+  const disp = String(panel.style.display || '');
+  if (!disp || disp === 'none') return;
+  const cr = col.getBoundingClientRect();
+  const vw = typeof window.innerWidth === 'number' ? window.innerWidth : cr.width;
+  const vv = typeof window !== 'undefined' && window.visualViewport ? window.visualViewport : null;
+  const vvH = vv && vv.height > 0 ? vv.height : 0;
+  const innerH = typeof window.innerHeight === 'number' ? window.innerHeight : 0;
+  const clientH =
+    typeof document !== 'undefined' && document.documentElement && document.documentElement.clientHeight > 0
+      ? document.documentElement.clientHeight
+      : 0;
+  /* Brave/Android: um dos três costuma atrasar face ao chrome da UI; o máximo evita maxHeight apertado demais. */
+  const vh = Math.max(vvH, innerH, clientH, 400);
+  /* Viewport estreito OU coluna de filtros larga demais (grelha “mobile” empilhada / iframe). */
+  const useStripLayout = vw <= 900 || cr.width > 520;
+  panel.style.boxSizing = 'border-box';
+  panel.style.position = 'absolute';
+  panel.style.top = '0';
+  if (useStripLayout) {
+    const sidePad = 8;
+    const cap = Math.min(Math.floor(vw - sidePad * 2), Math.max(260, Math.floor(cr.width)));
+    const wpx = Math.max(260, cap);
+    panel.style.width = `${wpx}px`;
+    const parentW = Math.max(1, Math.floor(cr.width));
+    const leftEdge = Math.max(0, Math.floor((parentW - wpx) / 2));
+    panel.style.left = `${leftEdge}px`;
+    panel.style.right = 'auto';
+    panel.style.transform = 'none';
+    panel.style.height = 'auto';
+    const colH = cr.height > 48 ? cr.height : vh * 0.92;
+    const stripMin = vh * 0.88;
+    /* Folga extra em px: barra do Brave / subpixel quando o URL bar anima ao fazer scroll. */
+    const baseCap = Math.min(vh * 0.98, Math.max(colH, stripMin));
+    const capH = Math.min(Math.ceil(vh * 0.995), Math.ceil(baseCap) + 72);
+    panel.style.maxHeight = `${capH}px`;
+  } else {
+    /* Desktop: preencher a coluna de filtros (top+bottom) para o flex do log consumir o espaço livre. */
+    panel.style.width = '100%';
+    panel.style.left = '0';
+    panel.style.right = '0';
+    panel.style.transform = 'none';
+    panel.style.top = '0';
+    panel.style.bottom = '0';
+    panel.style.height = '100%';
+    panel.style.maxHeight = 'none';
+  }
+}
+
+/**
+ * Em viewport estreito, desloca o scroll para o painel OCR visível (câmara no topo).
+ * @returns {void}
+ */
+function scrollMobileOcrIntoView() {
+  try {
+    if (typeof window.matchMedia !== 'function' || !window.matchMedia('(max-width: 900px)').matches) return;
+    const el = getEl('ocr-container') || getEl('col-filters');
+    if (!el) return;
+    window.requestAnimationFrame(() => {
+      try {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
+      } catch (_) {
+        try {
+          el.scrollIntoView(true);
+        } catch (__) {}
+      }
+    });
+  } catch (_) {}
+}
+
 // ==================== INICIAR SCANNER ====================
 
 /**
@@ -30299,79 +30964,130 @@ async function processOcrFrame() {
  * @returns {Promise<void>}
  */
 async function startScanner() {
+  if (scannerStartInFlight) return;
+  scannerStartInFlight = true;
   const container = getEl('ocr-container');
   const video = getEl('ocr-video');
-  if (container) container.style.display = 'block';
-  scannerFoundCards = [];
-  scannerFoundCardIds = new Set();
-  scannerFoundCardById = new Map();
+  const isDesktop = typeof window.matchMedia === 'function' && window.matchMedia('(min-width: 900px)').matches;
+  if (isDesktop) {
+    try {
+      applyFiltersColumnVisibility(false);
+    } catch (_) {}
+  }
   lastMatchedText = '';
   lastApiSearchCleaned = '';
   lastScanHapticKey = '';
   lastScanHapticTime = 0;
   cardCacheAPI.clear();
   fnameRawCache.clear();
-  const resultsContainer = getEl('search-results');
-  if (resultsContainer) {
-    resultsContainer.innerHTML =
-      '<div style="text-align:center; padding:30px; color:#2ecc71;">🎯 Aponte a mira no NOME da carta</div>';
-  }
   try {
-    addOcrLog('🎥 Iniciando câmera...');
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'environment', width: { ideal: 1280 } },
+    addOcrLog(T('ocr.log.camera_start'));
+    const videoConstraints = isDesktop
+      ? { width: { ideal: 1280 }, height: { ideal: 720 } }
+      : { facingMode: 'environment', width: { ideal: 1280 } };
+    const stream = await navigator.mediaDevices.getUserMedia({ video: videoConstraints });
+    if (container) {
+      container.style.display = isDesktop ? 'flex' : 'block';
+    }
+    try {
+      document.documentElement.classList.add('ocr-scanner-active');
+    } catch (_) {}
+    const resultsContainer = getEl('results-view');
+    if (resultsContainer) {
+      if (scannerFoundCards.length === 0) paintOcrScannerEmptyResultsView('aim');
+      else updateScannerResultsUI();
+    }
+    setScannerToolbarButtonActive(true);
+    bindOcrResizeForScanner();
+    layoutOcrPanelIntoFiltersColumn();
+    requestAnimationFrame(() => {
+      layoutOcrPanelIntoFiltersColumn();
+      requestAnimationFrame(() => {
+        layoutOcrPanelIntoFiltersColumn();
+        scrollMobileOcrIntoView();
+      });
     });
     video.srcObject = stream;
     await video.play();
+    layoutOcrPanelIntoFiltersColumn();
+    scrollMobileOcrIntoView();
     try {
       const track = stream.getVideoTracks()[0];
       const capabilities = track.getCapabilities();
       if (capabilities.focusMode) {
         if (capabilities.focusMode.includes('continuous')) {
           await track.applyConstraints({ advanced: [{ focusMode: 'continuous' }] });
-          addOcrLog('🎯 Foco contínuo');
+          addOcrLog(T('ocr.log.focus_continuous'));
         } else if (capabilities.focusMode.includes('auto')) {
           await track.applyConstraints({ advanced: [{ focusMode: 'auto' }] });
-          addOcrLog('🎯 Foco automático');
+          addOcrLog(T('ocr.log.focus_auto'));
         }
       }
       if (capabilities.zoom) {
         const maxZoom = capabilities.zoom.max;
         const zoom = Math.min(maxZoom, 1.5);
         await track.applyConstraints({ advanced: [{ zoom: zoom }] });
-        addOcrLog(`🔍 Zoom: ${zoom}x`);
+        addOcrLog(T('ocr.log.zoom', { zoom: String(zoom) }));
       }
     } catch (e) {}
-    video.addEventListener('click', async (e) => {
-      try {
-        const track = stream.getVideoTracks()[0];
-        if (track && track.applyConstraints) {
-          await track.applyConstraints({ advanced: [{ focusMode: 'manual', focusDistance: 1.0 }] });
-          addOcrLog('🔍 Foco manual');
-          setTimeout(async () => {
-            try {
-              await track.applyConstraints({ advanced: [{ focusMode: 'continuous' }] });
-            } catch (e) {}
-          }, 3000);
-        }
-      } catch (e) {}
-    });
-    if (!ocrWorker) {
-      addOcrLog('🧠 Carregando Tesseract...');
-      ocrWorker = await Tesseract.createWorker();
-      await ocrWorker.loadLanguage('eng');
-      await ocrWorker.initialize('eng');
-      await ocrWorker.setParameters({
-        tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 ,:ÁÉÍÓÚÂÊÎÔÛÃÕÇ',
-        tessedit_pageseg_mode: '7',
+    if (video.dataset.ocrFocusBound !== '1') {
+      video.dataset.ocrFocusBound = '1';
+      video.addEventListener('click', async () => {
+        try {
+          const src = video.srcObject;
+          if (!src) return;
+          const track = src.getVideoTracks()[0];
+          if (track && track.applyConstraints) {
+            await track.applyConstraints({ advanced: [{ focusMode: 'manual', focusDistance: 1.0 }] });
+            addOcrLog(T('ocr.log.focus_manual'));
+            setTimeout(async () => {
+              try {
+                await track.applyConstraints({ advanced: [{ focusMode: 'continuous' }] });
+              } catch (e) {}
+            }, 3000);
+          }
+        } catch (e) {}
       });
-      addOcrLog('✅ OCR pronto!');
+    }
+    if (!ocrWorker) {
+      addOcrLog(T('ocr.log.tesseract_loading'));
+      try {
+        ocrWorker = await Tesseract.createWorker(TESSERACT_WORKER_OPTIONS);
+        await ocrWorker.loadLanguage('eng');
+        await ocrWorker.initialize('eng');
+        await ocrWorker.setParameters({
+          tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 ,:ÁÉÍÓÚÂÊÎÔÛÃÕÇ',
+          tessedit_pageseg_mode: '7',
+        });
+        addOcrLog(T('ocr.log.tesseract_ready'));
+      } catch (tessErr) {
+        ocrWorker = null;
+        const tessMsg = tessErr && tessErr.message ? tessErr.message : String(tessErr);
+        addOcrLog(T('ocr.log.tesseract_fail', { msg: tessMsg }));
+        try {
+          showToast(T('toast.ocr_tess_load_fail'), { variant: 'error' });
+        } catch (_) {
+          showToast(T('toast.ocr_tess_load_fail'), { variant: 'error' });
+        }
+        isOcrActive = false;
+        return;
+      }
     }
     isOcrActive = true;
-    addOcrLog('🔍 Escaneando...');
+    setVisionStatus(T('ocr.status.initial'));
+    addOcrLog(T('ocr.log.scanning'));
     requestAnimationFrame(processOcrFrame);
   } catch (err) {
-    addOcrLog(`❌ Erro: ${err.message}`);
+    addOcrLog(T('ocr.log.error', { msg: err && err.message ? err.message : String(err) }));
+    if (container) container.setAttribute('style', 'display: none');
+    unbindOcrResizeForScanner();
+    try {
+      document.documentElement.classList.remove('ocr-scanner-active');
+    } catch (_) {}
+    setScannerToolbarButtonActive(false);
+    stopScanner();
+  } finally {
+    scannerStartInFlight = false;
   }
 }
 
@@ -30414,10 +31130,10 @@ window.forceAddToQueue = (cardId) => {
   }
 };
 
-/**
+/* --- DEV OCR: reative estes handlers junto aos botões em index.html ---
  * Copia texto bruto de `#ocr-log` para a área de transferência.
  * @returns {void}
- */
+ *
 window.copyLogs = () => {
   const logElement = getEl('ocr-log');
   if (logElement) {
@@ -30426,10 +31142,9 @@ window.copyLogs = () => {
   }
 };
 
-/**
  * Descarrega JSON com buffer de debug OCR e último snapshot (`ocr_debug_<timestamp>.json`).
  * @returns {void}
- */
+ *
 window.exportOcrDebug = () => {
   const payload = {
     exportedAt: new Date().toISOString(),
@@ -30445,10 +31160,9 @@ window.exportOcrDebug = () => {
   showToast(T('toast.debug_exported'));
 };
 
-/**
  * Gera PNG composto (pré-visualização + trecho de log + snapshot) e também chama {@link window.exportOcrDebug}.
  * @returns {void}
- */
+ *
 window.takeScreenshot = () => {
   const previewCanvas = getEl('preview-canvas');
   const canvas = document.createElement('canvas');
@@ -30483,10 +31197,61 @@ window.takeScreenshot = () => {
     link.referrerPolicy = 'no-referrer';
   } catch (_) {}
   link.click();
-  // Também exporta o JSON junto (mais útil pra análise)
   window.exportOcrDebug?.();
   showToast(T('toast.screenshot_saved'));
 };
+--- fim DEV OCR --- */
+
+/**
+ * Estado visual do botão da toolbar que abre o scanner (`#btn-open-scanner`).
+ * @param {boolean} on
+ * @returns {void}
+ */
+function setScannerToolbarButtonActive(on) {
+  const b = getEl('btn-open-scanner');
+  if (!b) return;
+  b.classList.toggle('active', !!on);
+  b.setAttribute('aria-pressed', on ? 'true' : 'false');
+}
+
+/**
+ * @returns {boolean} `true` se `#ocr-container` está visível (display ≠ none).
+ */
+function isOcrContainerVisible() {
+  const c = getEl('ocr-container');
+  const d = c && c.style && c.style.display;
+  return !!(c && d && d !== 'none');
+}
+
+/**
+ * Encerra câmera/OCR, oculta o painel e atualiza resultados (equivalente a fechar o scanner).
+ * @returns {void}
+ */
+function closeScannerUi() {
+  unbindOcrResizeForScanner();
+  try {
+    document.documentElement.classList.remove('ocr-scanner-active');
+  } catch (_) {}
+  stopScanner();
+  const c = getEl('ocr-container');
+  if (c) c.setAttribute('style', 'display: none');
+  setScannerToolbarButtonActive(false);
+  if (scannerFoundCards.length > 0) {
+    clearRandomPickState();
+    searchResults = scannerFoundCards.map((card) => ({
+      ...card,
+      current_image: card.card_images[0],
+      variant_idx: 0,
+      is_variant: card.card_images.length > 1,
+    }));
+    currentPage = 1;
+    if (typeof sortAndRender === 'function') sortAndRender();
+    showToast(T('toast.scanner_cards', { n: scannerFoundCards.length }));
+  } else {
+    const resultsView = getEl('results-view');
+    if (resultsView) paintOcrScannerEmptyResultsView('no-cards');
+  }
+}
 
 // ==================== EVENT LISTENERS ====================
 
@@ -30511,52 +31276,273 @@ function setupCalibratorButton() {
 document.addEventListener('click', (e) => {
   if (e.target.id === 'btn-open-scanner' || e.target.closest('#btn-open-scanner')) {
     e.preventDefault();
-    const resultsView = getEl('results-view');
-    if (resultsView)
-      resultsView.innerHTML =
-        '<div style="grid-column:1/-1; text-align:center; color:#2ecc71; padding:20px;">🤖 ' +
-        T('ocr.scanner_active') +
-        '</div>';
-    scannerFoundCards = [];
-    lastMatchedText = '';
+    if (isOcrContainerVisible()) {
+      closeScannerUi();
+      return;
+    }
     startScanner();
     setTimeout(setupCalibratorButton, 1000);
   }
   if (e.target.id === 'btn-close-ocr' || e.target.closest('#btn-close-ocr')) {
-    stopScanner();
-    const c = getEl('ocr-container');
-    if (c) c.style.display = 'none';
-    if (scannerFoundCards.length > 0) {
-      clearRandomPickState();
-      searchResults = scannerFoundCards.map((card) => ({
-        ...card,
-        current_image: card.card_images[0],
-        variant_idx: 0,
-        is_variant: card.card_images.length > 1,
-      }));
-      currentPage = 1;
-      if (typeof sortAndRender === 'function') sortAndRender();
-      showToast(T('toast.scanner_cards', { n: scannerFoundCards.length }));
-    } else {
-      const resultsView = getEl('results-view');
-      if (resultsView) {
-        resultsView.innerHTML =
-          "<div style='grid-column:1/-1; text-align:center; padding:20px; color:#e74c3c;'>🤖 " +
-          T('ocr.no_cards') +
-          '</div>';
-      }
-    }
+    closeScannerUi();
   }
 });
 
 document.addEventListener('DOMContentLoaded', () => {
   setupCalibratorButton();
+  const lb = getEl('ocr-log');
+  if (lb && lb.childElementCount === 0) {
+    addOcrLog(T('ocr.log.engine_standby'));
+  }
 });
 
 // ==================== CSS ====================
 
 const styleScanner = document.createElement('style');
 styleScanner.textContent = `
+    #col-filters {
+        position: relative;
+    }
+    /* Por defeito = desktop: OCR só cobre a coluna de filtros (nunca o viewport inteiro). */
+    #col-filters #ocr-container {
+        box-sizing: border-box;
+        background: #000;
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        width: 100%;
+        min-width: 0;
+        height: 100%;
+        max-height: 100%;
+        z-index: 20;
+        flex-direction: column;
+        align-items: stretch;
+        justify-content: flex-start;
+        overflow-x: hidden;
+        overflow-y: auto;
+        padding: 8px;
+    }
+    #btn-open-scanner.active {
+        box-shadow: inset 0 0 0 2px rgba(46, 204, 113, 0.72) !important;
+        border-color: rgba(46, 204, 113, 0.55) !important;
+    }
+    #vision-label.ocr-vision-label {
+        box-sizing: border-box;
+    }
+    #vision-label.ocr-vision-label--chips {
+        text-align: left;
+        padding: 8px 10px;
+    }
+    #vision-label .ocr-vision-label__plain {
+        display: block;
+        text-align: center;
+    }
+    #vision-label .ocr-vision-chips {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+    #vision-label .ocr-vision-chip {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        background: rgba(20, 32, 28, 0.78);
+        border: 1px solid rgba(46, 204, 113, 0.45);
+        border-radius: 8px;
+        padding: 8px 12px 8px 14px;
+    }
+    #vision-label .ocr-vision-chip__k {
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        color: #7ddb9f;
+        min-width: 4.8em;
+        flex-shrink: 0;
+    }
+    #vision-label .ocr-vision-chip__icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        width: 28px;
+        height: 28px;
+    }
+    /* Magia / Armadilha: dois ícones — empurra ícone + valor para a direita do chip. */
+    #vision-label .ocr-vision-chip:has(.filter-suggest-dual-icon) .ocr-vision-chip__icon {
+        margin-left: auto;
+        width: auto;
+        min-width: 36px;
+        max-width: 56px;
+        justify-content: flex-end;
+    }
+    #vision-label .ocr-vision-chip__icon .filter-suggest-icon {
+        width: 24px !important;
+        height: 24px !important;
+        max-width: 24px;
+        max-height: 24px;
+        object-fit: contain;
+        display: block;
+    }
+    #vision-label .ocr-vision-chip__icon .filter-suggest-dual-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 3px;
+        max-height: 26px;
+    }
+    #vision-label .ocr-vision-chip__icon .filter-suggest-dual-icon img:first-child {
+        width: 15px !important;
+        height: 15px !important;
+        object-fit: contain;
+        display: block;
+    }
+    #vision-label .ocr-vision-chip__icon .filter-suggest-dual-icon img.filter-suggest-icon--card-type {
+        width: 20px !important;
+        height: 20px !important;
+        object-fit: contain;
+        display: block;
+    }
+    #vision-label .ocr-vision-chip__icon .filter-suggest-html-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 26px;
+        height: 26px;
+        font-size: 15px;
+        line-height: 1;
+        color: #c8f5d4;
+    }
+    #vision-label .ocr-vision-chip__v {
+        font-size: 12px;
+        color: #eafdf0;
+        font-weight: 600;
+        flex: 1 1 auto;
+        min-width: 0;
+        text-align: left;
+    }
+    #vision-label .ocr-vision-calib-badge {
+        font-size: 10px;
+        font-weight: 700;
+        color: #ffc266;
+        text-align: center;
+        margin: 0 0 6px;
+        letter-spacing: 0.04em;
+    }
+    #ocr-manual-panel .custom-select-wrap--ocr-manual {
+        width: 100%;
+        margin-bottom: 8px;
+    }
+    #ocr-manual-panel .custom-select-wrap--ocr-manual .custom-select-trigger.ocr-manual-select-trigger {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 14px;
+        padding: 10px 16px;
+        min-height: 42px;
+        text-align: left;
+        flex-wrap: nowrap;
+    }
+    #ocr-manual-panel .custom-select-wrap--ocr-manual .custom-select-trigger.ocr-manual-select-trigger:has(.filter-suggest-dual-icon) {
+        justify-content: flex-end;
+        padding-left: 20px;
+        padding-right: 18px;
+    }
+    #ocr-manual-panel .custom-select-wrap--ocr-manual .filter-suggest-label {
+        flex: 1 1 auto;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        text-align: left;
+    }
+    #ocr-manual-panel .ocr-manual-select-trigger .filter-suggest-icon {
+        width: 22px !important;
+        height: 22px !important;
+        max-width: 22px;
+        max-height: 22px;
+        object-fit: contain;
+        flex-shrink: 0;
+    }
+    #ocr-manual-panel .ocr-manual-select-trigger .filter-suggest-dual-icon {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        flex-shrink: 0;
+    }
+    #ocr-manual-panel .ocr-manual-select-trigger .filter-suggest-dual-icon img {
+        width: 17px !important;
+        height: 17px !important;
+        object-fit: contain;
+        display: block;
+    }
+    #ocr-manual-panel .ocr-manual-select-trigger .filter-suggest-dual-icon img.filter-suggest-icon--card-type {
+        width: 20px !important;
+        height: 20px !important;
+    }
+    #ocr-manual-panel .ocr-manual-select-trigger .filter-suggest-html-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: auto;
+        min-width: 22px;
+        height: 22px;
+        font-size: 15px;
+        flex-shrink: 0;
+        color: var(--accent);
+    }
+    #ocr-manual-panel .ocr-manual-select-trigger .filter-suggest-html-icon:has(.filter-suggest-dual-icon) {
+        min-width: 48px;
+        justify-content: flex-start;
+        padding-left: 2px;
+    }
+    .ui-native-custom-select-panel .filter-combo-suggest-row--ocr-manual {
+        align-items: center;
+        gap: 14px;
+        padding: 12px 16px 12px 22px;
+    }
+    .ui-native-custom-select-panel .filter-combo-suggest-row--ocr-manual:has(.filter-suggest-dual-icon) {
+        justify-content: flex-start;
+        padding-left: 26px;
+        padding-right: 18px;
+    }
+    .ui-native-custom-select-panel .filter-combo-suggest-row--ocr-manual .filter-suggest-icon {
+        width: 22px !important;
+        height: 22px !important;
+        object-fit: contain;
+        flex-shrink: 0;
+    }
+    .ui-native-custom-select-panel .filter-combo-suggest-row--ocr-manual .filter-suggest-dual-icon {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+    }
+    .ui-native-custom-select-panel .filter-combo-suggest-row--ocr-manual .filter-suggest-dual-icon img {
+        width: 17px !important;
+        height: 17px !important;
+        object-fit: contain;
+        display: block;
+    }
+    .ui-native-custom-select-panel .filter-combo-suggest-row--ocr-manual .filter-suggest-html-icon {
+        width: auto;
+        min-width: 24px;
+        height: 22px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 15px;
+        flex-shrink: 0;
+        color: var(--accent);
+    }
+    .ui-native-custom-select-panel .filter-combo-suggest-row--ocr-manual .filter-suggest-html-icon:has(.filter-suggest-dual-icon) {
+        min-width: 48px;
+        justify-content: flex-start;
+        padding-left: 2px;
+    }
     #scanner-visual {
         width: 55% !important;
         height: 42px !important;
@@ -30568,51 +31554,260 @@ styleScanner.textContent = `
         border-radius: 8px !important;
         box-shadow: 0 0 0 2px rgba(0,0,0,0.3), 0 0 0 4px rgba(46,204,113,0.2) !important;
     }
-    #scanner-visual div {
-        font-size: 11px !important;
-        top: -28px !important;
-        background: rgba(0,0,0,0.85) !important;
-        padding: 3px 12px !important;
-        border-radius: 20px !important;
-        white-space: nowrap !important;
-        font-weight: bold !important;
-    }
     #preview-canvas {
         background: #000;
-        border: 1px solid #2ecc71;
+        border: 2px solid #0f0;
         border-radius: 4px;
         min-height: 50px;
+        box-sizing: border-box;
     }
-    .focus-hint {
+    /* Sem scanner: slot de vídeo ocupa fundo da coluna; com scanner (classe em html) passa a coluna empilhada. */
+    .ocr-layout-column {
         position: absolute;
-        bottom: 20px;
-        left: 50%;
-        transform: translateX(-50%);
-        background: rgba(0,0,0,0.7);
-        color: #ffaa00;
-        padding: 4px 12px;
-        border-radius: 20px;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+    .ocr-camera-slot {
+        position: absolute;
+        inset: 0;
+        z-index: 1;
+    }
+    html.ocr-scanner-active #col-filters .ocr-layout-column {
+        position: relative !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        height: 100% !important;
+        min-height: 0 !important;
+        margin: 0 !important;
+        flex: 1 1 0 !important;
+        isolation: isolate;
+    }
+    html.ocr-scanner-active #col-filters .ocr-camera-slot {
+        position: relative !important;
+        width: 100%;
+        height: clamp(120px, min(26dvh, 34vw), 220px);
+        flex: 0 0 auto;
+        border-radius: 8px;
+        overflow: hidden;
+        border: 1px solid rgba(46, 204, 113, 0.65);
+        box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
+        order: 1;
+        z-index: 0;
+    }
+    html.ocr-scanner-active #col-filters #ocr-under-camera {
+        order: 2;
+        flex: 0 0 auto;
+        width: 100%;
+        text-align: center;
+        padding: 2px 4px 4px;
+        box-sizing: border-box;
+        position: relative;
+        z-index: 1;
+    }
+    .ocr-focus-hint {
+        position: static;
+        display: block;
+        margin: 2px auto 4px;
+        background: rgba(0,0,0,0.75);
+        color: #ffc266;
+        padding: 5px 8px;
+        border-radius: 8px;
         font-size: 11px;
-        font-family: monospace;
-        z-index: 1000003;
+        font-family: system-ui, Segoe UI, sans-serif;
         pointer-events: none;
         white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+    .ocr-crosshair-hint {
+        display: block;
+        margin: 0 auto 4px;
+        padding: 0 4px;
+        font-size: 10px;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+        color: #dfffea;
+        font-family: system-ui, Segoe UI, sans-serif;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 100%;
+        line-height: 1.25;
+        box-sizing: border-box;
+    }
+    html.ocr-scanner-active #col-filters #ocr-preview-wrap {
+        position: relative !important;
+        top: auto !important;
+        left: auto !important;
+        transform: none !important;
+        width: 100% !important;
+        z-index: 1 !important;
+        order: 3;
+        margin-bottom: 10px !important;
+    }
+    html.ocr-scanner-active #col-filters #ocr-manual-panel {
+        position: relative !important;
+        top: auto !important;
+        left: auto !important;
+        transform: none !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+        overflow-x: hidden !important;
+        overflow-y: visible !important;
+        margin-top: 6px;
+        margin-bottom: 8px;
+        order: 5;
+        flex-shrink: 0;
+        z-index: 2 !important;
+        border: 1px solid rgba(46, 204, 113, 0.55);
+        contain: none;
+        padding-bottom: calc(22px + max(env(safe-area-inset-bottom, 0px), 12px)) !important;
+    }
+    #col-filters #ocr-manual-panel select,
+    #col-filters #ocr-manual-panel button {
+        box-sizing: border-box;
+        max-width: 100%;
+    }
+    #col-filters #ocr-manual-panel > div:last-child {
+        min-width: 0;
+        width: 100%;
+        position: relative;
+        z-index: 1;
+        min-height: 52px;
+        align-items: center;
+        padding-bottom: 6px;
+        box-sizing: border-box;
+    }
+    html.ocr-scanner-active #col-filters #scanner-visual {
+        top: 50% !important;
+        transform: translate(-50%, -50%) !important;
+        width: 62% !important;
+    }
+    #col-filters #ocr-log {
+        box-sizing: border-box;
+        max-width: 100%;
+        left: 0;
+        right: 0;
+        width: 100%;
+        color: #9cf0b8;
+        font-size: 12px;
+        line-height: 1.4;
+        font-family: ui-monospace, 'Cascadia Mono', 'Segoe UI Mono', Consolas, monospace;
+    }
+    html.ocr-scanner-active #col-filters #ocr-log {
+        position: relative !important;
+        height: auto !important;
+        min-height: 52px !important;
+        max-height: min(26dvh, 180px);
+        font-size: 12px !important;
+        padding: 6px 8px 8px 8px !important;
+        margin-top: 0;
+        flex: 0 0 auto;
+        flex-shrink: 0;
+        order: 4;
+        z-index: 1;
+        border-top: 1px solid rgba(46, 204, 113, 0.55);
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch;
+    }
+    html.ocr-scanner-active #col-filters #ocr-container {
+        padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+        min-height: 0;
+        overflow-y: auto;
+        overscroll-behavior-y: auto;
+    }
+    @media (max-width: 900px) {
+        html.ocr-scanner-active #app-layout > #col-filters {
+            max-width: 100%;
+            width: 100% !important;
+            margin-left: 0 !important;
+            margin-right: 0 !important;
+            min-height: 0;
+            position: relative !important;
+            z-index: 6;
+            box-sizing: border-box;
+            padding-left: 4px;
+            padding-right: 4px;
+        }
+        /* Barra inferior do Brave (e similares) sobrepõe o fim da página ao fazer scroll; sem isto corta TEMA/ORDENAR. */
+        html.ocr-scanner-active body {
+            padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+            box-sizing: border-box;
+        }
+        html.ocr-scanner-active #col-filters #ocr-container {
+            touch-action: pan-y;
+            padding-bottom: calc(22px + max(env(safe-area-inset-bottom, 0px), 14px));
+        }
+        html.ocr-scanner-active #col-filters #ocr-container .ocr-camera-slot,
+        html.ocr-scanner-active #col-filters #ocr-container #ocr-video {
+            touch-action: pan-y;
+        }
+        html.ocr-scanner-active #col-filters #ocr-container #ocr-preview-wrap,
+        html.ocr-scanner-active #col-filters #ocr-container #preview-canvas {
+            touch-action: pan-y;
+        }
+        html.ocr-scanner-active #col-filters .ocr-camera-slot {
+            height: clamp(118px, min(26dvh, 50vw), 210px);
+            z-index: 0;
+        }
+        html.ocr-scanner-active #col-filters #ocr-manual-panel {
+            padding-bottom: 8px;
+            margin-bottom: 8px;
+        }
+        html.ocr-scanner-active #col-filters .ocr-layout-column {
+            padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+        }
+        html.ocr-scanner-active #vision-label .ocr-vision-chip {
+            padding: 8px 12px 8px 16px;
+        }
+        html.ocr-scanner-active #vision-label .ocr-vision-chip__icon {
+            margin-left: 2px;
+        }
+        html.ocr-scanner-active #col-filters #ocr-log {
+            min-height: 48px !important;
+            max-height: min(17dvh, 118px) !important;
+            flex-shrink: 0 !important;
+            padding-top: 6px !important;
+            padding-bottom: 6px !important;
+            font-size: 11px !important;
+            line-height: 1.35 !important;
+        }
+    }
+    @media (min-width: 900px) {
+        #btn-close-ocr {
+            display: none !important;
+        }
+        html.ocr-scanner-active #col-filters #ocr-container {
+            overflow-y: hidden !important;
+            top: 0 !important;
+            bottom: 0 !important;
+            height: 100% !important;
+            max-height: none !important;
+        }
+        html.ocr-scanner-active #col-filters .ocr-camera-slot {
+            height: clamp(200px, 36dvh, 320px);
+        }
+        html.ocr-scanner-active #col-filters #ocr-manual-panel {
+            order: 4;
+        }
+        html.ocr-scanner-active #col-filters #ocr-log {
+            order: 5;
+            flex: 1 1 0;
+            min-height: 0;
+            max-height: none;
+            height: auto;
+            overflow-y: auto;
+            padding-top: 12px !important;
+        }
     }
 `;
 document.head.appendChild(styleScanner);
-
-// Aguarda o DOM carregar antes de tentar acessar #ocr-container
-document.addEventListener('DOMContentLoaded', () => {
-  const container = getEl('ocr-container');
-  if (container) {
-    const focusHint = document.createElement('div');
-    focusHint.className = 'focus-hint';
-    focusHint.innerHTML = '📷 Toque na tela para focar';
-    container.appendChild(focusHint);
-  } else {
-    console.warn('Elemento #ocr-container não encontrado ao adicionar focus-hint');
-  }
-});
 
 // ==================== CALIBRADOR DE OCR ====================
 
@@ -30897,9 +32092,13 @@ class OCRCalibrator {
             // Achou match forte: pode encerrar cedo
             bestScore = score;
             bestResult = { ...result, matchedName: displayNameForApiCard(matched) };
-            addOcrEvent('calibration_hit', `🎯 Calibração achou match: ${bestResult.matchedName}`, {
-              cleaned: result.cleaned,
-            });
+            addOcrEvent(
+              'calibration_hit',
+              T('ocr.event.calib_match', { name: bestResult.matchedName }),
+              {
+                cleaned: result.cleaned,
+              }
+            );
             break;
           } else {
             // fallback: maximize legibilidade, mas com peso baixo
@@ -30921,8 +32120,8 @@ class OCRCalibrator {
 
     if (bestResult) {
       this.setCalibration(cardType, rarity, bestResult.settings);
-      addOcrLog(`✅ Calibração otimizada para ${cardType} (${rarity})`);
-      addOcrLog(`📖 Melhor leitura: "${bestResult.cleaned}"`);
+      addOcrLog(T('ocr.log.calib_optimized', { type: cardType, rarity }));
+      addOcrLog(T('ocr.log.calib_best_read', { text: bestResult.cleaned }));
       return bestResult;
     }
     return null;
@@ -31117,16 +32316,16 @@ function detectRarityFromImage(video, cropRect) {
  */
 async function autoCalibrate() {
   if (!calibrator) {
-    addOcrLog('⏳ Calibrador ainda não inicializado. Tente novamente.');
+    addOcrLog(T('ocr.log.calib_not_ready'));
     return;
   }
 
-  addOcrLog('🔧 Iniciando calibração automática...');
+  addOcrLog(T('ocr.log.calib_start'));
   showToast(T('toast.ocr_calibrating'));
 
   const video = getEl('ocr-video');
   if (!video || video.videoWidth === 0) {
-    addOcrLog('❌ Câmera não está ativa');
+    addOcrLog(T('ocr.log.calib_no_camera'));
     showToast(T('toast.scanner_enable'));
     return;
   }
@@ -31158,22 +32357,22 @@ async function autoCalibrate() {
   if (cardType === 'AUTO') {
     try {
       const detected = await detectCardTypeFromImage(video, cropRect);
-      addOcrEvent('type_detected', `🧭 Tipo detectado: ${detected}`, { detected });
+      addOcrEvent('type_detected', T('ocr.log.type_detected', { type: detected }), { detected });
       cardType = detected;
     } catch (e) {
       cardType = 'Monstro Efeito';
-      addOcrEvent('type_detected', `🧭 Tipo detectado: ${cardType} (fallback)`, {
+      addOcrEvent('type_detected', T('ocr.log.type_detected_fallback', { type: cardType }), {
         detected: cardType,
       });
     }
   }
-  setVisionStatus(`CALIBRANDO | TIPO: ${cardType} | RARIDADE: ${rarity}`);
-  addOcrLog(`📋 Tipo selecionado: ${cardType}, Raridade: ${rarity}`);
+  setVisionTypeRarity(cardType, rarity, { calibrating: true });
+  addOcrLog(T('ocr.log.calib_selected', { type: cardType, rarity }));
 
   // Toast de progresso
   const progressToast = document.createElement('div');
   progressToast.style.cssText = `position:fixed; bottom:150px; left:50%; transform:translateX(-50%); background:#2c3e50; color:#2ecc71; padding:8px 16px; border-radius:20px; font-size:11px; z-index:1000003; font-family:monospace; white-space:nowrap;`;
-  progressToast.innerHTML = `🔧 Testando configurações... (toque para cancelar)`;
+  progressToast.innerHTML = escapeHtml(T('ocr.progress.testing'));
   document.body.appendChild(progressToast);
   progressToast.addEventListener(
     'click',
@@ -31183,9 +32382,9 @@ async function autoCalibrate() {
         // Evita spam por múltiplos toques
         if (progressToast.dataset.cancelled !== '1') {
           progressToast.dataset.cancelled = '1';
-          addOcrEvent('calibration_cancel', '🛑 Calibração cancelada pelo usuário', {});
+          addOcrEvent('calibration_cancel', T('ocr.event.calib_cancel'), {});
         }
-        progressToast.innerHTML = `🛑 Cancelando... (aguarde o teste atual)`;
+        progressToast.innerHTML = escapeHtml(T('ocr.progress.cancelling'));
         progressToast.style.pointerEvents = 'none';
         // Failsafe: retoma scanner em alguns segundos mesmo se o OCR demorar
         setTimeout(() => {
@@ -31195,7 +32394,7 @@ async function autoCalibrate() {
               isProcessing = false;
               processingCooldown = false;
               requestAnimationFrame(processOcrFrame);
-              addOcrLog('🔄 Scanner retomado após cancelamento');
+              addOcrLog(T('ocr.log.calib_resumed'));
             }
           } catch (e) {}
         }, 2200);
@@ -31205,7 +32404,9 @@ async function autoCalibrate() {
   );
 
   const onProgress = (e) => {
-    progressToast.innerHTML = `🔧 Testando configurações... ${e.detail.current}/${e.detail.total}`;
+    progressToast.innerHTML = escapeHtml(
+      T('ocr.progress.testing_count', { cur: e.detail.current, total: e.detail.total })
+    );
   };
   window.addEventListener('calibrationProgress', onProgress);
 
@@ -31213,7 +32414,7 @@ async function autoCalibrate() {
   try {
     result = await calibrator.autoOptimize(video, cropRect, cardType, rarity);
   } catch (err) {
-    addOcrLog(`❌ Erro durante calibração: ${err.message}`);
+    addOcrLog(T('ocr.log.calib_err', { msg: err.message }));
   } finally {
     if (progressToast && progressToast.parentNode) progressToast.remove();
     window.removeEventListener('calibrationProgress', onProgress);
@@ -31226,14 +32427,18 @@ async function autoCalibrate() {
   }
 
   if (result) {
-    addOcrLog(`✅ Calibração concluída!`);
+    addOcrLog(T('ocr.log.calib_done'));
     addOcrLog(
-      `📊 Melhor configuração: Contraste=${result.settings.contrast}, Brilho=${result.settings.brightness}, Limiar=${result.settings.threshold}`
+      T('ocr.log.calib_best_settings', {
+        contrast: String(result.settings.contrast),
+        brightness: String(result.settings.brightness),
+        threshold: String(result.settings.threshold),
+      })
     );
-    addOcrLog(`📖 Leitura obtida: "${result.cleaned}"`);
+    addOcrLog(T('ocr.log.calib_reading', { text: result.cleaned }));
     showToast(T('toast.ocr_ok', { text: result.cleaned }));
   } else {
-    addOcrLog(`⚠️ Não foi possível encontrar uma configuração ideal`);
+    addOcrLog(T('ocr.log.calib_no_ideal'));
     showToast(T('toast.ocr_bad'));
   }
 }
@@ -31248,12 +32453,12 @@ const __DEBUG_CALIBRATOR = false;
 function openCalibrator() {
   if (__DEBUG_CALIBRATOR) console.log('🔧 openCalibrator chamado!');
   if (!isOcrActive) {
-    addOcrLog("❌ Ative o scanner primeiro! Clique em 'Escanear Carta'");
+    addOcrLog(T('ocr.log.scanner_first_calib', { action: T('ui.scan_card_ocr') }));
     showToast(T('toast.scanner_enable'));
     return;
   }
   if (!ocrWorker) {
-    addOcrLog('⚠️ OCR ainda não carregou, aguarde alguns segundos...');
+    addOcrLog(T('ocr.log.ocr_not_loaded'));
     showToast(T('toast.ocr_wait'));
     return;
   }
