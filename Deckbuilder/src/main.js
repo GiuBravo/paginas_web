@@ -29430,6 +29430,16 @@ const ocrDebugBuffer = [];
 const OCR_DEBUG_MAX = 400;
 /** Última entrada de {@link pushOcrDebug} (screenshot overlay). */
 let lastOcrDebugSnapshot = null;
+/** Quando verdadeiro, cada ciclo de {@link processOcrFrame} (com throttle) grava amostra em {@link ocrDiagnosticsSession}. */
+let ocrDiagnosticsCaptureActive = false;
+/** Sessão de exportação OCR (amostras + log); criada ao ligar a coleta. */
+let ocrDiagnosticsSession = null;
+/** Último instante em que uma amostra foi gravada (throttle). */
+let ocrDiagnosticsLastSampleAt = 0;
+/** Intervalo mínimo entre amostras (ms) para não explodir memória nem travar a UI. */
+const OCR_DIAG_SAMPLE_THROTTLE_MS = 800;
+/** Limite de amostras por sessão antes de ignorar novas (mantém o JSON descarregável). */
+const OCR_DIAG_MAX_SAMPLES = 120;
 /** Tipo de carta inferido no último frame processado (UI). */
 let lastDetectedCardType = null;
 let lastScanHapticKey = '';
@@ -30105,6 +30115,7 @@ function addOcrLog(msg) {
   div.textContent = `[${t}] ${msg}`;
   logBox.prepend(div);
   if (logBox.childElementCount > 40) logBox.removeChild(logBox.lastChild);
+  ocrDiagnosticsPushLogMirror(msg);
 }
 
 /**
@@ -30151,6 +30162,201 @@ function downloadTextFile(filename, text, mime = 'text/plain') {
   } catch (_) {}
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+
+/**
+ * JPEG em Data URL a partir de um canvas (compressão para embutir em JSON de diagnóstico).
+ * @param {HTMLCanvasElement|null|undefined} canvas
+ * @param {number} [quality=0.82]
+ * @param {number} [maxW=560] Largura máxima; reduz proporcionalmente a altura.
+ * @returns {string|null} `data:image/jpeg;base64,...` ou `null`.
+ */
+function canvasToJpegDataUrl(canvas, quality = 0.82, maxW = 560) {
+  if (!canvas || !canvas.width || !canvas.height) return null;
+  try {
+    let w = canvas.width;
+    let h = canvas.height;
+    if (w > maxW) {
+      const s = maxW / w;
+      w = Math.max(1, Math.round(w * s));
+      h = Math.max(1, Math.round(h * s));
+      const tmp = document.createElement('canvas');
+      tmp.width = w;
+      tmp.height = h;
+      const tctx = tmp.getContext('2d');
+      tctx.drawImage(canvas, 0, 0, w, h);
+      return tmp.toDataURL('image/jpeg', quality);
+    }
+    return canvas.toDataURL('image/jpeg', quality);
+  } catch (e) {
+    return null;
+  }
+}
+
+/**
+ * Recorte bruto da faixa do nome no vídeo (antes dos filtros do “robô”), para avaliar legibilidade.
+ * @param {HTMLVideoElement} video
+ * @param {{ x: number, y: number, width: number, height: number }} cropRect
+ * @param {number} [maxW=480]
+ * @returns {string|null}
+ */
+function ocrDiagnosticsRawCropDataUrl(video, cropRect, maxW = 480) {
+  if (!video || !cropRect || cropRect.width < 2 || cropRect.height < 2) return null;
+  const c = document.createElement('canvas');
+  const scale = Math.min(1, maxW / cropRect.width);
+  const w = Math.max(1, Math.round(cropRect.width * scale));
+  const h = Math.max(1, Math.round(cropRect.height * scale));
+  c.width = w;
+  c.height = h;
+  const ctx = c.getContext('2d');
+  try {
+    ctx.drawImage(video, cropRect.x, cropRect.y, cropRect.width, cropRect.height, 0, 0, w, h);
+    return c.toDataURL('image/jpeg', 0.82);
+  } catch (e) {
+    return null;
+  }
+}
+
+/**
+ * Atualiza o rótulo do botão de coleta OCR e `aria-pressed`.
+ * @returns {void}
+ */
+function syncOcrDiagnosticsButtonUi() {
+  const btn = getEl('btn-ocr-collect-diagnostics');
+  if (!btn) return;
+  const on = !!ocrDiagnosticsCaptureActive;
+  btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+  btn.classList.toggle('ocr-diagnostics-collect--active', on);
+  const label = on ? 'Parar e exportar' : 'Coletar informações';
+  const span = btn.querySelector('.btn-ocr-collect-label');
+  if (span) span.textContent = label;
+  else btn.textContent = label;
+}
+
+/**
+ * Liga/desliga a coleta estruturada para análise offline. Ao desligar, descarrega um JSON único.
+ * @returns {void}
+ */
+function toggleOcrDiagnosticsCapture() {
+  if (!ocrDiagnosticsCaptureActive) {
+    ocrDiagnosticsSession = {
+      schemaVersion: 1,
+      startedAt: new Date().toISOString(),
+      samples: [],
+      logLines: [],
+    };
+    ocrDiagnosticsLastSampleAt = 0;
+    ocrDiagnosticsCaptureActive = true;
+    syncOcrDiagnosticsButtonUi();
+    addOcrLog('📋 Coleta de diagnóstico: ligada (amostras com throttle ~800 ms).');
+    try {
+      showToast('Coleta ligada: ao terminar, clique de novo para exportar JSON.', { variant: 'info' });
+    } catch (_) {}
+    return;
+  }
+  ocrDiagnosticsCaptureActive = false;
+  syncOcrDiagnosticsButtonUi();
+  const logBox = getEl('ocr-log');
+  const logSnapshot = logBox ? logBox.innerText : '';
+  const endedAt = new Date().toISOString();
+  const payload = {
+    schemaVersion: 1,
+    purpose:
+      'Diagnóstico OCR Yu-Gi-Oh: imagens (recorte bruto + faixa pré-processada), passes Tesseract, cropRect e metadados para melhorar deteção de tipo/nome.',
+    exportedAt: endedAt,
+    session: ocrDiagnosticsSession,
+    logPanelText: logSnapshot,
+    meta: {
+      userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : '',
+      language: typeof getUiLang === 'function' ? getUiLang() : '',
+      url: typeof location !== 'undefined' ? String(location.href) : '',
+      viewport: {
+        w: typeof window !== 'undefined' ? window.innerWidth : null,
+        h: typeof window !== 'undefined' ? window.innerHeight : null,
+      },
+      dpr: typeof window !== 'undefined' && typeof window.devicePixelRatio === 'number' ? window.devicePixelRatio : null,
+      tessedit_pageseg_mode: '7',
+      ocrWorkerReady: !!ocrWorker,
+    },
+  };
+  ocrDiagnosticsSession = null;
+  const fname = `ocr_diagnostics_${Date.now()}.json`;
+  downloadTextFile(fname, JSON.stringify(payload, null, 2), 'application/json');
+  addOcrLog(`📋 Coleta terminada. Ficheiro: ${fname}`);
+  try {
+    showToast(`Exportado: ${fname} — copie para a pasta do projeto.`, { variant: 'success' });
+  } catch (_) {}
+}
+
+/**
+ * Acrescenta linha à sessão de diagnóstico (espelho do painel, texto plano).
+ * @param {string} msg
+ * @returns {void}
+ */
+function ocrDiagnosticsPushLogMirror(msg) {
+  if (!ocrDiagnosticsCaptureActive || !ocrDiagnosticsSession) return;
+  const loc = getUiLang() === 'pt' ? 'pt-BR' : 'en-US';
+  const t = new Date().toLocaleTimeString(loc, { hour12: false });
+  const line = `[${t}] ${msg}`;
+  ocrDiagnosticsSession.logLines.push(line);
+  if (ocrDiagnosticsSession.logLines.length > 600) ocrDiagnosticsSession.logLines.shift();
+}
+
+/**
+ * Grava uma amostra (imagens + JSON) se a coleta estiver ativa e dentro dos limites.
+ * @param {HTMLVideoElement} video
+ * @param {{ x: number, y: number, width: number, height: number }} cropRect
+ * @param {null|{ pack?: object, cleaned?: string, card?: object|null, diagnostics?: object }} outcome
+ * @returns {void}
+ */
+function maybeRecordOcrDiagnosticsSample(video, cropRect, outcome) {
+  if (!ocrDiagnosticsCaptureActive || !ocrDiagnosticsSession) return;
+  const now = Date.now();
+  if (now - ocrDiagnosticsLastSampleAt < OCR_DIAG_SAMPLE_THROTTLE_MS) return;
+  if (ocrDiagnosticsSession.samples.length >= OCR_DIAG_MAX_SAMPLES) return;
+  ocrDiagnosticsLastSampleAt = now;
+  const preview = getEl('preview-canvas');
+  const visual = getEl('scanner-visual');
+  let visualDom = null;
+  try {
+    if (visual) {
+      const r = visual.getBoundingClientRect();
+      visualDom = { top: safeRound(r.top, 1), left: safeRound(r.left, 1), width: safeRound(r.width, 1), height: safeRound(r.height, 1) };
+    }
+  } catch (_) {}
+  const manualTypeSelect = getEl('manual-card-type');
+  const manualRaritySelect = getEl('manual-rarity');
+  const seq = ocrDiagnosticsSession.samples.length;
+  const sample = {
+    seq,
+    ts: new Date().toISOString(),
+    video: { videoWidth: video.videoWidth, videoHeight: video.videoHeight },
+    cropRect: {
+      x: safeRound(cropRect.x, 1),
+      y: safeRound(cropRect.y, 1),
+      width: safeRound(cropRect.width, 1),
+      height: safeRound(cropRect.height, 1),
+    },
+    scannerVisualDomCss: visualDom,
+    manualCardType: manualTypeSelect ? manualTypeSelect.value : null,
+    manualRarity: manualRaritySelect ? manualRaritySelect.value : null,
+    lastDetectedCardTypeUi: lastDetectedCardType,
+    images: {
+      rawNameRegionJpeg: ocrDiagnosticsRawCropDataUrl(video, cropRect),
+      robotNameStripJpeg: canvasToJpegDataUrl(preview, 0.82, 560),
+    },
+    outcome: outcome
+      ? {
+          cleaned: outcome.cleaned || null,
+          matchedCardId: outcome.card && outcome.card.id != null ? outcome.card.id : null,
+          matchedDisplayName: outcome.card ? displayNameForApiCard(outcome.card) : null,
+          diagnostics: outcome.diagnostics || null,
+          bestPassConfidence:
+            outcome.pack && typeof outcome.pack.confidence === 'number' ? safeRound(outcome.pack.confidence, 1) : null,
+        }
+      : { cleaned: null, matchedCardId: null, matchedDisplayName: null, diagnostics: null, note: 'no_valid_ocr_pipeline_result' },
+  };
+  ocrDiagnosticsSession.samples.push(sample);
 }
 
 /**
@@ -30571,7 +30777,7 @@ async function processImageWithColorFilter(
  *
  * @param {HTMLVideoElement} video
  * @param {{ x: number, y: number, width: number, height: number }} cropRect
- * @returns {Promise<null|{ pack: object, cleaned: string, card: object|null }>}
+ * @returns {Promise<null|{ pack: object, cleaned: string, card: object|null, diagnostics?: { cardType: string, rarity: string, passes: object[] } }>}
  */
 async function processFrameWithFallbackPasses(video, cropRect) {
   let cardType = 'Monstro Efeito';
@@ -30590,6 +30796,8 @@ async function processFrameWithFallbackPasses(video, cropRect) {
   }
   lastDetectedCardType = cardType;
   setVisionTypeRarity(cardType, rarity, { calibrating: false });
+
+  const diagnosticsPasses = [];
 
   const base = calibrator
     ? calibrator.getCalibration(cardType, rarity)
@@ -30677,39 +30885,41 @@ async function processFrameWithFallbackPasses(video, cropRect) {
     if (!pack || !pack.text) continue;
     const cleaned = smartNormalize(pack.text);
     if (!cleaned || cleaned.length < 4 || isGarbageText(cleaned)) continue;
+    const passData = {
+      pass: pi,
+      cardType,
+      rarity,
+      cropRect: {
+        x: safeRound(cropRect.x, 1),
+        y: safeRound(cropRect.y, 1),
+        width: safeRound(cropRect.width, 1),
+        height: safeRound(cropRect.height, 1),
+      },
+      dstRect: {
+        x: OCR_NAME_DST_X,
+        y: OCR_NAME_DST_Y,
+        width: OCR_NAME_DST_W,
+        height: OCR_NAME_DST_H,
+      },
+      settings: pack.settings,
+      confidence: safeRound(pack.confidence, 1),
+      avgRGB: {
+        r: safeRound(pack.avgR, 1),
+        g: safeRound(pack.avgG, 1),
+        b: safeRound(pack.avgB, 1),
+      },
+      cssFilter: pack.cssFilter,
+      appliedThreshold: safeRound(pack.appliedThreshold, 1),
+      rawText: pack.text,
+      cleaned,
+    };
     pushOcrDebug({
       ts: new Date().toISOString(),
       event: 'ocr_pass',
       msg: `pass=${pi} type=${cardType} rarity=${rarity}`,
-      data: {
-        pass: pi,
-        cardType,
-        rarity,
-        cropRect: {
-          x: safeRound(cropRect.x, 1),
-          y: safeRound(cropRect.y, 1),
-          width: safeRound(cropRect.width, 1),
-          height: safeRound(cropRect.height, 1),
-        },
-        dstRect: {
-          x: OCR_NAME_DST_X,
-          y: OCR_NAME_DST_Y,
-          width: OCR_NAME_DST_W,
-          height: OCR_NAME_DST_H,
-        },
-        settings: pack.settings,
-        confidence: safeRound(pack.confidence, 1),
-        avgRGB: {
-          r: safeRound(pack.avgR, 1),
-          g: safeRound(pack.avgG, 1),
-          b: safeRound(pack.avgB, 1),
-        },
-        cssFilter: pack.cssFilter,
-        appliedThreshold: safeRound(pack.appliedThreshold, 1),
-        rawText: pack.text,
-        cleaned,
-      },
+      data: passData,
     });
+    diagnosticsPasses.push({ ...passData });
     const card = await smartSearch(cleaned, pi > 0, cleaned);
     const strong = card ? isStrongMatch(cleaned, card) : false;
     if (card && !strong) {
@@ -30723,8 +30933,19 @@ async function processFrameWithFallbackPasses(video, cropRect) {
           candidate: displayNameForApiCard(card),
         },
       });
+      const lastP = diagnosticsPasses[diagnosticsPasses.length - 1];
+      if (lastP) {
+        lastP.apiCandidateName = displayNameForApiCard(card);
+        lastP.strongMatch = false;
+      }
     }
     if (card && strong) {
+      const lastP = diagnosticsPasses[diagnosticsPasses.length - 1];
+      if (lastP) {
+        lastP.apiCandidateName = displayNameForApiCard(card);
+        lastP.strongMatch = true;
+        lastP.matchedCardId = card.id;
+      }
       const merged = { ...pack.settings, ...(ov || {}) };
       calibrator?.setCalibration(pack.cardType, pack.rarity, merged);
       addOcrEvent(
@@ -30744,11 +30965,22 @@ async function processFrameWithFallbackPasses(video, cropRect) {
           settingsSaved: merged,
         }
       );
-      return { pack, cleaned, card };
+      return {
+        pack,
+        cleaned,
+        card,
+        diagnostics: { cardType, rarity, passes: diagnosticsPasses },
+      };
     }
     if (!best || pack.confidence > best.pack.confidence) best = { pack, cleaned };
   }
-  if (best) return { pack: best.pack, cleaned: best.cleaned, card: null };
+  if (best)
+    return {
+      pack: best.pack,
+      cleaned: best.cleaned,
+      card: null,
+      diagnostics: { cardType, rarity, passes: diagnosticsPasses },
+    };
   return null;
 }
 
@@ -30787,6 +31019,7 @@ async function processOcrFrame() {
     };
 
     const outcome = await processFrameWithFallbackPasses(video, cropRect);
+    maybeRecordOcrDiagnosticsSample(video, cropRect, outcome);
     if (outcome && outcome.cleaned) {
       if (outcome.cleaned !== lastMatchedText) addOcrLog(T('ocr.log.reading', { text: outcome.cleaned }));
       if (outcome.card) {
@@ -30987,7 +31220,7 @@ async function startScanner() {
       : { facingMode: 'environment', width: { ideal: 1280 } };
     const stream = await navigator.mediaDevices.getUserMedia({ video: videoConstraints });
     if (container) {
-      container.style.display = isDesktop ? 'flex' : 'block';
+      container.style.display = 'flex';
     }
     try {
       document.documentElement.classList.add('ocr-scanner-active');
@@ -31232,6 +31465,15 @@ function closeScannerUi() {
   try {
     document.documentElement.classList.remove('ocr-scanner-active');
   } catch (_) {}
+  if (ocrDiagnosticsCaptureActive && ocrDiagnosticsSession) {
+    try {
+      toggleOcrDiagnosticsCapture();
+    } catch (_) {
+      ocrDiagnosticsCaptureActive = false;
+      ocrDiagnosticsSession = null;
+      syncOcrDiagnosticsButtonUi();
+    }
+  }
   stopScanner();
   const c = getEl('ocr-container');
   if (c) c.setAttribute('style', 'display: none');
@@ -31286,10 +31528,16 @@ document.addEventListener('click', (e) => {
   if (e.target.id === 'btn-close-ocr' || e.target.closest('#btn-close-ocr')) {
     closeScannerUi();
   }
+  if (e.target.id === 'btn-ocr-collect-diagnostics' || e.target.closest('#btn-ocr-collect-diagnostics')) {
+    e.preventDefault();
+    e.stopPropagation();
+    toggleOcrDiagnosticsCapture();
+  }
 });
 
 document.addEventListener('DOMContentLoaded', () => {
   setupCalibratorButton();
+  syncOcrDiagnosticsButtonUi();
   const lb = getEl('ocr-log');
   if (lb && lb.childElementCount === 0) {
     addOcrLog(T('ocr.log.engine_standby'));
@@ -31662,7 +31910,7 @@ styleScanner.textContent = `
         overflow-y: visible !important;
         margin-top: 6px;
         margin-bottom: 8px;
-        order: 5;
+        order: 4;
         flex-shrink: 0;
         z-index: 2 !important;
         border: 1px solid rgba(46, 204, 113, 0.55);
@@ -31673,6 +31921,12 @@ styleScanner.textContent = `
     #col-filters #ocr-manual-panel button {
         box-sizing: border-box;
         max-width: 100%;
+    }
+    #btn-ocr-collect-diagnostics.ocr-diagnostics-collect--active {
+        background: rgba(18, 72, 48, 0.98) !important;
+        color: #c6ffd8 !important;
+        border-color: #2ecc71 !important;
+        box-shadow: 0 0 0 2px rgba(46, 204, 113, 0.4);
     }
     #col-filters #ocr-manual-panel > div:last-child {
         min-width: 0;
@@ -31708,9 +31962,9 @@ styleScanner.textContent = `
         font-size: 12px !important;
         padding: 6px 8px 8px 8px !important;
         margin-top: 0;
-        flex: 0 0 auto;
-        flex-shrink: 0;
-        order: 4;
+        flex: 1 1 auto;
+        flex-shrink: 1;
+        order: 5;
         z-index: 1;
         border-top: 1px solid rgba(46, 204, 113, 0.55);
         overflow-y: auto !important;
@@ -31743,6 +31997,9 @@ styleScanner.textContent = `
         html.ocr-scanner-active #col-filters #ocr-container {
             touch-action: pan-y;
             padding-bottom: calc(22px + max(env(safe-area-inset-bottom, 0px), 14px));
+            display: flex !important;
+            flex-direction: column !important;
+            min-height: 0 !important;
         }
         html.ocr-scanner-active #col-filters #ocr-container .ocr-camera-slot,
         html.ocr-scanner-active #col-filters #ocr-container #ocr-video {
@@ -31753,15 +32010,19 @@ styleScanner.textContent = `
             touch-action: pan-y;
         }
         html.ocr-scanner-active #col-filters .ocr-camera-slot {
-            height: clamp(118px, min(26dvh, 50vw), 210px);
+            height: clamp(140px, min(32dvh, 58vw), 236px);
             z-index: 0;
         }
         html.ocr-scanner-active #col-filters #ocr-manual-panel {
-            padding-bottom: 8px;
-            margin-bottom: 8px;
+            order: 4 !important;
+            flex-shrink: 0 !important;
+            padding-bottom: 8px !important;
+            margin-bottom: 4px !important;
         }
         html.ocr-scanner-active #col-filters .ocr-layout-column {
-            padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+            padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+            flex: 1 1 auto !important;
+            min-height: 0 !important;
         }
         html.ocr-scanner-active #vision-label .ocr-vision-chip {
             padding: 8px 12px 8px 16px;
@@ -31769,14 +32030,19 @@ styleScanner.textContent = `
         html.ocr-scanner-active #vision-label .ocr-vision-chip__icon {
             margin-left: 2px;
         }
+        /* Altura mínima generosa: mais linhas visíveis; o resto da coluna desce com scroll do #ocr-container. */
         html.ocr-scanner-active #col-filters #ocr-log {
-            min-height: 48px !important;
-            max-height: min(17dvh, 118px) !important;
+            order: 5 !important;
+            flex: 1 1 auto !important;
+            min-height: clamp(120px, min(34dvh, 52vw), 260px) !important;
+            max-height: none !important;
+            height: auto !important;
             flex-shrink: 0 !important;
-            padding-top: 6px !important;
+            align-self: stretch !important;
+            padding-top: 4px !important;
             padding-bottom: 6px !important;
             font-size: 11px !important;
-            line-height: 1.35 !important;
+            line-height: 1.3 !important;
         }
     }
     @media (min-width: 900px) {
@@ -31789,21 +32055,97 @@ styleScanner.textContent = `
             bottom: 0 !important;
             height: 100% !important;
             max-height: none !important;
+            padding: 4px 6px !important;
+            display: flex !important;
+            flex-direction: column !important;
+            min-height: 0 !important;
         }
+        /* Coluna interior a preencher o contentor: o log (flex 1) herda o espaço da “faixa preta”. */
+        html.ocr-scanner-active #col-filters .ocr-layout-column {
+            flex: 1 1 auto !important;
+            min-height: 0 !important;
+        }
+        /* Desktop: câmara é o foco principal — altura generosa em dvh com teto em px (coluna de filtros estreita). */
         html.ocr-scanner-active #col-filters .ocr-camera-slot {
-            height: clamp(200px, 36dvh, 320px);
+            height: clamp(176px, min(44dvh, 340px), 360px);
+        }
+        html.ocr-scanner-active #col-filters #ocr-under-camera {
+            padding: 0 2px 2px !important;
+        }
+        html.ocr-scanner-active #col-filters .ocr-focus-hint,
+        html.ocr-scanner-active #col-filters .ocr-crosshair-hint {
+            margin-top: 0 !important;
+            margin-bottom: 2px !important;
+            font-size: 10px !important;
+        }
+        html.ocr-scanner-active #col-filters .ocr-focus-hint {
+            padding: 3px 6px !important;
+        }
+        html.ocr-scanner-active #col-filters #ocr-preview-wrap {
+            margin-bottom: 4px !important;
+        }
+        html.ocr-scanner-active #col-filters #preview-canvas {
+            height: 52px !important;
+            min-height: 44px !important;
+        }
+        html.ocr-scanner-active #col-filters #vision-label.ocr-vision-label--chips {
+            padding: 4px 6px !important;
+        }
+        html.ocr-scanner-active #col-filters #vision-label .ocr-vision-chips {
+            gap: 4px !important;
+        }
+        html.ocr-scanner-active #col-filters #vision-label .ocr-vision-chip {
+            padding: 5px 8px !important;
+            gap: 6px !important;
+        }
+        html.ocr-scanner-active #col-filters #vision-label .ocr-vision-chip__icon {
+            width: 22px !important;
+            height: 22px !important;
         }
         html.ocr-scanner-active #col-filters #ocr-manual-panel {
             order: 4;
+            flex-shrink: 0 !important;
+            margin-top: 2px !important;
+            margin-bottom: 4px !important;
+            padding: 5px 6px 6px !important;
+            padding-bottom: 8px !important;
+        }
+        html.ocr-scanner-active #col-filters #ocr-manual-panel .custom-select-wrap--ocr-manual {
+            margin-bottom: 5px !important;
+        }
+        html.ocr-scanner-active #col-filters #ocr-manual-panel .custom-select-wrap--ocr-manual .custom-select-trigger.ocr-manual-select-trigger {
+            min-height: 34px !important;
+            padding: 6px 10px !important;
+        }
+        html.ocr-scanner-active #col-filters #btn-ocr-collect-diagnostics {
+            margin-bottom: 6px !important;
+            padding: 7px 8px !important;
+            font-size: 12px !important;
+        }
+        html.ocr-scanner-active #col-filters #ocr-manual-panel > div:last-child {
+            min-height: 44px !important;
+            padding-bottom: 2px !important;
         }
         html.ocr-scanner-active #col-filters #ocr-log {
             order: 5;
-            flex: 1 1 0;
-            min-height: 0;
-            max-height: none;
-            height: auto;
-            overflow-y: auto;
-            padding-top: 12px !important;
+            flex: 1 1 0 !important;
+            min-height: 0 !important;
+            max-height: none !important;
+            height: auto !important;
+            align-self: stretch !important;
+            overflow-y: auto !important;
+            padding: 3px 6px 4px !important;
+            font-size: 10px !important;
+            line-height: 1.25 !important;
+        }
+        html.ocr-scanner-active #col-filters #ocr-log > div {
+            padding: 1px 0 !important;
+            font-size: 10px !important;
+            line-height: 1.25 !important;
+        }
+        html.ocr-scanner-active #col-filters #ocr-manual-panel > div:first-child {
+            margin-bottom: 3px !important;
+            font-size: 12px !important;
         }
     }
 `;
@@ -32260,7 +32602,19 @@ function detectCardTypeFromImage(video, cropRect) {
     else if (avgR > avgG && avgR > avgB && avgR > 150 && avgG > 100) {
       resolve('Monstro Normal');
     }
-    // Roxo/rosa -> Armadilha
+    // Monstro Fusão (magenta/roxo): deve vir **antes** de Armadilha — partilham roxo na moldura, mas em luz
+    // quente/comum R e B ficam altos e G mais baixo sem atingir R>150 e B>150 (ex.: diagnóstico Dracotail ~143,71,107).
+    else if (
+      (avgR > 150 && avgG < 100 && avgB > 150) ||
+      (avgR > 116 &&
+        avgG < 102 &&
+        avgB > 88 &&
+        avgR > avgG + 18 &&
+        avgB > avgG + 18)
+    ) {
+      resolve('Monstro Fusão');
+    }
+    // Roxo/rosa -> Armadilha (roxo sem assinatura magenta de fusão acima)
     else if (avgR > avgG && avgB > avgG && avgR > 100 && avgB > 100) {
       resolve('Armadilha');
     }
@@ -32284,10 +32638,6 @@ function detectCardTypeFromImage(video, cropRect) {
     // Preto/azul escuro -> Monstro Xyz ou Link
     else if (avgR < 80 && avgG < 80 && avgB > 100) {
       resolve('Monstro Xyz');
-    }
-    // Roxo forte (Fusão)
-    else if (avgR > 150 && avgG < 100 && avgB > 150) {
-      resolve('Monstro Fusão');
     }
     // Azul claro (Ritual)
     else if (avgB > avgR + 30 && avgB > avgG + 30 && avgB > 120) {
