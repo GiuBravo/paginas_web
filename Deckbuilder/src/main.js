@@ -8197,8 +8197,8 @@ const STRINGS = {
   'ocr.btn.debug': { pt: 'EXPORTAR DEBUG (JSON)', en: 'EXPORT DEBUG (JSON)' },
   'ocr.btn.printbot': { pt: 'PRINT ROB\u00d4', en: 'PRINT BOT' },
   'ocr.crosshair': {
-    pt: '\uD83C\uDFAF Mire no nome da carta',
-    en: '\uD83C\uDFAF Aim at card name',
+    pt: '\uD83C\uDFAF Encaixe a carta na moldura azul (a verde \u00e9 s\u00f3 o nome, sem atributo)',
+    en: '\uD83C\uDFAF Fit the card in the blue frame (green is name only, no attribute)',
   },
   'ocr.manual.auto': { pt: 'Auto (detectar)', en: 'Auto (detect)' },
   'ocr.manual.title': {
@@ -8210,6 +8210,14 @@ const STRINGS = {
   'ocr.rarity.secret': { pt: 'Secreta', en: 'Secret' },
   'ocr.rarity.super': { pt: 'Super Rara', en: 'Super Rare' },
   'ocr.rarity.ultra': { pt: 'Ultra Rara', en: 'Ultra Rare' },
+  'ocr.rarity.ultimate': { pt: 'Ultimate Rara', en: 'Ultimate Rare' },
+  'ocr.rarity.ghost': { pt: 'Ghost Rare', en: 'Ghost Rare' },
+  'ocr.rarity.starlight': { pt: 'Starlight Rare', en: 'Starlight Rare' },
+  'ocr.rarity.platinum': { pt: 'Platina', en: 'Platinum' },
+  'ocr.rarity.gold': { pt: 'Ouro', en: 'Gold' },
+  'ocr.rarity.silver': { pt: 'Prata', en: 'Silver' },
+  'ocr.rarity.collector': { pt: 'Colecionador', en: "Collector's Rare" },
+  'ocr.rarity.quarter': { pt: 'Quarter Century', en: 'Quarter Century' },
   'ocr.type.effect': { pt: 'Monstro Efeito', en: 'Effect Monster' },
   'ocr.type.fusion': { pt: 'Monstro Fus\u00e3o', en: 'Fusion Monster' },
   'ocr.type.link': { pt: 'Monstro Link', en: 'Link Monster' },
@@ -8238,6 +8246,14 @@ const STRINGS = {
   'ocr.log.scanning': { pt: '\uD83D\uDD0D A digitalizar\u2026', en: '\uD83D\uDD0D Scanning\u2026' },
   'ocr.log.error': { pt: '\u274C Erro: {msg}', en: '\u274C Error: {msg}' },
   'ocr.log.reading': { pt: '\uD83D\uDCD6 \u201c{text}\u201d', en: '\uD83D\uDCD6 \u201c{text}\u201d' },
+  'ocr.log.scan_weak': {
+    pt: '\uD83D\uDD0E Lido \u00ab{text}\u00bb \u2014 sem correspond\u00eancia na base',
+    en: '\uD83D\uDD0E Read \u00ab{text}\u00bb \u2014 no database match',
+  },
+  'ocr.log.scan_hunting': {
+    pt: '\uD83D\uDD0D A procurar nome\u2026 (tipo: {type})',
+    en: '\uD83D\uDD0D Looking for name\u2026 (type: {type})',
+  },
   'ocr.log.card_added': { pt: '\u2705 {name}', en: '\u2705 {name}' },
   'ocr.vision.type_rarity': {
     pt: 'TIPO: {type} | RARIDADE: {rarity}',
@@ -8263,6 +8279,10 @@ const STRINGS = {
     en: '\uD83C\uDFAF Calibration: match for {name}',
   },
   'ocr.log.type_detected': { pt: '\uD83E\uDDED Tipo detectado: {type}', en: '\uD83E\uDDED Type detected: {type}' },
+  'ocr.log.rarity_detected': {
+    pt: '\u2728 Raridade detectada: {rarity}',
+    en: '\u2728 Rarity detected: {rarity}',
+  },
   'ocr.log.type_detected_fallback': {
     pt: '\uD83E\uDDED Tipo detectado: {type} (alternativa)',
     en: '\uD83E\uDDED Type detected: {type} (fallback)',
@@ -14433,7 +14453,15 @@ function ocrManualSelectRarityToMdCode(val) {
     Rara: 'R',
     'Super Rara': 'SR',
     'Ultra Rara': 'UR',
+    'Ultimate Rara': 'UR',
     Secreta: 'UR',
+    'Ghost Rare': 'UR',
+    'Starlight Rare': 'UR',
+    Platina: 'UR',
+    Ouro: 'UR',
+    Prata: 'R',
+    Colecionador: 'UR',
+    'Quarter Century': 'UR',
   };
   const v = String(val || '').trim();
   if (map[v]) return map[v];
@@ -29408,6 +29436,10 @@ let ocrWorker = null;
 let isOcrActive = false;
 /** Evita sobreposição de OCR no mesmo instante. */
 let isProcessing = false;
+/** Calibração manual em curso — evita duplo clique e loop OCR paralelo. */
+let ocrAutoCalibrateBusy = false;
+/** Incrementado para cancelar calibração anterior se o utilizador clicar de novo. */
+let ocrCalibrationGeneration = 0;
 /** Último nome de carta aceito como match (dedupe de toast/UI). */
 let lastMatchedText = '';
 let lastMatchTime = 0;
@@ -29437,11 +29469,22 @@ let ocrDiagnosticsSession = null;
 /** Último instante em que uma amostra foi gravada (throttle). */
 let ocrDiagnosticsLastSampleAt = 0;
 /** Intervalo mínimo entre amostras (ms) para não explodir memória nem travar a UI. */
-const OCR_DIAG_SAMPLE_THROTTLE_MS = 800;
+const OCR_DIAG_SAMPLE_THROTTLE_MS = 1200;
+/** Último log de estado visível no painel durante digitalização (evita spam). */
+let lastOcrScanStatusLogAt = 0;
+/** Último log de erro de frame (throttle). */
+let lastOcrFrameErrorLogAt = 0;
 /** Limite de amostras por sessão antes de ignorar novas (mantém o JSON descarregável). */
 const OCR_DIAG_MAX_SAMPLES = 120;
 /** Tipo de carta inferido no último frame processado (UI). */
 let lastDetectedCardType = null;
+/** Tipo estabilizado (evita saltos Armadilha ↔ Sincro entre frames). */
+let lastStableDetectedCardType = null;
+let lastStableDetectedCardTypeAt = 0;
+/** Raridade inferida no último frame (UI / passes OCR). */
+let lastDetectedCardRarity = null;
+let lastStableDetectedCardRarity = null;
+let lastStableDetectedCardRarityAt = 0;
 let lastScanHapticKey = '';
 let lastScanHapticTime = 0;
 
@@ -29538,9 +29581,33 @@ const SMART_NORMALIZE_BAD_WORDS = new Set([
  * @param {string} text
  * @returns {string}
  */
+/**
+ * Corrige confusões típicas OCR em foil (1/I, 0/O) — genérico, sem nomes de cartas.
+ * @param {string} text
+ * @returns {string}
+ */
+function repairOcrLetterDigitConfusion(text) {
+  if (!text) return '';
+  return String(text)
+    .replace(/\bFUS1ON\b/g, 'FUSION')
+    .replace(/\bFUS1N\b/g, 'FUSION')
+    .replace(/\bFU1ON\b/g, 'FUSION')
+    .replace(/\bFS1ON\b/g, 'FUSION')
+    .replace(/\bFS1N\b/g, 'FUSION')
+    .replace(/\bDR1AGON\b/g, 'DRAGON')
+    .replace(/\bDRAG0N\b/g, 'DRAGON')
+    .replace(/\bDRAGO\b(?![A-Z])/g, 'DRAGON')
+    .replace(/\bVENOMY\b/g, 'VENOM')
+    .replace(/\bVENEMY\b/g, 'VENOM')
+    .replace(/\bPREDAPLA/g, 'PREDAPLANT')
+    .replace(/\bQUAERITIE\b/g, 'QUAERITIS')
+    .replace(/\bOURERTIE\b/g, 'QUAERITIS');
+}
+
 function smartNormalize(text) {
   if (!text) return '';
   let clean = text.toUpperCase().replace(/[^A-Z0-9 ,:\u00C0-\u00FF\-']/g, ' ');
+  clean = repairOcrLetterDigitConfusion(clean);
   clean = clean.replace(/(.)\1{2,}/g, '$1');
   // IMPORTANTE: não remover palavras como MONSTER/SPELL/TRAP etc. porque elas existem em nomes reais
   // (ex.: "MONSTER GATE", "TRAP HOLE", "SPELL ABSORPTION").
@@ -29710,9 +29777,138 @@ function scoreCardAgainstOcr(card, ocrNormLower) {
       }
       s = Math.max(s, Math.min(1, s + tw * 0.04));
     }
+    if (hasOcrNearMissDistinctiveToken(qNorm.toUpperCase(), cNorm.toUpperCase())) {
+      s *= 0.55;
+    }
     score = Math.max(score, s);
   }
   return score;
+}
+
+/**
+ * Quão bem tokens distintivos do nome da carta aparecem no OCR (genérico, sem lista de cartas).
+ * @param {string} ocrNormUpper
+ * @param {string} cardNormUpper
+ * @returns {number} 0–1
+ */
+function scoreOcrDistinctiveTokenOverlap(ocrNormUpper, cardNormUpper) {
+  const ocrParts = ocrNormUpper.split(/\s+/).filter((w) => w.length >= 3);
+  const cardParts = cardNormUpper.split(/\s+/).filter((w) => w.length >= 4 && !OCR_STOP_WORDS.has(w));
+  if (!cardParts.length) return 1;
+  let matched = 0;
+  for (const cp of cardParts) {
+    let best = 0;
+    for (const op of ocrParts) {
+      if (ocrTokenMatchesCardName(op, cardNormUpper)) {
+        best = 1;
+        break;
+      }
+      best = Math.max(best, calculateSimilarity(op.toLowerCase(), cp.toLowerCase()));
+    }
+    if (best >= 0.68) matched++;
+  }
+  return matched / cardParts.length;
+}
+
+/**
+ * Detecta token do OCR “quase igual” ao da carta (ex.: 1 letra trocada) sem ser match forte.
+ * @param {string} ocrNormUpper
+ * @param {string} cardNormUpper
+ * @returns {boolean}
+ */
+function hasOcrNearMissDistinctiveToken(ocrNormUpper, cardNormUpper) {
+  const ocrParts = ocrNormUpper.split(/\s+/).filter((w) => w.length >= 5);
+  const cardParts = cardNormUpper.split(/\s+/).filter((w) => w.length >= 5 && !OCR_STOP_WORDS.has(w));
+  for (const cp of cardParts) {
+    let best = 0;
+    let exact = false;
+    for (const op of ocrParts) {
+      if (op === cp) {
+        exact = true;
+        break;
+      }
+      best = Math.max(best, calculateSimilarity(op.toLowerCase(), cp.toLowerCase()));
+    }
+    if (!exact && best >= 0.72 && best < 0.92) return true;
+  }
+  return false;
+}
+
+/**
+ * Pontua compatibilidade do `card.type` da API com o tipo inferido na visão (select manual / AUTO).
+ * @param {object} card
+ * @param {string|null|undefined} uiCardType
+ * @returns {number} 0–1
+ */
+function scoreApiCardTypeAgainstUi(card, uiCardType) {
+  if (!uiCardType || uiCardType === 'AUTO') return 0.5;
+  const apiT = String(card.type || '').toLowerCase();
+  const keywords = {
+    'Monstro Fusão': ['fusion'],
+    'Monstro Xyz': ['xyz'],
+    'Monstro Sincro': ['synchro'],
+    'Monstro Ritual': ['ritual'],
+    'Monstro Link': ['link'],
+    'Monstro Normal': ['normal'],
+    'Monstro Efeito': ['effect'],
+    'Monstro Pêndulo': ['pendulum'],
+    Magia: ['spell'],
+    Armadilha: ['trap'],
+    Ficha: ['token'],
+  };
+  const needles = keywords[uiCardType];
+  if (!needles) return 0.5;
+  for (const n of needles) {
+    if (apiT.includes(n)) return 1;
+  }
+  if (uiCardType.startsWith('Monstro') && apiT.includes('monster')) return 0.22;
+  if ((uiCardType === 'Magia' || uiCardType === 'Armadilha') && apiT.includes('monster')) return 0;
+  if (uiCardType.startsWith('Monstro') && (apiT.includes('spell') || apiT.includes('trap'))) return 0;
+  return 0.05;
+}
+
+/**
+ * Pontua raridade da carta (MD / prints) vs raridade inferida na visão.
+ * @param {object} card
+ * @param {string|null|undefined} uiRarity
+ * @returns {number} 0–1
+ */
+function scoreApiCardRarityAgainstUi(card, uiRarity) {
+  if (!uiRarity || uiRarity === 'AUTO') return 0.5;
+  const md = pickMasterDuelRarity(card);
+  const want = ocrManualSelectRarityToMdCode(uiRarity);
+  if (!want) return 0.5;
+  if (!md) return 0.45;
+  if (md === want) return 1;
+  const rank = { UR: 4, SR: 3, R: 2, N: 1 };
+  const dr = Math.abs((rank[md] || 0) - (rank[want] || 0));
+  if (dr === 0) return 1;
+  if (dr === 1) return 0.62;
+  if (want === 'UR' && md === 'UR') return 1;
+  if (want === 'UR' && (uiRarity === 'Secreta' || uiRarity === 'Ultra Rara')) return 0.88;
+  return 0.18;
+}
+
+/**
+ * Pontuação combinada nome + tipo + raridade (quando a API devolve poucos candidatos).
+ * @param {object} card
+ * @param {string} qNormLower
+ * @param {{ cardType?: string|null, rarity?: string|null, candidateCount?: number }|null|undefined} visionContext
+ * @returns {{ nameScore: number, typeScore: number, rarityScore: number, combined: number }}
+ */
+function scoreCardWithVisionContext(card, qNormLower, visionContext) {
+  const nameScore = scoreCardAgainstOcr(card, qNormLower);
+  if (!visionContext || (!visionContext.cardType && !visionContext.rarity)) {
+    return { nameScore, typeScore: 0.5, rarityScore: 0.5, combined: nameScore };
+  }
+  const typeScore = scoreApiCardTypeAgainstUi(card, visionContext.cardType);
+  const rarityScore = scoreApiCardRarityAgainstUi(card, visionContext.rarity);
+  const few = (visionContext.candidateCount || 99) <= 24;
+  const wName = few ? 0.58 : 0.72;
+  const wType = few ? 0.28 : 0.18;
+  const wRar = few ? 0.14 : 0.1;
+  const combined = nameScore * wName + typeScore * wType + rarityScore * wRar;
+  return { nameScore, typeScore, rarityScore, combined };
 }
 
 /**
@@ -29721,13 +29917,16 @@ function scoreCardAgainstOcr(card, ocrNormLower) {
  *
  * @param {string} name Nome ou fragmento a resolver (normalizado internamente).
  * @param {string|null|undefined} lang Código de idioma da cadeia de `fetchCardDataByFname` ou vazio para cadeia padrão.
+ * @param {{ cardType?: string|null, rarity?: string|null }|null|undefined} [visionContext] Tipo/raridade da visão para desempate.
  * @returns {Promise<object|null>} Melhor carta por similaridade ou `null` (query curta, sem candidatos, erro ou score baixo).
  */
-async function fetchCardByName(name, lang) {
+async function fetchCardByName(name, lang, visionContext) {
   const qNorm = normalizeForSim(name).toLowerCase();
   if (qNorm.length < 3) return null;
   const lk = lang == null || lang === '' ? null : String(lang).toLowerCase();
-  const cacheKey = `${qNorm}__${lk || 'all'}`;
+  const ctxType = visionContext?.cardType || '';
+  const ctxRar = visionContext?.rarity || '';
+  const cacheKey = `${qNorm}__${lk || 'all'}__${ctxType}__${ctxRar}`;
   if (cardCacheAPI.has(cacheKey)) return cardCacheAPI.get(cacheKey);
 
   const tokens = fnameTokensForApi(name);
@@ -29759,20 +29958,41 @@ async function fetchCardByName(name, lang) {
       return null;
     }
 
-    let best = null;
-    let bestScore = 0;
-    const scoreCap = candidates.length < 80 ? candidates.length : 80;
+    const poolCtx = {
+      cardType: visionContext?.cardType || null,
+      rarity: visionContext?.rarity || null,
+      candidateCount: candidates.length,
+    };
+    const scoreCap = candidates.length < 120 ? candidates.length : 120;
+    const ranked = [];
     for (let ci = 0; ci < scoreCap; ci++) {
       const card = candidates[ci];
-      const sc = scoreCardAgainstOcr(card, qNorm);
-      if (sc > bestScore) {
-        bestScore = sc;
-        best = card;
+      ranked.push({ card, ...scoreCardWithVisionContext(card, qNorm, poolCtx) });
+    }
+    ranked.sort((a, b) => b.combined - a.combined || b.nameScore - a.nameScore);
+
+    let pick = ranked[0] || null;
+    if (visionContext?.cardType && candidates.length <= 28) {
+      const typeStrong = ranked.filter((r) => scoreApiCardTypeAgainstUi(r.card, visionContext.cardType) >= 0.9);
+      if (typeStrong.length === 1) {
+        pick = typeStrong[0];
+      } else if (typeStrong.length > 1) {
+        typeStrong.sort((a, b) => b.combined - a.combined);
+        if (typeStrong[0].combined >= (pick?.combined || 0) * 0.82) pick = typeStrong[0];
       }
     }
+
+    const bestScore = pick ? pick.nameScore : 0;
     const nGe2 = countAsciiSpaceDelimitedSegmentsMinLen(qNorm, 2);
-    const minSim = nGe2 >= 3 ? 0.36 : 0.4;
-    const result = bestScore > minSim ? best : null;
+    let minSim = nGe2 >= 3 ? 0.36 : 0.4;
+    if (candidates.length <= 20 && pick && pick.combined >= 0.42) minSim = Math.min(minSim, 0.33);
+    if (candidates.length <= 12 && pick && pick.typeScore >= 0.9 && pick.combined >= 0.38) {
+      minSim = Math.min(minSim, 0.3);
+    }
+    if (pick && pick.typeScore >= 0.95 && scoreOcrDistinctiveTokenOverlap(qNorm.toUpperCase(), normalizeForSim(displayNameForApiCard(pick.card)).toUpperCase()) >= 0.5) {
+      minSim = Math.min(minSim, 0.28);
+    }
+    const result = bestScore > minSim ? pick.card : null;
     cardCacheAPI.set(cacheKey, result);
     return result;
   } catch (err) {
@@ -29802,28 +30022,57 @@ const SMART_SEARCH_IGNORE_WORDS = new Set([
  * @param {string} fullText Texto OCR já limpo (`smartNormalize`).
  * @param {boolean} [bypassThrottle] Se `true`, ignora dedupe temporal da última query.
  * @param {string|null} [ocrContextForStrongMatch] Se definido, só aceita carta que passe {@link isStrongMatch}.
+ * @param {{ cardType?: string|null, rarity?: string|null }|null} [visionContext] Tipo/raridade inferidos (visão).
  * @returns {Promise<object|null>} Carta API ou `null`.
  */
-async function smartSearch(fullText, bypassThrottle = false, ocrContextForStrongMatch = null) {
+/**
+ * @param {number} ms
+ * @returns {Promise<object|null>}
+ */
+async function smartSearchWithTimeout(
+  fullText,
+  bypassThrottle,
+  ocrContextForStrongMatch,
+  visionContext,
+  ms = 3200
+) {
+  let timer = 0;
+  try {
+    return await Promise.race([
+      smartSearch(fullText, bypassThrottle, ocrContextForStrongMatch, visionContext),
+      new Promise((resolve) => {
+        timer = window.setTimeout(() => resolve(null), ms);
+      }),
+    ]);
+  } finally {
+    if (timer) window.clearTimeout(timer);
+  }
+}
+
+async function smartSearch(
+  fullText,
+  bypassThrottle = false,
+  ocrContextForStrongMatch = null,
+  visionContext = null
+) {
   if (!fullText || fullText.length < 3) return null;
-  if (!bypassThrottle && lastApiSearchCleaned === fullText && Date.now() - lastApiSearchTime < 900)
+  const throttleKey = `${fullText}|${visionContext?.cardType || ''}|${visionContext?.rarity || ''}`;
+  if (!bypassThrottle && lastApiSearchCleaned === throttleKey && Date.now() - lastApiSearchTime < 900)
     return null;
 
   const accept = (card) => {
     if (!card) return false;
     if (!ocrContextForStrongMatch) return true;
-    // Se o contexto foi passado, só aceita se for match forte; caso contrário, segue tentando outras queries.
-    return isStrongMatch(ocrContextForStrongMatch, card);
+    return isStrongMatch(ocrContextForStrongMatch, card, visionContext);
   };
   const tryPair = async (query) => {
     if (!query || query.length < 4) return null;
-    // fetchCardByName já encadeia PT → EN → padrão e mescla candidatos por token fname.
-    return await fetchCardByName(query, getUiLang());
+    return await fetchCardByName(query, getUiLang(), visionContext);
   };
 
   let card = await tryPair(fullText);
   if (accept(card)) {
-    lastApiSearchCleaned = fullText;
+    lastApiSearchCleaned = throttleKey;
     lastApiSearchTime = Date.now();
     return card;
   }
@@ -29832,7 +30081,7 @@ async function smartSearch(fullText, bypassThrottle = false, ocrContextForStrong
   if (noSpaces.length > 4) {
     card = await tryPair(noSpaces);
     if (accept(card)) {
-      lastApiSearchCleaned = fullText;
+      lastApiSearchCleaned = throttleKey;
       lastApiSearchTime = Date.now();
       return card;
     }
@@ -29849,7 +30098,7 @@ async function smartSearch(fullText, bypassThrottle = false, ocrContextForStrong
     if (phrase.length < 9) continue;
     card = await tryPair(phrase);
     if (accept(card)) {
-      lastApiSearchCleaned = fullText;
+      lastApiSearchCleaned = throttleKey;
       lastApiSearchTime = Date.now();
       return card;
     }
@@ -29869,7 +30118,19 @@ async function smartSearch(fullText, bypassThrottle = false, ocrContextForStrong
     if (a !== b) {
       card = await tryPair(`${a} ${b}`);
       if (accept(card)) {
-        lastApiSearchCleaned = fullText;
+        lastApiSearchCleaned = throttleKey;
+        lastApiSearchTime = Date.now();
+        return card;
+      }
+    }
+  }
+  if (seqWords.length >= 3) {
+    for (let ti = 0; ti <= seqWords.length - 3; ti++) {
+      const phrase3 = `${seqWords[ti]} ${seqWords[ti + 1]} ${seqWords[ti + 2]}`;
+      if (phrase3.length < 12) continue;
+      card = await tryPair(phrase3);
+      if (accept(card)) {
+        lastApiSearchCleaned = throttleKey;
         lastApiSearchTime = Date.now();
         return card;
       }
@@ -29880,16 +30141,70 @@ async function smartSearch(fullText, bypassThrottle = false, ocrContextForStrong
     const word = sorted[wi];
     card = await tryPair(word);
     if (accept(card)) {
-      lastApiSearchCleaned = fullText;
+      lastApiSearchCleaned = throttleKey;
       lastApiSearchTime = Date.now();
       return card;
     }
     if (word.length >= 9) {
       card = await tryPair(word.substring(0, 5));
       if (accept(card)) {
-        lastApiSearchCleaned = fullText;
+        lastApiSearchCleaned = throttleKey;
         lastApiSearchTime = Date.now();
         return card;
+      }
+    }
+  }
+  if (seqWords.length >= 3) {
+    const joined = seqWords.slice(0, Math.min(5, seqWords.length)).join(' ');
+    if (joined.length >= 12) {
+      card = await tryPair(joined);
+      if (accept(card)) {
+        lastApiSearchCleaned = throttleKey;
+        lastApiSearchTime = Date.now();
+        return card;
+      }
+    }
+  }
+  if (sorted.length >= 1 && sorted[0].length >= 7) {
+    const frag = sorted[0];
+    const fragCard = await tryPair(frag);
+    if (fragCard) {
+      const names = cardNormalizedNames(fragCard);
+      for (const b of names) {
+        for (const part of b.split(' ')) {
+          if (part.length < 5) continue;
+          const sim = calculateSimilarity(frag, part);
+          if (sim >= 0.78) {
+            if (!ocrContextForStrongMatch || accept(fragCard)) {
+              lastApiSearchCleaned = throttleKey;
+              lastApiSearchTime = Date.now();
+              return fragCard;
+            }
+          }
+          if (frag.length >= 9 && part.length >= 7 && sim >= 0.72) {
+            lastApiSearchCleaned = throttleKey;
+            lastApiSearchTime = Date.now();
+            return fragCard;
+          }
+        }
+      }
+    }
+  }
+  const lone = fullText.trim().split(/\s+/).filter((w) => w.length >= 8 && !SMART_SEARCH_IGNORE_WORDS.has(w));
+  if (lone.length === 1) {
+    const tok = lone[0];
+    const tokCard = await tryPair(tok);
+    if (tokCard) {
+      const names = cardNormalizedNames(tokCard);
+      for (const b of names) {
+        for (const part of b.split(' ')) {
+          if (part.length < 7) continue;
+          if (calculateSimilarity(tok, part) >= 0.72) {
+            lastApiSearchCleaned = throttleKey;
+            lastApiSearchTime = Date.now();
+            return tokCard;
+          }
+        }
       }
     }
   }
@@ -29996,6 +30311,23 @@ function isStrongMatchAgainstB(ocrCleaned, b) {
   if (a.length < 6) return false;
 
   const sim = calculateSimilarity(a.toLowerCase(), b.toLowerCase());
+  const overlap = scoreOcrDistinctiveTokenOverlap(a, b);
+  const cardTokens = b.split(' ').filter((w) => w.length >= 4 && !OCR_STOP_WORDS.has(w));
+  if (hasOcrNearMissDistinctiveToken(a, b) && sim < 0.96) return false;
+  if (cardTokens.length >= 4 && overlap < 0.38) return false;
+  if (cardTokens.length >= 2 && overlap < 0.45 && sim < 0.52) return false;
+  const bPartsDistinct = b.split(' ').filter((w) => w.length >= 9);
+  for (const lp of bPartsDistinct) {
+    let found = false;
+    for (const part of a.split(' ')) {
+      if (!part || part.length < 5) continue;
+      if (ocrTokenMatchesCardName(part, b) || calculateSimilarity(part, lp) >= 0.72) {
+        found = true;
+        break;
+      }
+    }
+    if (!found) return false;
+  }
   const aParts = a.split(' ');
   let good = goodTokensFromNormalizedParts(aParts, 6);
   if (good.length >= 2) {
@@ -30087,16 +30419,26 @@ function isStrongMatchAgainstB(ocrCleaned, b) {
  * Verdadeiro se qualquer variante de nome da carta satisfaz {@link isStrongMatchAgainstB}.
  * @param {string} ocrCleaned
  * @param {object|null|undefined} card
+ * @param {{ cardType?: string|null, rarity?: string|null }|null} [visionContext]
  * @returns {boolean}
  */
-function isStrongMatch(ocrCleaned, card) {
+function isStrongMatch(ocrCleaned, card, visionContext) {
   if (!card) return false;
   const names = cardNormalizedNames(card);
   if (!names.length) return false;
+  let nameOk = false;
   for (const b of names) {
-    if (isStrongMatchAgainstB(ocrCleaned, b)) return true;
+    if (isStrongMatchAgainstB(ocrCleaned, b)) {
+      nameOk = true;
+      break;
+    }
   }
-  return false;
+  if (!nameOk) return false;
+  if (visionContext?.cardType) {
+    const typeSc = scoreApiCardTypeAgainstUi(card, visionContext.cardType);
+    if (typeSc < 0.2) return false;
+  }
+  return true;
 }
 
 /**
@@ -30165,6 +30507,101 @@ function downloadTextFile(filename, text, mime = 'text/plain') {
 }
 
 /**
+ * @param {string} dataUrl
+ * @returns {Uint8Array|null}
+ */
+function dataUrlToUint8Array(dataUrl) {
+  if (!dataUrl || typeof dataUrl !== 'string') return null;
+  const i = dataUrl.indexOf(',');
+  if (i < 0) return null;
+  try {
+    const b64 = dataUrl.slice(i + 1);
+    const bin = atob(b64);
+    const out = new Uint8Array(bin.length);
+    for (let j = 0; j < bin.length; j++) out[j] = bin.charCodeAt(j);
+    return out;
+  } catch (e) {
+    return null;
+  }
+}
+
+/**
+ * @param {string} filename
+ * @param {Uint8Array} bytes
+ * @returns {void}
+ */
+function downloadBinaryFile(filename, bytes) {
+  const blob = new Blob([bytes], { type: 'application/zip' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  try {
+    a.referrerPolicy = 'no-referrer';
+  } catch (_) {}
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+}
+
+/**
+ * Exporta diagnóstico OCR num único ZIP (JSON, resumo, galeria, JPEGs por amostra).
+ * @param {number} stamp
+ * @param {object} payload
+ * @param {{ samples?: object[] }} session
+ * @param {string} summaryText
+ * @param {string} galleryHtml
+ * @returns {Promise<void>}
+ */
+async function exportOcrDiagnosticsAsZip(stamp, payload, session, summaryText, galleryHtml) {
+  const { zipSync, strToU8 } = await import('fflate');
+  const files = {};
+  files['diagnostics.json'] = strToU8(JSON.stringify(payload, null, 2));
+  files['summary.txt'] = strToU8(summaryText);
+  files['gallery.html'] = strToU8(galleryHtml);
+  const slimPayload = {
+    ...payload,
+    session: {
+      ...session,
+      samples: (session.samples || []).map((s) => {
+        const im = s.images;
+        return {
+          ...s,
+          images: im
+            ? {
+                hasRobot: !!im.robotNameStripJpeg,
+                hasRawName: !!(im.rawNameOcrJpeg || im.rawNameRegionJpeg),
+                hasRawNameVisual: !!im.rawNameVisualJpeg,
+                hasTypeMira: !!im.typeMiraJpeg,
+                hasFrameLeft: !!im.frameProbeLeftJpeg,
+              }
+            : null,
+        };
+      }),
+    },
+  };
+  files['diagnostics_slim.json'] = strToU8(JSON.stringify(slimPayload, null, 2));
+  files['README.txt'] = strToU8(
+    'OCR diagnóstico Yu-Gi-Oh!\n- gallery.html: abrir no browser (robô + tipos)\n- diagnostics.json: dados completos\n- images/: JPEGs por amostra\n- diagnostics_slim.json: JSON sem base64 (leitura rápida)\n'
+  );
+  for (const s of session.samples || []) {
+    const pad = String(s.seq).padStart(3, '0');
+    const im = s.images || {};
+    const add = (key, name) => {
+      const u8 = dataUrlToUint8Array(im[key]);
+      if (u8) files[`images/sample_${pad}_${name}.jpg`] = u8;
+    };
+    add('robotNameStripJpeg', 'robot');
+    add('rawNameOcrJpeg', 'raw_name_ocr');
+    add('rawNameVisualJpeg', 'raw_name_visual');
+    add('rawNameRegionJpeg', 'raw_name');
+    add('typeMiraJpeg', 'type_mira');
+    add('frameProbeLeftJpeg', 'frame_border');
+  }
+  const zipped = zipSync(files, { level: 6 });
+  downloadBinaryFile(`ocr_diagnostics_${stamp}.zip`, zipped);
+}
+
+/**
  * JPEG em Data URL a partir de um canvas (compressão para embutir em JSON de diagnóstico).
  * @param {HTMLCanvasElement|null|undefined} canvas
  * @param {number} [quality=0.82]
@@ -30218,6 +30655,208 @@ function ocrDiagnosticsRawCropDataUrl(video, cropRect, maxW = 480) {
 }
 
 /**
+ * Agrega contagens e divergências moldura vs UI para exportação.
+ * @param {{ samples?: object[] }|null} session
+ * @returns {object}
+ */
+function buildOcrDiagnosticsExportSummary(session) {
+  const samples = session && Array.isArray(session.samples) ? session.samples : [];
+  const uiTypes = {};
+  const frameTypes = {};
+  const nameStripTypes = {};
+  const rarityUi = {};
+  const rarityDetected = {};
+  const rarityNameStrip = {};
+  const rarityArtHint = {};
+  const mismatches = [];
+  const rarityMismatches = [];
+  for (const s of samples) {
+    const ui = s.lastDetectedCardTypeUi || '(vazio)';
+    uiTypes[ui] = (uiTypes[ui] || 0) + 1;
+    const rUi = s.lastDetectedCardRarityUi || '(vazio)';
+    rarityUi[rUi] = (rarityUi[rUi] || 0) + 1;
+    const rp = s.rarityProbe;
+    const rDet = rp && rp.classifiedRarity;
+    if (rDet) rarityDetected[rDet] = (rarityDetected[rDet] || 0) + 1;
+    if (rp && rp.nameFromStrip) rarityNameStrip[rp.nameFromStrip] = (rarityNameStrip[rp.nameFromStrip] || 0) + 1;
+    if (rp && rp.artHint) rarityArtHint[rp.artHint] = (rarityArtHint[rp.artHint] || 0) + 1;
+    if (rDet && rUi !== '(vazio)' && rDet !== rUi) {
+      rarityMismatches.push({
+        seq: s.seq,
+        ui: rUi,
+        detected: rDet,
+        nameStrip: rp.nameFromStrip || '-',
+        art: rp.artHint || '-',
+      });
+    }
+    const frame =
+      s.typeProbe &&
+      (s.typeProbe.classifiedTypeMerged ||
+        s.typeProbe.classifiedTypeFromFrameOnly ||
+        s.typeProbe.classifiedTypeFromFrame);
+    if (frame) {
+      frameTypes[frame] = (frameTypes[frame] || 0) + 1;
+      if (frame !== ui) {
+        mismatches.push({ seq: s.seq, ui, frame, nameStrip: s.typeProbe.classifiedTypeFromNameStripOnly || null });
+      }
+    }
+    const strip = s.typeProbe && s.typeProbe.classifiedTypeFromNameStripOnly;
+    if (strip) nameStripTypes[strip] = (nameStripTypes[strip] || 0) + 1;
+  }
+  return {
+    sampleCount: samples.length,
+    uiTypes,
+    frameTypes,
+    nameStripTypes,
+    rarityUi,
+    rarityDetected,
+    rarityNameStrip,
+    rarityArtHint,
+    rarityMismatchCount: rarityMismatches.length,
+    rarityMismatches: rarityMismatches.slice(0, 40),
+    uiVsFrameMismatchCount: mismatches.length,
+    uiVsFrameMismatches: mismatches.slice(0, 40),
+  };
+}
+
+/**
+ * @param {object} summary
+ * @returns {string}
+ */
+function formatOcrDiagnosticsSummaryText(summary) {
+  const lines = ['=== Resumo diagnóstico OCR ===', `Amostras: ${summary.sampleCount}`, ''];
+  lines.push('Tipo na UI (lastDetectedCardTypeUi):');
+  for (const [k, v] of Object.entries(summary.uiTypes || {}).sort((a, b) => b[1] - a[1])) {
+    lines.push(`  ${k}: ${v}`);
+  }
+  lines.push('', 'Tipo detetado (moldura + fusão com faixa do nome):');
+  for (const [k, v] of Object.entries(summary.frameTypes || {}).sort((a, b) => b[1] - a[1])) {
+    lines.push(`  ${k}: ${v}`);
+  }
+  lines.push('', 'Tipo só pela faixa do nome (legado / comparação):');
+  for (const [k, v] of Object.entries(summary.nameStripTypes || {}).sort((a, b) => b[1] - a[1])) {
+    lines.push(`  ${k}: ${v}`);
+  }
+  lines.push('', `Divergências UI vs moldura: ${summary.uiVsFrameMismatchCount}`);
+  for (const m of summary.uiVsFrameMismatches || []) {
+    lines.push(`  #${m.seq} UI=${m.ui} moldura=${m.frame} nome=${m.nameStrip || '-'}`);
+  }
+  lines.push('', 'Raridade na UI (lastDetectedCardRarityUi):');
+  for (const [k, v] of Object.entries(summary.rarityUi || {}).sort((a, b) => b[1] - a[1])) {
+    lines.push(`  ${k}: ${v}`);
+  }
+  lines.push('', 'Raridade detetada (nome + arte/moldura):');
+  for (const [k, v] of Object.entries(summary.rarityDetected || {}).sort((a, b) => b[1] - a[1])) {
+    lines.push(`  ${k}: ${v}`);
+  }
+  lines.push('', 'Raridade só pela faixa do nome:');
+  for (const [k, v] of Object.entries(summary.rarityNameStrip || {}).sort((a, b) => b[1] - a[1])) {
+    lines.push(`  ${k}: ${v}`);
+  }
+  lines.push('', 'Raridade sugerida pela arte/moldura (mira azul):');
+  for (const [k, v] of Object.entries(summary.rarityArtHint || {}).sort((a, b) => b[1] - a[1])) {
+    lines.push(`  ${k}: ${v}`);
+  }
+  lines.push('', `Divergências raridade UI vs detetada: ${summary.rarityMismatchCount || 0}`);
+  for (const m of summary.rarityMismatches || []) {
+    lines.push(`  #${m.seq} UI=${m.ui} detetada=${m.detected} nome=${m.nameStrip} arte=${m.art}`);
+  }
+  return lines.join('\n');
+}
+
+/**
+ * HTML com imagens do robô, recorte bruto e moldura — abrir no browser para calibrar.
+ * @param {{ samples?: object[] }|null} session
+ * @param {object} [summary]
+ * @returns {string}
+ */
+function buildOcrDiagnosticsGalleryHtml(session, summary) {
+  const samples = session && Array.isArray(session.samples) ? session.samples : [];
+  const esc = (s) =>
+    String(s ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  const cards = samples
+    .map((s) => {
+      const ui = esc(s.lastDetectedCardTypeUi);
+      const frame = esc(
+        s.typeProbe &&
+          (s.typeProbe.classifiedTypeMerged ||
+            s.typeProbe.classifiedTypeFromFrameOnly ||
+            s.typeProbe.classifiedTypeFromFrame)
+      );
+      const strip = esc(s.typeProbe && s.typeProbe.classifiedTypeFromNameStripOnly);
+      const ocrType = esc(
+        (s.robotStrip && s.robotStrip.ocrPipelineCardType) ||
+          (s.outcome && s.outcome.diagnostics && s.outcome.diagnostics.cardType)
+      );
+      const rUi = esc(s.lastDetectedCardRarityUi);
+      const rp = s.rarityProbe;
+      const rDet = esc(rp && rp.classifiedRarity);
+      const rName = esc(rp && rp.nameFromStrip);
+      const rArt = esc(rp && rp.artHint);
+      const rMetrics =
+        rp && rp.artMetrics
+          ? `arte foil=${rp.artMetrics.foilRatio} colStd=${rp.artMetrics.colLumStd} hue=${rp.artMetrics.hueVar}`
+          : '';
+      const cleaned = esc(s.outcome && s.outcome.cleaned);
+      const fc = s.typeProbe && s.typeProbe.frameColor;
+      const rgb = fc ? `R${fc.avgR} G${fc.avgG} B${fc.avgB}` : '';
+      const robot = s.images && s.images.robotNameStripJpeg;
+      const raw = (s.images && s.images.rawNameOcrJpeg) || (s.images && s.images.rawNameRegionJpeg);
+      const rawVisual = s.images && s.images.rawNameVisualJpeg;
+      const typeImg = s.images && s.images.typeMiraJpeg;
+      const frameImg =
+        (s.images && s.images.frameProbeLeftJpeg) ||
+        (s.images && s.images.frameProbeRegionJpeg);
+      const img = (src, label) =>
+        src
+          ? `<figure><figcaption>${esc(label)}</figcaption><img src="${src}" alt="${esc(label)}" loading="lazy"/></figure>`
+          : '';
+      return `<article class="sample">
+        <h2>#${s.seq} <small>${esc(s.ts)}</small></h2>
+        <p><strong>UI</strong> ${ui} · <strong>Tipo (mira azul)</strong> ${frame} · <strong>Faixa nome</strong> ${strip} · <strong>OCR robô</strong> ${ocrType || '—'}</p>
+        <p><strong>Raridade UI</strong> ${rUi || '—'} · <strong>Detetada</strong> ${rDet || '—'} · <strong>Nome</strong> ${rName || '—'} · <strong>Arte</strong> ${rArt || '—'}</p>
+        <p class="meta">${esc(rgb)} · ${esc(rMetrics)} · texto: <code>${cleaned || '—'}</code></p>
+        <div class="grid">
+          ${img(robot, 'Robô (pré-processado)')}
+          ${img(raw, 'Recorte OCR (nome)')}
+          ${img(rawVisual, 'Mira verde no ecrã')}
+          ${img(typeImg, 'Mira azul — cartão')}
+          ${img(frameImg, 'Borda moldura')}
+          ${img(s.images && s.images.artRegionJpeg, 'Arte (mira azul)')}
+        </div>
+      </article>`;
+    })
+    .join('\n');
+  const sumBlock = summary
+    ? `<pre class="summary">${esc(formatOcrDiagnosticsSummaryText(summary))}</pre>`
+    : '';
+  return `<!DOCTYPE html><html lang="pt"><head><meta charset="utf-8"/><title>OCR diagnóstico — galeria</title>
+<style>
+body{font-family:system-ui,sans-serif;background:#111;color:#eee;margin:0;padding:16px}
+h1{font-size:1.1rem}
+.sample{border:1px solid #333;border-radius:8px;padding:12px;margin:16px 0;background:#1a1a1a}
+.sample h2{margin:0 0 8px;font-size:1rem}
+.sample small{color:#888;font-weight:normal}
+.meta{font-size:12px;color:#aaa}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+figure{margin:0}
+figcaption{font-size:11px;color:#8cf;margin-bottom:4px}
+img{max-width:100%;height:auto;background:#000;border:1px solid #444;border-radius:4px}
+.summary{background:#0d0d0d;padding:12px;border-radius:6px;font-size:12px;overflow:auto}
+code{color:#9f9}
+</style></head><body>
+<h1>Diagnóstico OCR — visão do robô por amostra</h1>
+<p>Ordem: faixa pré-processada (Tesseract), recorte da câmara, faixas laterais/superior da moldura.</p>
+${sumBlock}
+${cards || '<p>Sem amostras.</p>'}
+</body></html>`;
+}
+
+/**
  * Atualiza o rótulo do botão de coleta OCR e `aria-pressed`.
  * @returns {void}
  */
@@ -30240,7 +30879,7 @@ function syncOcrDiagnosticsButtonUi() {
 function toggleOcrDiagnosticsCapture() {
   if (!ocrDiagnosticsCaptureActive) {
     ocrDiagnosticsSession = {
-      schemaVersion: 1,
+      schemaVersion: 3,
       startedAt: new Date().toISOString(),
       samples: [],
       logLines: [],
@@ -30250,7 +30889,7 @@ function toggleOcrDiagnosticsCapture() {
     syncOcrDiagnosticsButtonUi();
     addOcrLog('📋 Coleta de diagnóstico: ligada (amostras com throttle ~800 ms).');
     try {
-      showToast('Coleta ligada: ao terminar, clique de novo para exportar JSON.', { variant: 'info' });
+      showToast('Coleta ligada: ao parar, exporta um único ficheiro .zip.', { variant: 'info' });
     } catch (_) {}
     return;
   }
@@ -30259,12 +30898,15 @@ function toggleOcrDiagnosticsCapture() {
   const logBox = getEl('ocr-log');
   const logSnapshot = logBox ? logBox.innerText : '';
   const endedAt = new Date().toISOString();
+  const session = ocrDiagnosticsSession;
+  const analysisSummary = buildOcrDiagnosticsExportSummary(session);
   const payload = {
-    schemaVersion: 1,
+    schemaVersion: 3,
     purpose:
-      'Diagnóstico OCR Yu-Gi-Oh: imagens (recorte bruto + faixa pré-processada), passes Tesseract, cropRect e metadados para melhorar deteção de tipo/nome.',
+      'Diagnóstico OCR: mira verde (nome), mira azul (tipo/cartão), faixa do robô, passes Tesseract. Exportado em ZIP.',
     exportedAt: endedAt,
-    session: ocrDiagnosticsSession,
+    session,
+    analysisSummary,
     logPanelText: logSnapshot,
     meta: {
       userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : '',
@@ -30277,15 +30919,28 @@ function toggleOcrDiagnosticsCapture() {
       dpr: typeof window !== 'undefined' && typeof window.devicePixelRatio === 'number' ? window.devicePixelRatio : null,
       tessedit_pageseg_mode: '7',
       ocrWorkerReady: !!ocrWorker,
+      ocrNameDstH: OCR_NAME_DST_H,
     },
   };
   ocrDiagnosticsSession = null;
-  const fname = `ocr_diagnostics_${Date.now()}.json`;
-  downloadTextFile(fname, JSON.stringify(payload, null, 2), 'application/json');
-  addOcrLog(`📋 Coleta terminada. Ficheiro: ${fname}`);
-  try {
-    showToast(`Exportado: ${fname} — copie para a pasta do projeto.`, { variant: 'success' });
-  } catch (_) {}
+  const stamp = Date.now();
+  const summaryText = formatOcrDiagnosticsSummaryText(analysisSummary);
+  const galleryHtml = buildOcrDiagnosticsGalleryHtml(session, analysisSummary);
+  void exportOcrDiagnosticsAsZip(stamp, payload, session, summaryText, galleryHtml)
+    .then(() => {
+      addOcrLog(`📋 Coleta terminada. Ficheiro: ocr_diagnostics_${stamp}.zip`);
+      try {
+        showToast(
+          `Exportado: ocr_diagnostics_${stamp}.zip — copie para a pasta logs/ do projeto para análise`,
+          { variant: 'success' }
+        );
+      } catch (_) {}
+    })
+    .catch((err) => {
+      console.error('ZIP export failed', err);
+      downloadTextFile(`ocr_diagnostics_${stamp}.json`, JSON.stringify(payload, null, 2), 'application/json');
+      addOcrLog(`📋 ZIP falhou; exportado JSON. Erro: ${err && err.message ? err.message : err}`);
+    });
 }
 
 /**
@@ -30303,47 +30958,101 @@ function ocrDiagnosticsPushLogMirror(msg) {
 }
 
 /**
- * Grava uma amostra (imagens + JSON) se a coleta estiver ativa e dentro dos limites.
+ * Monta e grava uma amostra de diagnóstico (executar fora do hot path do OCR quando possível).
  * @param {HTMLVideoElement} video
- * @param {{ x: number, y: number, width: number, height: number }} cropRect
+ * @param {{ x: number, y: number, width: number, height: number }} nameCropVisual
+ * @param {{ x: number, y: number, width: number, height: number }} nameCropOcr
+ * @param {{ x: number, y: number, width: number, height: number }|null} typeCropRect
  * @param {null|{ pack?: object, cleaned?: string, card?: object|null, diagnostics?: object }} outcome
  * @returns {void}
  */
-function maybeRecordOcrDiagnosticsSample(video, cropRect, outcome) {
+function recordOcrDiagnosticsSampleNow(video, nameCropVisual, nameCropOcr, typeCropRect, outcome) {
   if (!ocrDiagnosticsCaptureActive || !ocrDiagnosticsSession) return;
-  const now = Date.now();
-  if (now - ocrDiagnosticsLastSampleAt < OCR_DIAG_SAMPLE_THROTTLE_MS) return;
-  if (ocrDiagnosticsSession.samples.length >= OCR_DIAG_MAX_SAMPLES) return;
-  ocrDiagnosticsLastSampleAt = now;
   const preview = getEl('preview-canvas');
   const visual = getEl('scanner-visual');
+  const typeVisual = getEl('scanner-type-visual');
   let visualDom = null;
+  let typeVisualDom = null;
   try {
     if (visual) {
       const r = visual.getBoundingClientRect();
       visualDom = { top: safeRound(r.top, 1), left: safeRound(r.left, 1), width: safeRound(r.width, 1), height: safeRound(r.height, 1) };
     }
+    if (typeVisual) {
+      const r = typeVisual.getBoundingClientRect();
+      typeVisualDom = { top: safeRound(r.top, 1), left: safeRound(r.left, 1), width: safeRound(r.width, 1), height: safeRound(r.height, 1) };
+    }
   } catch (_) {}
   const manualTypeSelect = getEl('manual-card-type');
   const manualRaritySelect = getEl('manual-rarity');
   const seq = ocrDiagnosticsSession.samples.length;
+  const includeHeavyImages = seq % 3 === 0;
+  const typeProbe = probeCardTypeDiagnostics(video, nameCropVisual, typeCropRect);
+  const leftProbe = typeProbe.sampleRects && typeProbe.sampleRects.left;
   const sample = {
     seq,
     ts: new Date().toISOString(),
     video: { videoWidth: video.videoWidth, videoHeight: video.videoHeight },
-    cropRect: {
-      x: safeRound(cropRect.x, 1),
-      y: safeRound(cropRect.y, 1),
-      width: safeRound(cropRect.width, 1),
-      height: safeRound(cropRect.height, 1),
+    nameCropVisual: {
+      x: safeRound(nameCropVisual.x, 1),
+      y: safeRound(nameCropVisual.y, 1),
+      width: safeRound(nameCropVisual.width, 1),
+      height: safeRound(nameCropVisual.height, 1),
+    },
+    nameCropOcr: {
+      x: safeRound(nameCropOcr.x, 1),
+      y: safeRound(nameCropOcr.y, 1),
+      width: safeRound(nameCropOcr.width, 1),
+      height: safeRound(nameCropOcr.height, 1),
+    },
+    typeCropRect: typeCropRect
+      ? {
+          x: safeRound(typeCropRect.x, 1),
+          y: safeRound(typeCropRect.y, 1),
+          width: safeRound(typeCropRect.width, 1),
+          height: safeRound(typeCropRect.height, 1),
+        }
+      : null,
+    typeProbe: {
+      sampleRects: typeProbe.sampleRects,
+      frameColor: typeProbe.frameColor,
+      classifiedTypeFromFrameOnly: typeProbe.classifiedTypeFromFrameOnly,
+      classifiedTypeMerged: typeProbe.classifiedType,
+      classifiedTypeFromNameStripOnly: typeProbe.nameStripFallbackType,
+    },
+    rarityProbe: (() => {
+      const rp = probeCardRarityDiagnostics(video, nameCropOcr, typeCropRect);
+      return rp;
+    })(),
+    robotStrip: {
+      ocrNameDstH: OCR_NAME_DST_H,
+      ocrPipelineCardType: outcome && outcome.diagnostics ? outcome.diagnostics.cardType : null,
+      ocrPipelineRarity: outcome && outcome.diagnostics ? outcome.diagnostics.rarity : null,
     },
     scannerVisualDomCss: visualDom,
+    scannerTypeVisualDomCss: typeVisualDom,
     manualCardType: manualTypeSelect ? manualTypeSelect.value : null,
     manualRarity: manualRaritySelect ? manualRaritySelect.value : null,
-    lastDetectedCardTypeUi: lastDetectedCardType,
+    lastDetectedCardTypeUi:
+      outcome && outcome.diagnostics && outcome.diagnostics.cardType
+        ? outcome.diagnostics.cardType
+        : lastDetectedCardType,
+    lastDetectedCardRarityUi:
+      outcome && outcome.diagnostics && outcome.diagnostics.rarity
+        ? outcome.diagnostics.rarity
+        : lastDetectedCardRarity,
     images: {
-      rawNameRegionJpeg: ocrDiagnosticsRawCropDataUrl(video, cropRect),
-      robotNameStripJpeg: canvasToJpegDataUrl(preview, 0.82, 560),
+      rawNameOcrJpeg: ocrDiagnosticsRawCropDataUrl(video, nameCropOcr, 400),
+      robotNameStripJpeg: canvasToJpegDataUrl(preview, 0.78, 480),
+      rawNameVisualJpeg: includeHeavyImages ? ocrDiagnosticsRawCropDataUrl(video, nameCropVisual, 360) : null,
+      typeMiraJpeg:
+        includeHeavyImages && typeCropRect ? ocrDiagnosticsRawCropDataUrl(video, typeCropRect, 280) : null,
+      artRegionJpeg:
+        includeHeavyImages && typeCropRect
+          ? ocrDiagnosticsRawCropDataUrl(video, getCardArtSampleRect(typeCropRect, nameCropOcr), 320)
+          : null,
+      frameProbeLeftJpeg:
+        includeHeavyImages && leftProbe ? ocrDiagnosticsRawCropDataUrl(video, leftProbe, 160) : null,
     },
     outcome: outcome
       ? {
@@ -30357,6 +31066,52 @@ function maybeRecordOcrDiagnosticsSample(video, cropRect, outcome) {
       : { cleaned: null, matchedCardId: null, matchedDisplayName: null, diagnostics: null, note: 'no_valid_ocr_pipeline_result' },
   };
   ocrDiagnosticsSession.samples.push(sample);
+}
+
+/**
+ * Agenda gravação de amostra fora do ciclo síncrono do OCR (menos lag na câmara).
+ * @param {HTMLVideoElement} video
+ * @param {{ x: number, y: number, width: number, height: number }} nameCropVisual
+ * @param {{ x: number, y: number, width: number, height: number }} nameCropOcr
+ * @param {{ x: number, y: number, width: number, height: number }|null} typeCropRect
+ * @param {null|{ pack?: object, cleaned?: string, card?: object|null, diagnostics?: object }} outcome
+ * @returns {void}
+ */
+function maybeRecordOcrDiagnosticsSample(video, nameCropVisual, nameCropOcr, typeCropRect, outcome) {
+  if (!ocrDiagnosticsCaptureActive || !ocrDiagnosticsSession) return;
+  const now = Date.now();
+  if (now - ocrDiagnosticsLastSampleAt < OCR_DIAG_SAMPLE_THROTTLE_MS) return;
+  if (ocrDiagnosticsSession.samples.length >= OCR_DIAG_MAX_SAMPLES) return;
+  ocrDiagnosticsLastSampleAt = now;
+  const snap = {
+    video,
+    nameCropVisual: { ...nameCropVisual },
+    nameCropOcr: { ...nameCropOcr },
+    typeCropRect: typeCropRect ? { ...typeCropRect } : null,
+    outcome: outcome
+      ? {
+          cleaned: outcome.cleaned || null,
+          card: outcome.card || null,
+          pack: outcome.pack || null,
+          diagnostics: outcome.diagnostics || null,
+        }
+      : null,
+  };
+  const run = () => {
+    if (!ocrDiagnosticsCaptureActive || !ocrDiagnosticsSession) return;
+    recordOcrDiagnosticsSampleNow(
+      snap.video,
+      snap.nameCropVisual,
+      snap.nameCropOcr,
+      snap.typeCropRect,
+      snap.outcome
+    );
+  };
+  if (typeof requestIdleCallback === 'function') {
+    requestIdleCallback(run, { timeout: 1500 });
+  } else {
+    setTimeout(run, 0);
+  }
 }
 
 /**
@@ -30497,7 +31252,45 @@ const OCR_CANVAS_H = 110;
 const OCR_NAME_DST_X = 50;
 const OCR_NAME_DST_Y = 10;
 const OCR_NAME_DST_W = 900;
-const OCR_NAME_DST_H = 85;
+const OCR_NAME_DST_H = 52;
+/** Largura do canvas «visão do robô» (só a faixa do nome, sem margens do canvas OCR). */
+const OCR_PREVIEW_DISPLAY_W = 960;
+
+/**
+ * Retângulo da faixa do nome no canvas interno enviado ao Tesseract.
+ * @param {string} cardType
+ * @returns {{ x: number, y: number, width: number, height: number }}
+ */
+function getOcrNameStripRect(cardType) {
+  return {
+    x: cardType === 'Magia' ? 100 : OCR_NAME_DST_X,
+    y: OCR_NAME_DST_Y,
+    width: cardType === 'Magia' ? 800 : OCR_NAME_DST_W,
+    height: OCR_NAME_DST_H,
+  };
+}
+
+/**
+ * Preenche `#preview-canvas` com a faixa processada ampliada (sem faixas pretas laterais/abaixo).
+ * @param {HTMLCanvasElement|null} previewEl
+ * @param {HTMLCanvasElement} ocrCanvas Canvas pós-filtros antes do Tesseract.
+ * @param {string} cardType
+ * @returns {void}
+ */
+function paintOcrPreviewCanvas(previewEl, ocrCanvas, cardType) {
+  if (!previewEl || !ocrCanvas || !ocrCanvas.width) return;
+  const strip = getOcrNameStripRect(cardType);
+  const outW = OCR_PREVIEW_DISPLAY_W;
+  const outH = Math.max(44, Math.round(outW * (strip.height / strip.width)));
+  previewEl.width = outW;
+  previewEl.height = outH;
+  const pctx = previewEl.getContext('2d');
+  if (!pctx) return;
+  pctx.fillStyle = cardType === 'Magia' ? '#ffffff' : '#000000';
+  pctx.fillRect(0, 0, outW, outH);
+  pctx.imageSmoothingEnabled = true;
+  pctx.drawImage(ocrCanvas, strip.x, strip.y, strip.width, strip.height, 0, 0, outW, outH);
+}
 
 /**
  * Filtros baseados na versão Mobile_proxies_cards.html (que lia melhor Armadilha/Fusão/Efeito).
@@ -30507,10 +31300,11 @@ const OCR_NAME_DST_H = 85;
  * @returns {string|null} Valor de `filter` CSS ou `null` para cair na heurística {@link cssFilterFromRgb}.
  */
 function forcedCssFilterByCardType(cardType) {
-  if (cardType === 'Magia') return 'grayscale(1) contrast(2.6) brightness(1.15)';
+  if (cardType === 'Magia') return 'grayscale(1) contrast(2.2) brightness(1.05)';
+  if (cardType === 'Monstro Ritual') return 'grayscale(1) contrast(1.75) brightness(0.9)';
   if (cardType === 'Armadilha') return 'grayscale(1) contrast(1.4) brightness(1.5) saturate(0)';
   if (cardType === 'Monstro Fusão') return 'grayscale(1) contrast(1.4) brightness(1.5) saturate(0)';
-  if (cardType === 'Monstro Sincro') return 'grayscale(1) invert(1) contrast(1.6) brightness(1.0)';
+  if (cardType === 'Monstro Sincro') return 'grayscale(1) contrast(1.5) brightness(0.95)';
   if (cardType === 'Monstro Link') return 'grayscale(1) contrast(2.2) brightness(1.25)';
   // Efeito e demais monstros laranja/coloridos
   if (String(cardType || '').startsWith('Monstro'))
@@ -30518,8 +31312,85 @@ function forcedCssFilterByCardType(cardType) {
   return null;
 }
 
-/** Tipos que recebem passes OCR extra (fusão/armadilha/efeito). */
-const HARD_OCR_CARD_TYPES = new Set(['Armadilha', 'Monstro Fusão', 'Monstro Efeito']);
+/**
+ * Filtro CSS quando o foil do nome (raridade) muda o contraste em relação ao tipo.
+ * @param {string} cardType
+ * @param {string} rarity
+ * @returns {string|null}
+ */
+function forcedCssFilterByCardTypeAndRarity(cardType, rarity) {
+  const grp = getOcrRarityGroup(rarity);
+  if (grp === 'common' || rarity === 'Super Rara') return forcedCssFilterByCardType(cardType);
+  if (grp === 'starlight') return 'grayscale(1) contrast(2.0) brightness(0.92) saturate(1.1)';
+  if (grp === 'ghost') return 'grayscale(1) contrast(1.85) brightness(1.05)';
+  if (grp === 'collector') return 'grayscale(1) contrast(1.78) brightness(0.96)';
+  if (grp === 'ultimate' || grp === 'quarter') return 'grayscale(1) contrast(1.72) brightness(0.84) saturate(0)';
+  if (PURPLE_PLATE_CARD_TYPES.has(cardType)) {
+    if (grp === 'secret' || grp === 'quarter') return 'grayscale(1) contrast(1.9) brightness(0.93) saturate(0)';
+    if (grp === 'goldName' || grp === 'platinum') return 'grayscale(1) contrast(1.68) brightness(0.86) saturate(0)';
+    if (grp === 'silverName') return 'grayscale(1) contrast(1.58) brightness(1.02) saturate(0)';
+    return 'grayscale(1) contrast(1.58) brightness(1.02) saturate(0)';
+  }
+  if (cardType === 'Monstro Sincro') {
+    if (grp === 'secret' || grp === 'starlight') return 'grayscale(1) contrast(1.78) brightness(0.9)';
+    if (grp === 'goldName' || grp === 'ultimate') return 'grayscale(1) contrast(1.55) brightness(0.9)';
+    if (grp === 'silverName') return 'grayscale(1) contrast(1.5) brightness(0.98)';
+    return 'grayscale(1) contrast(1.5) brightness(0.98)';
+  }
+  if (cardType === 'Magia' || cardType === 'Monstro Ritual') {
+    return forcedCssFilterByCardType(cardType);
+  }
+  if (String(cardType || '').startsWith('Monstro')) {
+    return 'grayscale(1) contrast(1.72) brightness(1.05)';
+  }
+  return forcedCssFilterByCardType(cardType);
+}
+
+/** Tipos que recebem passes OCR extra (monstros castanho/laranja / Xyz com nome foil). */
+const HARD_OCR_CARD_TYPES = new Set(['Monstro Efeito', 'Monstro Xyz']);
+/** Fusão / Armadilha: faixa roxa com texto claro (pipeline dedicado). */
+const PURPLE_PLATE_CARD_TYPES = new Set(['Monstro Fusão', 'Armadilha']);
+
+/**
+ * Metadados de raridade física (impressão) para deteção e calibração OCR.
+ * `foilName`: foil no nome; `artHolo`: holo na arte; `ocrGroup`: ramo de passes.
+ * @type {Record<string, { foilName: boolean, artHolo: boolean, ocrGroup: string }>}
+ */
+const OCR_RARITY_META = Object.freeze({
+  Comum: { foilName: false, artHolo: false, ocrGroup: 'common' },
+  Rara: { foilName: true, artHolo: false, ocrGroup: 'silverName' },
+  'Super Rara': { foilName: false, artHolo: true, ocrGroup: 'artHolo' },
+  'Ultra Rara': { foilName: true, artHolo: true, ocrGroup: 'goldName' },
+  'Ultimate Rara': { foilName: true, artHolo: true, ocrGroup: 'ultimate' },
+  Secreta: { foilName: true, artHolo: true, ocrGroup: 'secret' },
+  'Ghost Rare': { foilName: true, artHolo: true, ocrGroup: 'ghost' },
+  'Starlight Rare': { foilName: true, artHolo: true, ocrGroup: 'starlight' },
+  Platina: { foilName: true, artHolo: true, ocrGroup: 'platinum' },
+  Ouro: { foilName: true, artHolo: true, ocrGroup: 'goldName' },
+  Prata: { foilName: true, artHolo: false, ocrGroup: 'silverName' },
+  Colecionador: { foilName: false, artHolo: true, ocrGroup: 'collector' },
+  'Quarter Century': { foilName: true, artHolo: true, ocrGroup: 'quarter' },
+});
+
+/** @param {string} rarity @returns {boolean} */
+function isOcrRarityWithNameFoil(rarity) {
+  return !!(OCR_RARITY_META[rarity] && OCR_RARITY_META[rarity].foilName);
+}
+
+/** @param {string} rarity @returns {boolean} */
+function isOcrRarityWithArtHolo(rarity) {
+  return !!(OCR_RARITY_META[rarity] && OCR_RARITY_META[rarity].artHolo);
+}
+
+/** @param {string} rarity @returns {string} */
+function getOcrRarityGroup(rarity) {
+  return (OCR_RARITY_META[rarity] && OCR_RARITY_META[rarity].ocrGroup) || 'common';
+}
+
+/** Raridades com foil no nome (substitui o antigo `FOIL_NAME_RARITIES`). */
+const FOIL_NAME_RARITIES = new Set(
+  Object.keys(OCR_RARITY_META).filter((k) => OCR_RARITY_META[k].foilName)
+);
 
 /**
  * Heurística RGB (alinhada com Mobile_proxies_cards.html V70, com detecção teal aprimorada) → string `filter` CSS.
@@ -30555,6 +31426,69 @@ function applyPixelInvert(ctx, canvas) {
     data[i + 2] = 255 - data[i + 2];
   }
   ctx.putImageData(imgData, 0, 0);
+}
+
+/**
+ * Sol direto em nome dourado (Ultra): separa canal R do reflexo na placa roxa.
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {number} x
+ * @param {number} y
+ * @param {number} w
+ * @param {number} h
+ * @returns {void}
+ */
+function applyGoldSunLetterExtract(ctx, x, y, w, h) {
+  const imgData = ctx.getImageData(x, y, w, h);
+  const data = imgData.data;
+  const scores = new Float32Array(data.length / 4);
+  for (let p = 0, i = 0; i < data.length; i += 4, p++) {
+    const r = data[i];
+    const g = data[i + 1];
+    const b = data[i + 2];
+    const lum = (r + g + b) / 3;
+    let s = r * 1.18 - g * 0.56 - b * 0.42;
+    if (lum > 152) s -= (lum - 152) * 0.38;
+    scores[p] = s;
+  }
+  const sorted = Array.from(scores).sort((a, b) => a - b);
+  const thr = sorted[Math.floor(sorted.length * 0.56)] ?? 14;
+  for (let p = 0, i = 0; i < data.length; i += 4, p++) {
+    const v = scores[p] >= thr ? 245 : 14;
+    data[i] = data[i + 1] = data[i + 2] = v;
+  }
+  ctx.putImageData(imgData, x, y);
+}
+
+/**
+ * Sol direto em nome prateado (Secreta): realça pixels claros pouco saturados.
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {number} x
+ * @param {number} y
+ * @param {number} w
+ * @param {number} h
+ * @returns {void}
+ */
+function applySilverSunLetterExtract(ctx, x, y, w, h) {
+  const imgData = ctx.getImageData(x, y, w, h);
+  const data = imgData.data;
+  const scores = new Float32Array(data.length / 4);
+  for (let p = 0, i = 0; i < data.length; i += 4, p++) {
+    const r = data[i];
+    const g = data[i + 1];
+    const b = data[i + 2];
+    const lum = (r + g + b) / 3;
+    const spread = Math.max(r, g, b) - Math.min(r, g, b);
+    let s = lum - spread * 1.35;
+    if (lum > 158) s -= (lum - 158) * 0.32;
+    scores[p] = s;
+  }
+  const sorted = Array.from(scores).sort((a, b) => a - b);
+  const thr = sorted[Math.floor(sorted.length * 0.54)] ?? 118;
+  for (let p = 0, i = 0; i < data.length; i += 4, p++) {
+    const v = scores[p] >= thr ? 242 : 16;
+    data[i] = data[i + 1] = data[i + 2] = v;
+  }
+  ctx.putImageData(imgData, x, y);
 }
 
 /**
@@ -30620,6 +31554,7 @@ function sampleNameStripAverages(ctx) {
  *   adaptiveThreshold?: boolean
  * }} settings Opções de pré-processamento antes do Tesseract.
  * @param {string} cardType Tipo de carta (afeta fundo, largura do texto e filtro forçado).
+ * @param {string} [rarity] Raridade física (afeta filtro quando adaptativo).
  * @returns {Promise<null|{
  *   text: string,
  *   confidence: number,
@@ -30630,16 +31565,22 @@ function sampleNameStripAverages(ctx) {
  *   appliedThreshold: number|null
  * }>} Texto/confiança e metadados de cor ou `null` sem worker ou em erro de reconhecimento.
  */
-async function runOcrWithSettings(media, cropRect, settings, cardType) {
+async function runOcrWithSettings(media, cropRect, settings, cardType, rarity = 'Comum') {
   if (!ocrWorker) return null;
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
   canvas.width = OCR_CANVAS_W;
   canvas.height = OCR_CANVAS_H;
   ctx.filter = 'none';
-  // Magia usa fundo branco: Tesseract é treinado para texto escuro em fundo claro.
-  // Outros tipos (Sincro com invert, Fusão/Armadilha escuros) funcionam melhor com preto.
-  ctx.fillStyle = cardType === 'Magia' ? 'white' : 'black';
+  const foilOnPurple = isOcrRarityWithNameFoil(rarity) && PURPLE_PLATE_CARD_TYPES.has(cardType);
+  // Magia / Ritual / Sincro comum: fundo claro. Foil dourado em placa roxa: fundo escuro.
+  const useLightCanvas =
+    !foilOnPurple &&
+    (cardType === 'Magia' ||
+      cardType === 'Monstro Ritual' ||
+      (cardType === 'Monstro Sincro' && !isOcrRarityWithNameFoil(rarity)) ||
+      !!(settings && settings.lightCanvas));
+  ctx.fillStyle = useLightCanvas ? 'white' : 'black';
   ctx.fillRect(0, 0, OCR_CANVAS_W, OCR_CANVAS_H);
   // Magia: margens laterais maiores (100px) — mais espaço branco ao redor do texto
   // ajuda o Tesseract PSM 7 a delimitar a linha corretamente (idêntico ao mobile_camera.html)
@@ -30658,9 +31599,19 @@ async function runOcrWithSettings(media, cropRect, settings, cardType) {
   );
 
   const { avgR, avgG, avgB } = sampleNameStripAverages(ctx);
+  if (settings.goldSunExtract) {
+    applyGoldSunLetterExtract(ctx, dstX, OCR_NAME_DST_Y, dstW, OCR_NAME_DST_H);
+  } else if (settings.silverSunExtract) {
+    applySilverSunLetterExtract(ctx, dstX, OCR_NAME_DST_Y, dstW, OCR_NAME_DST_H);
+  }
   let cssFilter;
-  if (settings.useColorAdaptive !== false) {
-    cssFilter = forcedCssFilterByCardType(cardType) || cssFilterFromRgb(avgR, avgG, avgB);
+  if (settings.goldSunExtract || settings.silverSunExtract) {
+    cssFilter = 'none';
+  } else if (settings.useColorAdaptive !== false) {
+    cssFilter =
+      forcedCssFilterByCardTypeAndRarity(cardType, rarity) ||
+      forcedCssFilterByCardType(cardType) ||
+      cssFilterFromRgb(avgR, avgG, avgB);
   } else {
     let fs = '';
     if (settings.grayscale) fs += 'grayscale(1) ';
@@ -30668,9 +31619,11 @@ async function runOcrWithSettings(media, cropRect, settings, cardType) {
     if (settings.brightness !== 1.0) fs += `brightness(${settings.brightness}) `;
     cssFilter = fs.trim() || 'none';
   }
-  ctx.filter = cssFilter;
-  ctx.drawImage(canvas, 0, 0);
-  ctx.filter = 'none';
+  if (!settings.goldSunExtract && !settings.silverSunExtract) {
+    ctx.filter = cssFilter;
+    ctx.drawImage(canvas, 0, 0);
+    ctx.filter = 'none';
+  }
 
   if (settings.invert) applyPixelInvert(ctx, canvas);
   let appliedThreshold = null;
@@ -30687,14 +31640,16 @@ async function runOcrWithSettings(media, cropRect, settings, cardType) {
   }
 
   const preview = getEl('preview-canvas');
-  if (preview) {
-    preview.width = canvas.width;
-    preview.height = canvas.height;
-    preview.getContext('2d').drawImage(canvas, 0, 0);
-  }
+  if (preview && !(settings && settings.suppressPreview)) paintOcrPreviewCanvas(preview, canvas, cardType);
 
   try {
-    const result = await ocrWorker.recognize(canvas);
+    const recognizeMs = settings && settings.suppressPreview ? 5000 : 12000;
+    const result = await Promise.race([
+      ocrWorker.recognize(canvas),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('ocr recognize timeout')), recognizeMs)
+      ),
+    ]);
     const conf = typeof result.data.confidence === 'number' ? result.data.confidence : 0;
     return {
       text: result.data.text,
@@ -30717,29 +31672,40 @@ async function runOcrWithSettings(media, cropRect, settings, cardType) {
  * @param {{ x: number, y: number, width: number, height: number }} cropRect Recorte no espaço do vídeo.
  * @param {object|null} [settingsOverride] Sobrescreve campos do preset (passes de fallback).
  * @param {string|null} [cardTypeFixed] Força tipo de carta (ex.: calibrador).
+ * @param {string|null} [rarityFixed] Força raridade (ex.: loop de passes).
  * @returns {Promise<null|{ text: string, confidence: number, settings: object, cardType: string, rarity: string, avgR: number, avgG: number, avgB: number, cssFilter: string, appliedThreshold: number|null }>}
  */
 async function processImageWithColorFilter(
   video,
   cropRect,
   settingsOverride = null,
-  cardTypeFixed = null
+  cardTypeFixed = null,
+  rarityFixed = null
 ) {
   let cardType;
   let rarity = 'Comum';
+  const typeRect = mapVisualBoxToVideoCrop(video, getEl('scanner-type-visual')) || cropRect;
   const manualTypeSelect = getEl('manual-card-type');
   const manualRaritySelect = getEl('manual-rarity');
   if (manualTypeSelect && manualRaritySelect) {
     if (manualTypeSelect.value === 'AUTO') {
       cardType =
-        cardTypeFixed != null ? cardTypeFixed : await detectCardTypeFromImage(video, cropRect);
+        cardTypeFixed != null ? cardTypeFixed : await detectCardTypeFromImage(video, typeRect, cropRect);
     } else {
       cardType = manualTypeSelect.value;
     }
-    rarity = manualRaritySelect.value;
+    if (rarityFixed != null) {
+      rarity = rarityFixed;
+    } else if (manualRaritySelect.value === 'AUTO') {
+      rarity =
+        lastDetectedCardRarity || (await detectRarityFromImage(video, cropRect, typeRect));
+    } else {
+      rarity = manualRaritySelect.value;
+    }
   } else {
     cardType =
-      cardTypeFixed != null ? cardTypeFixed : await detectCardTypeFromImage(video, cropRect);
+      cardTypeFixed != null ? cardTypeFixed : await detectCardTypeFromImage(video, typeRect, cropRect);
+    if (rarityFixed != null) rarity = rarityFixed;
   }
 
   const baseSettings = calibrator
@@ -30756,7 +31722,7 @@ async function processImageWithColorFilter(
       };
   const settings = settingsOverride ? { ...baseSettings, ...settingsOverride } : baseSettings;
 
-  const o = await runOcrWithSettings(video, cropRect, settings, cardType);
+  const o = await runOcrWithSettings(video, cropRect, settings, cardType, rarity);
   if (!o) return null;
   return {
     text: o.text,
@@ -30773,37 +31739,297 @@ async function processImageWithColorFilter(
 }
 
 /**
- * Vários passes de pré-processamento por tipo de carta; em match forte atualiza calibração e devolve carta.
- *
- * @param {HTMLVideoElement} video
- * @param {{ x: number, y: number, width: number, height: number }} cropRect
- * @returns {Promise<null|{ pack: object, cleaned: string, card: object|null, diagnostics?: { cardType: string, rarity: string, passes: object[] } }>}
+ * Passes de pré-processamento por tipo + raridade (foil no nome altera contraste).
+ * @param {string} cardType
+ * @param {string} rarity
+ * @param {object} base Calibração base do {@link OCRCalibrator}.
+ * @param {number} plateLum Luminância média da faixa do nome.
+ * @param {ReturnType<typeof sampleNameStripRarityMetrics>|null|undefined} [nameMetrics]
+ * @returns {object[]}
  */
-async function processFrameWithFallbackPasses(video, cropRect) {
-  let cardType = 'Monstro Efeito';
-  let rarity = 'Comum';
-  const manualTypeSelect = getEl('manual-card-type');
-  const manualRaritySelect = getEl('manual-rarity');
-  if (manualTypeSelect && manualRaritySelect) {
-    if (manualTypeSelect.value === 'AUTO') {
-      cardType = await detectCardTypeFromImage(video, cropRect);
-    } else {
-      cardType = manualTypeSelect.value;
-    }
-    rarity = manualRaritySelect.value;
-  } else {
-    cardType = await detectCardTypeFromImage(video, cropRect);
-  }
-  lastDetectedCardType = cardType;
-  setVisionTypeRarity(cardType, rarity, { calibrating: false });
+/** Fusão com foil Ultra/Secreta: deteção de raridade falha muito — testar prata e ouro. */
+function shouldUseFusionDualFoilOcr(cardType, rarity) {
+  if (cardType !== 'Monstro Fusão' || !isOcrRarityWithNameFoil(rarity)) return false;
+  const grp = getOcrRarityGroup(rarity);
+  return (
+    grp === 'secret' ||
+    grp === 'goldName' ||
+    grp === 'ultimate' ||
+    rarity === 'Ultra Rara' ||
+    rarity === 'Secreta'
+  );
+}
 
-  const diagnosticsPasses = [];
-
-  const base = calibrator
-    ? calibrator.getCalibration(cardType, rarity)
-    : { useBinarization: false };
+function buildOcrFallbackPasses(cardType, rarity, base, plateLum, nameMetrics) {
+  const foil = isOcrRarityWithNameFoil(rarity);
+  const grp = getOcrRarityGroup(rarity);
+  const fusionDual = shouldUseFusionDualFoilOcr(cardType, rarity);
+  const sunFoil =
+    foil &&
+    plateLum > 140 &&
+    nameMetrics &&
+    nameMetrics.foilRatio > 0.5 &&
+    nameMetrics.brightLum > 148;
+  const secretLike = grp === 'secret' || grp === 'starlight' || grp === 'quarter';
   let passes;
-  if (HARD_OCR_CARD_TYPES.has(cardType)) {
+  if (PURPLE_PLATE_CARD_TYPES.has(cardType) && foil) {
+    // Nome foil (Ultra/Secret/Rare) em placa roxa: evitar fundo branco (confunde com Sincro).
+    passes = [];
+    if (fusionDual) {
+      passes.push(
+        { silverSunExtract: true, useColorAdaptive: false, useBinarization: false, invert: false },
+        { goldSunExtract: true, useColorAdaptive: false, useBinarization: false, invert: false },
+        {
+          useColorAdaptive: false,
+          grayscale: true,
+          contrast: 1.88,
+          brightness: 0.84,
+          invert: true,
+        },
+        {
+          useColorAdaptive: false,
+          grayscale: true,
+          contrast: 1.52,
+          brightness: 0.8,
+          invert: true,
+        }
+      );
+    } else if (secretLike) {
+      passes.push(
+        { silverSunExtract: true, useColorAdaptive: false, useBinarization: false, invert: false },
+        {
+          useColorAdaptive: false,
+          grayscale: true,
+          contrast: 1.35,
+          brightness: 0.7,
+          invert: false,
+        }
+      );
+    } else if (rarity === 'Ultra Rara' || grp === 'goldName' || grp === 'ultimate') {
+      passes.push(
+        { goldSunExtract: true, useColorAdaptive: false, useBinarization: false, invert: false },
+        {
+          useColorAdaptive: false,
+          grayscale: true,
+          contrast: 1.42,
+          brightness: 0.74,
+          invert: true,
+        }
+      );
+    }
+    passes.push(
+      {
+        useBinarization: false,
+        useColorAdaptive: false,
+        grayscale: true,
+        contrast: secretLike ? 1.9 : grp === 'ultimate' ? 1.72 : 1.65,
+        brightness: 0.86,
+        invert: false,
+      },
+      null,
+      {
+        useBinarization: false,
+        useColorAdaptive: false,
+        grayscale: true,
+        contrast: 1.5,
+        brightness: 1.08,
+        invert: false,
+      },
+      {
+        useBinarization: false,
+        useColorAdaptive: false,
+        grayscale: true,
+        contrast: 1.72,
+        brightness: 0.82,
+        invert: true,
+      },
+      { useBinarization: false, useColorAdaptive: true, invert: false }
+    );
+    if (secretLike) {
+      passes.unshift({
+        useBinarization: false,
+        useColorAdaptive: false,
+        grayscale: true,
+        contrast: 2.0,
+        brightness: 0.9,
+        invert: true,
+      });
+      passes.push(
+        {
+          useBinarization: false,
+          useColorAdaptive: false,
+          grayscale: true,
+          contrast: 2.2,
+          brightness: 0.86,
+          invert: true,
+        },
+        { useBinarization: true, adaptiveThreshold: true, invert: false },
+        { useBinarization: true, adaptiveThreshold: true, invert: true }
+      );
+    }
+    if (grp === 'goldName' || grp === 'ultimate' || grp === 'platinum' || rarity === 'Ultra Rara') {
+      passes.push({
+        useBinarization: false,
+        useColorAdaptive: false,
+        grayscale: true,
+        contrast: 1.58,
+        brightness: 1.12,
+        invert: false,
+      });
+    }
+  } else if (PURPLE_PLATE_CARD_TYPES.has(cardType)) {
+    // Texto escuro em fundo roxo (Comum / Super sem foil no nome).
+    passes = [
+      {
+        useBinarization: false,
+        useColorAdaptive: false,
+        grayscale: true,
+        contrast: 1.72,
+        brightness: 0.82,
+        invert: false,
+      },
+      null,
+      {
+        useBinarization: false,
+        useColorAdaptive: false,
+        grayscale: true,
+        contrast: 1.55,
+        brightness: 1.08,
+        invert: false,
+      },
+      {
+        useBinarization: false,
+        useColorAdaptive: false,
+        grayscale: true,
+        contrast: 1.48,
+        brightness: 1.42,
+        invert: false,
+      },
+      {
+        useBinarization: false,
+        useColorAdaptive: false,
+        grayscale: true,
+        contrast: 1.65,
+        brightness: 0.78,
+        invert: true,
+      },
+      { useBinarization: false, useColorAdaptive: true, invert: false },
+      { useBinarization: true, adaptiveThreshold: true, invert: false },
+    ];
+  } else if (cardType === 'Monstro Xyz' && foil) {
+    passes = [
+      {
+        useBinarization: false,
+        useColorAdaptive: false,
+        grayscale: true,
+        contrast: 2.05,
+        brightness: 0.88,
+        invert: true,
+      },
+      null,
+      {
+        useBinarization: false,
+        useColorAdaptive: false,
+        grayscale: true,
+        contrast: 1.92,
+        brightness: 0.9,
+        invert: true,
+      },
+      {
+        useBinarization: false,
+        useColorAdaptive: false,
+        grayscale: true,
+        contrast: 1.78,
+        brightness: 1.04,
+        invert: false,
+      },
+      { useBinarization: true, adaptiveThreshold: true, invert: false },
+    ];
+  } else if (cardType === 'Monstro Xyz') {
+    passes = [
+      null,
+      {
+        useBinarization: false,
+        useColorAdaptive: false,
+        grayscale: true,
+        contrast: 1.55,
+        brightness: 0.9,
+        invert: false,
+      },
+      {
+        useBinarization: false,
+        useColorAdaptive: false,
+        grayscale: true,
+        contrast: 1.68,
+        brightness: 0.86,
+        invert: true,
+      },
+    ];
+  } else if (cardType === 'Monstro Sincro' && foil) {
+    // Nome dourado/prateado em moldura branca (ex.: Sincro Ultra).
+    passes = [
+      {
+        useBinarization: false,
+        useColorAdaptive: false,
+        lightCanvas: true,
+        grayscale: true,
+        contrast: 1.52,
+        brightness: 0.9,
+        invert: false,
+      },
+      null,
+      {
+        useBinarization: false,
+        useColorAdaptive: false,
+        lightCanvas: true,
+        grayscale: true,
+        contrast: 1.62,
+        brightness: 0.86,
+        invert: false,
+      },
+      {
+        useBinarization: false,
+        useColorAdaptive: false,
+        lightCanvas: true,
+        grayscale: true,
+        contrast: 1.48,
+        brightness: 0.94,
+        invert: true,
+      },
+    ];
+  } else if (cardType === 'Monstro Sincro') {
+    // Texto escuro em placa clara (Chaos Angel): fundo branco, sem invert.
+    passes = [
+      {
+        useBinarization: false,
+        useColorAdaptive: false,
+        lightCanvas: true,
+        grayscale: true,
+        contrast: 1.55,
+        brightness: 0.88,
+        invert: false,
+      },
+      null,
+      {
+        useBinarization: false,
+        useColorAdaptive: false,
+        lightCanvas: true,
+        grayscale: true,
+        contrast: 1.68,
+        brightness: 0.9,
+        invert: false,
+      },
+      {
+        useBinarization: false,
+        useColorAdaptive: false,
+        lightCanvas: true,
+        grayscale: true,
+        contrast: 1.45,
+        brightness: 0.95,
+        invert: false,
+      },
+    ];
+  } else if (HARD_OCR_CARD_TYPES.has(cardType)) {
     passes = [
       null,
       {
@@ -30843,28 +32069,55 @@ async function processFrameWithFallbackPasses(video, cropRect) {
         contrast: 1.6,
         brightness: 0.9,
       }, // pass 0: idêntico ao mobile_camera.html — melhor para distância
-      null, // pass 1: filtro forçado (2.6/1.15) via forcedCssFilterByCardType
+      null, // pass 1: filtro forçado via forcedCssFilterByCardType
       {
         useBinarization: false,
         useColorAdaptive: false,
         grayscale: true,
-        contrast: 2.6,
-        brightness: 1.4,
-      }, // mais brilho
+        contrast: 2.2,
+        brightness: 1.05,
+      },
       {
         useBinarization: false,
         useColorAdaptive: false,
         grayscale: true,
-        contrast: 3.5,
-        brightness: 1.1,
-      }, // alto contraste (bom de perto)
+        contrast: 2.8,
+        brightness: 0.95,
+      },
       {
         useBinarization: false,
         useColorAdaptive: false,
         grayscale: true,
         contrast: 2.0,
-        brightness: 1.55,
-      }, // brilho máximo
+        brightness: 1.12,
+      },
+    ];
+  } else if (cardType === 'Monstro Ritual') {
+    // Ritual: texto escuro em faixa azul clara — evitar brilho alto (estoura / fragmenta).
+    passes = [
+      {
+        useBinarization: false,
+        useColorAdaptive: false,
+        grayscale: true,
+        contrast: 1.65,
+        brightness: 0.88,
+      },
+      null,
+      {
+        useBinarization: false,
+        useColorAdaptive: false,
+        grayscale: true,
+        contrast: 1.9,
+        brightness: 0.82,
+      },
+      {
+        useBinarization: false,
+        useColorAdaptive: false,
+        grayscale: true,
+        contrast: 2.1,
+        brightness: 0.95,
+      },
+      { useBinarization: true, adaptiveThreshold: true, invert: false },
     ];
   } else {
     passes = [
@@ -30878,10 +32131,265 @@ async function processFrameWithFallbackPasses(video, cropRect) {
       passes[2] = { useBinarization: true, adaptiveThreshold: true };
     }
   }
+  if (plateLum > 135 && PURPLE_PLATE_CARD_TYPES.has(cardType) && !foil) {
+    passes.push({
+      useBinarization: false,
+      useColorAdaptive: false,
+      lightCanvas: true,
+      grayscale: true,
+      contrast: 1.55,
+      brightness: 0.88,
+      invert: false,
+    });
+  }
+  const ultraGoldFoil =
+    foil &&
+    grp === 'goldName' &&
+    nameMetrics &&
+    isUltraGoldNameStripMetrics(nameMetrics);
+  if (ultraGoldFoil && PURPLE_PLATE_CARD_TYPES.has(cardType)) {
+    passes.unshift(
+      {
+        useColorAdaptive: false,
+        grayscale: true,
+        contrast: 1.32,
+        brightness: 0.74,
+        invert: false,
+      },
+      {
+        useColorAdaptive: false,
+        grayscale: true,
+        contrast: 1.48,
+        brightness: 0.8,
+        invert: true,
+      }
+    );
+  }
+  if (sunFoil && PURPLE_PLATE_CARD_TYPES.has(cardType) && !fusionDual) {
+    if (secretLike) {
+      passes.unshift(
+        { silverSunExtract: true, useColorAdaptive: false, useBinarization: false, invert: false },
+        {
+          useColorAdaptive: false,
+          grayscale: true,
+          contrast: 1.22,
+          brightness: 0.7,
+          invert: false,
+        },
+        {
+          useColorAdaptive: false,
+          grayscale: true,
+          contrast: 1.45,
+          brightness: 0.86,
+          invert: true,
+        }
+      );
+    } else {
+      passes.unshift(
+        { goldSunExtract: true, useColorAdaptive: false, useBinarization: false, invert: false },
+        {
+          useColorAdaptive: false,
+          grayscale: true,
+          contrast: 1.16,
+          brightness: 0.68,
+          invert: false,
+        },
+        {
+          useColorAdaptive: false,
+          grayscale: true,
+          contrast: 1.24,
+          brightness: 0.64,
+          invert: true,
+        },
+        { useBinarization: true, adaptiveThreshold: true, invert: false }
+      );
+    }
+  } else if (plateLum > 138 && PURPLE_PLATE_CARD_TYPES.has(cardType) && foil) {
+    passes.unshift(
+      {
+        useBinarization: false,
+        useColorAdaptive: false,
+        grayscale: true,
+        contrast: 1.4,
+        brightness: 1.06,
+        invert: false,
+      },
+      {
+        useBinarization: false,
+        useColorAdaptive: false,
+        grayscale: true,
+        contrast: 1.35,
+        brightness: 0.9,
+        invert: true,
+      }
+    );
+  } else if (plateLum < 108 && cardType === 'Monstro Sincro' && !foil) {
+    passes.unshift(
+      {
+        useBinarization: false,
+        useColorAdaptive: false,
+        grayscale: true,
+        contrast: 1.4,
+        brightness: 1.5,
+        invert: false,
+      },
+      null
+    );
+  } else if (plateLum < 95 && cardType === 'Monstro Xyz' && foil) {
+    passes.unshift(
+      {
+        useBinarization: false,
+        useColorAdaptive: false,
+        grayscale: true,
+        contrast: 2.15,
+        brightness: 0.86,
+        invert: true,
+      },
+      secretLike
+        ? { silverSunExtract: true, useColorAdaptive: false, useBinarization: false, invert: false }
+        : {
+            goldSunExtract: true,
+            useColorAdaptive: false,
+            useBinarization: false,
+            invert: false,
+          }
+    );
+  } else if (foil && plateLum > 125 && HARD_OCR_CARD_TYPES.has(cardType)) {
+    passes.unshift({
+      useBinarization: false,
+      useColorAdaptive: false,
+      grayscale: true,
+      contrast: 1.55,
+      brightness: 1.02,
+      invert: false,
+    });
+  }
+  if (rarity === 'Super Rara' || grp === 'artHolo') {
+    passes.unshift(
+      {
+        useBinarization: false,
+        useColorAdaptive: false,
+        grayscale: true,
+        contrast: 1.68,
+        brightness: 1.02,
+        invert: false,
+      },
+      null
+    );
+  }
+  if (grp === 'starlight') {
+    passes.unshift(
+      {
+        useBinarization: false,
+        useColorAdaptive: false,
+        grayscale: true,
+        contrast: 2.05,
+        brightness: 0.88,
+        invert: true,
+      },
+      {
+        useBinarization: false,
+        useColorAdaptive: false,
+        grayscale: true,
+        contrast: 1.75,
+        brightness: 0.95,
+        invert: false,
+      }
+    );
+  }
+  if (grp === 'ghost') {
+    passes.unshift({
+      useBinarization: false,
+      useColorAdaptive: false,
+      grayscale: true,
+      contrast: 1.9,
+      brightness: 1.08,
+      invert: false,
+    });
+  }
+  if (grp === 'ultimate' || grp === 'collector') {
+    passes.unshift({
+      useBinarization: false,
+      useColorAdaptive: false,
+      grayscale: true,
+      contrast: 1.78,
+      brightness: 0.84,
+      invert: false,
+    });
+  }
+  return passes.slice(0, fusionDual ? 14 : 10);
+}
+
+/**
+ * Vários passes de pré-processamento por tipo de carta; em match forte atualiza calibração e devolve carta.
+ *
+ * @param {HTMLVideoElement} video
+ * @param {{ x: number, y: number, width: number, height: number }} nameCropRect Recorte OCR (refinado).
+ * @param {{ x: number, y: number, width: number, height: number }|null} [typeCropRect]
+ * @param {{ x: number, y: number, width: number, height: number }|null} [nameCropVisual] Mira verde no vídeo (tipo/cor da placa).
+ * @returns {Promise<null|{ pack: object, cleaned: string, card: object|null, diagnostics?: { cardType: string, rarity: string, passes: object[] } }>}
+ */
+async function processFrameWithFallbackPasses(video, nameCropRect, typeCropRect, nameCropVisual) {
+  const typeRect = typeCropRect || nameCropRect;
+  const nameStripForType = nameCropVisual || nameCropRect;
+  let cardType = 'Monstro Efeito';
+  let rarity = 'Comum';
+  const manualTypeSelect = getEl('manual-card-type');
+  const manualRaritySelect = getEl('manual-rarity');
+  const typeProbe = probeCardTypeDiagnostics(video, nameStripForType, typeCropRect);
+  const rarityProbe = probeCardRarityDiagnostics(video, nameCropRect, typeCropRect);
+  if (manualTypeSelect && manualRaritySelect) {
+    if (manualTypeSelect.value === 'AUTO') {
+      cardType = typeProbe.classifiedType || (await detectCardTypeFromImage(video, typeRect, nameCropRect));
+    } else {
+      cardType = manualTypeSelect.value;
+    }
+    if (manualRaritySelect.value === 'AUTO') {
+      rarity = rarityProbe.classifiedRarity || 'Comum';
+    } else {
+      rarity = manualRaritySelect.value;
+    }
+  } else {
+    cardType = typeProbe.classifiedType || (await detectCardTypeFromImage(video, typeRect, nameCropRect));
+    rarity = rarityProbe.classifiedRarity || 'Comum';
+  }
+  const resolved = resolveVisionTypeAndRarityFromProbes(typeProbe, rarityProbe, cardType, rarity);
+  cardType = resolved.cardType;
+  rarity = resolved.rarity;
+  const typeBeforeReconcile = cardType;
+  cardType = reconcileCardTypeWithRarity(
+    cardType,
+    rarity,
+    rarityProbe.plateColor,
+    typeProbe.frameColor,
+    rarityProbe.plateType || typeProbe.namePlateType
+  );
+  if (cardType !== typeBeforeReconcile) {
+    lastStableDetectedCardType = cardType;
+    lastStableDetectedCardTypeAt = Date.now();
+  } else {
+    cardType = stabilizeDetectedCardType(cardType);
+  }
+  if (rarityProbe.nameFromStrip === rarity) {
+    lastStableDetectedCardRarity = rarity;
+    lastStableDetectedCardRarityAt = Date.now();
+  } else {
+    rarity = stabilizeDetectedCardRarity(rarity);
+  }
+  lastDetectedCardType = cardType;
+  lastDetectedCardRarity = rarity;
+  setVisionTypeRarity(cardType, rarity, { calibrating: false });
+
+  const diagnosticsPasses = [];
+  const base = calibrator
+    ? calibrator.getCalibration(cardType, rarity)
+    : { useBinarization: false };
+  const plateLum = sampleCropMeanLuminance(video, nameCropRect);
+  const passes = buildOcrFallbackPasses(cardType, rarity, base, plateLum, rarityProbe.nameMetrics);
   let best = null;
   for (let pi = 0; pi < passes.length; pi++) {
     const ov = passes[pi];
-    const pack = await processImageWithColorFilter(video, cropRect, ov, cardType);
+    const pack = await processImageWithColorFilter(video, nameCropRect, ov, cardType, rarity);
     if (!pack || !pack.text) continue;
     const cleaned = smartNormalize(pack.text);
     if (!cleaned || cleaned.length < 4 || isGarbageText(cleaned)) continue;
@@ -30890,10 +32398,10 @@ async function processFrameWithFallbackPasses(video, cropRect) {
       cardType,
       rarity,
       cropRect: {
-        x: safeRound(cropRect.x, 1),
-        y: safeRound(cropRect.y, 1),
-        width: safeRound(cropRect.width, 1),
-        height: safeRound(cropRect.height, 1),
+        x: safeRound(nameCropRect.x, 1),
+        y: safeRound(nameCropRect.y, 1),
+        width: safeRound(nameCropRect.width, 1),
+        height: safeRound(nameCropRect.height, 1),
       },
       dstRect: {
         x: OCR_NAME_DST_X,
@@ -30920,8 +32428,9 @@ async function processFrameWithFallbackPasses(video, cropRect) {
       data: passData,
     });
     diagnosticsPasses.push({ ...passData });
-    const card = await smartSearch(cleaned, pi > 0, cleaned);
-    const strong = card ? isStrongMatch(cleaned, card) : false;
+    const visionCtx = { cardType, rarity };
+    const card = await smartSearch(cleaned, pi > 0, cleaned, visionCtx);
+    const strong = card ? isStrongMatch(cleaned, card, visionCtx) : false;
     if (card && !strong) {
       pushOcrDebug({
         ts: new Date().toISOString(),
@@ -30974,20 +32483,87 @@ async function processFrameWithFallbackPasses(video, cropRect) {
     }
     if (!best || pack.confidence > best.pack.confidence) best = { pack, cleaned };
   }
-  if (best)
+  if (best) {
     return {
       pack: best.pack,
       cleaned: best.cleaned,
       card: null,
       diagnostics: { cardType, rarity, passes: diagnosticsPasses },
     };
+  }
   return null;
 }
 
 // ==================== PROCESSAMENTO DO FRAME ====================
 
 /**
- * Um ciclo do loop de OCR: mapeia `#scanner-visual` para coordenadas do vídeo, processa e atualiza lista/toasts.
+ * Converte uma mira DOM (`#scanner-visual` ou `#scanner-type-visual`) em rect no espaço do vídeo.
+ * @param {HTMLVideoElement} video
+ * @param {HTMLElement|null} visualEl
+ * @returns {{ x: number, y: number, width: number, height: number }|null}
+ */
+function mapVisualBoxToVideoCrop(video, visualEl) {
+  if (!video || !visualEl || video.videoWidth === 0) return null;
+  const vRect = video.getBoundingClientRect();
+  const mRect = visualEl.getBoundingClientRect();
+  const vW = video.videoWidth;
+  const vH = video.videoHeight;
+  const s = vW / vH > vRect.width / vRect.height ? vH / vRect.height : vW / vRect.width;
+  const xO = (vW - vRect.width * s) / 2;
+  const yO = (vH - vRect.height * s) / 2;
+  return {
+    x: (mRect.left - vRect.left) * s + xO,
+    y: (mRect.top - vRect.top) * s + yO,
+    width: mRect.width * s,
+    height: mRect.height * s,
+  };
+}
+
+/**
+ * Recorte interno da faixa verde: só texto do nome (sem atributo à direita nem estrelas abaixo).
+ * A mira verde no ecrã pode ser um pouco maior; o OCR usa esta zona mais apertada.
+ * @param {{ x: number, y: number, width: number, height: number }} nameCropRect
+ * @returns {{ x: number, y: number, width: number, height: number }}
+ */
+/**
+ * Luminância média do recorte do nome (placa clara vs roxa).
+ * @param {HTMLVideoElement} video
+ * @param {{ x: number, y: number, width: number, height: number }} rect
+ * @returns {number}
+ */
+function sampleCropMeanLuminance(video, rect) {
+  if (!video || !rect || rect.width < 2 || rect.height < 2) return 128;
+  const c = document.createElement('canvas');
+  c.width = 28;
+  c.height = 14;
+  const ctx = c.getContext('2d');
+  try {
+    ctx.drawImage(video, rect.x, rect.y, rect.width, rect.height, 0, 0, 28, 14);
+    const d = ctx.getImageData(0, 0, 28, 14).data;
+    let s = 0;
+    const n = d.length / 4;
+    for (let i = 0; i < d.length; i += 4) s += (d[i] + d[i + 1] + d[i + 2]) / 3;
+    return s / n;
+  } catch (e) {
+    return 128;
+  }
+}
+
+function refineNameCropForOcr(nameCropRect) {
+  const trimL = 0.01;
+  const trimR = 0.008;
+  const trimT = 0.05;
+  const trimB = 0.1;
+  return {
+    x: nameCropRect.x + nameCropRect.width * trimL,
+    y: nameCropRect.y + nameCropRect.height * trimT,
+    width: Math.max(2, nameCropRect.width * (1 - trimL - trimR)),
+    height: Math.max(2, nameCropRect.height * (1 - trimT - trimB)),
+  };
+}
+
+/**
+ * Um ciclo do loop de OCR: mira verde = nome, mira azul = tipo; processa e atualiza lista/toasts.
  * @returns {Promise<void>}
  */
 async function processOcrFrame() {
@@ -31003,23 +32579,26 @@ async function processOcrFrame() {
   }
   isProcessing = true;
   try {
-    const visualBox = getEl('scanner-visual');
-    const vRect = video.getBoundingClientRect();
-    const mRect = visualBox.getBoundingClientRect();
-    const vW = video.videoWidth,
-      vH = video.videoHeight;
-    const s = vW / vH > vRect.width / vRect.height ? vH / vRect.height : vW / vRect.width;
-    const xO = (vW - vRect.width * s) / 2;
-    const yO = (vH - vRect.height * s) / 2;
-    const cropRect = {
-      x: (mRect.left - vRect.left) * s + xO,
-      y: (mRect.top - vRect.top) * s + yO,
-      width: mRect.width * s,
-      height: mRect.height * s,
-    };
+    const nameCropVisual = mapVisualBoxToVideoCrop(video, getEl('scanner-visual'));
+    const typeCropRect = mapVisualBoxToVideoCrop(video, getEl('scanner-type-visual'));
+    if (!nameCropVisual) {
+      isProcessing = false;
+      requestAnimationFrame(processOcrFrame);
+      return;
+    }
+    const nameCropRect = refineNameCropForOcr(nameCropVisual);
 
-    const outcome = await processFrameWithFallbackPasses(video, cropRect);
-    maybeRecordOcrDiagnosticsSample(video, cropRect, outcome);
+    const outcome = await processFrameWithFallbackPasses(video, nameCropRect, typeCropRect, nameCropVisual);
+    maybeRecordOcrDiagnosticsSample(video, nameCropVisual, nameCropRect, typeCropRect, outcome);
+    const statusNow = Date.now();
+    if (statusNow - lastOcrScanStatusLogAt >= 2800) {
+      lastOcrScanStatusLogAt = statusNow;
+      if (!outcome || !outcome.cleaned) {
+        addOcrLog(T('ocr.log.scan_hunting', { type: lastDetectedCardType || '?' }));
+      } else if (!outcome.card) {
+        addOcrLog(T('ocr.log.scan_weak', { text: outcome.cleaned }));
+      }
+    }
     if (outcome && outcome.cleaned) {
       if (outcome.cleaned !== lastMatchedText) addOcrLog(T('ocr.log.reading', { text: outcome.cleaned }));
       if (outcome.card) {
@@ -31043,11 +32622,17 @@ async function processOcrFrame() {
     }
   } catch (err) {
     console.error('Frame error:', err);
+    const errNow = Date.now();
+    if (errNow - lastOcrFrameErrorLogAt >= 3500) {
+      lastOcrFrameErrorLogAt = errNow;
+      addOcrLog(T('ocr.log.error', { msg: err && err.message ? err.message : String(err) }));
+    }
   }
   isProcessing = false;
+  const frameGapMs = ocrDiagnosticsCaptureActive ? 550 : 400;
   setTimeout(() => {
     if (isOcrActive) requestAnimationFrame(processOcrFrame);
-  }, 400);
+  }, frameGapMs);
 }
 
 /** Timer debounce para {@link onOcrWindowResize}. */
@@ -31791,22 +33376,58 @@ styleScanner.textContent = `
         justify-content: flex-start;
         padding-left: 2px;
     }
-    #scanner-visual {
-        width: 55% !important;
-        height: 42px !important;
-        top: 22% !important;
+    /* Proporção TCG 59×86 mm; verde = placa do nome (esquerda/centro, sem canto do atributo). */
+    .scanner-card-frame,
+    #scanner-type-visual {
+        position: absolute !important;
         left: 50% !important;
-        transform: translateX(-50%) !important;
+        top: 50% !important;
+        transform: translate(-50%, -50%) !important;
+        width: 63% !important;
+        max-width: 96% !important;
+        height: auto !important;
+        max-height: 84% !important;
+        aspect-ratio: 59 / 86 !important;
+        box-sizing: border-box !important;
+        border: 2px dashed rgba(52, 152, 219, 0.92) !important;
+        border-radius: 2.8% / 2% !important;
+        background: rgba(52, 152, 219, 0.06) !important;
+        z-index: 9 !important;
+        pointer-events: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    .scanner-name-frame,
+    #scanner-type-visual #scanner-visual,
+    #scanner-visual {
+        position: absolute !important;
+        top: 4.2% !important;
+        left: 4% !important;
+        right: auto !important;
+        bottom: auto !important;
+        transform: none !important;
+        width: 78% !important;
+        height: 6.6% !important;
+        min-height: 0 !important;
+        max-height: 8% !important;
         border: 3px solid #2ecc71 !important;
-        background: rgba(46, 204, 113, 0.25) !important;
-        border-radius: 8px !important;
-        box-shadow: 0 0 0 2px rgba(0,0,0,0.3), 0 0 0 4px rgba(46,204,113,0.2) !important;
+        background: rgba(46, 204, 113, 0.24) !important;
+        border-radius: 5px !important;
+        box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.3), 0 0 0 4px rgba(46, 204, 113, 0.18) !important;
+        z-index: 2 !important;
+        pointer-events: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
     }
     #preview-canvas {
+        display: block;
+        width: 100% !important;
+        height: auto !important;
+        max-height: none !important;
         background: #000;
         border: 2px solid #0f0;
         border-radius: 4px;
-        min-height: 50px;
+        min-height: 44px;
         box-sizing: border-box;
     }
     /* Sem scanner: slot de vídeo ocupa fundo da coluna; com scanner (classe em html) passa a coluna empilhada. */
@@ -31938,10 +33559,18 @@ styleScanner.textContent = `
         padding-bottom: 6px;
         box-sizing: border-box;
     }
-    html.ocr-scanner-active #col-filters #scanner-visual {
+    html.ocr-scanner-active #col-filters #scanner-type-visual {
+        width: min(66%, 100%) !important;
+        max-height: 82% !important;
         top: 50% !important;
         transform: translate(-50%, -50%) !important;
-        width: 62% !important;
+    }
+    html.ocr-scanner-active #col-filters #scanner-visual {
+        top: 4.2% !important;
+        left: 4% !important;
+        width: 78% !important;
+        height: 6.6% !important;
+        transform: none !important;
     }
     #col-filters #ocr-log {
         box-sizing: border-box;
@@ -32085,7 +33714,6 @@ styleScanner.textContent = `
             margin-bottom: 4px !important;
         }
         html.ocr-scanner-active #col-filters #preview-canvas {
-            height: 52px !important;
             min-height: 44px !important;
         }
         html.ocr-scanner-active #col-filters #vision-label.ocr-vision-label--chips {
@@ -32223,11 +33851,15 @@ class OCRCalibrator {
       Rara: { contrast: 1.4, brightness: 0.95, threshold: 128 },
       'Super Rara': { contrast: 1.45, brightness: 0.93, threshold: 130 },
       'Ultra Rara': { contrast: 1.5, brightness: 0.92, threshold: 132 },
+      'Ultimate Rara': { contrast: 1.52, brightness: 0.9, threshold: 133, invert: false },
       Secreta: { contrast: 1.55, brightness: 0.9, threshold: 135, invert: true },
+      'Ghost Rare': { contrast: 1.58, brightness: 1.02, threshold: 132, invert: false },
+      'Starlight Rare': { contrast: 1.62, brightness: 0.88, threshold: 140, invert: true },
       Platina: { contrast: 1.5, brightness: 0.91, threshold: 133 },
-      Starlight: { contrast: 1.6, brightness: 0.88, threshold: 140, invert: true },
       Ouro: { contrast: 1.45, brightness: 0.94, threshold: 128 },
       Prata: { contrast: 1.4, brightness: 0.95, threshold: 125 },
+      Colecionador: { contrast: 1.48, brightness: 0.94, threshold: 131 },
+      'Quarter Century': { contrast: 1.56, brightness: 0.91, threshold: 134, invert: true },
     };
   }
 
@@ -32273,8 +33905,8 @@ class OCRCalibrator {
     const base = { ...this.getDefaultFilters(), ...typePreset, ...rarityPreset };
     if (this.calibrations[key]) {
       const saved = this.calibrations[key];
-      // Garante que filtro de cor adaptativo nunca é desligado por calibração salva
-      return { ...base, ...saved, useColorAdaptive: true };
+      const sunMode = !!(saved.silverSunExtract || saved.goldSunExtract);
+      return { ...base, ...saved, useColorAdaptive: sunMode ? false : true };
     }
     return base;
   }
@@ -32288,10 +33920,18 @@ class OCRCalibrator {
    */
   setCalibration(cardType, rarity, settings) {
     const key = `${cardType}|${rarity}`;
-    // Nunca salvar useColorAdaptive=false: mantém o filtro de cor automático ativo
-    // (evita que uma calibração específica bloqueie o filtro para outras cartas do mesmo tipo)
-    const { useColorAdaptive: _ignored, ...rest } = settings;
-    this.calibrations[key] = { ...rest, useColorAdaptive: true };
+    const { useColorAdaptive: _ignored, suppressPreview: _sp, ...rest } = settings || {};
+    const sunMode = !!(rest.silverSunExtract || rest.goldSunExtract);
+    const toSave = { ...rest, useColorAdaptive: sunMode ? false : true };
+    this.calibrations[key] = toSave;
+    if (cardType === 'Monstro Fusão' && isOcrRarityWithNameFoil(rarity)) {
+      if (rest.silverSunExtract) {
+        this.calibrations['Monstro Fusão|Secreta'] = { ...toSave };
+      }
+      if (rest.goldSunExtract) {
+        this.calibrations['Monstro Fusão|Ultra Rara'] = { ...toSave };
+      }
+    }
     this.saveCalibrations();
   }
 
@@ -32348,7 +33988,7 @@ class OCRCalibrator {
    * @param {string} [cardType] Tipo manual para filtros; default interno `Monstro Efeito` se omitido em chamadas internas.
    * @returns {Promise<{ success: boolean, text?: string, cleaned?: string, settings?: object, error?: string }>}
    */
-  async testConfiguration(imageElement, cropRect, settings, cardType) {
+  async testConfiguration(imageElement, cropRect, settings, cardType, rarity = 'Comum') {
     if (!ocrWorker) return { success: false, error: 'ocrWorker not ready' };
     if (
       !cropRect ||
@@ -32364,7 +34004,8 @@ class OCRCalibrator {
         imageElement,
         cropRect,
         settings,
-        cardType || 'Monstro Efeito'
+        cardType || 'Monstro Efeito',
+        rarity || 'Comum'
       );
       if (!o) return { success: false, error: 'ocr failed' };
       const cleaned = smartNormalize(o.text);
@@ -32372,12 +34013,102 @@ class OCRCalibrator {
         text: o.text,
         cleaned,
         settings,
+        confidence: typeof o.confidence === 'number' ? o.confidence : 0,
         success: !!(cleaned && cleaned.length >= 4 && !isGarbageText(cleaned)),
       };
     } catch (err) {
       console.error('testConfiguration error:', err);
       return { success: false, error: err.message };
     }
+  }
+
+  /**
+   * Variações curtas para calibração manual (menos OCR = UI não trava).
+   * @param {object} baseSettings
+   * @param {string} cardType
+   * @param {string} rarity
+   * @returns {object[]}
+   */
+  generateCalibrationVariations(baseSettings, cardType, rarity) {
+    const grp = getOcrRarityGroup(rarity);
+    const foil = isOcrRarityWithNameFoil(rarity);
+    const out = [];
+    if (shouldUseFusionDualFoilOcr(cardType, rarity)) {
+      out.push({
+        silverSunExtract: true,
+        useColorAdaptive: false,
+        useBinarization: false,
+        invert: false,
+        suppressPreview: true,
+      });
+      out.push({
+        goldSunExtract: true,
+        useColorAdaptive: false,
+        useBinarization: false,
+        invert: false,
+        suppressPreview: true,
+      });
+      out.push({
+        useColorAdaptive: false,
+        grayscale: true,
+        contrast: 1.88,
+        brightness: 0.84,
+        invert: true,
+        suppressPreview: true,
+      });
+      out.push({
+        useColorAdaptive: false,
+        grayscale: true,
+        contrast: 1.52,
+        brightness: 0.8,
+        invert: true,
+        suppressPreview: true,
+      });
+      return out.slice(0, 4);
+    }
+    if (PURPLE_PLATE_CARD_TYPES.has(cardType) && foil && grp === 'secret') {
+      out.push({
+        silverSunExtract: true,
+        useColorAdaptive: false,
+        useBinarization: false,
+        invert: false,
+        suppressPreview: true,
+      });
+      out.push({
+        useColorAdaptive: false,
+        grayscale: true,
+        contrast: 1.88,
+        brightness: 0.84,
+        invert: true,
+        suppressPreview: true,
+      });
+    } else if (PURPLE_PLATE_CARD_TYPES.has(cardType) && foil && (grp === 'goldName' || rarity === 'Ultra Rara')) {
+      out.push({
+        goldSunExtract: true,
+        useColorAdaptive: false,
+        useBinarization: false,
+        invert: false,
+        suppressPreview: true,
+      });
+      out.push({
+        useColorAdaptive: false,
+        grayscale: true,
+        contrast: 1.52,
+        brightness: 0.8,
+        invert: true,
+        suppressPreview: true,
+      });
+    } else {
+      out.push({ ...baseSettings, suppressPreview: true });
+      out.push({
+        ...baseSettings,
+        useColorAdaptive: false,
+        grayscale: true,
+        contrast: (baseSettings.contrast || 1.3) + 0.2,
+        suppressPreview: true,
+      });
+    }
+    return out.slice(0, 2);
   }
 
   /**
@@ -32389,84 +34120,97 @@ class OCRCalibrator {
    * @param {string} rarity Raridade física associada ao preset.
    * @returns {Promise<object|null>} Melhor resultado (inclui `cleaned`, `settings`, opcionalmente `matchedName`) ou `null`.
    */
-  async autoOptimize(imageElement, cropRect, cardType, rarity) {
+  async autoOptimize(imageElement, cropRect, cardType, rarity, generationId = 0) {
     console.log('🚀 autoOptimize iniciado');
     this.isCalibrating = true;
     this.cancelRequested = false;
     this.testResults = [];
+    const isStale = () => generationId > 0 && generationId !== ocrCalibrationGeneration;
 
     const baseSettings = this.getCalibration(cardType, rarity);
-    const variations = this.generateVariations(baseSettings, cardType);
+    const variations = this.generateCalibrationVariations(baseSettings, cardType, rarity);
     console.log(`🔧 Variações geradas: ${variations.length}`);
-    if (variations.length === 0) return null;
+    if (variations.length === 0) {
+      this.isCalibrating = false;
+      return null;
+    }
 
     let bestResult = null;
     let bestScore = -1;
     let currentTest = 0;
 
-    for (const settings of variations) {
-      if (this.cancelRequested) break;
-      currentTest++;
-      console.log(
-        `🔬 Teste ${currentTest}/${variations.length}: contraste=${settings.contrast}, brilho=${settings.brightness}, threshold=${settings.threshold}`
-      );
-      window.dispatchEvent(
-        new CustomEvent('calibrationProgress', {
-          detail: { current: currentTest, total: variations.length },
-        })
-      );
+    try {
+      for (const settings of variations) {
+        if (this.cancelRequested || isStale()) break;
+        currentTest++;
+        console.log(
+          `🔬 Teste ${currentTest}/${variations.length}: contraste=${settings.contrast}, brilho=${settings.brightness}, threshold=${settings.threshold}`
+        );
+        window.dispatchEvent(
+          new CustomEvent('calibrationProgress', {
+            detail: { current: currentTest, total: variations.length },
+          })
+        );
 
-      try {
-        const result = await this.testConfiguration(imageElement, cropRect, settings, cardType);
-        this.testResults.push(result);
-        if (result.success && result.cleaned) {
-          // Pontua por match real na API (evita calibrar em texto "bonito" mas errado)
-          let score = 0;
-          let matched = null;
-          try {
-            matched = await smartSearch(result.cleaned, true, result.cleaned);
-          } catch (e) {}
-          if (matched && isStrongMatch(result.cleaned, matched)) {
-            score =
-              1000 +
-              (typeof result.confidence === 'number' ? result.confidence : 0) +
-              result.cleaned.length;
-            // Achou match forte: pode encerrar cedo
-            bestScore = score;
-            bestResult = { ...result, matchedName: displayNameForApiCard(matched) };
-            addOcrEvent(
-              'calibration_hit',
-              T('ocr.event.calib_match', { name: bestResult.matchedName }),
-              {
-                cleaned: result.cleaned,
-              }
-            );
-            break;
-          } else {
-            // fallback: maximize legibilidade, mas com peso baixo
-            score =
+        try {
+          const result = await this.testConfiguration(
+            imageElement,
+            cropRect,
+            { ...settings, suppressPreview: true },
+            cardType,
+            rarity
+          );
+          this.testResults.push(result);
+          if (result.success && result.cleaned) {
+            let score =
               (typeof result.confidence === 'number' ? result.confidence : 0) +
               result.cleaned.length * 2;
+            if (result.cleaned.length >= 10) score += 8;
+            if (settings.silverSunExtract || settings.goldSunExtract) score += 4;
             if (score > bestScore) {
               bestScore = score;
               bestResult = result;
-              console.log(`   🏆 Nova melhor pontuação: ${score}`);
             }
           }
+        } catch (err) {
+          console.error(`   ❌ Erro no teste ${currentTest}:`, err);
         }
-      } catch (err) {
-        console.error(`   ❌ Erro no teste ${currentTest}:`, err);
+        if (typeof scheduler !== 'undefined' && scheduler.yield) {
+          await scheduler.yield();
+        } else {
+          await new Promise((r) => setTimeout(r, 120));
+        }
       }
-      await new Promise((r) => setTimeout(r, 140)); // pausa maior (evita travar no mobile)
-    }
 
-    if (bestResult) {
-      this.setCalibration(cardType, rarity, bestResult.settings);
-      addOcrLog(T('ocr.log.calib_optimized', { type: cardType, rarity }));
-      addOcrLog(T('ocr.log.calib_best_read', { text: bestResult.cleaned }));
-      return bestResult;
+      if (bestResult && bestResult.cleaned && !this.cancelRequested) {
+        let matched = null;
+        try {
+          matched = await smartSearchWithTimeout(bestResult.cleaned, true, bestResult.cleaned, {
+            cardType,
+            rarity,
+          }, 2500);
+        } catch (e) {}
+        if (matched && isStrongMatch(bestResult.cleaned, matched, { cardType, rarity })) {
+          bestResult = { ...bestResult, matchedName: displayNameForApiCard(matched) };
+          addOcrEvent(
+            'calibration_hit',
+            T('ocr.event.calib_match', { name: bestResult.matchedName }),
+            { cleaned: bestResult.cleaned }
+          );
+        }
+      }
+
+      if (bestResult) {
+        const { suppressPreview: _sp, ...settingsToSave } = bestResult.settings || {};
+        this.setCalibration(cardType, rarity, settingsToSave);
+        addOcrLog(T('ocr.log.calib_optimized', { type: cardType, rarity }));
+        addOcrLog(T('ocr.log.calib_best_read', { text: bestResult.cleaned }));
+        return bestResult;
+      }
+      return null;
+    } finally {
+      this.isCalibrating = false;
     }
-    return null;
   }
 
   /**
@@ -32569,94 +34313,2067 @@ const calibrator = new OCRCalibrator();
  * @param {{ x: number, y: number, width: number, height: number }} cropRect
  * @returns {Promise<string>}
  */
-function detectCardTypeFromImage(video, cropRect) {
-  return new Promise((resolve) => {
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    canvas.width = 100;
-    canvas.height = 50;
-    ctx.drawImage(video, cropRect.x, cropRect.y, cropRect.width, cropRect.height, 0, 0, 100, 50);
-    const imgData = ctx.getImageData(0, 0, 100, 50).data;
-    let r = 0,
-      g = 0,
-      b = 0;
-    let sampleCount = 0;
-    for (let i = 0; i < imgData.length; i += 100) {
-      r += imgData[i];
-      g += imgData[i + 1];
-      b += imgData[i + 2];
-      sampleCount++;
-    }
-    const avgR = r / sampleCount,
-      avgG = g / sampleCount,
-      avgB = b / sampleCount;
-    const lum = (avgR + avgG + avgB) / 3;
-    const spread = Math.max(avgR, avgG, avgB) - Math.min(avgR, avgG, avgB);
+/**
+ * Faixas estreitas na moldura (laterais + topo da mira), sem subir até ao fundo da mesa.
+ * @param {{ x: number, y: number, width: number, height: number }} cropRect
+ * @param {number} vW
+ * @param {number} vH
+ */
+function getCardFrameSampleRects(cropRect, vW, vH) {
+  const w = cropRect.width;
+  const h = cropRect.height;
+  const sideW = Math.max(6, w * 0.14);
+  const topH = Math.max(5, h * 0.45);
+  const clamp = (r) => {
+    let x = Math.max(0, r.x);
+    let y = Math.max(0, r.y);
+    let width = Math.max(1, r.width);
+    let height = Math.max(1, r.height);
+    if (x + width > vW) width = vW - x;
+    if (y + height > vH) height = vH - y;
+    return { x, y, width, height };
+  };
+  return {
+    left: clamp({ x: cropRect.x - sideW, y: cropRect.y, width: sideW, height: h }),
+    right: clamp({ x: cropRect.x + w, y: cropRect.y, width: sideW, height: h }),
+    top: clamp({ x: cropRect.x, y: cropRect.y - topH, width: w, height: topH }),
+  };
+}
 
-    // Verde ou teal (verde+azul) -> Magia (fundo pode ser verde puro ou verde-azulado)
-    const isTeal = (avgG > avgR + 20 || avgB > avgR + 20) && avgR < 130 && avgG + avgB > avgR * 2.2;
-    if ((avgG > avgR + 30 && avgG > avgB + 30 && avgG > 100) || isTeal) {
-      resolve('Magia');
+/**
+ * @param {number} pr
+ * @param {number} pg
+ * @param {number} pb
+ * @returns {boolean}
+ */
+function isLikelyCardFramePixel(pr, pg, pb) {
+  const lum = (pr + pg + pb) / 3;
+  const spread = Math.max(pr, pg, pb) - Math.min(pr, pg, pb);
+  if (lum > 232 || lum < 22) return false;
+  if (spread < 10 && lum > 198) return false;
+  if (spread < 44 && pr > pg && pg > pb && pr < 178 && pr - pb < 52 && lum > 88 && lum < 148) {
+    return false;
+  }
+  return spread > 30 || pg > pr + 20 || pb > pr + 20 || pr > pg + 20 || lum < 58;
+}
+
+/**
+ * @param {HTMLVideoElement} video
+ * @param {{ x: number, y: number, width: number, height: number }} rect
+ * @returns {null|{ r: number, g: number, b: number, n: number }}
+ */
+function sampleRgbFromVideoRect(video, rect) {
+  if (!video || !rect || rect.width < 2 || rect.height < 2) return null;
+  const canvas = document.createElement('canvas');
+  const W = Math.max(12, Math.min(40, Math.round(rect.width / 3)));
+  const H = Math.max(12, Math.min(40, Math.round(rect.height / 3)));
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  try {
+    ctx.drawImage(video, rect.x, rect.y, rect.width, rect.height, 0, 0, W, H);
+  } catch (e) {
+    return null;
+  }
+  const imgData = ctx.getImageData(0, 0, W, H).data;
+  let r = 0,
+    g = 0,
+    b = 0,
+    n = 0;
+  for (let i = 0; i < imgData.length; i += 4) {
+    const pr = imgData[i];
+    const pg = imgData[i + 1];
+    const pb = imgData[i + 2];
+    if (!isLikelyCardFramePixel(pr, pg, pb)) continue;
+    r += pr;
+    g += pg;
+    b += pb;
+    n++;
+  }
+  if (!n) return null;
+  return { r: r / n, g: g / n, b: b / n, n };
+}
+
+/**
+ * RGB médio nas barras laterais/topo da moldura (evita mesa acima da carta).
+ * @param {HTMLVideoElement} video
+ * @param {{ x: number, y: number, width: number, height: number }} cropRect
+ * @param {number} vW
+ * @param {number} vH
+ */
+function sampleCardFrameRgbFromCrop(video, cropRect, vW, vH) {
+  const rects = getCardFrameSampleRects(cropRect, vW, vH);
+  const parts = [
+    { key: 'left', rect: rects.left, weight: 1.25 },
+    { key: 'right', rect: rects.right, weight: 1.25 },
+    { key: 'top', rect: rects.top, weight: 1.05 },
+  ];
+  let r = 0,
+    g = 0,
+    b = 0,
+    samples = 0;
+  const regions = {};
+  for (const p of parts) {
+    const avg = sampleRgbFromVideoRect(video, p.rect);
+    if (!avg) continue;
+    r += avg.r * avg.n * p.weight;
+    g += avg.g * avg.n * p.weight;
+    b += avg.b * avg.n * p.weight;
+    samples += avg.n * p.weight;
+    regions[p.key] = {
+      avgR: safeRound(avg.r, 1),
+      avgG: safeRound(avg.g, 1),
+      avgB: safeRound(avg.b, 1),
+      pixels: avg.n,
+    };
+  }
+  if (!samples) return null;
+  const avgR = r / samples;
+  const avgG = g / samples;
+  const avgB = b / samples;
+  const lum = (avgR + avgG + avgB) / 3;
+  const spread = Math.max(avgR, avgG, avgB) - Math.min(avgR, avgG, avgB);
+  return {
+    avgR,
+    avgG,
+    avgB,
+    lum: safeRound(lum, 1),
+    spread: safeRound(spread, 1),
+    samples: Math.round(samples),
+    regions,
+    sampleRects: rects,
+  };
+}
+
+/**
+ * Moldura da carta inteira (`#scanner-type-visual`): só bordas externas do rect.
+ * @param {HTMLVideoElement} video
+ * @param {{ x: number, y: number, width: number, height: number }} typeRect
+ * @param {number} vW
+ * @param {number} vH
+ */
+function sampleCardFrameRgbFromTypeCrop(video, typeRect, vW, vH) {
+  if (!typeRect || typeRect.width < 8 || typeRect.height < 8) return null;
+  const b = 0.1;
+  const sw = Math.max(6, typeRect.width * b * 1.15);
+  const th = Math.max(5, typeRect.height * b);
+  const clamp = (r) => {
+    let x = Math.max(0, r.x);
+    let y = Math.max(0, r.y);
+    let width = Math.max(1, r.width);
+    let height = Math.max(1, r.height);
+    if (x + width > vW) width = vW - x;
+    if (y + height > vH) height = vH - y;
+    return { x, y, width, height };
+  };
+  const rects = {
+    left: clamp({ x: typeRect.x, y: typeRect.y, width: sw, height: typeRect.height }),
+    right: clamp({
+      x: typeRect.x + typeRect.width - sw,
+      y: typeRect.y,
+      width: sw,
+      height: typeRect.height,
+    }),
+    top: clamp({ x: typeRect.x, y: typeRect.y, width: typeRect.width, height: th }),
+    bottom: clamp({
+      x: typeRect.x,
+      y: typeRect.y + typeRect.height - th,
+      width: typeRect.width,
+      height: th,
+    }),
+  };
+  const parts = [
+    { key: 'left', rect: rects.left, weight: 1.35 },
+    { key: 'right', rect: rects.right, weight: 1.35 },
+    { key: 'top', rect: rects.top, weight: 0.9 },
+    { key: 'bottom', rect: rects.bottom, weight: 0.45 },
+  ];
+  let r = 0,
+    g = 0,
+    bSum = 0,
+    samples = 0;
+  const regions = {};
+  for (const p of parts) {
+    const avg = sampleRgbFromVideoRect(video, p.rect);
+    if (!avg) continue;
+    r += avg.r * avg.n * p.weight;
+    g += avg.g * avg.n * p.weight;
+    bSum += avg.b * avg.n * p.weight;
+    samples += avg.n * p.weight;
+    regions[p.key] = {
+      avgR: safeRound(avg.r, 1),
+      avgG: safeRound(avg.g, 1),
+      avgB: safeRound(avg.b, 1),
+      pixels: avg.n,
+    };
+  }
+  if (!samples) return null;
+  const avgR = r / samples;
+  const avgG = g / samples;
+  const avgB = bSum / samples;
+  const lum = (avgR + avgG + avgB) / 3;
+  const spread = Math.max(avgR, avgG, avgB) - Math.min(avgR, avgG, avgB);
+  return {
+    avgR,
+    avgG,
+    avgB,
+    lum: safeRound(lum, 1),
+    spread: safeRound(spread, 1),
+    samples: Math.round(samples),
+    regions,
+    sampleRects: rects,
+  };
+}
+
+/**
+ * @param {number} avgR
+ * @param {number} avgG
+ * @param {number} avgB
+ * @returns {boolean}
+ */
+function isBrownNeutralFrameRgb(avgR, avgG, avgB) {
+  const spread = Math.max(avgR, avgG, avgB) - Math.min(avgR, avgG, avgB);
+  const lum = (avgR + avgG + avgB) / 3;
+  if (isFusionPurpleFrameRgb(avgR, avgG, avgB) || isTrapRoseFrameRgb(avgR, avgG, avgB)) return false;
+  if (isRitualBlueFrameRgb(avgR, avgG, avgB)) return false;
+  return spread < 48 && avgR > 98 && avgG > 82 && avgB > 68 && avgR > avgB && lum > 92 && lum < 145;
+}
+
+/**
+ * Roxo de Monstro Fusão (Dracotail, etc.) — distinto do rosa de Armadilha.
+ * @param {number} avgR
+ * @param {number} avgG
+ * @param {number} avgB
+ * @returns {boolean}
+ */
+function isFusionPurpleFrameRgb(avgR, avgG, avgB) {
+  if (isTrapRoseFrameRgb(avgR, avgG, avgB)) return false;
+  // Luz natural: roxo vivo vira lavanda (B alto, R≈G) — não confundir com Ritual azul.
+  if (
+    avgB > 148 &&
+    avgR > 90 &&
+    avgG > 95 &&
+    avgB > avgR + 12 &&
+    avgG >= avgR - 12 &&
+    Math.abs(avgR - avgG) < 42 &&
+    avgB - avgG < 82
+  ) {
+    return true;
+  }
+  const rb = Math.abs(avgR - avgB);
+  if (avgR > 150 && avgG < 105 && avgB > 115) return true;
+  if (
+    avgR > 100 &&
+    avgB > 85 &&
+    avgG < 138 &&
+    avgR > avgG + 5 &&
+    avgB > avgG + 5 &&
+    rb < 48
+  ) {
+    return true;
+  }
+  if (
+    avgB > 118 &&
+    avgR > 88 &&
+    avgG > 72 &&
+    avgB > avgR + 10 &&
+    avgB > avgG + 14 &&
+    rb < 72 &&
+    (avgB > 155 || avgG < avgB - 22)
+  ) {
+    return true;
+  }
+  return (
+    avgR > 108 &&
+    avgB > 88 &&
+    avgG < 118 &&
+    avgR > avgG + 8 &&
+    avgB > avgG + 8 &&
+    avgR - avgB >= 12 &&
+    avgR - avgB <= 42
+  );
+}
+
+/**
+ * Rosa/magenta de Armadilha (ex.: Dragon's Mind) — R alto, R≈B, G mais baixo.
+ * @param {number} avgR
+ * @param {number} avgG
+ * @param {number} avgB
+ * @returns {boolean}
+ */
+function isTrapRoseFrameRgb(avgR, avgG, avgB) {
+  const rb = Math.abs(avgR - avgB);
+  return avgR > 158 && avgB > 95 && avgG < 122 && rb < 35 && avgR > avgG + 18;
+}
+
+/**
+ * Placa/moldura escura de Monstro Xyz (preto + leve tom azul).
+ * @param {number} avgR
+ * @param {number} avgG
+ * @param {number} avgB
+ * @returns {boolean}
+ */
+function isXyzDarkPlateRgb(avgR, avgG, avgB) {
+  const lum = (avgR + avgG + avgB) / 3;
+  return lum < 76 && avgR < 88 && avgG < 88 && avgB < 98;
+}
+
+/**
+ * Placa escura da faixa do nome em Monstro Xyz (menos estrito que a moldura).
+ * @param {number} avgR
+ * @param {number} avgG
+ * @param {number} avgB
+ * @returns {boolean}
+ */
+function isXyzNamePlateRgb(avgR, avgG, avgB) {
+  if (isFusionPurpleFrameRgb(avgR, avgG, avgB)) return false;
+  const lum = (avgR + avgG + avgB) / 3;
+  return lum < 94 && avgR < 98 && avgG < 98 && avgB < 108;
+}
+
+/**
+ * Azul de Monstro Ritual (faixa do nome / moldura).
+ * @param {number} avgR
+ * @param {number} avgG
+ * @param {number} avgB
+ * @returns {boolean}
+ */
+function isRitualBlueFrameRgb(avgR, avgG, avgB) {
+  if (isFusionPurpleFrameRgb(avgR, avgG, avgB) || isXyzDarkPlateRgb(avgR, avgG, avgB)) return false;
+  const lum = (avgR + avgG + avgB) / 3;
+  return (
+    avgB > avgR + 38 &&
+    avgB > avgG + 38 &&
+    avgB > 145 &&
+    avgG > 88 &&
+    avgG < avgB - 28 &&
+    lum > 75 &&
+    lum < 210 &&
+    !isSynchroSilverFrameRgb(avgR, avgG, avgB)
+  );
+}
+
+/**
+ * Moldura branca/prateada de Monstro Sincro (Chaos Angel, etc.).
+ * @param {number} avgR
+ * @param {number} avgG
+ * @param {number} avgB
+ * @returns {boolean}
+ */
+function isSynchroSilverFrameRgb(avgR, avgG, avgB) {
+  const lum = (avgR + avgG + avgB) / 3;
+  const spread = Math.max(avgR, avgG, avgB) - Math.min(avgR, avgG, avgB);
+  return (
+    lum > 118 &&
+    spread < 52 &&
+    avgR > 108 &&
+    avgG > 108 &&
+    avgB > 108 &&
+    Math.abs(avgR - avgG) < 32 &&
+    Math.abs(avgG - avgB) < 32
+  );
+}
+
+/**
+ * Tipo a partir da faixa do nome: só cores bem distintas (evita Armadilha falso em Sincro).
+ * @param {number} avgR
+ * @param {number} avgG
+ * @param {number} avgB
+ * @returns {string|null}
+ */
+function classifyCardTypeFromNameStripRgb(avgR, avgG, avgB) {
+  if (isXyzDarkPlateRgb(avgR, avgG, avgB)) return 'Monstro Xyz';
+  if (isFusionPurpleFrameRgb(avgR, avgG, avgB)) return 'Monstro Fusão';
+  if (isRitualBlueFrameRgb(avgR, avgG, avgB)) return 'Monstro Ritual';
+  if (isSynchroSilverFrameRgb(avgR, avgG, avgB)) return 'Monstro Sincro';
+  const isTeal =
+    (avgG > avgR + 20 || avgB > avgR + 20) &&
+    avgR < 130 &&
+    avgG + avgB > avgR * 2.2 &&
+    !isFusionPurpleFrameRgb(avgR, avgG, avgB) &&
+    !isXyzDarkPlateRgb(avgR, avgG, avgB);
+  if ((avgG > avgR + 30 && avgG > avgB + 30 && avgG > 100) || isTeal) return 'Magia';
+  if (isTrapRoseFrameRgb(avgR, avgG, avgB)) return 'Armadilha';
+  return null;
+}
+
+/**
+ * Reflexo na placa roxa sem foil real no nome (Comum/Super com texto preto).
+ * @param {ReturnType<typeof sampleNameStripRarityMetrics>} m
+ * @returns {boolean}
+ */
+function isNameStripPlateGlareNotHolo(m) {
+  if (!m || m.foilRatio < 0.42) return false;
+  const holo =
+    m.goldRatio > 0.06 ||
+    m.warmFoilRatio > 0.15 ||
+    m.silverRatio > 0.1 ||
+    m.hueVar > 0.18 ||
+    (m.brightLum > 146 && m.warmFoilRatio > 0.065) ||
+    (m.brightLum > 146 && m.foilRatio > 0.52 && m.colLumStd > 4);
+  if (holo) return false;
+  if (m.foilRatio > 0.52 && m.brightLum > 152 && m.darkLetterRatio < 0.06) return false;
+  return isFusionPurpleFrameRgb(m.plateR, m.plateG, m.plateB);
+}
+
+/**
+ * Evita oscilar tipo entre frames (ex.: Sincro → Armadilha na faixa do nome).
+ * @param {string} detected
+ * @returns {string}
+ */
+function stabilizeDetectedCardType(detected) {
+  const now = Date.now();
+  if (!detected) return lastStableDetectedCardType || 'Monstro Efeito';
+  if (detected === lastStableDetectedCardType) {
+    lastStableDetectedCardTypeAt = now;
+    return detected;
+  }
+  const prev = lastStableDetectedCardType;
+  const chroma = new Set([
+    'Magia',
+    'Armadilha',
+    'Monstro Fusão',
+    'Monstro Ritual',
+    'Monstro Xyz',
+    'Monstro Sincro',
+  ]);
+  if (prev === 'Monstro Ritual' && detected === 'Monstro Sincro') {
+    lastStableDetectedCardType = detected;
+    lastStableDetectedCardTypeAt = now;
+    return detected;
+  }
+  if (prev === 'Armadilha' && detected === 'Monstro Fusão') {
+    lastStableDetectedCardType = detected;
+    lastStableDetectedCardTypeAt = now;
+    return detected;
+  }
+  if (prev === 'Monstro Fusão' && detected === 'Armadilha' && now - lastStableDetectedCardTypeAt > 600) {
+    lastStableDetectedCardType = detected;
+    lastStableDetectedCardTypeAt = now;
+    return detected;
+  }
+  if (prev === 'Monstro Sincro' && detected === 'Monstro Fusão') {
+    lastStableDetectedCardType = detected;
+    lastStableDetectedCardTypeAt = now;
+    return detected;
+  }
+  if (prev === 'Monstro Fusão' && detected === 'Monstro Sincro' && now - lastStableDetectedCardTypeAt < 1400) {
+    return prev;
+  }
+  if (prev === 'Monstro Fusão' && detected === 'Monstro Xyz') {
+    return prev;
+  }
+  if (prev === 'Monstro Xyz' && detected === 'Monstro Fusão') {
+    lastStableDetectedCardType = detected;
+    lastStableDetectedCardTypeAt = now;
+    return detected;
+  }
+  if (prev === 'Monstro Xyz' && detected === 'Monstro Sincro') {
+    lastStableDetectedCardType = detected;
+    lastStableDetectedCardTypeAt = now;
+    return detected;
+  }
+  if (
+    (prev === 'Monstro Ritual' || prev === 'Monstro Xyz') &&
+    detected === 'Monstro Fusão'
+  ) {
+    lastStableDetectedCardType = detected;
+    lastStableDetectedCardTypeAt = now;
+    return detected;
+  }
+  if (prev === 'Monstro Xyz' && detected === 'Monstro Ritual') {
+    lastStableDetectedCardType = detected;
+    lastStableDetectedCardTypeAt = now;
+    return detected;
+  }
+  if (prev && chroma.has(prev) && chroma.has(detected) && prev !== detected && now - lastStableDetectedCardTypeAt < 1100) {
+    if (prev === 'Monstro Xyz' && detected === 'Monstro Fusão') return detected;
+    if (prev === 'Monstro Fusão' && detected === 'Monstro Xyz') return detected;
+    if (prev === 'Monstro Ritual' && detected === 'Monstro Fusão') return detected;
+    return prev;
+  }
+  lastStableDetectedCardType = detected;
+  lastStableDetectedCardTypeAt = now;
+  return detected;
+}
+
+/**
+ * Quando a moldura fica neutra (mesa/madeira), confia na faixa do nome para Magia/Armadilha/Fusão/etc.
+ * @param {string} frameType
+ * @param {string|null} stripType
+ * @param {{ avgR?: number, avgG?: number, avgB?: number }|null} frameColor
+ * @returns {string}
+ */
+function mergeCardTypeDetection(frameType, stripType, frameColor, opts) {
+  const useTypeMira = !!(opts && opts.typeMiraDedicated);
+  const r = frameColor && frameColor.avgR != null ? frameColor.avgR : 0;
+  const g = frameColor && frameColor.avgG != null ? frameColor.avgG : 0;
+  const b = frameColor && frameColor.avgB != null ? frameColor.avgB : 0;
+  if (frameColor && frameColor.samples >= 4) {
+    const regEarly = frameColor.regions;
+    if (regEarly) {
+      const leftXyzEarly =
+        regEarly.left && isXyzDarkPlateRgb(regEarly.left.avgR, regEarly.left.avgG, regEarly.left.avgB);
+      const rightXyzEarly =
+        regEarly.right && isXyzDarkPlateRgb(regEarly.right.avgR, regEarly.right.avgG, regEarly.right.avgB);
+      if (leftXyzEarly && rightXyzEarly) return 'Monstro Xyz';
     }
-    // Laranja/marrom -> Monstro Normal
-    else if (avgR > avgG && avgR > avgB && avgR > 150 && avgG > 100) {
-      resolve('Monstro Normal');
+  }
+  if (stripType === 'Monstro Xyz') return 'Monstro Xyz';
+  if (stripType === 'Monstro Fusão') return 'Monstro Fusão';
+  if (frameColor && frameColor.samples >= 4) {
+    if (isFusionPurpleFrameRgb(r, g, b)) return 'Monstro Fusão';
+    const reg = frameColor.regions;
+    if (reg) {
+      const sidePurple =
+        (reg.left && isFusionPurpleFrameRgb(reg.left.avgR, reg.left.avgG, reg.left.avgB)) ||
+        (reg.right && isFusionPurpleFrameRgb(reg.right.avgR, reg.right.avgG, reg.right.avgB));
+      if (sidePurple) return 'Monstro Fusão';
+      const leftXyz =
+        reg.left &&
+        isXyzDarkPlateRgb(reg.left.avgR, reg.left.avgG, reg.left.avgB);
+      const rightXyz =
+        reg.right &&
+        isXyzDarkPlateRgb(reg.right.avgR, reg.right.avgG, reg.right.avgB);
+      if (leftXyz && rightXyz) return 'Monstro Xyz';
+      if ((leftXyz || rightXyz) && isXyzDarkPlateRgb(r, g, b)) return 'Monstro Xyz';
     }
-    // Monstro Fusão (magenta/roxo): deve vir **antes** de Armadilha — partilham roxo na moldura, mas em luz
-    // quente/comum R e B ficam altos e G mais baixo sem atingir R>150 e B>150 (ex.: diagnóstico Dracotail ~143,71,107).
-    else if (
-      (avgR > 150 && avgG < 100 && avgB > 150) ||
-      (avgR > 116 &&
-        avgG < 102 &&
-        avgB > 88 &&
-        avgR > avgG + 18 &&
-        avgB > avgG + 18)
+    if (isFusionPurpleFrameRgb(r, g, b)) return 'Monstro Fusão';
+    if (isRitualBlueFrameRgb(r, g, b)) return 'Monstro Ritual';
+    if (isTrapRoseFrameRgb(r, g, b)) return 'Armadilha';
+    if (isSynchroSilverFrameRgb(r, g, b)) return 'Monstro Sincro';
+  }
+  if (useTypeMira) {
+    if (stripType === 'Monstro Fusão') return 'Monstro Fusão';
+    if (stripType === 'Monstro Xyz') return 'Monstro Xyz';
+    if (stripType === 'Magia') return 'Magia';
+    if (stripType === 'Monstro Ritual') return 'Monstro Ritual';
+    if (stripType === 'Armadilha' && (isTrapRoseFrameRgb(r, g, b) || frameType === 'Armadilha')) {
+      return 'Armadilha';
+    }
+    if (frameType === 'Monstro Sincro' || isSynchroSilverFrameRgb(r, g, b)) {
+      return 'Monstro Sincro';
+    }
+    if (frameType !== 'Monstro Efeito' && frameType !== 'Monstro Normal') {
+      return frameType;
+    }
+    if (stripType === 'Monstro Fusão' && isFusionPurpleFrameRgb(r, g, b)) {
+      return 'Monstro Fusão';
+    }
+    if (stripType === 'Armadilha' && isTrapRoseFrameRgb(r, g, b)) {
+      return 'Armadilha';
+    }
+    if (stripType === 'Armadilha' && isSynchroSilverFrameRgb(r, g, b)) {
+      return 'Monstro Sincro';
+    }
+    if (stripType === 'Armadilha' && isFusionPurpleFrameRgb(r, g, b)) {
+      return 'Monstro Fusão';
+    }
+    if (
+      stripType === 'Armadilha' &&
+      frameType === 'Monstro Efeito' &&
+      isFusionPurpleFrameRgb(r, g, b)
     ) {
-      resolve('Monstro Fusão');
+      return 'Monstro Fusão';
     }
-    // Roxo/rosa -> Armadilha (roxo sem assinatura magenta de fusão acima)
-    else if (avgR > avgG && avgB > avgG && avgR > 100 && avgB > 100) {
-      resolve('Armadilha');
-    }
-    // Cinza/prata brilhante -> Monstro Sincro
-    else if (avgR > 180 && avgG > 180 && avgB > 180) {
-      resolve('Monstro Sincro');
-    }
-    // Prata/cinza sob luz quente (RGB ~120–170): mesmo padrão neutro que o Sincro, antes caía em Efeito
-    else if (
-      lum > 118 &&
-      lum < 188 &&
-      spread < 48 &&
-      avgR > 92 &&
-      avgG > 88 &&
-      avgB > 80 &&
-      avgG < avgR + 35 &&
-      avgB < avgR + 40
+    if (
+      stripType &&
+      stripType !== 'Monstro Efeito' &&
+      stripType !== 'Monstro Normal' &&
+      stripType !== 'Armadilha' &&
+      frameColor &&
+      isBrownNeutralFrameRgb(r, g, b)
     ) {
-      resolve('Monstro Sincro');
+      return stripType;
     }
-    // Preto/azul escuro -> Monstro Xyz ou Link
-    else if (avgR < 80 && avgG < 80 && avgB > 100) {
-      resolve('Monstro Xyz');
-    }
-    // Azul claro (Ritual)
-    else if (avgB > avgR + 30 && avgB > avgG + 30 && avgB > 120) {
-      resolve('Monstro Ritual');
-    } else {
-      resolve('Monstro Efeito');
-    }
+    return frameType;
+  }
+  const chromaTypes = new Set([
+    'Magia',
+    'Armadilha',
+    'Monstro Fusão',
+    'Monstro Ritual',
+    'Monstro Xyz',
+    'Monstro Sincro',
+  ]);
+  const frameWeak =
+    frameType === 'Monstro Efeito' ||
+    frameType === 'Monstro Normal' ||
+    (frameColor &&
+      isBrownNeutralFrameRgb(frameColor.avgR || 0, frameColor.avgG || 0, frameColor.avgB || 0));
+  if (frameWeak && stripType && chromaTypes.has(stripType)) {
+    return stripType;
+  }
+  if (frameType === 'Monstro Efeito' && stripType === 'Monstro Normal') {
+    return stripType;
+  }
+  return frameType || stripType || 'Monstro Efeito';
+}
+
+/**
+ * Classifica tipo Yu-Gi-Oh! a partir de RGB médio da moldura (não do texto do nome).
+ * @param {number} avgR
+ * @param {number} avgG
+ * @param {number} avgB
+ * @returns {string}
+ */
+function classifyCardTypeFromFrameRgb(avgR, avgG, avgB) {
+  const lum = (avgR + avgG + avgB) / 3;
+  const spread = Math.max(avgR, avgG, avgB) - Math.min(avgR, avgG, avgB);
+  const minRgb = Math.min(avgR, avgG, avgB);
+
+  if (isFusionPurpleFrameRgb(avgR, avgG, avgB)) {
+    return 'Monstro Fusão';
+  }
+  if (isRitualBlueFrameRgb(avgR, avgG, avgB)) {
+    return 'Monstro Ritual';
+  }
+
+  const isTeal =
+    (avgG > avgR + 20 || avgB > avgR + 20) &&
+    avgR < 130 &&
+    avgG + avgB > avgR * 2.2 &&
+    !isFusionPurpleFrameRgb(avgR, avgG, avgB) &&
+    !isXyzDarkPlateRgb(avgR, avgG, avgB);
+  if ((avgG > avgR + 30 && avgG > avgB + 30 && avgG > 100) || isTeal) {
+    return 'Magia';
+  }
+
+  // Xyz (preto): antes de Sincro — a faixa do nome sozinha parecia prata/cinza.
+  if (
+    !isFusionPurpleFrameRgb(avgR, avgG, avgB) &&
+    (lum < 72 ||
+      (avgR < 62 && avgG < 62 && avgB < 95) ||
+      (maxRgb(avgR, avgG, avgB) < 88 && spread < 38 && lum < 95))
+  ) {
+    return 'Monstro Xyz';
+  }
+
+  if (isSynchroSilverFrameRgb(avgR, avgG, avgB)) {
+    return 'Monstro Sincro';
+  }
+  if (avgR > 180 && avgG > 180 && avgB > 180) {
+    return 'Monstro Sincro';
+  }
+  if (lum > 128 && spread < 42 && minRgb > 102 && avgR < 215 && avgG < 215) {
+    return 'Monstro Sincro';
+  }
+
+  if (avgR > avgG + 22 && avgR > avgB + 25 && avgR > 162 && avgG > 112 && avgG < avgR - 15) {
+    return 'Monstro Normal';
+  }
+  if (isBrownNeutralFrameRgb(avgR, avgG, avgB)) {
+    return 'Monstro Efeito';
+  }
+
+  if (isFusionPurpleFrameRgb(avgR, avgG, avgB)) {
+    return 'Monstro Fusão';
+  }
+  if (isTrapRoseFrameRgb(avgR, avgG, avgB)) {
+    return 'Armadilha';
+  }
+  const fusionStrong =
+    (avgR > 150 && avgG < 100 && avgB > 150) ||
+    (avgR > 115 &&
+      avgG < 102 &&
+      avgB > 92 &&
+      avgR > avgG + 15 &&
+      avgB > avgG + 15 &&
+      avgR - avgB >= 22 &&
+      avgB > 105);
+  if (fusionStrong) {
+    return 'Monstro Fusão';
+  }
+  if (
+    avgR > avgG &&
+    avgB > avgG &&
+    avgR > 100 &&
+    avgB > 85 &&
+    avgR - avgB < 18 &&
+    !isFusionPurpleFrameRgb(avgR, avgG, avgB)
+  ) {
+    return 'Armadilha';
+  }
+
+  return 'Monstro Efeito';
+}
+
+/** @param {number} a @param {number} b @param {number} c */
+function maxRgb(a, b, c) {
+  return Math.max(a, b, c);
+}
+
+/**
+ * Deteção + metadados para diagnóstico (moldura vs mira do nome).
+ * @param {HTMLVideoElement} video
+ * @param {{ x: number, y: number, width: number, height: number }} cropRect
+ * @returns {{ probeRect: object, frameColor: object|null, classifiedType: string, nameStripFallbackType: string|null }}
+ */
+function probeCardTypeDiagnostics(video, nameCropRect, typeCropRect) {
+  const vW = video.videoWidth || 0;
+  const vH = video.videoHeight || 0;
+  const frameColor = typeCropRect
+    ? sampleCardFrameRgbFromTypeCrop(video, typeCropRect, vW, vH)
+    : nameCropRect
+      ? sampleCardFrameRgbFromCrop(video, nameCropRect, vW, vH)
+      : null;
+  let frameType = 'Monstro Efeito';
+  if (frameColor && frameColor.samples >= 4) {
+    frameType = classifyCardTypeFromFrameRgb(frameColor.avgR, frameColor.avgG, frameColor.avgB);
+  }
+  let nameStripFallbackType = null;
+  let namePlateType = null;
+  if (nameCropRect) {
+    try {
+      const plateMetrics = sampleNameStripRarityMetrics(video, nameCropRect);
+      namePlateType = classifyCardTypeFromNameStripRgb(
+        plateMetrics.plateR,
+        plateMetrics.plateG,
+        plateMetrics.plateB
+      );
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = 100;
+      canvas.height = 50;
+      ctx.drawImage(
+        video,
+        nameCropRect.x,
+        nameCropRect.y,
+        nameCropRect.width,
+        nameCropRect.height,
+        0,
+        0,
+        100,
+        50
+      );
+      const imgData = ctx.getImageData(0, 0, 100, 50).data;
+      let r = 0,
+        g = 0,
+        b = 0,
+        n = 0;
+      for (let i = 0; i < imgData.length; i += 100) {
+        r += imgData[i];
+        g += imgData[i + 1];
+        b += imgData[i + 2];
+        n++;
+      }
+      if (n) {
+        nameStripFallbackType = classifyCardTypeFromNameStripRgb(r / n, g / n, b / n);
+      }
+      if (namePlateType) nameStripFallbackType = namePlateType;
+    } catch (_) {}
+  }
+  const classifiedType = mergeCardTypeDetection(frameType, nameStripFallbackType, frameColor, {
+    typeMiraDedicated: !!typeCropRect,
+  });
+  const sampleRects =
+    frameColor && frameColor.sampleRects
+      ? frameColor.sampleRects
+      : nameCropRect
+        ? getCardFrameSampleRects(nameCropRect, vW, vH)
+        : { left: null, right: null, top: null };
+  const sr = sampleRects.left
+    ? sampleRects
+    : { left: sampleRects.left, right: sampleRects.right, top: sampleRects.top };
+  return {
+    typeCropRect: typeCropRect ? roundRect(typeCropRect) : null,
+    sampleRects: {
+      left: sr.left ? roundRect(sr.left) : null,
+      right: sr.right ? roundRect(sr.right) : null,
+      top: sr.top ? roundRect(sr.top) : null,
+      bottom: sr.bottom ? roundRect(sr.bottom) : null,
+    },
+    frameColor: frameColor
+      ? {
+          avgR: safeRound(frameColor.avgR, 1),
+          avgG: safeRound(frameColor.avgG, 1),
+          avgB: safeRound(frameColor.avgB, 1),
+          lum: frameColor.lum,
+          spread: frameColor.spread,
+          samples: frameColor.samples,
+          regions: frameColor.regions,
+        }
+      : null,
+    classifiedTypeFromFrameOnly: frameType,
+    classifiedType,
+    nameStripFallbackType,
+    namePlateType,
+  };
+}
+
+/** @param {{ x: number, y: number, width: number, height: number }} r */
+function roundRect(r) {
+  return {
+    x: safeRound(r.x, 1),
+    y: safeRound(r.y, 1),
+    width: safeRound(r.width, 1),
+    height: safeRound(r.height, 1),
+  };
+}
+
+/**
+ * Heurística RGB na moldura da carta (faixa do nome só para OCR).
+ * @param {HTMLVideoElement} video
+ * @param {{ x: number, y: number, width: number, height: number }} cropRect Mira do nome.
+ * @returns {Promise<string>}
+ */
+function detectCardTypeFromImage(video, typeCropRect, nameCropRect) {
+  return new Promise((resolve) => {
+    const probe = probeCardTypeDiagnostics(video, nameCropRect, typeCropRect);
+    resolve(probe.classifiedType || 'Monstro Efeito');
   });
 }
 
 /**
- * Placeholder: sempre resolve `'Comum'` (raridade vem do `<select>` manual).
- * @param {HTMLVideoElement} video Não usado (assinatura alinhada a {@link detectCardTypeFromImage}).
- * @param {{ x: number, y: number, width: number, height: number }} cropRect Não usado.
+ * Hue 0–1 a partir de RGB 0–255; -1 se acromático.
+ * @param {number} r
+ * @param {number} g
+ * @param {number} b
+ * @returns {number}
+ */
+function rgbToHue01(r, g, b) {
+  const rn = r / 255;
+  const gn = g / 255;
+  const bn = b / 255;
+  const max = Math.max(rn, gn, bn);
+  const min = Math.min(rn, gn, bn);
+  if (max - min < 0.035) return -1;
+  const d = max - min;
+  let h;
+  if (max === rn) h = ((gn - bn) / d + (gn < bn ? 6 : 0)) / 6;
+  else if (max === gn) h = ((bn - rn) / d + 2) / 6;
+  else h = ((rn - gn) / d + 4) / 6;
+  return h;
+}
+
+/**
+ * Métricas da faixa do nome para classificar raridade (foil vs texto comum).
+ * @param {HTMLVideoElement} video
+ * @param {{ x: number, y: number, width: number, height: number }} rect
+ * @returns {object}
+ */
+function sampleNameStripRarityMetrics(video, rect) {
+  const empty = {
+    samples: 0,
+    plateR: 128,
+    plateG: 128,
+    plateB: 128,
+    foilRatio: 0,
+    goldRatio: 0,
+    silverRatio: 0,
+    warmFoilRatio: 0,
+    hueVar: 0,
+    colLumStd: 0,
+    brightLum: 0,
+    darkLetterRatio: 0,
+  };
+  if (!video || !rect || rect.width < 2 || rect.height < 2) return empty;
+  const w = 80;
+  const h = 32;
+  const c = document.createElement('canvas');
+  c.width = w;
+  c.height = h;
+  const ctx = c.getContext('2d');
+  if (!ctx) return empty;
+  try {
+    ctx.drawImage(video, rect.x, rect.y, rect.width, rect.height, 0, 0, w, h);
+    const data = ctx.getImageData(0, 0, w, h).data;
+    const colSum = new Array(w).fill(0);
+    const colCnt = new Array(w).fill(0);
+    const lumList = [];
+    let plateR = 0;
+    let plateG = 0;
+    let plateB = 0;
+    let plateN = 0;
+    let foilN = 0;
+    let goldN = 0;
+    let silverN = 0;
+    let warmFoilN = 0;
+    let darkN = 0;
+    let brightLumSum = 0;
+    const hues = [];
+    const samples = w * h;
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const i = (y * w + x) * 4;
+        const r = data[i];
+        const g = data[i + 1];
+        const b = data[i + 2];
+        const lum = (r + g + b) / 3;
+        lumList.push(lum);
+        colSum[x] += lum;
+        colCnt[x]++;
+        if (lum < 108) darkN++;
+        if (lum >= 136) {
+          foilN++;
+          brightLumSum += lum;
+          const spread = Math.max(r, g, b) - Math.min(r, g, b);
+          if (r > g + 9 && g > b + 5 && r > 138) {
+            goldN++;
+          } else if (r > g + 4 && r > b + 1 && lum > 118) {
+            goldN++;
+          } else if (lum > 136 && r >= g - 4 && r >= b - 10 && lum < 252 && r > g + 2) {
+            goldN++;
+          }
+          if (r > g + 2 && r >= b - 4 && lum > 128) warmFoilN++;
+          if (spread < 34 && lum > 142) silverN++;
+          const hue = rgbToHue01(r, g, b);
+          if (hue >= 0) hues.push(hue);
+        }
+      }
+    }
+    lumList.sort((a, b) => a - b);
+    const plateLumCut = lumList[Math.floor(lumList.length * 0.42)] || 105;
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const i = (y * w + x) * 4;
+        const r = data[i];
+        const g = data[i + 1];
+        const b = data[i + 2];
+        const lum = (r + g + b) / 3;
+        if (lum >= 32 && lum <= plateLumCut + 10) {
+          plateR += r;
+          plateG += g;
+          plateB += b;
+          plateN++;
+        }
+      }
+    }
+    let hueVar = 0;
+    if (hues.length > 4) {
+      let mean = 0;
+      for (const hv of hues) mean += hv;
+      mean /= hues.length;
+      let v = 0;
+      for (const hv of hues) v += (hv - mean) * (hv - mean);
+      hueVar = Math.sqrt(v / hues.length);
+    }
+    const colMeans = [];
+    for (let x = 0; x < w; x++) {
+      if (colCnt[x]) colMeans.push(colSum[x] / colCnt[x]);
+    }
+    let colLumStd = 0;
+    if (colMeans.length > 3) {
+      const m = colMeans.reduce((a, b) => a + b, 0) / colMeans.length;
+      let v = 0;
+      for (const cl of colMeans) v += (cl - m) * (cl - m);
+      colLumStd = Math.sqrt(v / colMeans.length);
+    }
+    const foilDenom = Math.max(1, foilN);
+    return {
+      samples,
+      plateR: plateN ? plateR / plateN : 128,
+      plateG: plateN ? plateG / plateN : 128,
+      plateB: plateN ? plateB / plateN : 128,
+      foilRatio: foilN / samples,
+      goldRatio: Math.min(1, goldN / foilDenom),
+      silverRatio: Math.min(1, silverN / foilDenom),
+      warmFoilRatio: Math.min(1, warmFoilN / foilDenom),
+      hueVar,
+      colLumStd,
+      brightLum: foilN ? brightLumSum / foilN : 0,
+      darkLetterRatio: darkN / samples,
+    };
+  } catch (e) {
+    return empty;
+  }
+}
+
+/**
+ * Nome prateado/arco-íris (Secreta) na faixa — inclusive com sol direto.
+ * @param {ReturnType<typeof sampleNameStripRarityMetrics>} m
+ * @returns {boolean}
+ */
+function isFusionCommonPlateGlareNameStrip(m) {
+  if (!m || !isFusionPurpleFrameRgb(m.plateR, m.plateG, m.plateB)) return false;
+  return (
+    m.foilRatio > 0.42 &&
+    m.goldRatio < 0.03 &&
+    m.warmFoilRatio < 0.02 &&
+    m.hueVar < 0.05 &&
+    m.silverRatio < 0.1 &&
+    !(m.goldRatio > 0.06 && m.warmFoilRatio > 0.06)
+  );
+}
+
+function isSecretNameStripMetrics(m) {
+  if (!m || m.foilRatio < 0.42) return false;
+  if (isFusionCommonPlateGlareNameStrip(m)) return false;
+  if (
+    (m.goldRatio > 0.14 && m.warmFoilRatio > 0.11 && m.hueVar < 0.1) ||
+    (m.goldRatio > 0.18 && m.warmFoilRatio > 0.14 && m.hueVar < 0.12)
+  ) {
+    return false;
+  }
+  if (
+    (m.warmFoilRatio > 0.2 || m.goldRatio > 0.14) &&
+    m.hueVar < 0.09 &&
+    m.silverRatio < 0.12
+  ) {
+    return false;
+  }
+  if (m.silverRatio > 0.42) return true;
+  if (m.silverRatio > 0.1 && m.silverRatio > m.goldRatio * 0.65 && m.foilRatio > 0.48) return true;
+  if (m.silverRatio > 0.18 && m.hueVar > 0.085 && m.foilRatio > 0.55) return true;
+  if (m.hueVar > 0.12 && m.foilRatio > 0.5 && m.silverRatio >= m.goldRatio * 0.55) return true;
+  if (
+    isFusionPurpleFrameRgb(m.plateR, m.plateG, m.plateB) &&
+    m.foilRatio > 0.68 &&
+    m.goldRatio < 0.09 &&
+    m.warmFoilRatio < 0.12
+  ) {
+    if (m.colLumStd < 9.7 && m.hueVar < 0.06) return false;
+    return true;
+  }
+  if (m.foilRatio > 0.72 && m.goldRatio < 0.08 && m.warmFoilRatio < 0.1 && m.hueVar < 0.095) {
+    if (m.colLumStd < 9.7 && m.hueVar < 0.06) return false;
+    return true;
+  }
+  if (
+    isFusionPurpleFrameRgb(m.plateR, m.plateG, m.plateB) &&
+    m.foilRatio > 0.62 &&
+    m.goldRatio >= 0.1 &&
+    m.goldRatio <= 0.17 &&
+    m.warmFoilRatio < 0.12 &&
+    m.hueVar < 0.1
+  ) {
+    return true;
+  }
+  return (
+    m.foilRatio > 0.48 &&
+    m.brightLum > 135 &&
+    m.hueVar > 0.1 &&
+    m.goldRatio < 0.85 &&
+    !(m.warmFoilRatio > 0.22 && m.hueVar < 0.09) &&
+    !(
+      (m.goldRatio > 0.14 && m.warmFoilRatio > 0.11 && m.hueVar < 0.12) ||
+      (m.warmFoilRatio > 0.18 && m.goldRatio > 0.1 && m.hueVar < 0.1)
+    )
+  );
+}
+
+/**
+ * Nome dourado (Ultra) — baixo arco-íris, pouca prata.
+ * @param {ReturnType<typeof sampleNameStripRarityMetrics>} m
+ * @returns {boolean}
+ */
+function isUltraGoldNameStripMetrics(m) {
+  if (!m || m.foilRatio < 0.42) return false;
+  if (m.hueVar > 0.12 && m.silverRatio > 0.14) return false;
+  if (m.foilRatio > 0.65 && m.goldRatio < 0.07 && m.warmFoilRatio < 0.1) return false;
+  if (
+    isFusionPurpleFrameRgb(m.plateR, m.plateG, m.plateB) &&
+    m.goldRatio > 0.1 &&
+    m.goldRatio < 0.17 &&
+    m.warmFoilRatio < 0.12 &&
+    m.hueVar < 0.1
+  ) {
+    return false;
+  }
+  return (
+    ((m.goldRatio > 0.14 && m.warmFoilRatio > 0.11) ||
+      (m.warmFoilRatio > 0.18 && m.goldRatio > 0.08)) &&
+    m.hueVar < 0.12 &&
+    m.silverRatio < 0.12 &&
+    m.darkLetterRatio < 0.12 &&
+    m.warmFoilRatio >= m.silverRatio * 0.85
+  );
+}
+
+/**
+ * Texto preto em placa roxa (Comum/Super sem foil no nome).
+ * @param {ReturnType<typeof sampleNameStripRarityMetrics>} m
+ * @returns {boolean}
+ */
+function isCommonBlackNameStripMetrics(m) {
+  if (!m) return false;
+  const secretLikeName =
+    m.silverRatio > 0.32 ||
+    (m.silverRatio > 0.2 && m.hueVar > 0.15 && m.foilRatio > 0.55) ||
+    (m.foilRatio > 0.72 && m.silverRatio > 0.14 && m.hueVar > 0.16 && m.goldRatio < 0.12);
+  if (secretLikeName) return false;
+  return (
+    (m.darkLetterRatio > 0.085 && m.foilRatio < 0.78 && m.goldRatio < 0.35) ||
+    (m.darkLetterRatio > 0.12 && m.goldRatio < 0.2 && m.hueVar < 0.12) ||
+    (m.foilRatio < 0.22 && m.darkLetterRatio > 0.06 && m.hueVar < 0.1 && m.warmFoilRatio < 0.12)
+  );
+}
+
+/**
+ * Arte sem holo perceptível (Comum: sem brilho na ilustração).
+ * @param {ReturnType<typeof sampleRegionImageMetrics>} art
+ * @returns {boolean}
+ */
+function isArtMatteCommonMetrics(art) {
+  if (!art || art.samples < 8) return false;
+  return art.foilRatio < 0.17 && art.shineRatio < 0.055 && art.colLumStd < 11 && art.lumStd < 30;
+}
+
+/**
+ * Arte muito holo / arco-íris (típico de Secreta).
+ * @param {ReturnType<typeof sampleRegionImageMetrics>} art
+ * @returns {boolean}
+ */
+function isArtHeavySecretHoloMetrics(art) {
+  if (!art || art.samples < 8) return false;
+  return art.colLumStd > 17.5 && art.foilRatio > 0.54 && art.hueVar > 0.17;
+}
+
+/**
+ * Nome foil em placa roxa de Fusão (Ultra dourado vs Secreta prateada/arco-íris).
+ * @param {ReturnType<typeof sampleNameStripRarityMetrics>} m
+ * @returns {string|null} `Ultra Rara`, `Secreta`, `Comum` ou `null`
+ */
+function classifyFusionPlateFoilRarity(m, artMetrics) {
+  if (!m || m.samples < 8) return null;
+  if (!isFusionPurpleFrameRgb(m.plateR, m.plateG, m.plateB)) return null;
+  if (isFusionCommonPlateGlareNameStrip(m)) return 'Comum';
+  if (m.foilRatio < 0.36) {
+    return m.darkLetterRatio > 0.07 ? 'Comum' : null;
+  }
+  if (isUltraGoldNameStripMetrics(m)) return 'Ultra Rara';
+  if (isSecretNameStripMetrics(m)) return 'Secreta';
+  const artSecret =
+    artMetrics &&
+    (isArtHeavySecretHoloMetrics(artMetrics) ||
+      (artMetrics.hueVar > 0.18 && artMetrics.foilRatio > 0.48));
+  const artUltra =
+    artMetrics &&
+    artMetrics.foilRatio > 0.42 &&
+    artMetrics.hueVar > 0.2 &&
+    artMetrics.hueVar < 0.34 &&
+    artMetrics.colLumStd > 7 &&
+    artMetrics.colLumStd < 17;
+  if (m.foilRatio > 0.68 && m.goldRatio < 0.09 && m.warmFoilRatio < 0.12) {
+    if (
+      (m.goldRatio > 0.14 && m.warmFoilRatio > 0.11) ||
+      (m.warmFoilRatio > 0.18 && m.goldRatio > 0.1)
+    ) {
+      return 'Ultra Rara';
+    }
+    if (m.hueVar < 0.05 && m.goldRatio < 0.02) return 'Comum';
+    if (m.colLumStd < 9.7 && m.hueVar < 0.06 && m.goldRatio < 0.1) return 'Ultra Rara';
+    return 'Secreta';
+  }
+  if (m.hueVar > 0.088 && m.foilRatio > 0.4) return 'Secreta';
+  if ((m.warmFoilRatio > 0.1 || m.goldRatio > 0.06) && m.hueVar < 0.105 && m.foilRatio > 0.38) {
+    return 'Ultra Rara';
+  }
+  if (m.colLumStd > 10.5 && m.hueVar > 0.07 && m.foilRatio > 0.42) return 'Secreta';
+  return null;
+}
+
+/**
+ * Reflexo forte no sol na placa (dourado falso) — não confundir com Ultra/Secret foil.
+ * @param {ReturnType<typeof sampleNameStripRarityMetrics>} m
+ * @returns {boolean}
+ */
+function isNameStripSunGlareMetrics(m) {
+  if (!m) return false;
+  return (
+    (m.goldRatio > 0.45 && m.foilRatio < 0.32) ||
+    (m.warmFoilRatio > 0.55 && m.foilRatio < 0.28 && m.silverRatio < 0.14)
+  );
+}
+
+/**
+ * Desempate Secreta vs Ultra Rara com métricas do nome + arte (sem nomes de cartas).
+ * @param {string} nameRarity
+ * @param {string|null} artRarity
+ * @param {ReturnType<typeof sampleNameStripRarityMetrics>|null|undefined} nameMetrics
+ * @param {ReturnType<typeof sampleRegionImageMetrics>|null|undefined} artMetrics
+ * @returns {string|null}
+ */
+function resolveSecretUltraRarityDispute(nameRarity, artRarity, nameMetrics, artMetrics) {
+  const a = artRarity;
+  const m = nameMetrics;
+  const art = artMetrics;
+  if (!m || (nameRarity !== 'Secreta' && nameRarity !== 'Ultra Rara')) return null;
+  const artConflict = (nameRarity === 'Secreta' && a === 'Ultra Rara') || (nameRarity === 'Ultra Rara' && a === 'Secreta');
+  const stripConflict =
+    (nameRarity === 'Secreta' && isUltraGoldNameStripMetrics(m)) ||
+    (nameRarity === 'Ultra Rara' && isSecretNameStripMetrics(m));
+  if (!artConflict && !stripConflict) return null;
+  let secretScore = 0;
+  let ultraScore = 0;
+  if (m.silverRatio > 0.11) secretScore += 2;
+  if (m.silverRatio > m.goldRatio * 0.9) secretScore += 2;
+  if (m.hueVar > 0.11) secretScore += 2;
+  if (
+    m.goldRatio >= 0.1 &&
+    m.goldRatio <= 0.17 &&
+    m.warmFoilRatio < 0.12 &&
+    m.hueVar < 0.1 &&
+    m.foilRatio > 0.62
+  ) {
+    secretScore += 3;
+  }
+  if (m.colLumStd > 14) secretScore += 1;
+  if (m.warmFoilRatio > 0.18 && m.hueVar < 0.1) ultraScore += 3;
+  if (m.goldRatio > 0.08 && m.hueVar < 0.095 && m.silverRatio < 0.1) ultraScore += 2;
+  if (m.goldRatio < 0.14 && m.warmFoilRatio < 0.14 && m.foilRatio > 0.48) ultraScore += 2;
+  if (m.foilRatio > 0.9 && m.silverRatio < 0.11 && m.hueVar < 0.08) ultraScore += 2;
+  if (m.goldRatio > 0.45 && m.foilRatio < 0.32) secretScore += 1;
+  if (art && art.samples >= 8) {
+    if (isArtHeavySecretHoloMetrics(art)) secretScore += 3;
+    else if (art.colLumStd > 16.5 && art.foilRatio > 0.52) secretScore += 2;
+    if (art.colLumStd > 10 && art.colLumStd < 16 && art.foilRatio > 0.4 && art.foilRatio < 0.64) {
+      ultraScore += 2;
+    }
+    if (isArtMatteCommonMetrics(art)) {
+      if (nameRarity === 'Comum') secretScore -= 2;
+      else ultraScore -= 1;
+    }
+  }
+  if (secretScore === ultraScore) return nameRarity;
+  return secretScore > ultraScore ? 'Secreta' : 'Ultra Rara';
+}
+
+/**
+ * Classifica raridade só pela faixa do nome (foil no texto).
+ * Super Rara: nome preto → retorna `Comum` (arte holo tratada na mira azul).
+ * @param {ReturnType<typeof sampleNameStripRarityMetrics>} m
+ * @returns {string}
+ */
+function classifyRarityFromStripMetrics(m) {
+  if (!m || m.samples < 8) return 'Comum';
+  const { foilRatio, goldRatio, silverRatio, warmFoilRatio, hueVar, colLumStd, brightLum, darkLetterRatio } =
+    m;
+  const pr = m.plateR;
+  const pg = m.plateG;
+  const pb = m.plateB;
+  const purplePlate = isFusionPurpleFrameRgb(pr, pg, pb);
+  const xyzPlate = isXyzDarkPlateRgb(pr, pg, pb);
+
+  if (xyzPlate && silverRatio > 0.22 && foilRatio > 0.03 && foilRatio < 0.45) return 'Secreta';
+  if (silverRatio > 0.45 && foilRatio > 0.32) return 'Secreta';
+  if (isNameStripSunGlareMetrics(m)) return 'Comum';
+  if (isFusionCommonPlateGlareNameStrip(m)) return 'Comum';
+  if (isCommonBlackNameStripMetrics(m)) return 'Comum';
+  if (isUltraGoldNameStripMetrics(m)) return 'Ultra Rara';
+  if (isSecretNameStripMetrics(m)) return 'Secreta';
+  if (purplePlate) {
+    const fusionFoil = classifyFusionPlateFoilRarity(m, null);
+    if (fusionFoil) return fusionFoil;
+  }
+  if (
+    purplePlate &&
+    foilRatio > 0.48 &&
+    silverRatio > 0.09 &&
+    silverRatio >= goldRatio * 0.55 &&
+    warmFoilRatio < 0.22
+  ) {
+    return 'Secreta';
+  }
+  if (darkLetterRatio > 0.08 && foilRatio < 0.28 && !xyzPlate) return 'Comum';
+  if (
+    purplePlate &&
+    foilRatio > 0.5 &&
+    brightLum > 146 &&
+    hueVar > 0.08 &&
+    silverRatio > 0.08 &&
+    goldRatio < 0.04 &&
+    warmFoilRatio < 0.12
+  ) {
+    return 'Secreta';
+  }
+  if (
+    purplePlate &&
+    foilRatio > 0.52 &&
+    brightLum > 146 &&
+    hueVar < 0.09 &&
+    (warmFoilRatio > 0.04 || goldRatio > 0.01 || colLumStd > 4.5)
+  ) {
+    return 'Ultra Rara';
+  }
+  if (
+    purplePlate &&
+    foilRatio > 0.52 &&
+    brightLum > 146 &&
+    hueVar > 0.11
+  ) {
+    return 'Secreta';
+  }
+  if (
+    purplePlate &&
+    darkLetterRatio >= 0.07 &&
+    foilRatio >= 0.4 &&
+    warmFoilRatio < 0.12 &&
+    goldRatio < 0.03 &&
+    hueVar < 0.06
+  ) {
+    return 'Comum';
+  }
+  if (
+    purplePlate &&
+    darkLetterRatio < 0.045 &&
+    foilRatio >= 0.48 &&
+    warmFoilRatio < 0.1 &&
+    goldRatio < 0.03 &&
+    hueVar < 0.045 &&
+    colLumStd < 4
+  ) {
+    return 'Comum';
+  }
+  if (
+    purplePlate &&
+    foilRatio > 0.52 &&
+    brightLum > 145 &&
+    goldRatio < 0.03 &&
+    warmFoilRatio < 0.06 &&
+    silverRatio < 0.06 &&
+    darkLetterRatio < 0.05
+  ) {
+    return 'Ultra Rara';
+  }
+  if (isNameStripPlateGlareNotHolo(m)) return 'Comum';
+  if (
+    purplePlate &&
+    foilRatio > 0.35 &&
+    goldRatio < 0.025 &&
+    warmFoilRatio < 0.12 &&
+    silverRatio < 0.08 &&
+    hueVar < 0.22
+  ) {
+    const fusionHint = classifyFusionPlateFoilRarity(m);
+    if (!fusionHint || fusionHint === 'Comum') return 'Comum';
+  }
+  if (
+    purplePlate &&
+    foilRatio > 0.45 &&
+    goldRatio < 0.04 &&
+    silverRatio < 0.08 &&
+    warmFoilRatio < 0.14 &&
+    darkLetterRatio < 0.2
+  ) {
+    const fusionHint = classifyFusionPlateFoilRarity(m);
+    if (!fusionHint || fusionHint === 'Comum') return 'Comum';
+  }
+
+  if (
+    (goldRatio > 0.12 || warmFoilRatio > 0.18) &&
+    hueVar < 0.1 &&
+    silverRatio < 0.12 &&
+    foilRatio > 0.42
+  ) {
+    return 'Ultra Rara';
+  }
+  if (goldRatio > 0.18 && foilRatio > 0.38 && silverRatio < 0.14) return 'Ultra Rara';
+  if (
+    purplePlate &&
+    foilRatio > 0.38 &&
+    brightLum > 145 &&
+    warmFoilRatio > 0.08 &&
+    silverRatio < 0.11
+  ) {
+    return 'Ultra Rara';
+  }
+  if (warmFoilRatio > 0.28 && foilRatio > 0.35 && silverRatio < 0.12) return 'Ultra Rara';
+  if (goldRatio > 0.08 && foilRatio > 0.32 && brightLum > 125 && silverRatio < 0.1) return 'Ultra Rara';
+
+  if (
+    foilRatio > 0.4 &&
+    brightLum > 148 &&
+    (hueVar > 0.14 || silverRatio > 0.12) &&
+    silverRatio >= goldRatio * 0.7
+  ) {
+    return 'Secreta';
+  }
+  if (
+    (hueVar > 0.16 || (silverRatio > 0.2 && hueVar > 0.1)) &&
+    silverRatio > goldRatio * 0.65 &&
+    foilRatio > 0.08 &&
+    brightLum > 118
+  ) {
+    return 'Secreta';
+  }
+
+  if (foilRatio > 0.38 && brightLum > 145) {
+    if (purplePlate || warmFoilRatio > 0.2) return 'Ultra Rara';
+    if (hueVar > 0.12 && silverRatio > 0.08) return 'Secreta';
+    return 'Ultra Rara';
+  }
+
+  if (silverRatio > 0.3 && foilRatio > 0.04) return 'Rara';
+  if (silverRatio > 0.18 && foilRatio > 0.07 && brightLum > 140) return 'Rara';
+
+  if (
+    foilRatio > 0.03 &&
+    foilRatio < 0.22 &&
+    brightLum < 125 &&
+    darkLetterRatio > 0.06 &&
+    purplePlate
+  ) {
+    return 'Ultra Rara';
+  }
+
+  return 'Comum';
+}
+
+/**
+ * Retângulo da arte (mira azul), abaixo da faixa do nome.
+ * @param {{ x: number, y: number, width: number, height: number }} typeRect
+ * @param {{ x: number, y: number, width: number, height: number }|null} nameRect
+ * @returns {{ x: number, y: number, width: number, height: number }|null}
+ */
+function getCardArtSampleRect(typeRect, nameRect) {
+  if (!typeRect || typeRect.width < 4 || typeRect.height < 4) return null;
+  const nameBottom = nameRect ? nameRect.y + nameRect.height : typeRect.y + typeRect.height * 0.12;
+  const top = Math.max(typeRect.y + typeRect.height * 0.1, nameBottom + typeRect.height * 0.01);
+  const bottom = typeRect.y + typeRect.height * 0.88;
+  const height = Math.max(8, bottom - top);
+  const insetX = typeRect.width * 0.1;
+  return {
+    x: typeRect.x + insetX,
+    y: top,
+    width: Math.max(8, typeRect.width - insetX * 2),
+    height,
+  };
+}
+
+/**
+ * Métricas de brilho/textura de uma região do vídeo (arte ou moldura).
+ * @param {HTMLVideoElement} video
+ * @param {{ x: number, y: number, width: number, height: number }|null} rect
+ * @param {number} [outW=64]
+ * @param {number} [outH=48]
+ * @returns {object}
+ */
+function sampleRegionImageMetrics(video, rect, outW = 64, outH = 48) {
+  const empty = {
+    samples: 0,
+    meanLum: 128,
+    lumStd: 0,
+    colLumStd: 0,
+    foilRatio: 0,
+    hueVar: 0,
+    saturation: 0,
+    shineRatio: 0,
+  };
+  if (!video || !rect || rect.width < 2 || rect.height < 2) return empty;
+  const c = document.createElement('canvas');
+  c.width = outW;
+  c.height = outH;
+  const ctx = c.getContext('2d');
+  if (!ctx) return empty;
+  try {
+    ctx.drawImage(video, rect.x, rect.y, rect.width, rect.height, 0, 0, outW, outH);
+    const data = ctx.getImageData(0, 0, outW, outH).data;
+    const colSum = new Array(outW).fill(0);
+    const colCnt = new Array(outW).fill(0);
+    let lumSum = 0;
+    let lumSq = 0;
+    let foilN = 0;
+    let shineN = 0;
+    let satSum = 0;
+    const hues = [];
+    const samples = outW * outH;
+    for (let y = 0; y < outH; y++) {
+      for (let x = 0; x < outW; x++) {
+        const i = (y * outW + x) * 4;
+        const r = data[i];
+        const g = data[i + 1];
+        const b = data[i + 2];
+        const lum = (r + g + b) / 3;
+        lumSum += lum;
+        lumSq += lum * lum;
+        colSum[x] += lum;
+        colCnt[x]++;
+        const max = Math.max(r, g, b);
+        const min = Math.min(r, g, b);
+        const sat = max > 0 ? (max - min) / max : 0;
+        satSum += sat;
+        if (lum >= 130) {
+          foilN++;
+          if (lum >= 168) shineN++;
+          const hue = rgbToHue01(r, g, b);
+          if (hue >= 0) hues.push(hue);
+        }
+      }
+    }
+    let hueVar = 0;
+    if (hues.length > 5) {
+      let mean = 0;
+      for (const h of hues) mean += h;
+      mean /= hues.length;
+      let v = 0;
+      for (const h of hues) v += (h - mean) * (h - mean);
+      hueVar = Math.sqrt(v / hues.length);
+    }
+    const colMeans = [];
+    for (let x = 0; x < outW; x++) {
+      if (colCnt[x]) colMeans.push(colSum[x] / colCnt[x]);
+    }
+    let colLumStd = 0;
+    if (colMeans.length > 3) {
+      const m = colMeans.reduce((a, b) => a + b, 0) / colMeans.length;
+      let v = 0;
+      for (const cl of colMeans) v += (cl - m) * (cl - m);
+      colLumStd = Math.sqrt(v / colMeans.length);
+    }
+    const meanLum = lumSum / samples;
+    const lumStd = Math.sqrt(Math.max(0, lumSq / samples - meanLum * meanLum));
+    return {
+      samples,
+      meanLum,
+      lumStd,
+      colLumStd,
+      foilRatio: foilN / samples,
+      hueVar,
+      saturation: satSum / samples,
+      shineRatio: shineN / samples,
+    };
+  } catch (e) {
+    return empty;
+  }
+}
+
+/**
+ * Raridade sugerida pela arte / moldura (mira azul).
+ * @param {ReturnType<typeof sampleRegionImageMetrics>} art
+ * @param {ReturnType<typeof sampleRegionImageMetrics>} border
+ * @returns {string|null}
+ */
+function classifyRarityFromArtMetrics(art, border) {
+  if (!art || art.samples < 8) return null;
+  const a = art;
+  const b = border && border.samples >= 8 ? border : art;
+
+  if (isArtMatteCommonMetrics(a)) return 'Comum';
+  if (isArtHeavySecretHoloMetrics(a) && a.shineRatio > 0.12) return 'Secreta';
+
+  if (
+    a.colLumStd > 48 &&
+    b.colLumStd > 36 &&
+    a.foilRatio > 0.32 &&
+    a.shineRatio > 0.1 &&
+    b.shineRatio > 0.09
+  ) {
+    return 'Starlight Rare';
+  }
+  if (a.meanLum > 172 && a.saturation < 0.14 && a.lumStd > 36) {
+    return 'Ghost Rare';
+  }
+  if (
+    a.lumStd > 42 &&
+    a.colLumStd < 12 &&
+    a.foilRatio > 0.28 &&
+    a.foilRatio < 0.52 &&
+    a.hueVar > 0.11
+  ) {
+    return 'Secreta';
+  }
+  if (a.colLumStd > 16 && a.foilRatio > 0.52 && a.hueVar > 0.22 && a.lumStd > 38) {
+    return 'Secreta';
+  }
+  if (
+    a.colLumStd > 10 &&
+    a.colLumStd < 16.5 &&
+    a.foilRatio > 0.42 &&
+    a.foilRatio < 0.64 &&
+    a.hueVar > 0.24 &&
+    a.hueVar < 0.34
+  ) {
+    return 'Ultra Rara';
+  }
+  if (a.colLumStd > 34 && a.foilRatio > 0.3 && b.shineRatio > 0.11 && a.lumStd > 44 && a.shineRatio > 0.09) {
+    return 'Ultimate Rara';
+  }
+  if (a.foilRatio > 0.1 && a.foilRatio < 0.26 && a.meanLum > 92 && a.meanLum < 132 && a.lumStd < 26) {
+    return 'Super Rara';
+  }
+  return null;
+}
+
+/**
+ * Combina nome (verde) + arte/moldura (azul).
+ * @param {string} nameRarity
+ * @param {string|null} artRarity
+ * @param {ReturnType<typeof sampleNameStripRarityMetrics>} nameMetrics
+ * @param {ReturnType<typeof sampleRegionImageMetrics>} artMetrics
+ * @returns {string}
+ */
+function mergeRarityClassification(nameRarity, artRarity, nameMetrics, artMetrics) {
+  const art = artRarity || null;
+  if (nameMetrics && isFusionCommonPlateGlareNameStrip(nameMetrics)) {
+    return 'Comum';
+  }
+  if (nameMetrics && isNameStripSunGlareMetrics(nameMetrics)) {
+    const glarePick = resolveSecretUltraRarityDispute('Comum', art, nameMetrics, artMetrics);
+    if (glarePick === 'Secreta' || glarePick === 'Ultra Rara') return glarePick;
+    if (art === 'Secreta' || art === 'Ultra Rara') return art;
+    return 'Comum';
+  }
+  const disputed = resolveSecretUltraRarityDispute(nameRarity, art, nameMetrics, artMetrics);
+  if (disputed) return disputed;
+  if (nameMetrics) {
+    const fusionFoil = classifyFusionPlateFoilRarity(nameMetrics, artMetrics);
+    if (fusionFoil && fusionFoil !== 'Comum' && (nameRarity === 'Comum' || !nameRarity)) {
+      return fusionFoil;
+    }
+  }
+  const goldHeavy =
+    nameMetrics &&
+    nameMetrics.foilRatio > 0.32 &&
+    !isNameStripSunGlareMetrics(nameMetrics) &&
+    (nameMetrics.goldRatio > 0.08 ||
+      nameMetrics.warmFoilRatio > 0.22 ||
+      (nameMetrics.goldRatio + nameMetrics.warmFoilRatio > 0.2 &&
+        nameMetrics.goldRatio >= nameMetrics.silverRatio * 0.85));
+  const secretName =
+    nameRarity === 'Secreta' ||
+    (nameMetrics &&
+      nameMetrics.silverRatio > 0.14 &&
+      nameMetrics.silverRatio > nameMetrics.goldRatio * 0.85 &&
+      nameMetrics.hueVar > 0.1 &&
+      nameMetrics.foilRatio > 0.08);
+
+  if (nameRarity === 'Comum') {
+    if (artMetrics && isArtMatteCommonMetrics(artMetrics) && nameMetrics && nameMetrics.foilRatio < 0.35) {
+      return 'Comum';
+    }
+    if (nameMetrics && isCommonBlackNameStripMetrics(nameMetrics)) return 'Comum';
+    if (nameMetrics && isNameStripPlateGlareNotHolo(nameMetrics)) return 'Comum';
+    if (nameMetrics && nameMetrics.darkLetterRatio > 0.28 && nameMetrics.foilRatio < 0.28) return 'Comum';
+    if (
+      nameMetrics &&
+      isFusionPurpleFrameRgb(nameMetrics.plateR, nameMetrics.plateG, nameMetrics.plateB) &&
+      nameMetrics.foilRatio > 0.35 &&
+      nameMetrics.goldRatio < 0.03 &&
+      nameMetrics.warmFoilRatio < 0.12 &&
+      nameMetrics.silverRatio < 0.08
+    ) {
+      return 'Comum';
+    }
+    if (
+      nameMetrics &&
+      isFusionPurpleFrameRgb(nameMetrics.plateR, nameMetrics.plateG, nameMetrics.plateB) &&
+      nameMetrics.foilRatio > 0.52 &&
+      nameMetrics.brightLum > 145 &&
+      nameMetrics.goldRatio < 0.03 &&
+      nameMetrics.warmFoilRatio < 0.06 &&
+      nameMetrics.silverRatio < 0.06
+    ) {
+      return 'Ultra Rara';
+    }
+    if (art === 'Secreta' && nameMetrics && nameMetrics.foilRatio > 0.45 && nameMetrics.brightLum > 145) {
+      if (nameMetrics.silverRatio > 0.1 || nameMetrics.hueVar > 0.1) return 'Secreta';
+      return 'Ultra Rara';
+    }
+  }
+
+  if (art === 'Ultimate Rara') {
+    if (nameRarity === 'Secreta' || nameRarity === 'Ultra Rara') return nameRarity;
+    if (
+      nameMetrics &&
+      nameMetrics.foilRatio > 0.35 &&
+      (nameMetrics.hueVar > 0.08 || nameMetrics.silverRatio > 0.1)
+    ) {
+      return nameRarity;
+    }
+  }
+
+  if (nameRarity !== 'Comum') {
+    if (nameMetrics && isSecretNameStripMetrics(nameMetrics)) return 'Secreta';
+    if (nameMetrics && isUltraGoldNameStripMetrics(nameMetrics)) return 'Ultra Rara';
+    const nameArtDispute = resolveSecretUltraRarityDispute(nameRarity, art, nameMetrics, artMetrics);
+    if (nameArtDispute) return nameArtDispute;
+    if (
+      nameRarity === 'Ultra Rara' &&
+      art === 'Secreta' &&
+      nameMetrics &&
+      nameMetrics.foilRatio > 0.35
+    ) {
+      if (nameMetrics.hueVar < 0.085 && nameMetrics.silverRatio < 0.09) return 'Ultra Rara';
+      if (nameMetrics.hueVar > 0.1 || nameMetrics.silverRatio > 0.06) return 'Secreta';
+      return 'Secreta';
+    }
+    if (art === 'Starlight Rare' || art === 'Ghost Rare') {
+      if (nameRarity === 'Ultra Rara' || nameRarity === 'Secreta') return nameRarity;
+    }
+    if (art === 'Quarter Century' || art === 'Colecionador') return nameRarity;
+    return nameRarity;
+  }
+
+  if (artMetrics && isArtMatteCommonMetrics(artMetrics) && nameMetrics && isCommonBlackNameStripMetrics(nameMetrics)) {
+    return 'Comum';
+  }
+  if (goldHeavy) return 'Ultra Rara';
+  if (secretName) return 'Secreta';
+  if (art === 'Secreta' && isArtHeavySecretHoloMetrics(artMetrics)) return 'Secreta';
+  if (art === 'Super Rara') return 'Super Rara';
+  if (art === 'Starlight Rare' && nameMetrics && nameMetrics.colLumStd > 42) return 'Starlight Rare';
+  if (art === 'Ghost Rare' && nameMetrics && nameMetrics.foilRatio > 0.55) return 'Ghost Rare';
+  if (art === 'Ultimate Rara' && goldHeavy) return 'Ultimate Rara';
+
+  if (
+    nameMetrics &&
+    nameMetrics.foilRatio > 0.35 &&
+    nameMetrics.brightLum > 140 &&
+    isFusionPurpleFrameRgb(nameMetrics.plateR, nameMetrics.plateG, nameMetrics.plateB) &&
+    !(
+      nameMetrics.goldRatio < 0.03 &&
+      nameMetrics.warmFoilRatio < 0.12 &&
+      nameMetrics.silverRatio < 0.08
+    )
+  ) {
+    return 'Ultra Rara';
+  }
+  if (
+    nameMetrics &&
+    nameMetrics.foilRatio > 0.35 &&
+    nameMetrics.hueVar > 0.12 &&
+    nameMetrics.silverRatio > 0.1
+  ) {
+    return 'Secreta';
+  }
+  if (nameMetrics && nameMetrics.foilRatio < 0.15 && nameMetrics.darkLetterRatio > 0.08) {
+    return 'Comum';
+  }
+  return 'Comum';
+}
+
+/**
+ * Deteção completa: faixa do nome + arte (mira azul) + bordas da moldura.
+ * @param {HTMLVideoElement} video
+ * @param {{ x: number, y: number, width: number, height: number }} nameCropRect
+ * @param {{ x: number, y: number, width: number, height: number }|null} typeCropRect
+ * @returns {object}
+ */
+function probeCardRarityDiagnostics(video, nameCropRect, typeCropRect) {
+  const nameMetrics = sampleNameStripRarityMetrics(video, nameCropRect);
+  const nameFromStrip = classifyRarityFromStripMetrics(nameMetrics);
+  const vW = video.videoWidth || 0;
+  const vH = video.videoHeight || 0;
+  const frameColor = typeCropRect
+    ? sampleCardFrameRgbFromTypeCrop(video, typeCropRect, vW, vH)
+    : null;
+  const artRect = typeCropRect ? getCardArtSampleRect(typeCropRect, nameCropRect) : null;
+  const artMetrics = artRect ? sampleRegionImageMetrics(video, artRect, 72, 52) : sampleRegionImageMetrics(video, nameCropRect, 48, 20);
+  let borderMetrics = artMetrics;
+  if (typeCropRect && frameColor && frameColor.sampleRects) {
+    const sr = frameColor.sampleRects;
+    const borderParts = [];
+    for (const key of ['left', 'right', 'top']) {
+      const r = sr[key];
+      if (r && r.width > 2) borderParts.push(sampleRegionImageMetrics(video, r, 24, 40));
+    }
+    if (borderParts.length) {
+      borderMetrics = {
+        samples: borderParts.reduce((s, p) => s + p.samples, 0),
+        meanLum: borderParts.reduce((s, p) => s + p.meanLum, 0) / borderParts.length,
+        lumStd: borderParts.reduce((s, p) => s + p.lumStd, 0) / borderParts.length,
+        colLumStd: borderParts.reduce((s, p) => s + p.colLumStd, 0) / borderParts.length,
+        foilRatio: borderParts.reduce((s, p) => s + p.foilRatio, 0) / borderParts.length,
+        hueVar: borderParts.reduce((s, p) => s + p.hueVar, 0) / borderParts.length,
+        saturation: borderParts.reduce((s, p) => s + p.saturation, 0) / borderParts.length,
+        shineRatio: borderParts.reduce((s, p) => s + p.shineRatio, 0) / borderParts.length,
+      };
+    }
+  }
+  const artHint = classifyRarityFromArtMetrics(artMetrics, borderMetrics);
+  const classifiedRarity = mergeRarityClassification(nameFromStrip, artHint, nameMetrics, artMetrics);
+  const roundMetrics = (m) => ({
+    meanLum: safeRound(m.meanLum, 1),
+    lumStd: safeRound(m.lumStd, 2),
+    colLumStd: safeRound(m.colLumStd, 2),
+    foilRatio: safeRound(m.foilRatio, 3),
+    hueVar: safeRound(m.hueVar, 3),
+    saturation: safeRound(m.saturation, 3),
+    shineRatio: safeRound(m.shineRatio, 3),
+  });
+  return {
+    nameFromStrip,
+    artHint: artHint || null,
+    classifiedRarity,
+    nameMetrics: {
+      foilRatio: safeRound(nameMetrics.foilRatio, 3),
+      goldRatio: safeRound(nameMetrics.goldRatio, 3),
+      warmFoilRatio: safeRound(nameMetrics.warmFoilRatio, 3),
+      silverRatio: safeRound(nameMetrics.silverRatio, 3),
+      hueVar: safeRound(nameMetrics.hueVar, 3),
+      colLumStd: safeRound(nameMetrics.colLumStd, 2),
+      brightLum: safeRound(nameMetrics.brightLum, 1),
+      darkLetterRatio: safeRound(nameMetrics.darkLetterRatio, 3),
+    },
+    artMetrics: roundMetrics(artMetrics),
+    borderMetrics: roundMetrics(borderMetrics),
+    frameColor: frameColor
+      ? {
+          avgR: safeRound(frameColor.avgR, 1),
+          avgG: safeRound(frameColor.avgG, 1),
+          avgB: safeRound(frameColor.avgB, 1),
+          lum: safeRound(frameColor.lum, 1),
+          spread: safeRound(frameColor.spread, 1),
+        }
+      : null,
+    plateColor: {
+      avgR: safeRound(nameMetrics.plateR, 1),
+      avgG: safeRound(nameMetrics.plateG, 1),
+      avgB: safeRound(nameMetrics.plateB, 1),
+    },
+    plateType: classifyCardTypeFromNameStripRgb(
+      nameMetrics.plateR,
+      nameMetrics.plateG,
+      nameMetrics.plateB
+    ),
+    artSampleRect: artRect ? roundRect(artRect) : null,
+  };
+}
+
+/** @deprecated Use {@link probeCardRarityDiagnostics}. */
+function probeNameStripRarityDiagnostics(video, cropRect) {
+  const p = probeCardRarityDiagnostics(video, cropRect, null);
+  return {
+    metrics: p.nameMetrics,
+    classifiedRarity: p.classifiedRarity,
+    plateColor: p.plateColor,
+  };
+}
+
+/**
+ * Tipo/raridade com consenso entre sondas (faixa, classificador, placa) — evita segurar carta anterior.
+ * @param {ReturnType<typeof probeCardTypeDiagnostics>} typeProbe
+ * @param {ReturnType<typeof probeCardRarityDiagnostics>} rarityProbe
+ * @param {string} detectedType
+ * @param {string} detectedRarity
+ * @returns {{ cardType: string, rarity: string }}
+ */
+function resolveVisionTypeAndRarityFromProbes(typeProbe, rarityProbe, detectedType, detectedRarity) {
+  let cardType = detectedType || 'Monstro Efeito';
+  let rarity = detectedRarity || 'Comum';
+  const stripR = rarityProbe?.nameFromStrip;
+  const classR = rarityProbe?.classifiedRarity;
+  const plateT = rarityProbe?.plateType || typeProbe?.namePlateType;
+  const mergedT = typeProbe?.classifiedTypeMerged || typeProbe?.classifiedType;
+  const nm = rarityProbe?.nameMetrics;
+  const artHint = rarityProbe?.artHint;
+  const fusionFoil = nm
+    ? classifyFusionPlateFoilRarity(nm, rarityProbe?.artMetrics ? { ...rarityProbe.artMetrics, samples: 64 } : null)
+    : null;
+  const premium = new Set(['Ultra Rara', 'Secreta', 'Ultimate Rara', 'Starlight Rare']);
+
+  if (nm && (isFusionCommonPlateGlareNameStrip(nm) || isCommonBlackNameStripMetrics(nm))) {
+    rarity = 'Comum';
+    lastStableDetectedCardRarity = rarity;
+    lastStableDetectedCardRarityAt = Date.now();
+  } else if (nm && isUltraGoldNameStripMetrics(nm)) {
+    rarity = 'Ultra Rara';
+    lastStableDetectedCardRarity = rarity;
+    lastStableDetectedCardRarityAt = Date.now();
+  } else if (nm && isSecretNameStripMetrics(nm)) {
+    rarity = 'Secreta';
+    lastStableDetectedCardRarity = rarity;
+    lastStableDetectedCardRarityAt = Date.now();
+  } else if (fusionFoil && fusionFoil !== 'Comum') {
+    rarity = fusionFoil;
+    lastStableDetectedCardRarity = rarity;
+    lastStableDetectedCardRarityAt = Date.now();
+  } else if (stripR && classR && stripR === classR) {
+    rarity = classR;
+    lastStableDetectedCardRarity = rarity;
+    lastStableDetectedCardRarityAt = Date.now();
+  } else if (stripR && classR && premium.has(stripR) && classR === 'Comum') {
+    rarity = stripR;
+    lastStableDetectedCardRarity = rarity;
+    lastStableDetectedCardRarityAt = Date.now();
+  } else if (stripR && classR && premium.has(classR) && stripR === 'Comum') {
+    rarity = classR;
+    lastStableDetectedCardRarity = rarity;
+    lastStableDetectedCardRarityAt = Date.now();
+  } else {
+    rarity = stabilizeDetectedCardRarity(classR || stripR || rarity);
+  }
+
+  const stripType = typeProbe?.nameStripFallbackType || typeProbe?.classifiedTypeFromNameStripOnly;
+  if (stripType === 'Monstro Fusão' || plateT === 'Monstro Fusão' || mergedT === 'Monstro Fusão') {
+    cardType = 'Monstro Fusão';
+    lastStableDetectedCardType = cardType;
+    lastStableDetectedCardTypeAt = Date.now();
+  } else if (plateT && mergedT && plateT === mergedT) {
+    cardType = plateT;
+    lastStableDetectedCardType = cardType;
+    lastStableDetectedCardTypeAt = Date.now();
+  } else if (mergedT) {
+    cardType = stabilizeDetectedCardType(mergedT);
+  } else {
+    cardType = stabilizeDetectedCardType(cardType);
+  }
+
+  return { cardType, rarity };
+}
+
+/**
+ * Evita oscilar raridade entre frames (ex.: Ultra ↔ Comum com reflexo).
+ * @param {string} detected
+ * @returns {string}
+ */
+function stabilizeDetectedCardRarity(detected) {
+  const now = Date.now();
+  if (!detected) return lastStableDetectedCardRarity || 'Comum';
+  if (detected === lastStableDetectedCardRarity) {
+    lastStableDetectedCardRarityAt = now;
+    return detected;
+  }
+  const prev = lastStableDetectedCardRarity;
+  const premiumSet = new Set([
+    'Rara',
+    'Super Rara',
+    'Ultra Rara',
+    'Ultimate Rara',
+    'Secreta',
+    'Starlight Rare',
+    'Platina',
+    'Ouro',
+  ]);
+  const falsePremium = new Set(['Quarter Century', 'Colecionador', 'Ghost Rare']);
+  if (prev && falsePremium.has(prev) && (detected === 'Ultra Rara' || detected === 'Secreta' || detected === 'Comum' || detected === 'Super Rara')) {
+    lastStableDetectedCardRarity = detected;
+    lastStableDetectedCardRarityAt = now;
+    return detected;
+  }
+  if (detected === 'Comum' && prev && premiumSet.has(prev)) {
+    lastStableDetectedCardRarity = detected;
+    lastStableDetectedCardRarityAt = now;
+    return detected;
+  }
+  if (prev && premiumSet.has(prev) && detected === 'Comum' && now - lastStableDetectedCardRarityAt < 220) {
+    return prev;
+  }
+  if (prev === 'Starlight Rare' && detected !== 'Starlight Rare' && now - lastStableDetectedCardRarityAt < 1100) {
+    return prev;
+  }
+  if (prev === 'Ghost Rare' && detected !== 'Ghost Rare' && now - lastStableDetectedCardRarityAt < 400) {
+    return prev;
+  }
+  if (prev === 'Ultra Rara' && detected === 'Secreta') {
+    lastStableDetectedCardRarity = detected;
+    lastStableDetectedCardRarityAt = now;
+    return detected;
+  }
+  if (prev === 'Comum' && premiumSet.has(detected)) {
+    lastStableDetectedCardRarity = detected;
+    lastStableDetectedCardRarityAt = now;
+    return detected;
+  }
+  if (prev === 'Ultra Rara' && detected === 'Rara' && now - lastStableDetectedCardRarityAt < 700) {
+    return prev;
+  }
+  if (
+    prev === 'Secreta' &&
+    detected === 'Rara' &&
+    now - lastStableDetectedCardRarityAt < 600
+  ) {
+    return prev;
+  }
+  if (prev === 'Secreta' && detected === 'Ultra Rara' && now - lastStableDetectedCardRarityAt < 520) {
+    return prev;
+  }
+  if (prev === 'Ultra Rara' && detected === 'Secreta' && now - lastStableDetectedCardRarityAt < 420) {
+    return prev;
+  }
+  lastStableDetectedCardRarity = detected;
+  lastStableDetectedCardRarityAt = now;
+  return detected;
+}
+
+/**
+ * Corrige tipo quando o foil claro na placa roxa foi lido como Sincro (moldura desaturada).
+ * @param {string} cardType
+ * @param {string} rarity
+ * @param {{ avgR?: number, avgG?: number, avgB?: number }|null} plateColor
+ * @returns {string}
+ */
+function reconcileCardTypeWithRarity(cardType, rarity, plateColor, frameColor, plateType) {
+  const fr = frameColor && frameColor.avgR != null ? frameColor.avgR : null;
+  const fg = frameColor && frameColor.avgG != null ? frameColor.avgG : null;
+  const fb = frameColor && frameColor.avgB != null ? frameColor.avgB : null;
+  const frameFusion = fr != null && isFusionPurpleFrameRgb(fr, fg, fb);
+  if (plateType === 'Monstro Fusão' || frameFusion) return 'Monstro Fusão';
+  if (
+    plateColor &&
+    plateColor.avgR != null &&
+    isFusionPurpleFrameRgb(plateColor.avgR, plateColor.avgG, plateColor.avgB)
+  ) {
+    return 'Monstro Fusão';
+  }
+  if (plateType === 'Monstro Xyz') return 'Monstro Xyz';
+  if (
+    plateColor &&
+    plateColor.avgR != null &&
+    (isXyzDarkPlateRgb(plateColor.avgR, plateColor.avgG, plateColor.avgB) ||
+      isXyzNamePlateRgb(plateColor.avgR, plateColor.avgG, plateColor.avgB))
+  ) {
+    return 'Monstro Xyz';
+  }
+  const reg = frameColor && frameColor.regions;
+  if (reg && !frameFusion) {
+    const leftXyz =
+      reg.left && isXyzDarkPlateRgb(reg.left.avgR, reg.left.avgG, reg.left.avgB);
+    const rightXyz =
+      reg.right && isXyzDarkPlateRgb(reg.right.avgR, reg.right.avgG, reg.right.avgB);
+    if (leftXyz && rightXyz) return 'Monstro Xyz';
+    if ((leftXyz || rightXyz) && fr != null && isXyzDarkPlateRgb(fr, fg, fb)) return 'Monstro Xyz';
+  }
+  if (cardType === 'Monstro Fusão' && plateColor && isXyzDarkPlateRgb(plateColor.avgR, plateColor.avgG, plateColor.avgB)) {
+    return 'Monstro Xyz';
+  }
+  if (cardType !== 'Monstro Sincro') return cardType;
+  if (plateType === 'Monstro Fusão' || plateType === 'Armadilha') {
+    return plateType;
+  }
+  if (plateColor && plateColor.avgR != null) {
+    const r = plateColor.avgR;
+    const g = plateColor.avgG;
+    const b = plateColor.avgB;
+    if (isFusionPurpleFrameRgb(r, g, b)) return 'Monstro Fusão';
+    if (isTrapRoseFrameRgb(r, g, b)) return 'Armadilha';
+  }
+  if (reg) {
+    if (reg.left && isFusionPurpleFrameRgb(reg.left.avgR, reg.left.avgG, reg.left.avgB)) {
+      return 'Monstro Fusão';
+    }
+    if (
+      reg.left &&
+      reg.right &&
+      reg.left.avgR < 95 &&
+      reg.right.avgR < 95 &&
+      reg.left.avgB > reg.left.avgR + 8 &&
+      reg.right.avgB > reg.right.avgR + 8
+    ) {
+      return 'Monstro Xyz';
+    }
+  }
+  if (
+    isOcrRarityWithNameFoil(rarity) &&
+    plateColor &&
+    plateColor.avgB > 82 &&
+    plateColor.avgR > 95 &&
+    plateColor.avgG < 135
+  ) {
+    return 'Monstro Fusão';
+  }
+  if (
+    (rarity === 'Ultra Rara' || rarity === 'Secreta' || rarity === 'Ultimate Rara') &&
+    plateColor &&
+    isFusionPurpleFrameRgb(plateColor.avgR, plateColor.avgG, plateColor.avgB)
+  ) {
+    return 'Monstro Fusão';
+  }
+  return cardType;
+}
+
+/**
+ * Deteta raridade (faixa do nome + arte/moldura na mira azul).
+ * @param {HTMLVideoElement} video
+ * @param {{ x: number, y: number, width: number, height: number }} nameCropRect
+ * @param {{ x: number, y: number, width: number, height: number }|null} [typeCropRect]
  * @returns {Promise<string>}
  */
-function detectRarityFromImage(video, cropRect) {
+function detectRarityFromImage(video, nameCropRect, typeCropRect) {
   return new Promise((resolve) => {
-    resolve('Comum');
+    const probe = probeCardRarityDiagnostics(video, nameCropRect, typeCropRect || null);
+    resolve(probe.classifiedRarity || 'Comum');
   });
 }
 
@@ -32669,6 +36386,18 @@ async function autoCalibrate() {
     addOcrLog(T('ocr.log.calib_not_ready'));
     return;
   }
+  if (ocrAutoCalibrateBusy) {
+    if (calibrator) calibrator.cancelRequested = true;
+    ocrCalibrationGeneration++;
+    addOcrLog('A cancelar calibração anterior…');
+    await new Promise((r) => setTimeout(r, 180));
+  }
+  ocrAutoCalibrateBusy = true;
+  const calibGen = ++ocrCalibrationGeneration;
+  if (calibrator) {
+    calibrator.cancelRequested = false;
+    calibrator.isCalibrating = false;
+  }
 
   addOcrLog(T('ocr.log.calib_start'));
   showToast(T('toast.ocr_calibrating'));
@@ -32677,36 +36406,35 @@ async function autoCalibrate() {
   if (!video || video.videoWidth === 0) {
     addOcrLog(T('ocr.log.calib_no_camera'));
     showToast(T('toast.scanner_enable'));
+    ocrAutoCalibrateBusy = false;
     return;
   }
 
   // Obtém tipo e raridade manuais (ou fallback); `let` porque `AUTO` substitui por deteção.
   let cardType = String(getVal('manual-card-type', 'Monstro Efeito')) || 'Monstro Efeito';
-  const rarity = String(getVal('manual-rarity', 'Comum')) || 'Comum';
+  let rarity = String(getVal('manual-rarity', 'AUTO')) || 'AUTO';
 
   // Pausa o scanner
   const wasActive = isOcrActive;
   if (wasActive) isOcrActive = false;
 
-  // Calcula cropRect (igual ao que você já tem)
-  const visualBox = getEl('scanner-visual');
-  const vRect = video.getBoundingClientRect();
-  const mRect = visualBox.getBoundingClientRect();
-  const vW = video.videoWidth,
-    vH = video.videoHeight;
-  const s = vW / vH > vRect.width / vRect.height ? vH / vRect.height : vW / vRect.width;
-  const xO = (vW - vRect.width * s) / 2;
-  const yO = (vH - vRect.height * s) / 2;
-  const cropRect = {
-    x: (mRect.left - vRect.left) * s + xO,
-    y: (mRect.top - vRect.top) * s + yO,
-    width: mRect.width * s,
-    height: mRect.height * s,
-  };
+  const nameCropVisual = mapVisualBoxToVideoCrop(video, getEl('scanner-visual'));
+  const typeCropRect = mapVisualBoxToVideoCrop(video, getEl('scanner-type-visual'));
+  const cropRect = nameCropVisual ? refineNameCropForOcr(nameCropVisual) : null;
+  if (!cropRect || cropRect.width < 4 || cropRect.height < 4) {
+    addOcrLog('Mira verde inválida — alinhe o nome da carta.');
+    showToast(T('toast.ocr_bad'));
+    ocrAutoCalibrateBusy = false;
+    if (wasActive) {
+      isOcrActive = true;
+      requestAnimationFrame(processOcrFrame);
+    }
+    return;
+  }
 
   if (cardType === 'AUTO') {
     try {
-      const detected = await detectCardTypeFromImage(video, cropRect);
+      const detected = await detectCardTypeFromImage(video, typeCropRect, nameCropVisual);
       addOcrEvent('type_detected', T('ocr.log.type_detected', { type: detected }), { detected });
       cardType = detected;
     } catch (e) {
@@ -32714,6 +36442,34 @@ async function autoCalibrate() {
       addOcrEvent('type_detected', T('ocr.log.type_detected_fallback', { type: cardType }), {
         detected: cardType,
       });
+    }
+  }
+  cardType = stabilizeDetectedCardType(cardType);
+  if (rarity === 'AUTO' && cropRect) {
+    try {
+      const rarityProbe = probeCardRarityDiagnostics(video, cropRect, typeCropRect);
+      const typeProbeCalib = probeCardTypeDiagnostics(video, nameCropVisual, typeCropRect);
+      const resolvedCalib = resolveVisionTypeAndRarityFromProbes(
+        typeProbeCalib,
+        rarityProbe,
+        typeProbeCalib.classifiedType,
+        rarityProbe.classifiedRarity
+      );
+      rarity = resolvedCalib.rarity;
+      cardType = resolvedCalib.cardType;
+      cardType = reconcileCardTypeWithRarity(
+        cardType,
+        rarity,
+        rarityProbe.plateColor,
+        typeProbeCalib.frameColor,
+        rarityProbe.plateType || typeProbeCalib.namePlateType
+      );
+      cardType = stabilizeDetectedCardType(cardType);
+      lastDetectedCardRarity = rarity;
+      lastDetectedCardType = cardType;
+      addOcrEvent('rarity_detected', T('ocr.log.rarity_detected', { rarity }), { rarity });
+    } catch (e) {
+      rarity = 'Comum';
     }
   }
   setVisionTypeRarity(cardType, rarity, { calibrating: true });
@@ -32762,10 +36518,13 @@ async function autoCalibrate() {
 
   let result = null;
   try {
-    result = await calibrator.autoOptimize(video, cropRect, cardType, rarity);
+    result = await calibrator.autoOptimize(video, cropRect, cardType, rarity, calibGen);
   } catch (err) {
     addOcrLog(T('ocr.log.calib_err', { msg: err.message }));
   } finally {
+    ocrAutoCalibrateBusy = false;
+    if (calibrator) calibrator.isCalibrating = false;
+    setVisionTypeRarity(cardType, rarity, { calibrating: false });
     if (progressToast && progressToast.parentNode) progressToast.remove();
     window.removeEventListener('calibrationProgress', onProgress);
     if (wasActive) {
@@ -32786,6 +36545,10 @@ async function autoCalibrate() {
       })
     );
     addOcrLog(T('ocr.log.calib_reading', { text: result.cleaned }));
+    if (cropRect && result.settings) {
+      const { suppressPreview: _x, ...previewSettings } = result.settings;
+      void runOcrWithSettings(video, cropRect, { ...previewSettings, suppressPreview: true }, cardType, rarity);
+    }
     showToast(T('toast.ocr_ok', { text: result.cleaned }));
   } else {
     addOcrLog(T('ocr.log.calib_no_ideal'));
@@ -32812,7 +36575,17 @@ function openCalibrator() {
     showToast(T('toast.ocr_wait'));
     return;
   }
-  autoCalibrate();
+  const btn = getEl('btn-open-calibrator');
+  if (btn) {
+    btn.disabled = true;
+    btn.setAttribute('aria-busy', 'true');
+  }
+  void autoCalibrate().finally(() => {
+    if (btn) {
+      btn.disabled = false;
+      btn.removeAttribute('aria-busy');
+    }
+  });
 }
 
 if (__DEBUG_CALIBRATOR) console.log('🔍 Verificando calibrador...');
