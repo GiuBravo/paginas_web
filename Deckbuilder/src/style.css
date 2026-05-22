@@ -1522,6 +1522,21 @@ html:not(.help-enabled) .filter-action-row .icon-btn-stack--tool .theme-row-labe
   min-width: 0;
   width: auto;
 }
+.ui-native-custom-select-panel.ui-native-custom-select-panel--ocr-manual {
+  min-width: 280px;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+.ui-native-custom-select-panel.ui-native-custom-select-panel--ocr-manual
+  .filter-combo-suggest-row--ocr-manual {
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+.ui-native-custom-select-panel.ui-native-custom-select-panel--ocr-manual
+  .filter-combo-suggest-row--ocr-manual
+  .filter-suggest-label {
+  white-space: nowrap;
+}
 .filter-full-add-stack {
   display: flex;
   flex-direction: column;

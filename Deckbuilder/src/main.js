@@ -7,7 +7,7 @@ window.__DECKBUILDER_MONOLITH__=true;
  * @copyright Cartas e dados de cartas: propriedade da Konami / bases públicas consultadas via API.
  *
  * @description Responsável pela UI: busca na API YGOPRODeck, filtros, montagem do deck
- * (principal, extra e side), exportações (PDF/ZIP), OCR opcional (Tesseract), i18n,
+ * (principal, extra e side), exportações (PDF/ZIP), OCR (Tesseract + Paddle foil), i18n,
  * validação de banlist/formatos e caches locais (ver código e `docs/DOCUMENTACAO.md`).
  *
  * @lastupdated 2026-05-01 — Ciclo de JSDoc da lógica da aplicação dado por encerrado: todas as `function` de topo têm `@returns` no bloco precedente; modais/handlers e `OCRCalibrator` documentados. Novas funções: manter o mesmo padrão (pt-BR, `@param`/`@returns`).
@@ -29,7 +29,7 @@ window.__DECKBUILDER_MONOLITH__=true;
  * ## Bibliotecas globais esperadas (`index.html`)
  * - `window.jspdf` (jsPDF) — exportação PDF.
  * - `JSZip` — empacotamento ZIP nas exportações.
- * - `Tesseract` — OCR quando a funcionalidade estiver em uso.
+ * - `Tesseract` — OCR base; Paddle (eSearch-OCR/onnx) para raridades foil no browser.
  *
  * ## Convenção de comentários
  * Português do Brasil; JSDoc com `@param` / `@returns`; ver `docs/CODING_STANDARDS.md` e `docs/DOCUMENTACAO.md`.
@@ -8197,10 +8197,46 @@ const STRINGS = {
   'ocr.btn.debug': { pt: 'EXPORTAR DEBUG (JSON)', en: 'EXPORT DEBUG (JSON)' },
   'ocr.btn.printbot': { pt: 'PRINT ROB\u00d4', en: 'PRINT BOT' },
   'ocr.crosshair': {
-    pt: '\uD83C\uDFAF Encaixe a carta na moldura azul (a verde \u00e9 s\u00f3 o nome, sem atributo)',
-    en: '\uD83C\uDFAF Fit the card in the blue frame (green is name only, no attribute)',
+    pt: '\uD83C\uDFAF Azul: carta \u00b7 Verde: nome \u00b7 Laranja estreita: ID',
+    en: '\uD83C\uDFAF Blue: card \u00b7 Green: name \u00b7 Narrow orange: ID',
   },
+  'ocr.preview.name_label': { pt: 'Nome lido', en: 'Name read' },
+  'ocr.preview.id_label': { pt: 'ID lido', en: 'ID read' },
+  'ocr.preview.id_hint': {
+    pt: 'Recorte da mira laranja (como a c\u00e2mara v\u00ea)',
+    en: 'Orange frame crop (camera view)',
+  },
+  'ocr.live.passcode_no_text': { pt: 'ID: \u2014', en: 'ID: \u2014' },
+  'ocr.live.passcode_reading': {
+    pt: 'ID: \u00ab{raw}\u00bb \u00b7 candidatos {cands} \u00b7 {engine} {conf}% \u00b7 {status}',
+    en: 'ID: \u00ab{raw}\u00bb \u00b7 candidates {cands} \u00b7 {engine} {conf}% \u00b7 {status}',
+  },
+  'ocr.log.passcode_reading': {
+    pt: 'ID {engine} {conf}% \u00ab{raw}\u00bb \u2192 {cands}',
+    en: 'ID {engine} {conf}% \u00ab{raw}\u00bb \u2192 {cands}',
+  },
+  'ocr.log.passcode_weak': {
+    pt: 'ID sem carta na base (\u00ab{raw}\u00bb)',
+    en: 'ID not in DB (\u00ab{raw}\u00bb)',
+  },
+  'ocr.log.passcode_hunt': {
+    pt: 'A ler passcode (mira laranja)\u2026',
+    en: 'Reading passcode (orange frame)\u2026',
+  },
+  'ocr.log.card_added_id': {
+    pt: '\u2705 {name} (passcode {id})',
+    en: '\u2705 {name} (passcode {id})',
+  },
+  'ocr.live.no_text': { pt: 'Leitura: \u2014', en: 'Reading: \u2014' },
+  'ocr.live.reading': {
+    pt: 'Leitura: \u00ab{text}\u00bb \u00b7 {engine} {conf}% \u00b7 {status}',
+    en: 'Read: \u00ab{text}\u00bb \u00b7 {engine} {conf}% \u00b7 {status}',
+  },
+  'ocr.live.status_match': { pt: 'match', en: 'match' },
+  'ocr.live.status_weak': { pt: 'sem match na base', en: 'no DB match' },
+  'ocr.live.status_hunt': { pt: 'a procurar\u2026', en: 'searching\u2026' },
   'ocr.manual.auto': { pt: 'Auto (detectar)', en: 'Auto (detect)' },
+  'ocr.manual.auto_short': { pt: 'Auto', en: 'Auto' },
   'ocr.manual.title': {
     pt: '\u2699\ufe0f Configura\u00e7\u00e3o Manual',
     en: '\u2699\ufe0f Manual setup',
@@ -8241,18 +8277,39 @@ const STRINGS = {
   'ocr.log.zoom': { pt: '\uD83D\uDD0D Zoom: {zoom}x', en: '\uD83D\uDD0D Zoom: {zoom}x' },
   'ocr.log.focus_manual': { pt: '\uD83D\uDD0D Foco manual', en: '\uD83D\uDD0D Manual focus' },
   'ocr.log.tesseract_loading': { pt: '\uD83E\uDDE0 A carregar Tesseract\u2026', en: '\uD83E\uDDE0 Loading Tesseract\u2026' },
-  'ocr.log.tesseract_ready': { pt: '\u2705 OCR pronto!', en: '\u2705 OCR ready!' },
+  'ocr.log.tesseract_ready': { pt: '\u2705 Tesseract pronto!', en: '\u2705 Tesseract ready!' },
   'ocr.log.tesseract_fail': { pt: '\u274C Tesseract: {msg}', en: '\u274C Tesseract: {msg}' },
+  'ocr.log.paddle_loading': {
+    pt: '\uD83E\uDDE0 A carregar OCR avan\u00e7ado (foil)\u2026',
+    en: '\uD83E\uDDE0 Loading advanced OCR (foil)\u2026',
+  },
+  'ocr.log.paddle_ready': { pt: '\u2705 OCR foil (Paddle) pronto', en: '\u2705 Foil OCR (Paddle) ready' },
+  'ocr.log.paddle_fail': {
+    pt: '\u26A0\uFE0F OCR foil indispon\u00edvel: {msg}',
+    en: '\u26A0\uFE0F Foil OCR unavailable: {msg}',
+  },
+  'ocr.framing.seeking': {
+    pt: '\uD83D\uDCD0 Alinhe a carta \u00e0 moldura azul',
+    en: '\uD83D\uDCD0 Align the card to the blue frame',
+  },
+  'ocr.framing.aligned': { pt: '\u2713 Enquadrado', en: '\u2713 Framed' },
   'ocr.log.scanning': { pt: '\uD83D\uDD0D A digitalizar\u2026', en: '\uD83D\uDD0D Scanning\u2026' },
   'ocr.log.error': { pt: '\u274C Erro: {msg}', en: '\u274C Error: {msg}' },
-  'ocr.log.reading': { pt: '\uD83D\uDCD6 \u201c{text}\u201d', en: '\uD83D\uDCD6 \u201c{text}\u201d' },
+  'ocr.log.reading': {
+    pt: 'Leitura {engine} {conf}% \u00b7 \u00ab{text}\u00bb',
+    en: 'Read {engine} {conf}% \u00b7 \u00ab{text}\u00bb',
+  },
   'ocr.log.scan_weak': {
-    pt: '\uD83D\uDD0E Lido \u00ab{text}\u00bb \u2014 sem correspond\u00eancia na base',
-    en: '\uD83D\uDD0E Read \u00ab{text}\u00bb \u2014 no database match',
+    pt: '\uD83D\uDD0E \u00ab{text}\u00bb ({engine} {conf}%) \u2014 sem match',
+    en: '\uD83D\uDD0E \u00ab{text}\u00bb ({engine} {conf}%) \u2014 no match',
   },
   'ocr.log.scan_hunting': {
-    pt: '\uD83D\uDD0D A procurar nome\u2026 (tipo: {type})',
-    en: '\uD83D\uDD0D Looking for name\u2026 (type: {type})',
+    pt: 'Sem leitura do nome \u00b7 {typeShort}',
+    en: 'No name read \u00b7 {typeShort}',
+  },
+  'ocr.log.scan_pass': {
+    pt: '\uD83D\uDD0D Pass {pass}: \u00ab{text}\u00bb ({engine} {conf}%)',
+    en: '\uD83D\uDD0D Pass {pass}: \u00ab{text}\u00bb ({engine} {conf}%)',
   },
   'ocr.log.card_added': { pt: '\u2705 {name}', en: '\u2705 {name}' },
   'ocr.vision.type_rarity': {
@@ -14968,7 +15025,14 @@ function positionNativeCustomSelectPanel(anchor) {
   const bottomLimit = vOffTop + vh - pad;
   const rightLimit = vOffLeft + vw - pad;
   if (kind === 'api-lang') panel.style.width = `${Math.round(Math.max(r.width, 1))}px`;
-  else panel.style.width = `${Math.round(Math.max(r.width, 160))}px`;
+  else if (kind === 'ocr-manual-type' || kind === 'ocr-manual-rarity') {
+    const manualPanel = getEl('ocr-manual-panel');
+    const panelW = manualPanel ? manualPanel.getBoundingClientRect().width : 0;
+    const minOcrManual = 280;
+    const wantW = Math.max(Math.round(r.width), Math.round(panelW), minOcrManual);
+    const maxW = Math.max(minOcrManual, Math.floor(rightLimit - (vOffLeft + pad) - 4));
+    panel.style.width = `${Math.min(wantW, maxW)}px`;
+  } else panel.style.width = `${Math.round(Math.max(r.width, 160))}px`;
   panel.style.removeProperty('bottom');
   panel.style.display = 'block';
 
@@ -15190,14 +15254,14 @@ async function commitNativeCustomSelect(kind, value) {
     setApiCardLang(value);
   } else if (kind === 'ocr-manual-type' || kind === 'ocr-manual-rarity') {
     try {
-      if (document.documentElement.classList.contains('ocr-scanner-active')) {
-        const mt = String(getVal('manual-card-type', 'AUTO'));
-        const rr = String(getVal('manual-rarity', 'Comum'));
-        setVisionTypeRarity(mt, rr, { calibrating: false });
-      }
+      syncOcrManualRowDisplays(lastDetectedCardType, lastDetectedCardRarity, { calibrating: false });
     } catch (_) {}
   }
-  if (ctx && ctx.selId) syncNativeCustomSelectTrigger(ctx.selId);
+  if (ctx && ctx.selId) {
+    if (ctx.selId === 'manual-card-type' || ctx.selId === 'manual-rarity')
+      syncOcrManualRowDisplays(lastDetectedCardType, lastDetectedCardRarity);
+    else syncNativeCustomSelectTrigger(ctx.selId);
+  }
 }
 
 /**
@@ -15210,6 +15274,10 @@ function refreshNativeCustomSelectPanel() {
   const ctx = nativeCustomSelectCtx;
   if (!ctx || !ctx.sel) return;
   panel.classList.toggle('ui-native-custom-select-panel--api-lang', ctx.kind === 'api-lang');
+  panel.classList.toggle(
+    'ui-native-custom-select-panel--ocr-manual',
+    ctx.kind === 'ocr-manual-type' || ctx.kind === 'ocr-manual-rarity'
+  );
   const sel = ctx.sel;
   const kind = ctx.kind;
   panel.innerHTML = '';
@@ -15298,15 +15366,7 @@ function syncNativeCustomSelectTrigger(selId) {
     return;
   }
   if (selId === 'manual-card-type' || selId === 'manual-rarity') {
-    const si = sel.selectedIndex;
-    const opt = si >= 0 && sel.options[si] ? sel.options[si] : null;
-    const v = opt ? String(opt.value || '') : '';
-    const lab = (opt && opt.textContent && opt.textContent.trim()) || v || '—';
-    const ik = selId === 'manual-card-type' ? 'ocrManualType' : 'ocrManualRarity';
-    btn.innerHTML = filterSuggestRowInnerHtml(ik, { value: v, label: lab });
-    btn.classList.add('ocr-manual-select-trigger');
-    btn.setAttribute('title', lab);
-    btn.setAttribute('aria-label', lab);
+    syncOcrManualRowDisplays(lastDetectedCardType, lastDetectedCardRarity);
     return;
   }
   const i = sel.selectedIndex;
@@ -15455,6 +15515,14 @@ function autosizeResultsSortTrigger() {
   if (sel) sel.style.width = `${w}px`;
 }
 
+/** Tipo/raridade detetados no último frame (UI OCR); declarados cedo — {@link initNativeSelectCustomUi} pode correr antes do bloco OCR. */
+let lastDetectedCardType = null;
+let lastStableDetectedCardType = null;
+let lastStableDetectedCardTypeAt = 0;
+let lastDetectedCardRarity = null;
+let lastStableDetectedCardRarity = null;
+let lastStableDetectedCardRarityAt = 0;
+
 /**
  * Atualiza todos os triggers custom após mudança de idioma ou reconstrução de opções.
  *
@@ -15467,8 +15535,7 @@ function syncAllNativeCustomSelectTriggers() {
   syncNativeCustomSelectTrigger('deck-banlist-select');
   syncNativeCustomSelectTrigger('deck-sort-by');
   syncNativeCustomSelectTrigger('select-api-card-lang');
-  syncNativeCustomSelectTrigger('manual-card-type');
-  syncNativeCustomSelectTrigger('manual-rarity');
+  syncOcrManualRowDisplays(lastDetectedCardType, lastDetectedCardRarity);
 }
 
 /**
@@ -15497,8 +15564,6 @@ function initNativeSelectCustomUi() {
     { selId: 'deck-banlist-select', kind: 'deck-banlist' },
     { selId: 'deck-sort-by', kind: 'deck-sort' },
     { selId: 'select-api-card-lang', kind: 'api-lang' },
-    { selId: 'manual-card-type', kind: 'ocr-manual-type' },
-    { selId: 'manual-rarity', kind: 'ocr-manual-rarity' },
   ];
   for (let _cfg = 0; _cfg < configs.length; _cfg++) {
     const { selId, kind } = configs[_cfg];
@@ -15555,6 +15620,7 @@ function initNativeSelectCustomUi() {
   const dSel = getEl('deck-sort-by');
   if (dSel) dSel.addEventListener('change', () => void deckSortAndRefresh());
   syncAllNativeCustomSelectTriggers();
+  initOcrManualCompactUi();
 }
 
 /**
@@ -29430,8 +29496,60 @@ const TESSERACT_WORKER_OPTIONS = Object.freeze({
   langPath: 'https://tessdata.projectnaptha.com/4.0.0',
   gzip: true,
 });
+/** Parâmetros Tesseract para faixa do nome (restaurados após OCR de passcode). */
+const TESSERACT_NAME_OCR_PARAMS = Object.freeze({
+  tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 ,:ÁÉÍÓÚÂÊÎÔÛÃÕÇ',
+  tessedit_pageseg_mode: '7',
+});
+/** Só dígitos — passcode no canto da carta. */
+const TESSERACT_PASSCODE_OCR_PARAMS = Object.freeze({
+  tessedit_char_whitelist: '0123456789',
+  tessedit_pageseg_mode: '8',
+});
 /** Worker Tesseract (`Tesseract.createWorker()`); `null` até o primeiro scan bem-sucedido. */
 let ocrWorker = null;
+/** Import dinâmico de `ocr-paddle.mjs` (Paddle / foil). */
+let paddleOcrModulePromise = null;
+/** Último instante de inferência Paddle (throttle mobile/desktop). */
+let lastPaddleRecognizeAt = 0;
+/** Último OCR de passcode (throttle — alivia travadas na câmara). */
+let lastPasscodeOcrAt = 0;
+/** Promessa do OCR de passcode em curso (não bloqueia o loop de frames). */
+let passcodeOcrInFlight = null;
+/** Última sonda rápida tipo/raridade (sem Tesseract). */
+let lastVisionProbeAt = 0;
+/** Loop rAF só para previews Nome/ID (independente do OCR pesado). */
+let ocrPreviewLoopActive = false;
+let ocrPreviewLoopRaf = 0;
+/** Canvas reutilizados no preview ao vivo (evita alocação por frame). */
+let ocrLivePasscodeScratch = null;
+let ocrLiveNameScratch = null;
+/** Último paint do preview «robô» (throttle CPU). */
+let lastOcrPreviewPaintAt = 0;
+/** Última linha em `#ocr-passcode-live-read`. */
+let lastOcrPasscodeLiveReadKey = '';
+/** Dedupe de logs do canal passcode. */
+let lastOcrPasscodeLogKey = '';
+/** Canvas reutilizado no OCR de passcode. */
+let passcodeOcrCanvasReuse = null;
+/** Canvas só para o preview legível do ID (não partilhar com OCR). */
+let passcodePreviewEnhCanvas = null;
+/** Última tentativa de leitura de passcode (para UI/log). */
+let lastPasscodeSidecar = null;
+/** Histórico de luminância para feedback de enquadramento. */
+const ocrFramingLumHistory = [];
+/** `seeking` | `aligned` */
+let ocrFramingState = 'seeking';
+/** Última linha exibida em `#ocr-live-read` (evita repintar igual). */
+let lastOcrLiveReadKey = '';
+/** Último texto enviado ao log de leitura OCR. */
+let lastOcrLogReadKey = '';
+/** Evita repetir a mesma linha «sem leitura». */
+let lastOcrHuntLogKey = '';
+/** Timer do próximo ciclo OCR (evita empilhar timeouts). */
+let ocrFrameScheduleTimer = 0;
+/** `true` após {@link initPaddleOcrRec} bem-sucedido na sessão. */
+let paddleOcrReadyFlag = false;
 /** Quando verdadeiro, o loop {@link processOcrFrame} continua ativo. */
 let isOcrActive = false;
 /** Evita sobreposição de OCR no mesmo instante. */
@@ -29450,6 +29568,10 @@ let scannerFoundCardIds = new Set();
 let scannerFoundCardById = new Map();
 /** Cooldown curto após match para não inundar a API. */
 let processingCooldown = false;
+/** Pausa só o toast/UI após match; OCR continua (ms). */
+const OCR_SCANNER_COOLDOWN_MS = 380;
+/** Chave da cena (carta enquadrada) — troca de carta limpa cooldown/throttle ID. */
+let lastScannerSceneKey = '';
 /** Evita chamadas concorrentes a {@link startScanner} (duplo clique / propagacao). */
 let scannerStartInFlight = false;
 /** Evita recursão quando {@link updateScannerResultsUI} delega a {@link renderResults} com `searchResults` temporário. */
@@ -29476,15 +29598,6 @@ let lastOcrScanStatusLogAt = 0;
 let lastOcrFrameErrorLogAt = 0;
 /** Limite de amostras por sessão antes de ignorar novas (mantém o JSON descarregável). */
 const OCR_DIAG_MAX_SAMPLES = 120;
-/** Tipo de carta inferido no último frame processado (UI). */
-let lastDetectedCardType = null;
-/** Tipo estabilizado (evita saltos Armadilha ↔ Sincro entre frames). */
-let lastStableDetectedCardType = null;
-let lastStableDetectedCardTypeAt = 0;
-/** Raridade inferida no último frame (UI / passes OCR). */
-let lastDetectedCardRarity = null;
-let lastStableDetectedCardRarity = null;
-let lastStableDetectedCardRarityAt = 0;
 let lastScanHapticKey = '';
 let lastScanHapticTime = 0;
 
@@ -29565,16 +29678,11 @@ function isGarbageText(text) {
 
 /** Palavras curtas (≤2 letras) mantidas na normalização OCR. */
 const SMART_NORMALIZE_VALID_SHORT = new Set(['OF', 'TO', 'A', 'DE', 'DO']);
-/** Atributos de carta Yu-Gi-Oh que o OCR costuma ler no frame e não fazem parte do nome. */
-const SMART_NORMALIZE_BAD_WORDS = new Set([
-  'LUZ',
-  'TREVAS',
-  'FOGO',
-  'ÁGUA',
-  'VENTO',
-  'TERRA',
-  'DIVINO',
-]);
+/**
+ * Atributos que às vezes entram no recorte do nome (ícone no frame).
+ * Não incluir LUZ/TREVAS — fazem parte de nomes reais (ex.: Senhor Dragão da Luz e das Trevas).
+ */
+const SMART_NORMALIZE_BAD_WORDS = new Set(['FOGO', 'AGUA', 'VENTO', 'TERRA', 'DIVINO']);
 
 /**
  * Normaliza texto OCR: maiúsculas, remove ruído, corta até ~6 tokens úteis (alinhado a `mobile_camera.html`).
@@ -29597,11 +29705,14 @@ function repairOcrLetterDigitConfusion(text) {
     .replace(/\bDR1AGON\b/g, 'DRAGON')
     .replace(/\bDRAG0N\b/g, 'DRAGON')
     .replace(/\bDRAGO\b(?![A-Z])/g, 'DRAGON')
+    .replace(/\bDRAGAO\b/g, 'DRAGON')
+    .replace(/\bDRAGAD\b/g, 'DRAGON')
     .replace(/\bVENOMY\b/g, 'VENOM')
     .replace(/\bVENEMY\b/g, 'VENOM')
     .replace(/\bPREDAPLA/g, 'PREDAPLANT')
     .replace(/\bQUAERITIE\b/g, 'QUAERITIS')
-    .replace(/\bOURERTIE\b/g, 'QUAERITIS');
+    .replace(/\bOURERTIE\b/g, 'QUAERITIS')
+    .replace(/\b7\s*,?\s*7\b/g, 'LUZ');
 }
 
 function smartNormalize(text) {
@@ -29616,11 +29727,12 @@ function smartNormalize(text) {
   for (let i = 0; i < parts.length; i++) {
     const w = parts[i];
     if (!w) continue;
+    if (/^\d+$/.test(w)) continue;
     if (w.length <= 2 && !SMART_NORMALIZE_VALID_SHORT.has(w)) continue;
-    if (SMART_NORMALIZE_BAD_WORDS.has(w)) continue;
+    if (SMART_NORMALIZE_BAD_WORDS.has(w) && parts.length <= 3) continue;
     if (w.length < 2) continue;
     out.push(w);
-    if (out.length >= 6) break;
+    if (out.length >= 12) break;
   }
   if (out.length === 0) return '';
   return out.join(' ').replace(/\s+/g, ' ').trim();
@@ -29665,6 +29777,50 @@ const cardCacheAPI = new Map();
 const fnameRawCache = new Map();
 const FNAME_RAW_CACHE_MAX = 120;
 
+/**
+ * Palavras estruturais PT → EN para queries `fname` (genérico, não nomes de cartas).
+ * @type {ReadonlyMap<string, string>}
+ */
+const FNAME_PT_TO_EN_STRUCTURAL = new Map([
+  ['DRAGAO', 'DRAGON'],
+  ['DRAGAD', 'DRAGON'],
+  ['FUSAO', 'FUSION'],
+  ['MAGICA', 'SPELL'],
+  ['ARMADILHA', 'TRAP'],
+  ['SINCRO', 'SYNCHRO'],
+  ['PENDULO', 'PENDULUM'],
+  ['GUERREIRO', 'WARRIOR'],
+  ['TREVAS', 'DARKNESS'],
+  ['LUZ', 'LIGHT'],
+  ['AGUA', 'WATER'],
+  ['VENTO', 'WIND'],
+  ['TERRA', 'EARTH'],
+  ['FOGO', 'FIRE'],
+  ['DIVINO', 'DIVINE'],
+  ['MACHINE', 'MACHINE'],
+  ['MAQUINA', 'MACHINE'],
+  ['ZUMBI', 'ZOMBIE'],
+  ['FADA', 'FAIRY'],
+  ['BESTA', 'BEAST'],
+  ['DINOSSAURO', 'DINOSAUR'],
+  ['WINGED', 'WINGED'],
+  ['ASA', 'WINGED'],
+]);
+
+/**
+ * Tokens EN derivados do OCR PT para a API indexar nomes em inglês.
+ * @param {Set<string>} partSet
+ * @returns {string[]}
+ */
+function fnameEnStructuralTokensFromPt(partSet) {
+  const extra = [];
+  for (const tok of partSet) {
+    const en = FNAME_PT_TO_EN_STRUCTURAL.get(tok);
+    if (en && !partSet.has(en)) extra.push(en);
+  }
+  return extra;
+}
+
 /** A API costuma não aceitar (ou não achar) fname com várias palavras; usamos 1 token forte por requisição. */
 function fnameTokensForApi(name) {
   const parts = normalizeForSim(name).split(' ');
@@ -29677,11 +29833,20 @@ function fnameTokensForApi(name) {
     seen.add(tok);
     uniq.push(tok);
   }
+  const partSet = new Set(uniq);
+  const companion = fnameEnStructuralTokensFromPt(partSet);
+  for (let ci = 0; ci < companion.length; ci++) {
+    const ct = companion[ci];
+    if (!seen.has(ct)) {
+      seen.add(ct);
+      uniq.push(ct);
+    }
+  }
   uniq.sort((a, b) => b.length - a.length);
   const n = uniq.length;
   if (!n) return [];
-  if (n <= 3) return uniq;
-  return [uniq[0], uniq[1], uniq[2]];
+  if (n <= 5) return uniq;
+  return uniq.slice(0, 5);
 }
 
 /**
@@ -29781,6 +29946,18 @@ function scoreCardAgainstOcr(card, ocrNormLower) {
       s *= 0.55;
     }
     score = Math.max(score, s);
+  }
+  const qU = qNorm.toUpperCase();
+  if (qU.includes('LUZ') && qU.includes('TREVAS')) {
+    for (const cNorm of uniq) {
+      const cU = cNorm.toUpperCase();
+      if (
+        (cU.includes('LIGHT') || cU.includes('LUZ')) &&
+        (cU.includes('DARKNESS') || cU.includes('TREVAS'))
+      ) {
+        score = Math.max(score, 0.74);
+      }
+    }
   }
   return score;
 }
@@ -30300,6 +30477,51 @@ function cardNormalizedNames(card) {
 }
 
 /**
+ * Tokens do OCR (≥4) que não correspondem a nenhuma parte do nome da carta (evita «Senhor dos Dragões» com «…DAS TREV»).
+ * @param {string} ocrNormUpper
+ * @param {string} cardNormUpper
+ * @returns {number}
+ */
+/**
+ * Artigos/preposições PT no OCR que não batem com o nome da carta (ex.: OCR «DAS» vs carta «DOS»).
+ * @param {string} ocrNormUpper
+ * @param {string} cardNormUpper
+ * @returns {boolean}
+ */
+function ocrPtParticleMismatch(ocrNormUpper, cardNormUpper) {
+  const ocrSet = new Set(ocrNormUpper.split(/\s+/).filter(Boolean));
+  const cardParts = cardNormUpper.split(/\s+/).filter(Boolean);
+  const pairs = [
+    ['DAS', 'DOS'],
+    ['DOS', 'DAS'],
+    ['DA', 'DO'],
+    ['DO', 'DA'],
+  ];
+  for (const [inOcr, inCard] of pairs) {
+    if (ocrSet.has(inOcr) && cardParts.includes(inCard) && !ocrSet.has(inCard)) return true;
+  }
+  return false;
+}
+
+function countOcrOrphanTokensAgainstCard(ocrNormUpper, cardNormUpper) {
+  const cardParts = cardNormUpper.split(/\s+/).filter((w) => w.length >= 3);
+  const ocrParts = ocrNormUpper.split(/\s+/).filter((w) => w.length >= 4 && !OCR_STOP_WORDS.has(w));
+  let orphans = 0;
+  for (const op of ocrParts) {
+    let best = 0;
+    for (const cp of cardParts) {
+      if (ocrTokenMatchesCardName(op, cardNormUpper)) {
+        best = 1;
+        break;
+      }
+      best = Math.max(best, calculateSimilarity(op.toLowerCase(), cp.toLowerCase()));
+    }
+    if (best < 0.68) orphans++;
+  }
+  return orphans;
+}
+
+/**
  * Match “forte” do OCR contra um único nome normalizado `b` (tokens, similaridade, palavras genéricas).
  * @param {string} ocrCleaned Texto OCR (pode ter caixa mista; será normalizado dentro).
  * @param {string} b Nome de carta já `normalizeForSim`.
@@ -30313,6 +30535,29 @@ function isStrongMatchAgainstB(ocrCleaned, b) {
   const sim = calculateSimilarity(a.toLowerCase(), b.toLowerCase());
   const overlap = scoreOcrDistinctiveTokenOverlap(a, b);
   const cardTokens = b.split(' ').filter((w) => w.length >= 4 && !OCR_STOP_WORDS.has(w));
+  const aParts = a.split(' ');
+  let meaningfulWordCount = 0;
+  for (let mi = 0; mi < aParts.length; mi++) {
+    const w = aParts[mi];
+    if (w && w.length >= 3) meaningfulWordCount++;
+  }
+  let cardWordCount = 0;
+  const bParts = b.split(' ');
+  for (let bi = 0; bi < bParts.length; bi++) {
+    if (bParts[bi]) cardWordCount++;
+  }
+  const orphans = countOcrOrphanTokensAgainstCard(a, b);
+  if (ocrPtParticleMismatch(a, b)) return false;
+  const aSet = new Set(a.split(/\s+/).filter(Boolean));
+  if (aSet.has('LUZ') && aSet.has('TREVAS')) {
+    const bHasLuz = b.includes('LUZ') || b.includes('LIGHT');
+    const bHasTrevas = b.includes('TREVAS') || b.includes('DARKNESS');
+    if (!bHasLuz || !bHasTrevas) return false;
+  }
+  if (orphans >= 2) return false;
+  if (orphans >= 1 && cardWordCount <= 5 && meaningfulWordCount >= 4) return false;
+  if (cardWordCount <= 4 && meaningfulWordCount >= 3 && overlap < 0.85 && sim < 0.72) return false;
+  if (cardWordCount <= 4 && meaningfulWordCount > cardWordCount && sim < 0.65) return false;
   if (hasOcrNearMissDistinctiveToken(a, b) && sim < 0.96) return false;
   if (cardTokens.length >= 4 && overlap < 0.38) return false;
   if (cardTokens.length >= 2 && overlap < 0.45 && sim < 0.52) return false;
@@ -30328,7 +30573,6 @@ function isStrongMatchAgainstB(ocrCleaned, b) {
     }
     if (!found) return false;
   }
-  const aParts = a.split(' ');
   let good = goodTokensFromNormalizedParts(aParts, 6);
   if (good.length >= 2) {
     for (let i = 0; i < aParts.length; i++) {
@@ -30340,20 +30584,11 @@ function isStrongMatchAgainstB(ocrCleaned, b) {
   let hits = 0;
   for (const tok of good) if (ocrTokenMatchesCardName(tok, b)) hits++;
 
-  let meaningfulWordCount = 0;
-  for (let i = 0; i < aParts.length; i++) {
-    const w = aParts[i];
-    if (w && w.length >= 3) meaningfulWordCount++;
-  }
-  let cardWordCount = 0;
-  const bParts = b.split(' ');
-  for (let bi = 0; bi < bParts.length; bi++) {
-    if (bParts[bi]) cardWordCount++;
-  }
-
   if (good.length >= 2) {
     if (good.length === 2) {
       if (hits < 2) return false;
+      if (meaningfulWordCount >= cardWordCount + 1 && sim < 0.58) return false;
+      if (orphans >= 1 && cardWordCount <= 5) return false;
     } else {
       if (hits < 2 || sim < 0.45) return false;
     }
@@ -30442,22 +30677,209 @@ function isStrongMatch(ocrCleaned, card, visionContext) {
 }
 
 /**
- * Acrescenta linha no painel `#ocr-log` (máx. ~40 filhos).
+ * Abrevia tipo de carta para logs (uma linha, sem quebra).
+ * @param {string} cardType
+ * @returns {string}
+ */
+function ocrCardTypeShort(cardType) {
+  const t = String(cardType || '?');
+  const map = {
+    'Monstro Xyz': 'Xyz',
+    'Monstro Fusão': 'Fusão',
+    'Monstro Fusao': 'Fusão',
+    'Monstro Sincro': 'Sincro',
+    'Monstro Efeito': 'Efeito',
+    'Monstro Normal': 'Normal',
+    'Monstro Ritual': 'Ritual',
+    'Monstro Link': 'Link',
+    'Monstro Pêndulo': 'Pêndulo',
+    Magia: 'Magia',
+    Armadilha: 'Armadilha',
+    Ficha: 'Ficha',
+  };
+  return map[t] || t.replace(/^Monstro\s+/i, '').slice(0, 14);
+}
+
+/**
+ * Confiança OCR para exibição.
+ * @param {object|null|undefined} pack
+ * @returns {string}
+ */
+function ocrPackConfDisplay(pack) {
+  if (!pack || typeof pack.confidence !== 'number' || !isFinite(pack.confidence)) return '—';
+  return String(Math.round(pack.confidence));
+}
+
+/** Ícone por tipo de linha no painel `#ocr-log` (só se a mensagem ainda não tiver emoji/símbolo). */
+const OCR_LOG_KIND_ICON = Object.freeze({
+  info: '💬',
+  read: '📖',
+  weak: '⚠️',
+  hunt: '🔍',
+  ok: '✅',
+  warn: '⚠️',
+  err: '❌',
+  id: '🔢',
+});
+
+/**
  * @param {string} msg
+ * @returns {boolean}
+ */
+function ocrLogMessageHasLeadingIcon(msg) {
+  const s = String(msg || '').trimStart();
+  if (!s) return false;
+  if (/^[>\u2713\u2714\u2699\u23F3]/.test(s)) return true;
+  if (/^[\u2705\u274C\u26A0\uFE0F\uD83C-\uDBFF]/.test(s)) return true;
+  try {
+    if (/^[\p{Extended_Pictographic}\u{1F1E6}-\u{1F1FF}]/u.test(s)) return true;
+  } catch (_) {}
+  return false;
+}
+
+/**
+ * Acrescenta linha no painel `#ocr-log` (máx. ~36 filhos).
+ * @param {string} msg Texto (sem hora).
+ * @param {'info'|'read'|'weak'|'hunt'|'ok'|'warn'|'err'|'id'} [kind]
  * @returns {void}
  */
-function addOcrLog(msg) {
+function addOcrLog(msg, kind = 'info') {
   const logBox = getEl('ocr-log');
   if (!logBox) return;
   const loc = getUiLang() === 'pt' ? 'pt-BR' : 'en-US';
-  const t = new Date().toLocaleTimeString(loc, { hour12: false });
+  const t = new Date().toLocaleTimeString(loc, { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
   const div = document.createElement('div');
-  div.style.cssText =
-    'border-bottom:1px solid #333; padding:3px 0; font-size:12px; color:#9cf0b8; font-family:ui-monospace,Consolas,monospace;';
-  div.textContent = `[${t}] ${msg}`;
+  div.className = `ocr-log-line ocr-log-line--${kind}`;
+  const displayMsg = ocrLogMessageHasLeadingIcon(msg)
+    ? msg
+    : `${OCR_LOG_KIND_ICON[kind] || OCR_LOG_KIND_ICON.info} ${msg}`;
+  div.title = displayMsg;
+  const colors = {
+    info: '#9cf0b8',
+    read: '#b8e0ff',
+    weak: '#ffd27a',
+    hunt: '#8aa3b8',
+    ok: '#5dff9a',
+    warn: '#ffc266',
+    err: '#ff8a8a',
+    id: '#f5d08a',
+  };
+  div.style.cssText = [
+    'display:block',
+    'border-bottom:1px solid rgba(255,255,255,0.06)',
+    'padding:4px 2px',
+    'font-size:11px',
+    'line-height:1.25',
+    'white-space:nowrap',
+    'overflow:hidden',
+    'text-overflow:ellipsis',
+    'max-width:100%',
+    `color:${colors[kind] || colors.info}`,
+    "font-family:ui-monospace,Consolas,monospace",
+  ].join(';');
+  div.textContent = `${t}  ${displayMsg}`;
   logBox.prepend(div);
-  if (logBox.childElementCount > 40) logBox.removeChild(logBox.lastChild);
-  ocrDiagnosticsPushLogMirror(msg);
+  if (logBox.childElementCount > 36) logBox.removeChild(logBox.lastChild);
+  ocrDiagnosticsPushLogMirror(displayMsg);
+}
+
+/**
+ * Regista no log o resultado de um frame (deduplica leituras repetidas).
+ * @param {null|{ cleaned?: string, card?: object|null, pack?: object }} outcome
+ * @returns {void}
+ */
+function logOcrFrameOutcome(outcome) {
+  const typeShort = ocrCardTypeShort(lastDetectedCardType);
+  if (!outcome || !outcome.cleaned) {
+    const huntKey = `hunt|${typeShort}`;
+    if (huntKey === lastOcrHuntLogKey) return;
+    lastOcrHuntLogKey = huntKey;
+    addOcrLog(T('ocr.log.scan_hunting', { typeShort }), 'hunt');
+    return;
+  }
+  lastOcrHuntLogKey = '';
+  const pack = outcome.pack || {};
+  const eng = ocrEngineLabel(pack.ocrEngine);
+  const conf = ocrPackConfDisplay(pack);
+  const text = String(outcome.cleaned).slice(0, 56);
+  if (outcome.card) {
+    const readKey = `ok|${outcome.card.id}|${text}|${outcome.matchSource || ''}`;
+    if (readKey !== lastOcrLogReadKey) {
+      lastOcrLogReadKey = readKey;
+      if (outcome.matchSource === 'passcode') {
+        addOcrLog(
+          T('ocr.log.card_added_id', {
+            name: displayNameForApiCard(outcome.card),
+            id: String(outcome.card.id),
+          }),
+          'ok'
+        );
+      } else {
+        addOcrLog(T('ocr.log.card_added', { name: displayNameForApiCard(outcome.card) }), 'ok');
+      }
+      addOcrLog(T('ocr.log.reading', { text, engine: eng, conf }), 'read');
+    }
+    return;
+  }
+  const readKey = `r|${eng}|${conf}|${text}`;
+  if (readKey === lastOcrLogReadKey) return;
+  lastOcrLogReadKey = readKey;
+  addOcrLog(T('ocr.log.reading', { text, engine: eng, conf }), 'read');
+  addOcrLog(T('ocr.log.scan_weak', { text, engine: eng, conf: String(conf) }), 'weak');
+}
+
+/**
+ * Intervalo entre ciclos OCR (alivia travadas na pré-visualização da câmara).
+ * @returns {number}
+ */
+function getOcrFrameGapMs() {
+  if (ocrDiagnosticsCaptureActive) return 1000;
+  try {
+    const dm = navigator.deviceMemory;
+    const mobile =
+      (typeof dm === 'number' && dm > 0 && dm < 4) ||
+      (window.matchMedia('(pointer: coarse)').matches && window.matchMedia('(max-width: 900px)').matches);
+    return mobile ? 720 : 520;
+  } catch (e) {
+    return 620;
+  }
+}
+
+/**
+ * Intervalo mínimo entre OCR de passcode (corre em paralelo ao nome, mas com menos frequência).
+ * @returns {number}
+ */
+function passcodeOcrThrottleMs() {
+  try {
+    const dm = navigator.deviceMemory;
+    const mobile =
+      (typeof dm === 'number' && dm > 0 && dm < 4) ||
+      (window.matchMedia('(pointer: coarse)').matches && window.matchMedia('(max-width: 900px)').matches);
+    return mobile ? 620 : 420;
+  } catch (e) {
+    return 500;
+  }
+}
+
+/** @returns {boolean} */
+function canRunPasscodeOcrNow() {
+  return Date.now() - lastPasscodeOcrAt >= passcodeOcrThrottleMs();
+}
+
+/**
+ * Agenda o próximo {@link processOcrFrame} (um timer de cada vez).
+ * @returns {void}
+ */
+function scheduleNextOcrFrame() {
+  if (ocrFrameScheduleTimer) {
+    clearTimeout(ocrFrameScheduleTimer);
+    ocrFrameScheduleTimer = 0;
+  }
+  const gap = getOcrFrameGapMs();
+  ocrFrameScheduleTimer = setTimeout(() => {
+    ocrFrameScheduleTimer = 0;
+    if (isOcrActive) requestAnimationFrame(processOcrFrame);
+  }, gap);
 }
 
 /**
@@ -30902,8 +31324,8 @@ function toggleOcrDiagnosticsCapture() {
   const analysisSummary = buildOcrDiagnosticsExportSummary(session);
   const payload = {
     schemaVersion: 3,
-    purpose:
-      'Diagnóstico OCR: mira verde (nome), mira azul (tipo/cartão), faixa do robô, passes Tesseract. Exportado em ZIP.',
+      purpose:
+      'Diagnóstico OCR: mira verde (nome), mira azul (carta), Tesseract + Paddle (foil). Exportado em ZIP.',
     exportedAt: endedAt,
     session,
     analysisSummary,
@@ -30919,6 +31341,7 @@ function toggleOcrDiagnosticsCapture() {
       dpr: typeof window !== 'undefined' && typeof window.devicePixelRatio === 'number' ? window.devicePixelRatio : null,
       tessedit_pageseg_mode: '7',
       ocrWorkerReady: !!ocrWorker,
+      paddleOcrReady: paddleOcrReadyFlag,
       ocrNameDstH: OCR_NAME_DST_H,
     },
   };
@@ -31062,6 +31485,10 @@ function recordOcrDiagnosticsSampleNow(video, nameCropVisual, nameCropOcr, typeC
           diagnostics: outcome.diagnostics || null,
           bestPassConfidence:
             outcome.pack && typeof outcome.pack.confidence === 'number' ? safeRound(outcome.pack.confidence, 1) : null,
+          ocrEngine:
+            (outcome.pack && outcome.pack.ocrEngine) ||
+            (outcome.diagnostics && outcome.diagnostics.ocrEngine) ||
+            null,
         }
       : { cleaned: null, matchedCardId: null, matchedDisplayName: null, diagnostics: null, note: 'no_valid_ocr_pipeline_result' },
   };
@@ -31126,6 +31553,182 @@ function safeRound(n, d = 2) {
 }
 
 /**
+ * @param {string} selId
+ * @returns {boolean}
+ */
+function isOcrManualSelectAuto(selId) {
+  const sel = getEl(selId);
+  return !!sel && String(sel.value || '') === 'AUTO';
+}
+
+/**
+ * Valor e rótulo exibidos na linha compacta (deteção quando AUTO, opção quando manual).
+ *
+ * @param {'manual-card-type'|'manual-rarity'} selId
+ * @param {string|null|undefined} detectedType
+ * @param {string|null|undefined} detectedRarity
+ * @returns {{ value: string, label: string }}
+ */
+function getOcrManualRowDisplayPair(selId, detectedType, detectedRarity) {
+  const sel = getEl(selId);
+  if (!sel) return { value: '—', label: '—' };
+  const auto = isOcrManualSelectAuto(selId);
+  if (auto) {
+    const raw =
+      selId === 'manual-card-type'
+        ? String(detectedType || lastDetectedCardType || '').trim()
+        : String(detectedRarity || lastDetectedCardRarity || '').trim();
+    const fallback = T('ocr.manual.auto');
+    const value = raw || '—';
+    const label = raw || fallback;
+    return { value, label };
+  }
+  const si = sel.selectedIndex;
+  const opt = si >= 0 && sel.options[si] ? sel.options[si] : null;
+  const value = opt ? String(opt.value || '') : '—';
+  const label = (opt && opt.textContent && opt.textContent.trim()) || value || '—';
+  return { value, label };
+}
+
+/**
+ * @param {'ocrManualType'|'ocrManualRarity'} ocrKind
+ * @param {string} value
+ * @param {string} label
+ * @returns {string}
+ */
+function ocrManualRowValueInnerHtml(ocrKind, value, label) {
+  return filterSuggestRowInnerHtml(ocrKind, { value, label });
+}
+
+/**
+ * Atualiza as linhas compactas Tipo / Raridade no painel OCR.
+ *
+ * @param {string|null|undefined} detectedType
+ * @param {string|null|undefined} detectedRarity
+ * @param {{ calibrating?: boolean }} [opts]
+ * @returns {void}
+ */
+function syncOcrManualRowDisplays(detectedType, detectedRarity, opts) {
+  const typePair = getOcrManualRowDisplayPair('manual-card-type', detectedType, detectedRarity);
+  const rarPair = getOcrManualRowDisplayPair('manual-rarity', detectedType, detectedRarity);
+  const typeBtn = getEl('btn-ocr-manual-type-value');
+  const rarBtn = getEl('btn-ocr-manual-rarity-value');
+  if (typeBtn) {
+    typeBtn.innerHTML = ocrManualRowValueInnerHtml('ocrManualType', typePair.value, typePair.label);
+    typeBtn.setAttribute('title', typePair.label);
+    typeBtn.setAttribute('aria-label', `${T('ocr.vision.k_type')}: ${typePair.label}`);
+  }
+  if (rarBtn) {
+    rarBtn.innerHTML = ocrManualRowValueInnerHtml('ocrManualRarity', rarPair.value, rarPair.label);
+    rarBtn.setAttribute('title', rarPair.label);
+    rarBtn.setAttribute('aria-label', `${T('ocr.vision.k_rarity')}: ${rarPair.label}`);
+  }
+  const typeAutoBtn = getEl('btn-ocr-manual-type-auto');
+  const rarAutoBtn = getEl('btn-ocr-manual-rarity-auto');
+  const typeAuto = isOcrManualSelectAuto('manual-card-type');
+  const rarAuto = isOcrManualSelectAuto('manual-rarity');
+  if (typeAutoBtn) {
+    typeAutoBtn.setAttribute('aria-pressed', typeAuto ? 'true' : 'false');
+    typeAutoBtn.classList.toggle('ocr-manual-row__auto--on', typeAuto);
+    typeAutoBtn.setAttribute('title', T('ocr.manual.auto'));
+  }
+  if (rarAutoBtn) {
+    rarAutoBtn.setAttribute('aria-pressed', rarAuto ? 'true' : 'false');
+    rarAutoBtn.classList.toggle('ocr-manual-row__auto--on', rarAuto);
+    rarAutoBtn.setAttribute('title', T('ocr.manual.auto'));
+  }
+  const calibEl = getEl('ocr-manual-calib-badge');
+  if (calibEl) {
+    const on = !!(opts && opts.calibrating);
+    calibEl.hidden = !on;
+    if (on) calibEl.textContent = T('ocr.vision.calibrating_badge');
+  }
+}
+
+/**
+ * @param {'manual-card-type'|'manual-rarity'} selId
+ * @param {boolean} auto
+ * @returns {void}
+ */
+function setOcrManualSelectAuto(selId, auto) {
+  const sel = getEl(selId);
+  if (!sel) return;
+  if (auto) sel.value = 'AUTO';
+  syncOcrManualRowDisplays(lastDetectedCardType, lastDetectedCardRarity);
+}
+
+/**
+ * Remove wraps antigos do select custom (migração de sessões anteriores).
+ *
+ * @param {string} selId
+ * @returns {void}
+ */
+function unwrapOcrManualNativeSelect(selId) {
+  const sel = getEl(selId);
+  if (!sel) return;
+  const wrap = sel.closest('.custom-select-wrap--ocr-manual');
+  if (!wrap || !wrap.parentNode) return;
+  wrap.parentNode.insertBefore(sel, wrap);
+  wrap.remove();
+  sel.classList.remove('custom-select-native-hidden');
+  delete sel.dataset.nativeCustomUi;
+}
+
+/**
+ * Liga botões valor/Auto das linhas compactas ao painel de opções existente.
+ *
+ * @returns {void}
+ */
+function initOcrManualCompactUi() {
+  if (window.__ocrManualCompactUiInited) return;
+  window.__ocrManualCompactUiInited = true;
+  unwrapOcrManualNativeSelect('manual-card-type');
+  unwrapOcrManualNativeSelect('manual-rarity');
+  ensureNativeCustomSelectPanel();
+  const rows = [
+    {
+      selId: 'manual-card-type',
+      kind: 'ocr-manual-type',
+      valueBtnId: 'btn-ocr-manual-type-value',
+      autoBtnId: 'btn-ocr-manual-type-auto',
+    },
+    {
+      selId: 'manual-rarity',
+      kind: 'ocr-manual-rarity',
+      valueBtnId: 'btn-ocr-manual-rarity-value',
+      autoBtnId: 'btn-ocr-manual-rarity-auto',
+    },
+  ];
+  for (let ri = 0; ri < rows.length; ri++) {
+    const { selId, kind, valueBtnId, autoBtnId } = rows[ri];
+    const sel = getEl(selId);
+    const valueBtn = getEl(valueBtnId);
+    const autoBtn = getEl(autoBtnId);
+    if (!sel || !valueBtn || !autoBtn) continue;
+    valueBtn.addEventListener('click', (ev) => {
+      ev.preventDefault();
+      const p = ensureNativeCustomSelectPanel();
+      if (
+        nativeCustomSelectCtx &&
+        nativeCustomSelectCtx.btn === valueBtn &&
+        p.style.display === 'block'
+      ) {
+        void hideNativeCustomSelectPanel(!!nativeCustomSelectBaseline);
+        return;
+      }
+      void hideNativeCustomSelectPanel(!!nativeCustomSelectBaseline);
+      openNativeCustomSelectPanel({ kind, sel, selId, btn: valueBtn });
+    });
+    autoBtn.addEventListener('click', (ev) => {
+      ev.preventDefault();
+      if (isOcrManualSelectAuto(selId)) return;
+      setOcrManualSelectAuto(selId, true);
+    });
+  }
+  syncOcrManualRowDisplays(lastDetectedCardType, lastDetectedCardRarity);
+}
+
+/**
  * Atualiza rótulo `#vision-label`: texto simples (estado inicial, mensagens) ou {@link setVisionTypeRarity}.
  *
  * @param {string} text
@@ -31140,43 +31743,17 @@ function setVisionStatus(text) {
 }
 
 /**
- * Mostra tipo e raridade em chips com ícones (painel OCR).
+ * Atualiza tipo/raridade nas linhas compactas do painel OCR (deteção + modo manual).
  *
- * @param {string} type Valor de `#manual-card-type` ou detetado.
- * @param {string} rarity Valor de `#manual-rarity`.
+ * @param {string|null|undefined} type Tipo detetado pelo OCR.
+ * @param {string|null|undefined} rarity Raridade detetada pelo OCR.
  * @param {{ calibrating?: boolean }} [opts]
  * @returns {void}
  */
 function setVisionTypeRarity(type, rarity, opts) {
-  const el = getEl('vision-label');
-  if (!el) return;
-  const calibrating = !!(opts && opts.calibrating);
-  el.classList.add('ocr-vision-label--chips');
-  const typeStr = String(type || '');
-  const rarityStr = String(rarity || '');
-  const typeIcon = ocrManualRowIconInnerHtml('ocrManualType', typeStr);
-  const rarityIcon = ocrManualRowIconInnerHtml('ocrManualRarity', rarityStr);
-  const kType = escapeHtml(T('ocr.vision.k_type'));
-  const kRar = escapeHtml(T('ocr.vision.k_rarity'));
-  const typeEsc = escapeHtml(typeStr);
-  const rarityEsc = escapeHtml(rarityStr);
-  const calibBadge = calibrating
-    ? `<div class="ocr-vision-calib-badge" role="status">${escapeHtml(T('ocr.vision.calibrating_badge'))}</div>`
-    : '';
-  el.innerHTML = `
-    ${calibBadge}
-    <div class="ocr-vision-chips">
-      <div class="ocr-vision-chip ocr-vision-chip--type">
-        <span class="ocr-vision-chip__k">${kType}</span>
-        <span class="ocr-vision-chip__icon">${typeIcon}</span>
-        <span class="ocr-vision-chip__v">${typeEsc}</span>
-      </div>
-      <div class="ocr-vision-chip ocr-vision-chip--rarity">
-        <span class="ocr-vision-chip__k">${kRar}</span>
-        <span class="ocr-vision-chip__icon">${rarityIcon}</span>
-        <span class="ocr-vision-chip__v">${rarityEsc}</span>
-      </div>
-    </div>`;
+  if (type != null && String(type).trim()) lastDetectedCardType = String(type).trim();
+  if (rarity != null && String(rarity).trim()) lastDetectedCardRarity = String(rarity).trim();
+  syncOcrManualRowDisplays(type, rarity, opts);
 }
 
 /**
@@ -31252,9 +31829,14 @@ const OCR_CANVAS_H = 110;
 const OCR_NAME_DST_X = 50;
 const OCR_NAME_DST_Y = 10;
 const OCR_NAME_DST_W = 900;
-const OCR_NAME_DST_H = 52;
-/** Largura do canvas «visão do robô» (só a faixa do nome, sem margens do canvas OCR). */
+const OCR_NAME_DST_H = 58;
+/** Largura do canvas «visão do robô» após processamento OCR (alta resolução). */
 const OCR_PREVIEW_DISPLAY_W = 960;
+/** Resolução do preview ao vivo (CSS ~72px; não precisa de 960px internos). */
+const OCR_PREVIEW_LIVE_W = 400;
+/** Preview ID ao vivo (leve, atualizado a ~60 fps). */
+const OCR_PREVIEW_PASSCODE_LIVE_W = 320;
+const OCR_PREVIEW_PASSCODE_LIVE_H = 44;
 
 /**
  * Retângulo da faixa do nome no canvas interno enviado ao Tesseract.
@@ -31277,19 +31859,144 @@ function getOcrNameStripRect(cardType) {
  * @param {string} cardType
  * @returns {void}
  */
-function paintOcrPreviewCanvas(previewEl, ocrCanvas, cardType) {
+function paintOcrPreviewCanvas(previewEl, ocrCanvas, cardType, outW) {
   if (!previewEl || !ocrCanvas || !ocrCanvas.width) return;
   const strip = getOcrNameStripRect(cardType);
-  const outW = OCR_PREVIEW_DISPLAY_W;
-  const outH = Math.max(44, Math.round(outW * (strip.height / strip.width)));
-  previewEl.width = outW;
-  previewEl.height = outH;
-  const pctx = previewEl.getContext('2d');
+  const displayW = outW > 0 ? outW : OCR_PREVIEW_DISPLAY_W;
+  const outH = Math.max(36, Math.round(displayW * (strip.height / strip.width)));
+  if (previewEl.width !== displayW || previewEl.height !== outH) {
+    previewEl.width = displayW;
+    previewEl.height = outH;
+  }
+  const pctx = previewEl.getContext('2d', { alpha: false });
   if (!pctx) return;
   pctx.fillStyle = cardType === 'Magia' ? '#ffffff' : '#000000';
-  pctx.fillRect(0, 0, outW, outH);
-  pctx.imageSmoothingEnabled = true;
-  pctx.drawImage(ocrCanvas, strip.x, strip.y, strip.width, strip.height, 0, 0, outW, outH);
+  pctx.fillRect(0, 0, displayW, outH);
+  pctx.imageSmoothingEnabled = false;
+  pctx.drawImage(ocrCanvas, strip.x, strip.y, strip.width, strip.height, 0, 0, displayW, outH);
+}
+
+/**
+ * Definições de pré-processamento para o preview «visão do robô» ao vivo.
+ * @param {string} cardType
+ * @param {string} rarity
+ * @returns {object}
+ */
+function getLiveRobotNamePreviewSettings(cardType, rarity) {
+  /** Preview ao vivo: só filtros CSS (extracts pixel-a-pixel bloqueiam OCR/tipo/raridade). */
+  const light = {
+    useColorAdaptive: true,
+    grayscale: true,
+    contrast: 1.3,
+    brightness: 1,
+    invert: false,
+    useBinarization: false,
+    goldSunExtract: false,
+    silverSunExtract: false,
+    suppressPreview: true,
+    adaptiveThreshold: false,
+  };
+  if (calibrator) {
+    const s = calibrator.getCalibration(cardType, rarity);
+    return {
+      ...s,
+      ...light,
+      contrast: s.contrast != null ? s.contrast : light.contrast,
+      brightness: s.brightness != null ? s.brightness : light.brightness,
+      invert: !!s.invert,
+    };
+  }
+  const foil = isOcrRarityWithNameFoil(rarity);
+  if (cardType === 'Monstro Fusão' && foil) {
+    return { ...light, contrast: 1.35, brightness: 0.86 };
+  }
+  return light;
+}
+
+/**
+ * Monta o canvas interno do OCR (filtros / binarização) — igual ao Tesseract vê.
+ * @param {CanvasImageSource} media
+ * @param {{ x: number, y: number, width: number, height: number }} cropRect
+ * @param {object} settings
+ * @param {string} cardType
+ * @param {string} rarity
+ * @param {HTMLCanvasElement} [reuseCanvas]
+ * @returns {{ canvas: HTMLCanvasElement, avgR: number, avgG: number, avgB: number, cssFilter: string, appliedThreshold: number|null }|null}
+ */
+function buildOcrNameProcessingCanvas(media, cropRect, settings, cardType, rarity, reuseCanvas) {
+  if (!media || !cropRect || cropRect.width < 4) return null;
+  const canvas = reuseCanvas || document.createElement('canvas');
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  if (!ctx) return null;
+  canvas.width = OCR_CANVAS_W;
+  canvas.height = OCR_CANVAS_H;
+  ctx.filter = 'none';
+  const foilOnPurple = isOcrRarityWithNameFoil(rarity) && PURPLE_PLATE_CARD_TYPES.has(cardType);
+  const useLightCanvas =
+    !foilOnPurple &&
+    (cardType === 'Magia' ||
+      cardType === 'Monstro Ritual' ||
+      (cardType === 'Monstro Sincro' && !isOcrRarityWithNameFoil(rarity)) ||
+      !!(settings && settings.lightCanvas));
+  ctx.fillStyle = useLightCanvas ? 'white' : 'black';
+  ctx.fillRect(0, 0, OCR_CANVAS_W, OCR_CANVAS_H);
+  const dstX = cardType === 'Magia' ? 100 : OCR_NAME_DST_X;
+  const dstW = cardType === 'Magia' ? 800 : OCR_NAME_DST_W;
+  try {
+    ctx.drawImage(
+      media,
+      cropRect.x,
+      cropRect.y,
+      cropRect.width,
+      cropRect.height,
+      dstX,
+      OCR_NAME_DST_Y,
+      dstW,
+      OCR_NAME_DST_H
+    );
+  } catch (_) {
+    return null;
+  }
+  const { avgR, avgG, avgB } = sampleNameStripAverages(ctx);
+  if (settings.goldSunExtract) {
+    applyGoldSunLetterExtract(ctx, dstX, OCR_NAME_DST_Y, dstW, OCR_NAME_DST_H);
+  } else if (settings.silverSunExtract) {
+    applySilverSunLetterExtract(ctx, dstX, OCR_NAME_DST_Y, dstW, OCR_NAME_DST_H);
+  }
+  let cssFilter;
+  if (settings.goldSunExtract || settings.silverSunExtract) {
+    cssFilter = 'none';
+  } else if (settings.useColorAdaptive !== false) {
+    cssFilter =
+      forcedCssFilterByCardTypeAndRarity(cardType, rarity) ||
+      forcedCssFilterByCardType(cardType) ||
+      cssFilterFromRgb(avgR, avgG, avgB);
+  } else {
+    let fs = '';
+    if (settings.grayscale) fs += 'grayscale(1) ';
+    if (settings.contrast !== 1.0) fs += `contrast(${settings.contrast}) `;
+    if (settings.brightness !== 1.0) fs += `brightness(${settings.brightness}) `;
+    cssFilter = fs.trim() || 'none';
+  }
+  if (!settings.goldSunExtract && !settings.silverSunExtract) {
+    ctx.filter = cssFilter;
+    ctx.drawImage(canvas, 0, 0);
+    ctx.filter = 'none';
+  }
+  if (settings.invert) applyPixelInvert(ctx, canvas);
+  let appliedThreshold = null;
+  if (settings.useBinarization === true) {
+    appliedThreshold = settings.threshold;
+    if (settings.adaptiveThreshold) {
+      const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const data = imgData.data;
+      let total = 0;
+      for (let i = 0; i < data.length; i += 4) total += data[i];
+      appliedThreshold = total / (data.length / 4);
+    }
+    applyThresholdBinarize(ctx, canvas, { ...settings, threshold: appliedThreshold });
+  }
+  return { canvas, avgR, avgG, avgB, cssFilter, appliedThreshold };
 }
 
 /**
@@ -31539,6 +32246,162 @@ function sampleNameStripAverages(ctx) {
 }
 
 /**
+ * @returns {Promise<object>}
+ */
+function getPaddleOcrModule() {
+  if (!paddleOcrModulePromise) {
+    paddleOcrModulePromise = import(/* @vite-ignore */ './ocr-paddle.mjs');
+  }
+  return paddleOcrModulePromise;
+}
+
+/**
+ * Intervalo mínimo entre inferências Paddle (ms).
+ * @returns {number}
+ */
+function paddleOcrThrottleMs() {
+  try {
+    const dm = navigator.deviceMemory;
+    const mobile =
+      (typeof dm === 'number' && dm > 0 && dm < 4) ||
+      (window.matchMedia('(pointer: coarse)').matches && window.matchMedia('(max-width: 900px)').matches);
+    return mobile ? 1100 : 650;
+  } catch (e) {
+    return 800;
+  }
+}
+
+/**
+ * @returns {boolean}
+ */
+function canRunPaddleOcrNow() {
+  return Date.now() - lastPaddleRecognizeAt >= paddleOcrThrottleMs();
+}
+
+/**
+ * Define se este pass usa Paddle (foil ou fallback explícito).
+ * @param {string} rarity
+ * @param {object} settings
+ * @returns {boolean}
+ */
+function shouldUsePaddleForRecognize(rarity, settings) {
+  if (settings && settings.forceTesseract) return false;
+  if (!canRunPaddleOcrNow()) return false;
+  if (settings && settings.runPaddle) return true;
+  if (settings && settings.paddleFallback) return true;
+  return false;
+}
+
+/**
+ * OCR Paddle no canvas já pré-processado (faixa do nome).
+ * @param {HTMLCanvasElement} canvas
+ * @param {number} timeoutMs
+ * @returns {Promise<null|{ text: string, confidence: number }>}
+ */
+async function recognizeCanvasWithPaddle(canvas, timeoutMs) {
+  try {
+    const mod = await getPaddleOcrModule();
+    const ok = await mod.initPaddleOcrRec();
+    if (!ok) return null;
+    lastPaddleRecognizeAt = Date.now();
+    const pr = await Promise.race([
+      mod.paddleRecognizeCanvas(canvas),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('paddle recognize timeout')), timeoutMs)
+      ),
+    ]);
+    return pr && pr.text ? pr : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+/**
+ * Atualiza classes visuais da moldura conforme estabilidade do recorte do nome.
+ * @param {HTMLVideoElement} video
+ * @param {{ x: number, y: number, width: number, height: number }} nameCropVisual
+ * @returns {void}
+ */
+function updateScannerFramingState(video, nameCropVisual) {
+  const typeEl = getEl('scanner-type-visual');
+  const nameEl = getEl('scanner-visual');
+  if (!video || !nameCropVisual || !typeEl) return;
+  const lum = sampleCropMeanLuminance(video, nameCropVisual);
+  ocrFramingLumHistory.push(lum);
+  if (ocrFramingLumHistory.length > 6) ocrFramingLumHistory.shift();
+  let state = 'seeking';
+  if (ocrFramingLumHistory.length >= 3) {
+    let min = lum;
+    let max = lum;
+    for (let i = 0; i < ocrFramingLumHistory.length; i++) {
+      const v = ocrFramingLumHistory[i];
+      if (v < min) min = v;
+      if (v > max) max = v;
+    }
+    if (max - min < 14 && lum > 35 && lum < 230) state = 'aligned';
+  }
+  if (state === ocrFramingState) return;
+  ocrFramingState = state;
+  typeEl.classList.toggle('scanner-frame--aligned', state === 'aligned');
+  typeEl.classList.toggle('scanner-frame--seeking', state !== 'aligned');
+  if (nameEl) {
+    nameEl.classList.toggle('scanner-frame--aligned', state === 'aligned');
+    nameEl.classList.toggle('scanner-frame--seeking', state !== 'aligned');
+  }
+  const hint = getEl('ocr-framing-hint');
+  if (hint) {
+    hint.textContent = T(state === 'aligned' ? 'ocr.framing.aligned' : 'ocr.framing.seeking');
+    hint.classList.toggle('ocr-framing-hint--ok', state === 'aligned');
+    hint.classList.toggle('scanner-frame--aligned', state === 'aligned');
+    hint.classList.toggle('scanner-frame--seeking', state !== 'aligned');
+  }
+}
+
+/**
+ * Rótulo curto do motor OCR para UI/logs.
+ * @param {string} [engine]
+ * @returns {string}
+ */
+function ocrEngineLabel(engine) {
+  if (engine === 'paddle') return 'Paddle';
+  if (engine === 'tesseract') return 'Tess';
+  if (engine === 'passcode') return 'ID';
+  return '?';
+}
+
+/**
+ * Atualiza `#ocr-live-read` com a melhor leitura do frame (texto, motor, confiança, match).
+ * @param {null|{ cleaned?: string, card?: object|null, pack?: { text?: string, confidence?: number, ocrEngine?: string } }} outcome
+ * @returns {void}
+ */
+function updateOcrLiveReadDisplay(outcome) {
+  const el = getEl('ocr-live-read');
+  if (!el) return;
+  if (!outcome || !outcome.cleaned) {
+    const t = T('ocr.live.no_text');
+    if (lastOcrLiveReadKey !== t) {
+      lastOcrLiveReadKey = t;
+      el.textContent = t;
+    }
+    return;
+  }
+  const pack = outcome.pack || {};
+  const engine = ocrEngineLabel(pack.ocrEngine);
+  const conf =
+    typeof pack.confidence === 'number' && isFinite(pack.confidence)
+      ? Math.round(pack.confidence)
+      : '—';
+  const status = outcome.card
+    ? T('ocr.live.status_match')
+    : T('ocr.live.status_weak');
+  const text = String(outcome.cleaned).slice(0, 48);
+  const line = T('ocr.live.reading', { text, engine, conf: String(conf), status });
+  if (line === lastOcrLiveReadKey) return;
+  lastOcrLiveReadKey = line;
+  el.textContent = line;
+}
+
+/**
  * Núcleo compartilhado com o calibrador: mesma geometria e filtros que mobile_camera.html.
  *
  * @param {CanvasImageSource} media Frame de vídeo, `Image` ou canvas com a carta.
@@ -31567,83 +32430,32 @@ function sampleNameStripAverages(ctx) {
  */
 async function runOcrWithSettings(media, cropRect, settings, cardType, rarity = 'Comum') {
   if (!ocrWorker) return null;
-  const canvas = document.createElement('canvas');
-  const ctx = canvas.getContext('2d', { willReadFrequently: true });
-  canvas.width = OCR_CANVAS_W;
-  canvas.height = OCR_CANVAS_H;
-  ctx.filter = 'none';
-  const foilOnPurple = isOcrRarityWithNameFoil(rarity) && PURPLE_PLATE_CARD_TYPES.has(cardType);
-  // Magia / Ritual / Sincro comum: fundo claro. Foil dourado em placa roxa: fundo escuro.
-  const useLightCanvas =
-    !foilOnPurple &&
-    (cardType === 'Magia' ||
-      cardType === 'Monstro Ritual' ||
-      (cardType === 'Monstro Sincro' && !isOcrRarityWithNameFoil(rarity)) ||
-      !!(settings && settings.lightCanvas));
-  ctx.fillStyle = useLightCanvas ? 'white' : 'black';
-  ctx.fillRect(0, 0, OCR_CANVAS_W, OCR_CANVAS_H);
-  // Magia: margens laterais maiores (100px) — mais espaço branco ao redor do texto
-  // ajuda o Tesseract PSM 7 a delimitar a linha corretamente (idêntico ao mobile_camera.html)
-  const dstX = cardType === 'Magia' ? 100 : OCR_NAME_DST_X;
-  const dstW = cardType === 'Magia' ? 800 : OCR_NAME_DST_W;
-  ctx.drawImage(
-    media,
-    cropRect.x,
-    cropRect.y,
-    cropRect.width,
-    cropRect.height,
-    dstX,
-    OCR_NAME_DST_Y,
-    dstW,
-    OCR_NAME_DST_H
-  );
-
-  const { avgR, avgG, avgB } = sampleNameStripAverages(ctx);
-  if (settings.goldSunExtract) {
-    applyGoldSunLetterExtract(ctx, dstX, OCR_NAME_DST_Y, dstW, OCR_NAME_DST_H);
-  } else if (settings.silverSunExtract) {
-    applySilverSunLetterExtract(ctx, dstX, OCR_NAME_DST_Y, dstW, OCR_NAME_DST_H);
-  }
-  let cssFilter;
-  if (settings.goldSunExtract || settings.silverSunExtract) {
-    cssFilter = 'none';
-  } else if (settings.useColorAdaptive !== false) {
-    cssFilter =
-      forcedCssFilterByCardTypeAndRarity(cardType, rarity) ||
-      forcedCssFilterByCardType(cardType) ||
-      cssFilterFromRgb(avgR, avgG, avgB);
-  } else {
-    let fs = '';
-    if (settings.grayscale) fs += 'grayscale(1) ';
-    if (settings.contrast !== 1.0) fs += `contrast(${settings.contrast}) `;
-    if (settings.brightness !== 1.0) fs += `brightness(${settings.brightness}) `;
-    cssFilter = fs.trim() || 'none';
-  }
-  if (!settings.goldSunExtract && !settings.silverSunExtract) {
-    ctx.filter = cssFilter;
-    ctx.drawImage(canvas, 0, 0);
-    ctx.filter = 'none';
-  }
-
-  if (settings.invert) applyPixelInvert(ctx, canvas);
-  let appliedThreshold = null;
-  if (settings.useBinarization === true) {
-    appliedThreshold = settings.threshold;
-    if (settings.adaptiveThreshold) {
-      const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const data = imgData.data;
-      let total = 0;
-      for (let i = 0; i < data.length; i += 4) total += data[i];
-      appliedThreshold = total / (data.length / 4);
-    }
-    applyThresholdBinarize(ctx, canvas, { ...settings, threshold: appliedThreshold });
-  }
+  const built = buildOcrNameProcessingCanvas(media, cropRect, settings, cardType, rarity);
+  if (!built) return null;
+  const { canvas, avgR, avgG, avgB, cssFilter, appliedThreshold } = built;
 
   const preview = getEl('preview-canvas');
   if (preview && !(settings && settings.suppressPreview)) paintOcrPreviewCanvas(preview, canvas, cardType);
 
+  const recognizeMs = settings && settings.suppressPreview ? 5000 : 12000;
+  if (shouldUsePaddleForRecognize(rarity, settings)) {
+    const paddleOut = await recognizeCanvasWithPaddle(canvas, recognizeMs);
+    if (paddleOut && paddleOut.text) {
+      return {
+        text: paddleOut.text,
+        confidence: paddleOut.confidence,
+        avgR,
+        avgG,
+        avgB,
+        cssFilter,
+        appliedThreshold,
+        ocrEngine: 'paddle',
+      };
+    }
+  }
+
+  if (!ocrWorker) return null;
   try {
-    const recognizeMs = settings && settings.suppressPreview ? 5000 : 12000;
     const result = await Promise.race([
       ocrWorker.recognize(canvas),
       new Promise((_, reject) =>
@@ -31659,8 +32471,24 @@ async function runOcrWithSettings(media, cropRect, settings, cardType, rarity = 
       avgB,
       cssFilter,
       appliedThreshold,
+      ocrEngine: 'tesseract',
     };
   } catch (err) {
+    if (settings && settings.runPaddle) {
+      const paddleOut = await recognizeCanvasWithPaddle(canvas, recognizeMs);
+      if (paddleOut && paddleOut.text) {
+        return {
+          text: paddleOut.text,
+          confidence: paddleOut.confidence,
+          avgR,
+          avgG,
+          avgB,
+          cssFilter,
+          appliedThreshold,
+          ocrEngine: 'paddle',
+        };
+      }
+    }
     return null;
   }
 }
@@ -31735,6 +32563,7 @@ async function processImageWithColorFilter(
     avgB: o.avgB,
     cssFilter: o.cssFilter,
     appliedThreshold: o.appliedThreshold,
+    ocrEngine: o.ocrEngine || 'tesseract',
   };
 }
 
@@ -32235,6 +33064,26 @@ function buildOcrFallbackPasses(cardType, rarity, base, plateLum, nameMetrics) {
       },
       null
     );
+  } else if (plateLum < 115 && cardType === 'Monstro Xyz' && !foil) {
+    passes.unshift(
+      {
+        useBinarization: false,
+        useColorAdaptive: false,
+        grayscale: true,
+        contrast: 2.05,
+        brightness: 0.84,
+        invert: true,
+      },
+      {
+        useBinarization: false,
+        useColorAdaptive: false,
+        grayscale: true,
+        contrast: 1.88,
+        brightness: 1.06,
+        invert: false,
+      },
+      null
+    );
   } else if (plateLum < 95 && cardType === 'Monstro Xyz' && foil) {
     passes.unshift(
       {
@@ -32327,9 +33176,16 @@ function buildOcrFallbackPasses(cardType, rarity, base, plateLum, nameMetrics) {
  * @param {{ x: number, y: number, width: number, height: number }} nameCropRect Recorte OCR (refinado).
  * @param {{ x: number, y: number, width: number, height: number }|null} [typeCropRect]
  * @param {{ x: number, y: number, width: number, height: number }|null} [nameCropVisual] Mira verde no vídeo (tipo/cor da placa).
+ * @param {{ x: number, y: number, width: number, height: number }|null} [nameCropOcrRefined] Recorte ligeiramente afinado (só diagnóstico).
  * @returns {Promise<null|{ pack: object, cleaned: string, card: object|null, diagnostics?: { cardType: string, rarity: string, passes: object[] } }>}
  */
-async function processFrameWithFallbackPasses(video, nameCropRect, typeCropRect, nameCropVisual) {
+async function processFrameWithFallbackPasses(
+  video,
+  nameCropRect,
+  typeCropRect,
+  nameCropVisual,
+  nameCropOcrRefined
+) {
   const typeRect = typeCropRect || nameCropRect;
   const nameStripForType = nameCropVisual || nameCropRect;
   let cardType = 'Monstro Efeito';
@@ -32337,7 +33193,9 @@ async function processFrameWithFallbackPasses(video, nameCropRect, typeCropRect,
   const manualTypeSelect = getEl('manual-card-type');
   const manualRaritySelect = getEl('manual-rarity');
   const typeProbe = probeCardTypeDiagnostics(video, nameStripForType, typeCropRect);
-  const rarityProbe = probeCardRarityDiagnostics(video, nameCropRect, typeCropRect);
+  const nameForRarity =
+    nameCropOcrRefined || refineNameCropForOcr(nameCropVisual || nameCropRect);
+  const rarityProbe = probeCardRarityDiagnostics(video, nameForRarity, typeCropRect);
   if (manualTypeSelect && manualRaritySelect) {
     if (manualTypeSelect.value === 'AUTO') {
       cardType = typeProbe.classifiedType || (await detectCardTypeFromImage(video, typeRect, nameCropRect));
@@ -32385,14 +33243,42 @@ async function processFrameWithFallbackPasses(video, nameCropRect, typeCropRect,
     ? calibrator.getCalibration(cardType, rarity)
     : { useBinarization: false };
   const plateLum = sampleCropMeanLuminance(video, nameCropRect);
-  const passes = buildOcrFallbackPasses(cardType, rarity, base, plateLum, rarityProbe.nameMetrics);
+  let passes = buildOcrFallbackPasses(cardType, rarity, base, plateLum, rarityProbe.nameMetrics);
+  const foilName = isOcrRarityWithNameFoil(rarity);
+  const xyzDarkPlate = cardType === 'Monstro Xyz' && plateLum < 115;
+  const fusionPurplePlate =
+    cardType === 'Monstro Fusão' && PURPLE_PLATE_CARD_TYPES.has(cardType);
+  const fusionDarkPlate = fusionPurplePlate && plateLum < 120;
+  const fusionFoilPlate = fusionPurplePlate && foilName;
+  const darkNamePlate =
+    plateLum < 120 && (xyzDarkPlate || fusionDarkPlate || HARD_OCR_CARD_TYPES.has(cardType));
+  const usePaddleEarly = foilName || darkNamePlate || fusionFoilPlate;
+  const maxPasses = foilName ? 7 : 5;
+  if (passes.length > maxPasses) passes = passes.slice(0, maxPasses);
+  let paddleTriedThisFrame = false;
   let best = null;
+  let failStreak = 0;
   for (let pi = 0; pi < passes.length; pi++) {
     const ov = passes[pi];
-    const pack = await processImageWithColorFilter(video, nameCropRect, ov, cardType, rarity);
-    if (!pack || !pack.text) continue;
+    /** @type {object|null} */
+    let passSettings = ov ? { ...ov } : null;
+    if (usePaddleEarly && !paddleTriedThisFrame && pi < 3) {
+      passSettings = { ...(passSettings || {}), runPaddle: true };
+      paddleTriedThisFrame = true;
+    }
+    const pack = await processImageWithColorFilter(video, nameCropRect, passSettings, cardType, rarity);
+    if (!pack || !pack.text) {
+      failStreak++;
+      if (failStreak >= 3 && !best) break;
+      continue;
+    }
     const cleaned = smartNormalize(pack.text);
-    if (!cleaned || cleaned.length < 4 || isGarbageText(cleaned)) continue;
+    if (!cleaned || cleaned.length < 4 || isGarbageText(cleaned)) {
+      failStreak++;
+      if (failStreak >= 3 && !best) break;
+      continue;
+    }
+    failStreak = 0;
     const passData = {
       pass: pi,
       cardType,
@@ -32410,6 +33296,7 @@ async function processFrameWithFallbackPasses(video, nameCropRect, typeCropRect,
         height: OCR_NAME_DST_H,
       },
       settings: pack.settings,
+      ocrEngine: pack.ocrEngine || 'tesseract',
       confidence: safeRound(pack.confidence, 1),
       avgRGB: {
         r: safeRound(pack.avgR, 1),
@@ -32449,14 +33336,56 @@ async function processFrameWithFallbackPasses(video, nameCropRect, typeCropRect,
       }
     }
     if (card && strong) {
+      let finalPack = pack;
+      let finalCleaned = cleaned;
+      let finalCard = card;
+      const tessLowConf =
+        (pack.ocrEngine === 'tesseract' || !pack.ocrEngine) && pack.confidence < 62;
+      if (tessLowConf && canRunPaddleOcrNow()) {
+        const verifyPack = await processImageWithColorFilter(
+          video,
+          nameCropRect,
+          { runPaddle: true, suppressPreview: true, useColorAdaptive: true },
+          cardType,
+          rarity
+        );
+        let paddleOk = false;
+        if (verifyPack && verifyPack.text) {
+          const cleanedV = smartNormalize(verifyPack.text);
+          if (cleanedV && cleanedV.length >= 4 && !isGarbageText(cleanedV)) {
+            const cardV = await smartSearch(cleanedV, true, cleanedV, visionCtx);
+            const strongV = cardV ? isStrongMatch(cleanedV, cardV, visionCtx) : false;
+            if (cardV && strongV) {
+              finalPack = verifyPack;
+              finalCleaned = cleanedV;
+              finalCard = cardV;
+              paddleOk = true;
+            }
+          }
+        }
+        if (!paddleOk) {
+          pushOcrDebug({
+            ts: new Date().toISOString(),
+            event: 'match_rejected',
+            msg: 'tess low-conf match requires paddle confirmation',
+            data: {
+              pass: pi,
+              ocr: cleaned,
+              confidence: pack.confidence,
+              candidate: displayNameForApiCard(card),
+            },
+          });
+          continue;
+        }
+      }
       const lastP = diagnosticsPasses[diagnosticsPasses.length - 1];
       if (lastP) {
-        lastP.apiCandidateName = displayNameForApiCard(card);
+        lastP.apiCandidateName = displayNameForApiCard(finalCard);
         lastP.strongMatch = true;
-        lastP.matchedCardId = card.id;
+        lastP.matchedCardId = finalCard.id;
       }
-      const merged = { ...pack.settings, ...(ov || {}) };
-      calibrator?.setCalibration(pack.cardType, pack.rarity, merged);
+      const merged = { ...finalPack.settings, ...(ov || {}) };
+      calibrator?.setCalibration(finalPack.cardType, finalPack.rarity, merged);
       addOcrEvent(
         'match',
         ov
@@ -32466,29 +33395,75 @@ async function processFrameWithFallbackPasses(video, nameCropRect, typeCropRect,
           pass: pi,
           cardType: pack.cardType,
           rarity: pack.rarity,
-          ocr: cleaned,
-          matchedName: displayNameForApiCard(card),
-          confidence: safeRound(pack.confidence, 1),
-          cssFilter: pack.cssFilter,
-          appliedThreshold: safeRound(pack.appliedThreshold, 1),
+          ocr: finalCleaned,
+          matchedName: displayNameForApiCard(finalCard),
+          confidence: safeRound(finalPack.confidence, 1),
+          cssFilter: finalPack.cssFilter,
+          appliedThreshold: safeRound(finalPack.appliedThreshold, 1),
           settingsSaved: merged,
         }
       );
       return {
-        pack,
-        cleaned,
-        card,
+        pack: finalPack,
+        cleaned: finalCleaned,
+        card: finalCard,
         diagnostics: { cardType, rarity, passes: diagnosticsPasses },
       };
     }
     if (!best || pack.confidence > best.pack.confidence) best = { pack, cleaned };
+  }
+  if (best && best.cleaned && ocrDiagnosticsCaptureActive) {
+    const eng = ocrEngineLabel(best.pack.ocrEngine);
+    const conf =
+      typeof best.pack.confidence === 'number' ? Math.round(best.pack.confidence) : '—';
+    pushOcrDebug({
+      ts: new Date().toISOString(),
+      event: 'frame_best',
+      msg: `best=${best.cleaned} ${eng} ${conf}%`,
+      data: { cleaned: best.cleaned, ocrEngine: best.pack.ocrEngine, confidence: best.pack.confidence },
+    });
+  }
+  const paddleBoostConfMax = darkNamePlate ? 68 : 52;
+  if (best && best.pack.confidence < paddleBoostConfMax && canRunPaddleOcrNow()) {
+    const paddlePack = await processImageWithColorFilter(
+      video,
+      nameCropRect,
+      { runPaddle: true, suppressPreview: true, useColorAdaptive: true },
+      cardType,
+      rarity
+    );
+    if (paddlePack && paddlePack.text) {
+      const cleanedP = smartNormalize(paddlePack.text);
+      if (cleanedP && cleanedP.length >= 4 && !isGarbageText(cleanedP)) {
+        const visionCtx = { cardType, rarity };
+        const longerRead = cleanedP.length > (best.cleaned ? best.cleaned.length : 0) + 2;
+        const cardP = longerRead ? await smartSearch(cleanedP, true, cleanedP, visionCtx) : null;
+        const strongP = cardP ? isStrongMatch(cleanedP, cardP, visionCtx) : false;
+        if (cardP && strongP) {
+          return {
+            pack: paddlePack,
+            cleaned: cleanedP,
+            card: cardP,
+            diagnostics: { cardType, rarity, passes: diagnosticsPasses },
+          };
+        }
+        if (!best.cleaned || paddlePack.confidence > best.pack.confidence || longerRead) {
+          best = { pack: paddlePack, cleaned: cleanedP };
+        }
+      }
+    }
   }
   if (best) {
     return {
       pack: best.pack,
       cleaned: best.cleaned,
       card: null,
-      diagnostics: { cardType, rarity, passes: diagnosticsPasses },
+      diagnostics: {
+        cardType,
+        rarity,
+        passes: diagnosticsPasses,
+        ocrEngine: best.pack.ocrEngine || 'tesseract',
+      },
     };
   }
   return null;
@@ -32532,28 +33507,177 @@ function mapVisualBoxToVideoCrop(video, visualEl) {
  * @returns {number}
  */
 function sampleCropMeanLuminance(video, rect) {
-  if (!video || !rect || rect.width < 2 || rect.height < 2) return 128;
+  const rgb = sampleVideoCropAvgRgb(video, rect, 28, 14);
+  return rgb.meanLum;
+}
+
+/**
+ * Média RGB + luminância de um recorte do vídeo (zona do passcode / placa).
+ * @param {HTMLVideoElement} video
+ * @param {{ x: number, y: number, width: number, height: number }} rect
+ * @param {number} [outW]
+ * @param {number} [outH]
+ * @returns {{ avgR: number, avgG: number, avgB: number, meanLum: number }}
+ */
+function sampleVideoCropAvgRgb(video, rect, outW = 28, outH = 14) {
+  const fallback = { avgR: 128, avgG: 128, avgB: 128, meanLum: 128 };
+  if (!video || !rect || rect.width < 2 || rect.height < 2) return fallback;
   const c = document.createElement('canvas');
-  c.width = 28;
-  c.height = 14;
+  c.width = outW;
+  c.height = outH;
   const ctx = c.getContext('2d');
+  if (!ctx) return fallback;
   try {
-    ctx.drawImage(video, rect.x, rect.y, rect.width, rect.height, 0, 0, 28, 14);
-    const d = ctx.getImageData(0, 0, 28, 14).data;
-    let s = 0;
+    ctx.drawImage(video, rect.x, rect.y, rect.width, rect.height, 0, 0, outW, outH);
+    const d = ctx.getImageData(0, 0, outW, outH).data;
+    let rS = 0;
+    let gS = 0;
+    let bS = 0;
     const n = d.length / 4;
-    for (let i = 0; i < d.length; i += 4) s += (d[i] + d[i + 1] + d[i + 2]) / 3;
-    return s / n;
+    for (let i = 0; i < d.length; i += 4) {
+      rS += d[i];
+      gS += d[i + 1];
+      bS += d[i + 2];
+    }
+    const avgR = rS / n;
+    const avgG = gS / n;
+    const avgB = bS / n;
+    return { avgR, avgG, avgB, meanLum: (avgR + avgG + avgB) / 3 };
   } catch (e) {
-    return 128;
+    return fallback;
   }
 }
 
+/**
+ * Chave estável da carta enquadrada (muda ao trocar de carta na mesa).
+ * @param {HTMLVideoElement} video
+ * @param {{ x: number, y: number, width: number, height: number }} nameCropVisual
+ * @param {{ x: number, y: number, width: number, height: number }|null} typeCropRect
+ * @returns {string}
+ */
+function getScannerSceneKey(video, nameCropVisual, typeCropRect) {
+  if (!nameCropVisual) return '';
+  const lum = typeCropRect ? Math.round(sampleCropMeanLuminance(video, typeCropRect)) : 0;
+  return [
+    Math.round(nameCropVisual.x / 14),
+    Math.round(nameCropVisual.y / 14),
+    Math.round(nameCropVisual.width / 14),
+    Math.round(nameCropVisual.height / 14),
+    lum,
+  ].join('|');
+}
+
+/**
+ * Nova carta na mira: liberta cooldown e throttle do passcode para ler de imediato.
+ * @returns {boolean}
+ */
+function onScannerSceneMaybeChanged(video, nameCropVisual, typeCropRect) {
+  const key = getScannerSceneKey(video, nameCropVisual, typeCropRect);
+  if (!key || key === lastScannerSceneKey) return false;
+  lastScannerSceneKey = key;
+  processingCooldown = false;
+  lastPasscodeOcrAt = 0;
+  lastOcrLogReadKey = '';
+  lastOcrPasscodeLogKey = '';
+  lastOcrHuntLogKey = '';
+  return true;
+}
+
+/** @returns {{ cardType: string|null, rarity: string|null }} */
+function getScannerPasscodeVisionContext() {
+  return {
+    cardType: lastDetectedCardType || null,
+    rarity: lastDetectedCardRarity || null,
+  };
+}
+
+/**
+ * Modo de binarização do passcode conforme placa (tipo) e raridade.
+ * Ultra/Secreta: dígitos matte preto/branco sobre cor da placa (sem foil no ID).
+ * @param {HTMLVideoElement} video
+ * @param {{ x: number, y: number, width: number, height: number }|null} typeCropRect
+ * @param {string|null} cardType
+ * @param {string|null} rarity
+ * @returns {{ primary: string, secondary: string, meanLum: number, matteIdDigits: boolean, cardType: string, rarity: string, plateR: number, plateG: number, plateB: number }}
+ */
+function derivePasscodeOcrHint(video, typeCropRect, cardType, rarity) {
+  const ct = cardType || lastDetectedCardType || 'Monstro Efeito';
+  const rv = rarity || lastDetectedCardRarity || 'Comum';
+  const grp = getOcrRarityGroup(rv);
+  const matteIdDigits =
+    isOcrRarityWithNameFoil(rv) &&
+    (rv === 'Ultra Rara' || rv === 'Secreta' || grp === 'goldName' || grp === 'secret');
+  let avgR = 128;
+  let avgG = 128;
+  let avgB = 128;
+  let meanLum = 128;
+  if (typeCropRect && video && video.videoWidth > 0) {
+    const plateZone = {
+      x: typeCropRect.x + typeCropRect.width * 0.02,
+      y: typeCropRect.y + typeCropRect.height * 0.8,
+      width: typeCropRect.width * 0.36,
+      height: typeCropRect.height * 0.18,
+    };
+    const rgb = sampleVideoCropAvgRgb(video, plateZone, 36, 18);
+    avgR = rgb.avgR;
+    avgG = rgb.avgG;
+    avgB = rgb.avgB;
+    meanLum = rgb.meanLum;
+  }
+  let primary = meanLum >= 118 ? 'darkOnLight' : 'lightOnDark';
+  let secondary = primary === 'darkOnLight' ? 'lightOnDark' : 'darkOnLight';
+  if (isFusionPurpleFrameRgb(avgR, avgG, avgB) || isXyzDarkPlateRgb(avgR, avgG, avgB)) {
+    primary = 'lightOnDark';
+    secondary = 'darkOnLight';
+  } else if (ct === 'Magia' || ct === 'Monstro Ritual' || meanLum > 148) {
+    primary = 'darkOnLight';
+    secondary = 'lightOnDark';
+  } else if (ct === 'Monstro Link' || ct === 'Monstro Xyz' || ct === 'Monstro Pêndulo') {
+    if (meanLum < 128) {
+      primary = 'lightOnDark';
+      secondary = 'darkOnLight';
+    }
+  }
+  if (matteIdDigits && primary === 'lightOnDark') {
+    secondary = 'darkOnLight';
+  }
+  return {
+    primary,
+    secondary,
+    meanLum,
+    matteIdDigits,
+    cardType: ct,
+    rarity: rv,
+    plateR: avgR,
+    plateG: avgG,
+    plateB: avgB,
+  };
+}
+
+/**
+ * Reforço de contraste para dígitos matte (Ultra/Secreta — ID sem brilho).
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {number} w
+ * @param {number} h
+ * @returns {void}
+ */
+function applyPasscodeMatteSharpen(ctx, w, h) {
+  const img = ctx.getImageData(0, 0, w, h);
+  const d = img.data;
+  const n = w * h;
+  for (let p = 0, i = 0; p < n; p++, i += 4) {
+    const L = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+    const v = Math.max(0, Math.min(255, (L - 128) * 1.42 + 128));
+    d[i] = d[i + 1] = d[i + 2] = v;
+  }
+  ctx.putImageData(img, 0, 0);
+}
+
 function refineNameCropForOcr(nameCropRect) {
-  const trimL = 0.01;
-  const trimR = 0.008;
-  const trimT = 0.05;
-  const trimB = 0.1;
+  const trimL = 0;
+  const trimR = 0;
+  const trimT = 0.02;
+  const trimB = 0.04;
   return {
     x: nameCropRect.x + nameCropRect.width * trimL,
     y: nameCropRect.y + nameCropRect.height * trimT,
@@ -32563,61 +33687,811 @@ function refineNameCropForOcr(nameCropRect) {
 }
 
 /**
+ * Candidatos a passcode Yu-Gi-Oh! (7–9 dígitos) extraídos de texto OCR numérico.
+ * @param {string} raw
+ * @returns {string[]}
+ */
+function extractYuGiOhPasscodeCandidates(raw) {
+  if (!raw) return [];
+  const ordered = [];
+  const seen = new Set();
+  const add = (s) => {
+    if (!s || s.length !== 8) return;
+    const xs = coerceYuGiOhNumericIds([s]);
+    if (!xs.length || seen.has(xs[0])) return;
+    seen.add(xs[0]);
+    ordered.push(xs[0]);
+  };
+  const digits = String(raw).replace(/\D/g, '');
+  if (digits.length >= 8) add(digits.slice(0, 8));
+  const chunks = String(raw).match(/\d{8}/g) || [];
+  for (let i = 0; i < chunks.length; i++) add(chunks[i]);
+  for (let i = 1; i <= digits.length - 8; i++) add(digits.slice(i, i + 8));
+  return ordered.slice(0, 3);
+}
+
+/**
+ * Recorte interno da mira laranja: só os 8 dígitos do passcode (exclui «1ª Edição» à direita).
+ * @param {{ x: number, y: number, width: number, height: number }} passcodeVisualRect
+ * @returns {{ x: number, y: number, width: number, height: number }}
+ */
+function refinePasscodeCropForOcr(passcodeVisualRect) {
+  const trimL = 0;
+  const trimR = 0.36;
+  const trimT = 0.08;
+  const trimB = 0.08;
+  return {
+    x: passcodeVisualRect.x + passcodeVisualRect.width * trimL,
+    y: passcodeVisualRect.y + passcodeVisualRect.height * trimT,
+    width: Math.max(2, passcodeVisualRect.width * (1 - trimL - trimR)),
+    height: Math.max(2, passcodeVisualRect.height * (1 - trimT - trimB)),
+  };
+}
+
+/** Largura/altura do preview passcode (faixa horizontal). */
+const PASSCODE_PREVIEW_W = 480;
+const PASSCODE_PREVIEW_H = 64;
+/** Resolução interna enviada ao Tesseract (maior = dígitos mais legíveis). */
+const PASSCODE_OCR_CANVAS_W = 640;
+const PASSCODE_OCR_CANVAS_H = 80;
+
+/**
+ * Limiar de Otsu para binarização do passcode.
+ *
+ * @param {Float32Array} lum
+ * @param {number} n
+ * @returns {number}
+ */
+function otsuThresholdFromLum(lum, n) {
+  const hist = new Uint32Array(256);
+  for (let p = 0; p < n; p++) {
+    const b = Math.max(0, Math.min(255, Math.floor(lum[p])));
+    hist[b]++;
+  }
+  let sum = 0;
+  for (let t = 0; t < 256; t++) sum += t * hist[t];
+  let sumB = 0;
+  let wB = 0;
+  let wF = 0;
+  let maxVar = 0;
+  let threshold = 128;
+  for (let t = 0; t < 256; t++) wF += hist[t];
+  for (let t = 0; t < 256; t++) {
+    wB += hist[t];
+    if (!wB) continue;
+    wF -= hist[t];
+    if (!wF) break;
+    sumB += t * hist[t];
+    const mB = sumB / wB;
+    const mF = (sum - sumB) / wF;
+    const varBetween = wB * wF * (mB - mF) * (mB - mF);
+    if (varBetween > maxVar) {
+      maxVar = varBetween;
+      threshold = t;
+    }
+  }
+  return threshold;
+}
+
+/**
+ * Binariza recorte do passcode para Tesseract (dígitos escuros em fundo claro ou o inverso).
+ *
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {number} w
+ * @param {number} h
+ * @param {'darkOnLight'|'lightOnDark'} mode
+ * @returns {void}
+ */
+function binarizePasscodeCrop(ctx, w, h, mode) {
+  const img = ctx.getImageData(0, 0, w, h);
+  const d = img.data;
+  const n = w * h;
+  const lum = new Float32Array(n);
+  let sum = 0;
+  for (let p = 0, i = 0; p < n; p++, i += 4) {
+    const L = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+    lum[p] = L;
+    sum += L;
+  }
+  const otsu = otsuThresholdFromLum(lum, n);
+  const mean = sum / n;
+  const thresh =
+    mode === 'darkOnLight'
+      ? Math.max(40, Math.min(220, Math.round(otsu * 0.92 + mean * 0.08 - 6)))
+      : Math.max(40, Math.min(220, Math.round((255 - otsu) * 0.92 + (255 - mean) * 0.08 - 6)));
+  for (let p = 0, i = 0; p < n; p++, i += 4) {
+    let L = lum[p];
+    if (mode === 'lightOnDark') L = 255 - L;
+    const v = L < thresh ? 0 : 255;
+    d[i] = d[i + 1] = d[i + 2] = v;
+    d[i + 3] = 255;
+  }
+  ctx.putImageData(img, 0, 0);
+}
+
+/**
+ * Desenha o recorte do vídeo no canvas do passcode e devolve variantes binarizadas para OCR.
+ *
+ * @param {HTMLVideoElement} video
+ * @param {{ x: number, y: number, width: number, height: number }} cropRect
+ * @param {HTMLCanvasElement} canvas
+ * @returns {{ darkOnLight: HTMLCanvasElement, lightOnDark: HTMLCanvasElement, meanLum: number }|null}
+ */
+/**
+ * Recorte bruto do vídeo na faixa do passcode (só para preview — leve).
+ *
+ * @param {HTMLVideoElement} video
+ * @param {{ x: number, y: number, width: number, height: number }} cropRect
+ * @param {HTMLCanvasElement} [targetCanvas]
+ * @returns {HTMLCanvasElement|null}
+ */
+function drawPasscodeRawCropToCanvas(video, cropRect, targetCanvas, outW, outH) {
+  if (!video || !cropRect || cropRect.width < 4) return null;
+  outW = outW > 0 ? outW : PASSCODE_PREVIEW_W;
+  outH = outH > 0 ? outH : PASSCODE_PREVIEW_H;
+  const canvas = targetCanvas || document.createElement('canvas');
+  canvas.width = outW;
+  canvas.height = outH;
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  if (!ctx) return null;
+  ctx.fillStyle = '#3a3a3a';
+  ctx.fillRect(0, 0, outW, outH);
+  try {
+    ctx.drawImage(
+      video,
+      cropRect.x,
+      cropRect.y,
+      cropRect.width,
+      cropRect.height,
+      0,
+      0,
+      outW,
+      outH
+    );
+  } catch (_) {
+    return null;
+  }
+  return canvas;
+}
+
+/**
+ * Atualiza previews Nome/ID a cada frame (sem Tesseract).
+ *
+ * @param {HTMLVideoElement} video
+ * @param {{ x: number, y: number, width: number, height: number }|null} nameCropVisual
+ * @param {{ x: number, y: number, width: number, height: number }|null} typeCropRect
+ * @returns {void}
+ */
+/**
+ * Binariza o recorte do passcode para o preview ao vivo (visão do robô ID).
+ * @param {HTMLVideoElement} video
+ * @param {{ x: number, y: number, width: number, height: number }} cropRect
+ * @returns {HTMLCanvasElement|null}
+ */
+function buildPasscodeLiveRobotCanvas(video, cropRect, hint) {
+  if (!video || !cropRect || cropRect.width < 4) return null;
+  if (!ocrLivePasscodeScratch) ocrLivePasscodeScratch = document.createElement('canvas');
+  const c = ocrLivePasscodeScratch;
+  const outW = OCR_PREVIEW_PASSCODE_LIVE_W;
+  const outH = OCR_PREVIEW_PASSCODE_LIVE_H;
+  if (c.width !== outW || c.height !== outH) {
+    c.width = outW;
+    c.height = outH;
+  }
+  const ctx = c.getContext('2d', { willReadFrequently: true });
+  if (!ctx) return null;
+  ctx.fillStyle = '#e8e8e8';
+  ctx.fillRect(0, 0, outW, outH);
+  try {
+    ctx.drawImage(video, cropRect.x, cropRect.y, cropRect.width, cropRect.height, 0, 0, outW, outH);
+  } catch (_) {
+    return null;
+  }
+  if (hint && hint.matteIdDigits) applyPasscodeMatteSharpen(ctx, outW, outH);
+  const mode = (hint && hint.primary) || 'darkOnLight';
+  binarizePasscodeCrop(ctx, outW, outH, mode);
+  return c;
+}
+
+function refreshOcrRobotPreviewsFromVideo(video, nameCropVisual, typeCropRect, passcodeVisual) {
+  if (!video || video.videoWidth < 4) return;
+  const cardType = lastDetectedCardType || 'Monstro Efeito';
+  const rarity = lastDetectedCardRarity || 'Comum';
+  if (nameCropVisual && nameCropVisual.width >= 4) {
+    const preview = getEl('preview-canvas');
+    if (preview) {
+      if (!ocrLiveNameScratch) ocrLiveNameScratch = document.createElement('canvas');
+      const settings = getLiveRobotNamePreviewSettings(cardType, rarity);
+      const nameCropOcr = refineNameCropForOcr(nameCropVisual);
+      const built = buildOcrNameProcessingCanvas(
+        video,
+        nameCropOcr,
+        settings,
+        cardType,
+        rarity,
+        ocrLiveNameScratch
+      );
+      if (built) paintOcrPreviewCanvas(preview, built.canvas, cardType, OCR_PREVIEW_LIVE_W);
+    }
+  }
+  const passVis =
+    passcodeVisual || mapVisualBoxToVideoCrop(video, getEl('scanner-passcode-visual'));
+  const passcodeCrop = getPasscodeCropForOcr(passVis, typeCropRect);
+  if (passcodeCrop) {
+    const idHint = derivePasscodeOcrHint(video, typeCropRect, cardType, rarity);
+    const robot = buildPasscodeLiveRobotCanvas(video, passcodeCrop, idHint);
+    if (robot) paintPasscodePreviewCanvasLive(robot);
+  }
+}
+
+/**
+ * Loop dedicado (~60 fps) para previews; não depende do throttle do OCR.
+ * @returns {void}
+ */
+function ocrPreviewFrameTick() {
+  if (!ocrPreviewLoopActive || !isOcrActive) {
+    ocrPreviewLoopRaf = 0;
+    return;
+  }
+  ocrPreviewLoopRaf = requestAnimationFrame(ocrPreviewFrameTick);
+  const video = getEl('ocr-video');
+  if (!video || video.videoWidth === 0) return;
+  const nameCropVisual = mapVisualBoxToVideoCrop(video, getEl('scanner-visual'));
+  if (!nameCropVisual) return;
+  const typeCropRect = mapVisualBoxToVideoCrop(video, getEl('scanner-type-visual'));
+  const passcodeVisual = mapVisualBoxToVideoCrop(video, getEl('scanner-passcode-visual'));
+  onScannerSceneMaybeChanged(video, nameCropVisual, typeCropRect);
+  quickVisionProbeAndUpdate(video, nameCropVisual, typeCropRect);
+  const now = performance.now();
+  if (now - lastOcrPreviewPaintAt >= 48) {
+    lastOcrPreviewPaintAt = now;
+    refreshOcrRobotPreviewsFromVideo(video, nameCropVisual, typeCropRect, passcodeVisual);
+  }
+}
+
+/** @returns {void} */
+function startOcrPreviewLoop() {
+  ocrPreviewLoopActive = true;
+  if (!ocrPreviewLoopRaf) ocrPreviewFrameTick();
+}
+
+/** @returns {void} */
+function stopOcrPreviewLoop() {
+  ocrPreviewLoopActive = false;
+  if (ocrPreviewLoopRaf) {
+    cancelAnimationFrame(ocrPreviewLoopRaf);
+    ocrPreviewLoopRaf = 0;
+  }
+}
+
+/**
+ * Sonda tipo/raridade sem OCR (atualiza chips Auto).
+ *
+ * @param {HTMLVideoElement} video
+ * @param {{ x: number, y: number, width: number, height: number }} nameCropRect
+ * @param {{ x: number, y: number, width: number, height: number }|null} typeCropRect
+ * @returns {void}
+ */
+function quickVisionProbeAndUpdate(video, nameCropRect, typeCropRect) {
+  const now = Date.now();
+  if (now - lastVisionProbeAt < 280) return;
+  lastVisionProbeAt = now;
+  const nameStrip = nameCropRect;
+  const nameForRarity = refineNameCropForOcr(nameCropRect);
+  const typeProbe = probeCardTypeDiagnostics(video, nameStrip, typeCropRect);
+  const rarityProbe = probeCardRarityDiagnostics(video, nameForRarity, typeCropRect);
+  let cardType = 'Monstro Efeito';
+  let rarity = 'Comum';
+  const manualTypeSelect = getEl('manual-card-type');
+  const manualRaritySelect = getEl('manual-rarity');
+  if (manualTypeSelect && manualRaritySelect) {
+    cardType =
+      manualTypeSelect.value === 'AUTO'
+        ? typeProbe.classifiedType || lastDetectedCardType || cardType
+        : manualTypeSelect.value;
+    rarity =
+      manualRaritySelect.value === 'AUTO'
+        ? rarityProbe.classifiedRarity || lastDetectedCardRarity || rarity
+        : manualRaritySelect.value;
+  } else {
+    cardType = typeProbe.classifiedType || cardType;
+    rarity = rarityProbe.classifiedRarity || rarity;
+  }
+  const resolved = resolveVisionTypeAndRarityFromProbes(typeProbe, rarityProbe, cardType, rarity);
+  let nextType = reconcileCardTypeWithRarity(
+    resolved.cardType,
+    resolved.rarity,
+    rarityProbe.plateColor,
+    typeProbe.frameColor,
+    rarityProbe.plateType || typeProbe.namePlateType
+  );
+  nextType = stabilizeDetectedCardType(nextType);
+  const nextRarity = stabilizeDetectedCardRarity(resolved.rarity);
+  lastDetectedCardType = nextType;
+  lastDetectedCardRarity = nextRarity;
+  setVisionTypeRarity(nextType, nextRarity, { calibrating: false });
+}
+
+function buildPasscodeOcrVariants(video, cropRect, canvas, hint) {
+  const outW = PASSCODE_OCR_CANVAS_W;
+  const outH = PASSCODE_OCR_CANVAS_H;
+  canvas.width = outW;
+  canvas.height = outH;
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  if (!ctx) return null;
+  ctx.fillStyle = '#e8e8e8';
+  ctx.fillRect(0, 0, outW, outH);
+  try {
+    ctx.drawImage(
+      video,
+      cropRect.x,
+      cropRect.y,
+      cropRect.width,
+      cropRect.height,
+      0,
+      0,
+      outW,
+      outH
+    );
+  } catch (_) {
+    return null;
+  }
+  if (hint && hint.matteIdDigits) applyPasscodeMatteSharpen(ctx, outW, outH);
+  const makeVariant = (mode) => {
+    const c = document.createElement('canvas');
+    c.width = outW;
+    c.height = outH;
+    const cx = c.getContext('2d', { willReadFrequently: true });
+    if (!cx) return c;
+    cx.drawImage(canvas, 0, 0);
+    binarizePasscodeCrop(cx, outW, outH, mode);
+    return c;
+  };
+  const meanLum = hint && hint.meanLum != null ? hint.meanLum : 128;
+  const primary =
+    hint && hint.primary ? hint.primary : meanLum >= 105 ? 'darkOnLight' : 'lightOnDark';
+  const secondary =
+    hint && hint.secondary
+      ? hint.secondary
+      : primary === 'darkOnLight'
+        ? 'lightOnDark'
+        : 'darkOnLight';
+  const rawCanvas = document.createElement('canvas');
+  rawCanvas.width = outW;
+  rawCanvas.height = outH;
+  const rawCtx = rawCanvas.getContext('2d');
+  if (rawCtx) rawCtx.drawImage(canvas, 0, 0);
+  return {
+    darkOnLight: makeVariant('darkOnLight'),
+    lightOnDark: makeVariant('lightOnDark'),
+    rawCanvas,
+    primary,
+    secondary,
+    meanLum,
+  };
+}
+
+/**
+ * Recorte do passcode no espaço do vídeo (canto inf. esq. da carta), com fallback geométrico.
+ * @param {{ x: number, y: number, width: number, height: number }|null} passcodeVisual
+ * @param {{ x: number, y: number, width: number, height: number }|null} typeCropRect Mira azul.
+ * @returns {{ x: number, y: number, width: number, height: number }|null}
+ */
+function getPasscodeCropForOcr(passcodeVisual, typeCropRect) {
+  const base = typeCropRect || passcodeVisual;
+  if (!base) return null;
+  const computed = {
+    x: base.x + base.width * 0.03,
+    y: base.y + base.height * 0.925,
+    width: base.width * 0.24,
+    height: base.height * 0.05,
+  };
+  if (!passcodeVisual || passcodeVisual.width < 6) return computed;
+  const aspect = passcodeVisual.height / passcodeVisual.width;
+  if (aspect > 0.28) return computed;
+  return refinePasscodeCropForOcr(passcodeVisual);
+}
+
+/**
+ * Preenche `#preview-passcode-canvas` com o recorte bruto da mira (legível para o utilizador).
+ * @param {HTMLCanvasElement} rawCanvas Recorte antes da binarização agressiva.
+ * @returns {void}
+ */
+/**
+ * Preview ID ao vivo (1 blit; chamado a cada frame do loop de preview).
+ * @param {HTMLCanvasElement} rawCanvas
+ * @returns {void}
+ */
+function paintPasscodePreviewCanvasLive(robotCanvas) {
+  const previewEl = getEl('preview-passcode-canvas');
+  if (!previewEl || !robotCanvas || !robotCanvas.width) return;
+  const outW = OCR_PREVIEW_PASSCODE_LIVE_W;
+  const outH = OCR_PREVIEW_PASSCODE_LIVE_H;
+  if (previewEl.width !== outW || previewEl.height !== outH) {
+    previewEl.width = outW;
+    previewEl.height = outH;
+  }
+  const pctx = previewEl.getContext('2d', { alpha: false });
+  if (!pctx) return;
+  pctx.fillStyle = '#2a2a2a';
+  pctx.fillRect(0, 0, outW, outH);
+  pctx.imageSmoothingEnabled = false;
+  pctx.drawImage(robotCanvas, 0, 0, robotCanvas.width, robotCanvas.height, 0, 0, outW, outH);
+  pctx.strokeStyle = 'rgba(243, 156, 18, 0.85)';
+  pctx.lineWidth = 2;
+  pctx.strokeRect(1, 1, outW - 2, outH - 2);
+}
+
+function paintPasscodePreviewCanvas(rawCanvas) {
+  const previewEl = getEl('preview-passcode-canvas');
+  if (!previewEl || !rawCanvas || !rawCanvas.width) return;
+  const outW = PASSCODE_PREVIEW_W;
+  const outH = PASSCODE_PREVIEW_H;
+  previewEl.width = outW;
+  previewEl.height = outH;
+  const pctx = previewEl.getContext('2d');
+  if (!pctx) return;
+  pctx.fillStyle = '#2a2a2a';
+  pctx.fillRect(0, 0, outW, outH);
+  if (!passcodePreviewEnhCanvas) passcodePreviewEnhCanvas = document.createElement('canvas');
+  const enh = passcodePreviewEnhCanvas;
+  enh.width = outW;
+  enh.height = outH;
+  const ectx = enh.getContext('2d');
+  if (!ectx) return;
+  ectx.fillStyle = '#888';
+  ectx.fillRect(0, 0, outW, outH);
+  ectx.drawImage(rawCanvas, 0, 0, rawCanvas.width, rawCanvas.height, 0, 0, outW, outH);
+  ectx.filter = 'grayscale(1) contrast(1.55) brightness(1.08)';
+  ectx.drawImage(enh, 0, 0);
+  ectx.filter = 'none';
+  pctx.imageSmoothingEnabled = false;
+  pctx.drawImage(enh, 0, 0, outW, outH);
+  pctx.strokeStyle = 'rgba(243, 156, 18, 0.85)';
+  pctx.lineWidth = 2;
+  pctx.strokeRect(1, 1, outW - 2, outH - 2);
+}
+
+/**
+ * Atualiza `#ocr-passcode-live-read` (canal ID separado do nome).
+ * @param {null|{ raw?: string, candidates?: string[], confidence?: number, card?: object|null }} sidecar
+ * @returns {void}
+ */
+function updateOcrPasscodeLiveReadDisplay(sidecar) {
+  const el = getEl('ocr-passcode-live-read');
+  if (!el) return;
+  if (!sidecar || !sidecar.raw) {
+    const t = T('ocr.live.passcode_no_text');
+    if (lastOcrPasscodeLiveReadKey !== t) {
+      lastOcrPasscodeLiveReadKey = t;
+      el.textContent = t;
+    }
+    return;
+  }
+  const cands = (sidecar.candidates || []).join(', ') || '—';
+  const conf =
+    typeof sidecar.confidence === 'number' && isFinite(sidecar.confidence)
+      ? Math.round(sidecar.confidence)
+      : '—';
+  const status = sidecar.card ? T('ocr.live.status_match') : T('ocr.live.status_weak');
+  const raw = String(sidecar.raw).replace(/\s+/g, '').slice(0, 16);
+  const line = T('ocr.live.passcode_reading', {
+    raw,
+    cands,
+    engine: 'ID',
+    conf: String(conf),
+    status,
+  });
+  if (line === lastOcrPasscodeLiveReadKey) return;
+  lastOcrPasscodeLiveReadKey = line;
+  el.textContent = line;
+}
+
+/**
+ * Logs dedicados ao canal passcode (separados do nome).
+ * @param {null|{ raw?: string, candidates?: string[], confidence?: number, card?: object|null }} sidecar
+ * @returns {void}
+ */
+function logPasscodeOcrAttempt(sidecar) {
+  if (!sidecar) {
+    const hk = 'hunt';
+    if (lastOcrPasscodeLogKey === hk) return;
+    lastOcrPasscodeLogKey = hk;
+    addOcrLog(T('ocr.log.passcode_hunt'), 'id');
+    return;
+  }
+  if (!sidecar.raw) return;
+  const conf =
+    typeof sidecar.confidence === 'number' && isFinite(sidecar.confidence)
+      ? Math.round(sidecar.confidence)
+      : '—';
+  const cands = (sidecar.candidates || []).join(',') || '—';
+  const raw = String(sidecar.raw).replace(/\s+/g, '').slice(0, 20);
+  if (sidecar.card) return;
+  const readKey = `p|${conf}|${raw}|${cands}`;
+  if (readKey === lastOcrPasscodeLogKey) return;
+  lastOcrPasscodeLogKey = readKey;
+  addOcrLog(
+    T('ocr.log.passcode_reading', { raw, cands, engine: 'ID', conf: String(conf) }),
+    'id'
+  );
+  if ((sidecar.candidates || []).length) {
+    addOcrLog(T('ocr.log.passcode_weak', { raw: cands }), 'weak');
+  }
+}
+
+/**
+ * Inicia OCR de passcode em paralelo (não bloqueia o arranque do OCR do nome).
+ *
+ * @param {HTMLVideoElement} video
+ * @param {{ x: number, y: number, width: number, height: number }|null} passcodeVisual
+ * @param {{ x: number, y: number, width: number, height: number }|null} typeCropRect
+ * @returns {Promise<null|object>|null}
+ */
+function ensurePasscodeOcrRunning(video, passcodeVisual, typeCropRect) {
+  if (passcodeOcrInFlight) return passcodeOcrInFlight;
+  if (!canRunPasscodeOcrNow()) return null;
+  lastPasscodeOcrAt = Date.now();
+  passcodeOcrInFlight = tryScannerPasscodeMatch(
+    video,
+    passcodeVisual,
+    typeCropRect,
+    getScannerPasscodeVisionContext()
+  ).finally(() => {
+    passcodeOcrInFlight = null;
+  });
+  return passcodeOcrInFlight;
+}
+
+async function recognizePasscodeVariantCanvas(variantCanvas) {
+  try {
+    const result = await Promise.race([
+      ocrWorker.recognize(variantCanvas),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('passcode ocr timeout')), 1600)
+      ),
+    ]);
+    const text = result.data.text || '';
+    const conf = typeof result.data.confidence === 'number' ? result.data.confidence : 0;
+    const cands = extractYuGiOhPasscodeCandidates(text);
+    const score = conf + (cands.length ? 55 : 0) + (cands[0] && cands[0].length === 8 ? 12 : 0);
+    return { text, confidence: conf, score, cands };
+  } catch (_) {
+    return null;
+  }
+}
+
+async function recognizePasscodeFromCrop(video, cropRect, hint) {
+  if (!ocrWorker || !video || !cropRect || cropRect.width < 4 || cropRect.height < 2) return null;
+  if (!passcodeOcrCanvasReuse) {
+    passcodeOcrCanvasReuse = document.createElement('canvas');
+  }
+  const variants = buildPasscodeOcrVariants(video, cropRect, passcodeOcrCanvasReuse, hint);
+  if (!variants) return null;
+  await ocrWorker.setParameters(TESSERACT_PASSCODE_OCR_PARAMS);
+  let best = null;
+  let bestCanvas = variants[variants.primary];
+  const order = [variants.primary, variants.secondary];
+  try {
+    for (let oi = 0; oi < order.length; oi++) {
+      const mode = order[oi];
+      const vCanvas = variants[mode];
+      const hit = await recognizePasscodeVariantCanvas(vCanvas);
+      if (!hit) continue;
+      if (!best || hit.score > best.score) {
+        best = hit;
+        bestCanvas = vCanvas;
+      }
+      const hasEight = (hit.cands || []).some((c) => String(c).length === 8);
+      if (hasEight && hit.confidence >= 35) break;
+      if (oi === 0 && !(hit.cands || []).length && hit.confidence < 18) continue;
+      if (oi === 0 && (hit.cands || []).length) break;
+    }
+  } finally {
+    try {
+      await ocrWorker.setParameters(TESSERACT_NAME_OCR_PARAMS);
+    } catch (_) {}
+  }
+  if (variants.rawCanvas) paintPasscodePreviewCanvas(variants.rawCanvas);
+  if (!best) return null;
+  return { text: best.text, confidence: best.confidence };
+}
+
+/**
+ * Busca carta na API pelo passcode (`cardinfo.php?id=`).
+ * @param {string} passcodeStr
+ * @param {{ cardType?: string|null, rarity?: string|null }|null} [visionContext]
+ * @returns {Promise<object|null>}
+ */
+async function fetchScannerCardByPasscode(passcodeStr, visionContext) {
+  const candidates = extractYuGiOhPasscodeCandidates(passcodeStr);
+  if (!candidates.length) return null;
+  for (let ci = 0; ci < candidates.length; ci++) {
+    const idNum = Number(candidates[ci]);
+    const map = await fetchCardsByIdsBatched([idNum]);
+    const card = map.get(idNum);
+    if (!card) continue;
+    if (visionContext?.cardType && visionContext.cardType !== 'AUTO') {
+      if (scoreApiCardTypeAgainstUi(card, visionContext.cardType) < 0.22) continue;
+    }
+    return card;
+  }
+  return null;
+}
+
+/**
+ * Tenta identificar carta pelo passcode impresso na carta.
+ * @param {HTMLVideoElement} video
+ * @param {{ x: number, y: number, width: number, height: number }|null} passcodeCrop
+ * @param {{ cardType?: string|null, rarity?: string|null }|null} [visionContext]
+ * @returns {Promise<null|{ pack: object, cleaned: string, card: object, matchSource: string }>}
+ */
+async function tryScannerPasscodeMatch(video, passcodeVisualCrop, typeCropRect, visionContext) {
+  const passcodeCrop = getPasscodeCropForOcr(passcodeVisualCrop, typeCropRect);
+  if (!passcodeCrop) {
+    lastPasscodeSidecar = null;
+    updateOcrPasscodeLiveReadDisplay(null);
+    return null;
+  }
+  const idHint = derivePasscodeOcrHint(
+    video,
+    typeCropRect,
+    visionContext && visionContext.cardType,
+    visionContext && visionContext.rarity
+  );
+  const ocr = await recognizePasscodeFromCrop(video, passcodeCrop, idHint);
+  const candidates = ocr && ocr.text ? extractYuGiOhPasscodeCandidates(ocr.text) : [];
+  lastPasscodeSidecar = {
+    raw: ocr && ocr.text ? String(ocr.text).replace(/\s+/g, '') : '',
+    candidates,
+    confidence: ocr ? ocr.confidence : 0,
+    card: null,
+  };
+  updateOcrPasscodeLiveReadDisplay(lastPasscodeSidecar);
+  logPasscodeOcrAttempt(lastPasscodeSidecar);
+  if (!ocr || !ocr.text || !candidates.length) return null;
+  const card = await fetchScannerCardByPasscode(ocr.text, visionContext);
+  if (!card) return null;
+  const idLabel = candidates[0] || String(card.id);
+  lastPasscodeSidecar = { ...lastPasscodeSidecar, card };
+  updateOcrPasscodeLiveReadDisplay(lastPasscodeSidecar);
+  return {
+    pack: {
+      text: ocr.text,
+      confidence: ocr.confidence,
+      ocrEngine: 'passcode',
+      settings: { passcodeOcr: true },
+    },
+    cleaned: `ID ${idLabel}`,
+    card,
+    matchSource: 'passcode',
+  };
+}
+
+/**
+ * Nome e passcode em paralelo; o primeiro match válido ganha.
+ * @param {HTMLVideoElement} video
+ * @param {{ x: number, y: number, width: number, height: number }} nameCropRect
+ * @param {{ x: number, y: number, width: number, height: number }|null} typeCropRect
+ * @param {{ x: number, y: number, width: number, height: number }} nameCropVisual
+ * @param {{ x: number, y: number, width: number, height: number }} nameCropOcrRefined
+ * @returns {Promise<null|object>}
+ */
+async function scanNameOrPasscodeParallel(
+  video,
+  nameCropRect,
+  typeCropRect,
+  nameCropVisual,
+  nameCropOcrRefined
+) {
+  const passcodeVisual = mapVisualBoxToVideoCrop(video, getEl('scanner-passcode-visual'));
+  const nameP = processFrameWithFallbackPasses(
+    video,
+    nameCropRect,
+    typeCropRect,
+    nameCropVisual,
+    nameCropOcrRefined
+  );
+  const idP = ensurePasscodeOcrRunning(video, passcodeVisual, typeCropRect) || Promise.resolve(null);
+  const wrapMatch = (promise, source) =>
+    promise.then((outcome) => {
+      if (outcome && outcome.card) {
+        return { ...outcome, matchSource: outcome.matchSource || source };
+      }
+      throw new Error('ocr_no_match');
+    });
+  try {
+    return await Promise.any([wrapMatch(nameP, 'name'), wrapMatch(idP, 'passcode')]);
+  } catch (err) {
+    const [nameOutcome, idOutcome] = await Promise.all([nameP, idP]);
+    if (nameOutcome && nameOutcome.card) {
+      return { ...nameOutcome, matchSource: nameOutcome.matchSource || 'name' };
+    }
+    if (idOutcome && idOutcome.card) return idOutcome;
+    return nameOutcome || idOutcome || null;
+  }
+}
+
+/**
  * Um ciclo do loop de OCR: mira verde = nome, mira azul = tipo; processa e atualiza lista/toasts.
  * @returns {Promise<void>}
  */
 async function processOcrFrame() {
   if (!isOcrActive) return;
-  if (isProcessing || processingCooldown) {
-    requestAnimationFrame(processOcrFrame);
-    return;
-  }
   const video = getEl('ocr-video');
   if (!video || video.videoWidth === 0) {
     requestAnimationFrame(processOcrFrame);
     return;
   }
+  const nameCropVisual = mapVisualBoxToVideoCrop(video, getEl('scanner-visual'));
+  const typeCropRect = mapVisualBoxToVideoCrop(video, getEl('scanner-type-visual'));
+  if (nameCropVisual) {
+    onScannerSceneMaybeChanged(video, nameCropVisual, typeCropRect);
+    updateScannerFramingState(video, nameCropVisual);
+    const passcodeVisual = mapVisualBoxToVideoCrop(video, getEl('scanner-passcode-visual'));
+    ensurePasscodeOcrRunning(video, passcodeVisual, typeCropRect);
+  }
+  if (isProcessing) {
+    scheduleNextOcrFrame();
+    return;
+  }
   isProcessing = true;
   try {
-    const nameCropVisual = mapVisualBoxToVideoCrop(video, getEl('scanner-visual'));
-    const typeCropRect = mapVisualBoxToVideoCrop(video, getEl('scanner-type-visual'));
     if (!nameCropVisual) {
       isProcessing = false;
       requestAnimationFrame(processOcrFrame);
       return;
     }
-    const nameCropRect = refineNameCropForOcr(nameCropVisual);
+    const nameCropOcrRefined = refineNameCropForOcr(nameCropVisual);
+    const nameCropRect = nameCropVisual;
 
-    const outcome = await processFrameWithFallbackPasses(video, nameCropRect, typeCropRect, nameCropVisual);
-    maybeRecordOcrDiagnosticsSample(video, nameCropVisual, nameCropRect, typeCropRect, outcome);
+    const outcome = await scanNameOrPasscodeParallel(
+      video,
+      nameCropRect,
+      typeCropRect,
+      nameCropVisual,
+      nameCropOcrRefined
+    );
+    updateOcrLiveReadDisplay(outcome);
+    if (lastPasscodeSidecar) updateOcrPasscodeLiveReadDisplay(lastPasscodeSidecar);
     const statusNow = Date.now();
-    if (statusNow - lastOcrScanStatusLogAt >= 2800) {
+    if (statusNow - lastOcrScanStatusLogAt >= 2200) {
       lastOcrScanStatusLogAt = statusNow;
-      if (!outcome || !outcome.cleaned) {
-        addOcrLog(T('ocr.log.scan_hunting', { type: lastDetectedCardType || '?' }));
-      } else if (!outcome.card) {
-        addOcrLog(T('ocr.log.scan_weak', { text: outcome.cleaned }));
-      }
+      logOcrFrameOutcome(outcome);
+    } else if (outcome && outcome.card) {
+      logOcrFrameOutcome(outcome);
+    } else if (outcome && outcome.cleaned) {
+      const rk = `${outcome.cleaned}|${outcome.pack && outcome.pack.ocrEngine}`;
+      if (rk !== lastOcrLogReadKey) logOcrFrameOutcome(outcome);
     }
-    if (outcome && outcome.cleaned) {
-      if (outcome.cleaned !== lastMatchedText) addOcrLog(T('ocr.log.reading', { text: outcome.cleaned }));
-      if (outcome.card) {
-        const cardName = displayNameForApiCard(outcome.card);
-        triggerScanHaptic(outcome.card.id);
-        if (!scannerFoundCardIds.has(outcome.card.id)) {
-          scannerFoundCardIds.add(outcome.card.id);
-          scannerFoundCardById.set(String(outcome.card.id), outcome.card);
-          scannerFoundCards.push(outcome.card);
-          lastMatchedText = cardName;
-          lastMatchTime = Date.now();
-          showScannerToast(cardName);
-          addOcrLog(T('ocr.log.card_added', { name: cardName }));
-          updateScannerResultsUI();
-          processingCooldown = true;
-          setTimeout(() => {
-            processingCooldown = false;
-          }, 1200);
-        }
+    if (ocrDiagnosticsCaptureActive) {
+      const deferDiag = typeof requestIdleCallback === 'function';
+      const runDiag = () =>
+        maybeRecordOcrDiagnosticsSample(
+          video,
+          nameCropVisual,
+          nameCropOcrRefined || nameCropRect,
+          typeCropRect,
+          outcome
+        );
+      if (deferDiag) requestIdleCallback(runDiag, { timeout: 400 });
+      else setTimeout(runDiag, 0);
+    }
+    if (outcome && outcome.card) {
+      const cardName = displayNameForApiCard(outcome.card);
+      triggerScanHaptic(outcome.card.id);
+      if (!scannerFoundCardIds.has(outcome.card.id)) {
+        scannerFoundCardIds.add(outcome.card.id);
+        scannerFoundCardById.set(String(outcome.card.id), outcome.card);
+        scannerFoundCards.push(outcome.card);
+        lastMatchedText = cardName;
+        lastMatchTime = Date.now();
+        showScannerToast(cardName);
+        updateScannerResultsUI();
+        processingCooldown = true;
+        setTimeout(() => {
+          processingCooldown = false;
+        }, OCR_SCANNER_COOLDOWN_MS);
       }
     }
   } catch (err) {
@@ -32629,10 +34503,7 @@ async function processOcrFrame() {
     }
   }
   isProcessing = false;
-  const frameGapMs = ocrDiagnosticsCaptureActive ? 550 : 400;
-  setTimeout(() => {
-    if (isOcrActive) requestAnimationFrame(processOcrFrame);
-  }, frameGapMs);
+  scheduleNextOcrFrame();
 }
 
 /** Timer debounce para {@link onOcrWindowResize}. */
@@ -32873,11 +34744,30 @@ async function startScanner() {
         ocrWorker = await Tesseract.createWorker(TESSERACT_WORKER_OPTIONS);
         await ocrWorker.loadLanguage('eng');
         await ocrWorker.initialize('eng');
-        await ocrWorker.setParameters({
-          tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 ,:ÁÉÍÓÚÂÊÎÔÛÃÕÇ',
-          tessedit_pageseg_mode: '7',
-        });
+        await ocrWorker.setParameters(TESSERACT_NAME_OCR_PARAMS);
         addOcrLog(T('ocr.log.tesseract_ready'));
+        addOcrLog(T('ocr.log.paddle_loading'));
+        void getPaddleOcrModule()
+          .then(async (m) => {
+            const ok = await m.initPaddleOcrRec();
+            if (ok) {
+              paddleOcrReadyFlag = true;
+              addOcrLog(T('ocr.log.paddle_ready'), 'ok');
+            }
+            else {
+              const pe = m.getPaddleOcrInitError();
+              addOcrLog(
+                T('ocr.log.paddle_fail', {
+                  msg: pe && pe.message ? pe.message : 'init failed',
+                })
+              );
+            }
+          })
+          .catch((pe) => {
+            addOcrLog(
+              T('ocr.log.paddle_fail', { msg: pe && pe.message ? pe.message : String(pe) })
+            );
+          });
       } catch (tessErr) {
         ocrWorker = null;
         const tessMsg = tessErr && tessErr.message ? tessErr.message : String(tessErr);
@@ -32892,8 +34782,8 @@ async function startScanner() {
       }
     }
     isOcrActive = true;
-    setVisionStatus(T('ocr.status.initial'));
     addOcrLog(T('ocr.log.scanning'));
+    startOcrPreviewLoop();
     requestAnimationFrame(processOcrFrame);
   } catch (err) {
     addOcrLog(T('ocr.log.error', { msg: err && err.message ? err.message : String(err) }));
@@ -32915,6 +34805,35 @@ async function startScanner() {
  */
 function stopScanner() {
   isOcrActive = false;
+  stopOcrPreviewLoop();
+  paddleOcrReadyFlag = false;
+  if (ocrFrameScheduleTimer) {
+    clearTimeout(ocrFrameScheduleTimer);
+    ocrFrameScheduleTimer = 0;
+  }
+  ocrFramingLumHistory.length = 0;
+  ocrFramingState = 'seeking';
+  lastOcrLiveReadKey = '';
+  lastOcrLogReadKey = '';
+  lastOcrHuntLogKey = '';
+  lastOcrPasscodeLiveReadKey = '';
+  lastOcrPasscodeLogKey = '';
+  lastPasscodeSidecar = null;
+  lastPasscodeOcrAt = 0;
+  passcodeOcrInFlight = null;
+  lastVisionProbeAt = 0;
+  lastOcrPreviewPaintAt = 0;
+  lastScannerSceneKey = '';
+  const liveEl = getEl('ocr-live-read');
+  if (liveEl) liveEl.textContent = T('ocr.live.no_text');
+  const passLiveEl = getEl('ocr-passcode-live-read');
+  if (passLiveEl) passLiveEl.textContent = T('ocr.live.passcode_no_text');
+  const hint = getEl('ocr-framing-hint');
+  if (hint) {
+    hint.textContent = T('ocr.framing.seeking');
+    hint.classList.remove('ocr-framing-hint--ok', 'scanner-frame--aligned');
+    hint.classList.add('scanner-frame--seeking');
+  }
   const video = getEl('ocr-video');
   if (video && video.srcObject) {
     const tk = video.srcObject.getTracks();
@@ -33265,78 +35184,160 @@ styleScanner.textContent = `
         margin: 0 0 6px;
         letter-spacing: 0.04em;
     }
-    #ocr-manual-panel .custom-select-wrap--ocr-manual {
+    #ocr-manual-panel .ocr-manual-native-select {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        opacity: 0;
+        pointer-events: none;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+    }
+    #ocr-manual-panel .ocr-manual-type-rarity {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
         width: 100%;
         margin-bottom: 8px;
+        text-align: left;
     }
-    #ocr-manual-panel .custom-select-wrap--ocr-manual .custom-select-trigger.ocr-manual-select-trigger {
+    #ocr-manual-panel .ocr-manual-row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
         width: 100%;
+        min-width: 0;
+        background: rgba(20, 32, 28, 0.78);
+        border: 1px solid rgba(46, 204, 113, 0.45);
+        border-radius: 8px;
+        padding: 6px 8px;
+        box-sizing: border-box;
+    }
+    #ocr-manual-panel .ocr-manual-row__label {
+        flex: 0 0 4.6em;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: #7ddb9f;
+        line-height: 1.2;
+    }
+    #ocr-manual-panel .ocr-manual-row__value {
+        flex: 1 1 auto;
+        min-width: 0;
         display: flex;
         align-items: center;
         justify-content: flex-start;
-        gap: 14px;
-        padding: 10px 16px;
-        min-height: 42px;
+        gap: 6px;
+        padding: 4px 6px;
+        margin: 0;
+        background: rgba(0, 0, 0, 0.35);
+        border: 1px solid rgba(46, 204, 113, 0.28);
+        border-radius: 6px;
+        color: #eafdf0;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
         text-align: left;
-        flex-wrap: nowrap;
     }
-    #ocr-manual-panel .custom-select-wrap--ocr-manual .custom-select-trigger.ocr-manual-select-trigger:has(.filter-suggest-dual-icon) {
+    #ocr-manual-panel .ocr-manual-row__value:hover {
+        border-color: rgba(46, 204, 113, 0.55);
+        background: rgba(0, 0, 0, 0.5);
+    }
+    #ocr-manual-panel .ocr-manual-row__value:has(.filter-suggest-dual-icon) {
         justify-content: flex-end;
-        padding-left: 20px;
-        padding-right: 18px;
+        padding-right: 8px;
     }
-    #ocr-manual-panel .custom-select-wrap--ocr-manual .filter-suggest-label {
+    #ocr-manual-panel .ocr-manual-row__value .filter-suggest-label {
         flex: 1 1 auto;
         min-width: 0;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
-        text-align: left;
     }
-    #ocr-manual-panel .ocr-manual-select-trigger .filter-suggest-icon {
-        width: 22px !important;
-        height: 22px !important;
-        max-width: 22px;
-        max-height: 22px;
-        object-fit: contain;
-        flex-shrink: 0;
-    }
-    #ocr-manual-panel .ocr-manual-select-trigger .filter-suggest-dual-icon {
-        display: inline-flex;
-        align-items: center;
-        gap: 7px;
-        flex-shrink: 0;
-    }
-    #ocr-manual-panel .ocr-manual-select-trigger .filter-suggest-dual-icon img {
-        width: 17px !important;
-        height: 17px !important;
-        object-fit: contain;
-        display: block;
-    }
-    #ocr-manual-panel .ocr-manual-select-trigger .filter-suggest-dual-icon img.filter-suggest-icon--card-type {
+    #ocr-manual-panel .ocr-manual-row__value .filter-suggest-icon {
         width: 20px !important;
         height: 20px !important;
+        max-width: 20px;
+        max-height: 20px;
+        object-fit: contain;
+        flex-shrink: 0;
     }
-    #ocr-manual-panel .ocr-manual-select-trigger .filter-suggest-html-icon {
+    #ocr-manual-panel .ocr-manual-row__value .filter-suggest-dual-icon {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        flex-shrink: 0;
+    }
+    #ocr-manual-panel .ocr-manual-row__value .filter-suggest-dual-icon img {
+        width: 15px !important;
+        height: 15px !important;
+        object-fit: contain;
+    }
+    #ocr-manual-panel .ocr-manual-row__value .filter-suggest-dual-icon img.filter-suggest-icon--card-type {
+        width: 18px !important;
+        height: 18px !important;
+    }
+    #ocr-manual-panel .ocr-manual-row__value .filter-suggest-html-icon {
         display: flex;
         align-items: center;
         justify-content: center;
-        width: auto;
-        min-width: 22px;
-        height: 22px;
-        font-size: 15px;
         flex-shrink: 0;
-        color: var(--accent);
+        font-size: 14px;
+        color: #c8f5d4;
     }
-    #ocr-manual-panel .ocr-manual-select-trigger .filter-suggest-html-icon:has(.filter-suggest-dual-icon) {
-        min-width: 48px;
-        justify-content: flex-start;
-        padding-left: 2px;
+    #ocr-manual-panel .ocr-manual-row__auto {
+        flex: 0 0 auto;
+        margin: 0;
+        padding: 4px 8px;
+        min-height: 28px;
+        font-size: 11px;
+        font-weight: 700;
+        color: #9ab8a8;
+        background: rgba(0, 0, 0, 0.45);
+        border: 1px solid rgba(46, 204, 113, 0.22);
+        border-radius: 6px;
+        cursor: pointer;
+        white-space: nowrap;
+    }
+    #ocr-manual-panel .ocr-manual-row__auto:hover {
+        color: #d4f5e0;
+        border-color: rgba(46, 204, 113, 0.45);
+    }
+    #ocr-manual-panel .ocr-manual-row__auto--on,
+    #ocr-manual-panel .ocr-manual-row__auto[aria-pressed="true"] {
+        color: #1a2e22;
+        background: rgba(46, 204, 113, 0.88);
+        border-color: rgba(46, 204, 113, 0.95);
+    }
+    #ocr-manual-panel .ocr-manual-calib-badge {
+        font-size: 10px;
+        font-weight: 700;
+        color: #ffc266;
+        text-align: center;
+        letter-spacing: 0.04em;
+    }
+    html.ocr-scanner-active #vision-label.ocr-vision-label--chips {
+        display: none;
+    }
+    .ui-native-custom-select-panel.ui-native-custom-select-panel--ocr-manual {
+        min-width: 280px;
+        overflow-x: hidden;
+        box-sizing: border-box;
     }
     .ui-native-custom-select-panel .filter-combo-suggest-row--ocr-manual {
         align-items: center;
         gap: 14px;
         padding: 12px 16px 12px 22px;
+        flex-wrap: nowrap;
+        white-space: nowrap;
+    }
+    .ui-native-custom-select-panel .filter-combo-suggest-row--ocr-manual .filter-suggest-label {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        flex: 1 1 auto;
+        min-width: 0;
     }
     .ui-native-custom-select-panel .filter-combo-suggest-row--ocr-manual:has(.filter-suggest-dual-icon) {
         justify-content: flex-start;
@@ -33417,18 +35418,168 @@ styleScanner.textContent = `
         z-index: 2 !important;
         pointer-events: none !important;
         margin: 0 !important;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
         padding: 0 !important;
+    }
+    .scanner-card-frame.scanner-frame--aligned,
+    #scanner-type-visual.scanner-frame--aligned {
+        border-color: rgba(46, 204, 113, 0.95) !important;
+        box-shadow: 0 0 0 2px rgba(46, 204, 113, 0.35), 0 0 18px rgba(46, 204, 113, 0.25) !important;
+    }
+    .scanner-name-frame.scanner-frame--aligned,
+    #scanner-visual.scanner-frame--aligned {
+        border-color: #2ecc71 !important;
+        box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.25), 0 0 12px rgba(46, 204, 113, 0.45) !important;
+    }
+    .scanner-passcode-frame,
+    #scanner-passcode-visual {
+        position: absolute !important;
+        left: 2.5% !important;
+        bottom: 2.6% !important;
+        top: auto !important;
+        right: auto !important;
+        width: 19% !important;
+        height: 3.4% !important;
+        min-height: 0 !important;
+        border: 2px solid #f39c12 !important;
+        background: rgba(243, 156, 18, 0.22) !important;
+        border-radius: 3px !important;
+        box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.35), 0 0 8px rgba(243, 156, 18, 0.35) !important;
+        z-index: 3 !important;
+        pointer-events: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    html.ocr-scanner-active #vision-label {
+        display: none !important;
+    }
+    #ocr-preview-wrap {
+        background: rgba(0, 0, 0, 0.55);
+        border: 1px solid rgba(46, 204, 113, 0.25);
+        border-radius: 8px;
+        margin-top: 4px;
+    }
+    .ocr-preview-label {
+        font-size: 11px;
+        font-weight: 600;
+        color: #b8e8c8;
+        text-align: center;
+        padding: 8px 6px 4px;
+        font-family: system-ui, Segoe UI, sans-serif;
+        letter-spacing: 0.02em;
+    }
+    .ocr-preview-label--id {
+        color: #f0c878;
+        padding-top: 10px;
+        padding-bottom: 0;
+    }
+    .ocr-preview-sublabel {
+        font-size: 9px;
+        color: #9aa8b5;
+        text-align: center;
+        padding: 0 6px 4px;
+        line-height: 1.25;
+        font-family: system-ui, Segoe UI, sans-serif;
+    }
+    .ocr-preview-sublabel--id {
+        color: #c9a56a;
+    }
+    #preview-passcode-canvas {
+        display: block;
+        width: 100% !important;
+        height: auto !important;
+        max-height: 72px !important;
+        min-height: 36px !important;
+        background: #2a2a2a;
+        border: 2px solid #f39c12;
+        border-radius: 4px;
+        box-sizing: border-box;
+        object-fit: fill;
+        image-rendering: pixelated;
+        image-rendering: crisp-edges;
+    }
+    #ocr-passcode-live-read {
+        display: block;
+        width: 100%;
+        box-sizing: border-box;
+        padding: 4px 6px 6px;
+        text-align: center;
+        font-size: 10px;
+        line-height: 1.35;
+        font-family: ui-monospace, Consolas, monospace;
+        color: #f5d08a;
+        word-break: break-word;
+    }
+    #ocr-passcode-live-read:empty::before {
+        content: 'ID: —';
+        opacity: 0.65;
+    }
+    .scanner-card-frame.scanner-frame--seeking,
+    #scanner-type-visual.scanner-frame--seeking {
+        border-color: rgba(52, 152, 219, 0.92) !important;
+    }
+    .ocr-framing-hint,
+    #ocr-framing-hint {
+        display: block;
+        margin: 2px auto 4px;
+        padding: 4px 8px;
+        border-radius: 8px;
+        background: rgba(0, 0, 0, 0.72);
+        color: #ecf0f1;
+        font-size: 11px;
+        font-family: system-ui, Segoe UI, sans-serif;
+        line-height: 1.2;
+        text-align: center;
+        pointer-events: none;
+        white-space: normal;
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+    #ocr-crosshair-hint {
+        font-size: 10px;
+        line-height: 1.3;
+        text-align: center;
+        padding: 0 6px 6px;
+        color: #aeb8c4;
+        word-break: break-word;
+    }
+    #ocr-focus-hint-static {
+        font-size: 11px;
+    }
+    #ocr-framing-hint.ocr-framing-hint--ok,
+    .ocr-framing-hint.scanner-frame--aligned {
+        background: rgba(39, 174, 96, 0.82);
+        color: #fff;
+    }
+    #ocr-live-read {
+        display: block;
+        width: 100%;
+        box-sizing: border-box;
+        padding: 5px 6px 2px;
+        text-align: center;
+        font-size: 11px;
+        line-height: 1.35;
+        font-family: ui-monospace, Consolas, monospace;
+        color: #9fd4ff;
+        word-break: break-word;
+    }
+    #ocr-live-read:empty::before {
+        content: 'Leitura: —';
+        opacity: 0.65;
     }
     #preview-canvas {
         display: block;
         width: 100% !important;
         height: auto !important;
-        max-height: none !important;
-        background: #000;
+        max-height: 72px !important;
+        min-height: 32px !important;
+        background: #0a0a0a;
         border: 2px solid #0f0;
         border-radius: 4px;
-        min-height: 44px;
         box-sizing: border-box;
+        object-fit: fill;
+        image-rendering: pixelated;
+        image-rendering: crisp-edges;
     }
     /* Sem scanner: slot de vídeo ocupa fundo da coluna; com scanner (classe em html) passa a coluna empilhada. */
     .ocr-layout-column {
@@ -33495,19 +35646,21 @@ styleScanner.textContent = `
     }
     .ocr-crosshair-hint {
         display: block;
-        margin: 0 auto 4px;
-        padding: 0 4px;
-        font-size: 10px;
+        margin: 0 auto 6px;
+        padding: 3px 6px;
+        font-size: 11px;
         font-weight: 600;
-        letter-spacing: 0.02em;
+        letter-spacing: 0.01em;
         color: #dfffea;
         font-family: system-ui, Segoe UI, sans-serif;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
         max-width: 100%;
-        line-height: 1.25;
+        line-height: 1.2;
         box-sizing: border-box;
+        background: rgba(0, 0, 0, 0.45);
+        border-radius: 6px;
     }
     html.ocr-scanner-active #col-filters #ocr-preview-wrap {
         position: relative !important;
@@ -33518,6 +35671,11 @@ styleScanner.textContent = `
         z-index: 1 !important;
         order: 3;
         margin-bottom: 10px !important;
+        flex: 0 1 auto;
+        min-height: 0;
+        max-height: min(38vh, 280px);
+        overflow-y: auto;
+        overflow-x: hidden;
     }
     html.ocr-scanner-active #col-filters #ocr-manual-panel {
         position: relative !important;
@@ -33587,8 +35745,8 @@ styleScanner.textContent = `
         position: relative !important;
         height: auto !important;
         min-height: 52px !important;
-        max-height: min(26dvh, 180px);
-        font-size: 12px !important;
+        max-height: min(22dvh, 150px);
+        font-size: 11px !important;
         padding: 6px 8px 8px 8px !important;
         margin-top: 0;
         flex: 1 1 auto;
@@ -33715,6 +35873,10 @@ styleScanner.textContent = `
         }
         html.ocr-scanner-active #col-filters #preview-canvas {
             min-height: 44px !important;
+            max-height: 56px !important;
+        }
+        html.ocr-scanner-active #col-filters #preview-passcode-canvas {
+            max-height: 36px !important;
         }
         html.ocr-scanner-active #col-filters #vision-label.ocr-vision-label--chips {
             padding: 4px 6px !important;
@@ -33766,10 +35928,14 @@ styleScanner.textContent = `
             font-size: 10px !important;
             line-height: 1.25 !important;
         }
-        html.ocr-scanner-active #col-filters #ocr-log > div {
-            padding: 1px 0 !important;
+        html.ocr-scanner-active #col-filters #ocr-log > div,
+        html.ocr-scanner-active #col-filters #ocr-log .ocr-log-line {
+            padding: 3px 2px !important;
             font-size: 10px !important;
-            line-height: 1.25 !important;
+            line-height: 1.2 !important;
+            white-space: nowrap !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
         }
         html.ocr-scanner-active #col-filters #ocr-manual-panel > div:first-child {
             margin-bottom: 3px !important;
@@ -35363,12 +37529,14 @@ function isUltraGoldNameStripMetrics(m) {
   if (m.foilRatio > 0.65 && m.goldRatio < 0.07 && m.warmFoilRatio < 0.1) return false;
   if (
     isFusionPurpleFrameRgb(m.plateR, m.plateG, m.plateB) &&
-    m.goldRatio > 0.1 &&
-    m.goldRatio < 0.17 &&
-    m.warmFoilRatio < 0.12 &&
-    m.hueVar < 0.1
+    m.goldRatio >= 0.04 &&
+    m.goldRatio < 0.22 &&
+    m.warmFoilRatio >= 0.06 &&
+    m.hueVar < 0.12 &&
+    m.silverRatio < 0.14 &&
+    m.foilRatio > 0.38
   ) {
-    return false;
+    return true;
   }
   return (
     ((m.goldRatio > 0.14 && m.warmFoilRatio > 0.11) ||
@@ -35387,6 +37555,15 @@ function isUltraGoldNameStripMetrics(m) {
  */
 function isCommonBlackNameStripMetrics(m) {
   if (!m) return false;
+  if (isUltraGoldNameStripMetrics(m)) return false;
+  if (
+    isFusionPurpleFrameRgb(m.plateR, m.plateG, m.plateB) &&
+    m.foilRatio > 0.42 &&
+    (m.goldRatio > 0.04 || m.warmFoilRatio > 0.06) &&
+    m.silverRatio < 0.14
+  ) {
+    return false;
+  }
   const secretLikeName =
     m.silverRatio > 0.32 ||
     (m.silverRatio > 0.2 && m.hueVar > 0.15 && m.foilRatio > 0.55) ||
@@ -35427,11 +37604,11 @@ function isArtHeavySecretHoloMetrics(art) {
 function classifyFusionPlateFoilRarity(m, artMetrics) {
   if (!m || m.samples < 8) return null;
   if (!isFusionPurpleFrameRgb(m.plateR, m.plateG, m.plateB)) return null;
-  if (isFusionCommonPlateGlareNameStrip(m)) return 'Comum';
   if (m.foilRatio < 0.36) {
     return m.darkLetterRatio > 0.07 ? 'Comum' : null;
   }
   if (isUltraGoldNameStripMetrics(m)) return 'Ultra Rara';
+  if (isFusionCommonPlateGlareNameStrip(m)) return 'Comum';
   if (isSecretNameStripMetrics(m)) return 'Secreta';
   const artSecret =
     artMetrics &&
@@ -35548,9 +37725,9 @@ function classifyRarityFromStripMetrics(m) {
   if (xyzPlate && silverRatio > 0.22 && foilRatio > 0.03 && foilRatio < 0.45) return 'Secreta';
   if (silverRatio > 0.45 && foilRatio > 0.32) return 'Secreta';
   if (isNameStripSunGlareMetrics(m)) return 'Comum';
+  if (isUltraGoldNameStripMetrics(m)) return 'Ultra Rara';
   if (isFusionCommonPlateGlareNameStrip(m)) return 'Comum';
   if (isCommonBlackNameStripMetrics(m)) return 'Comum';
-  if (isUltraGoldNameStripMetrics(m)) return 'Ultra Rara';
   if (isSecretNameStripMetrics(m)) return 'Secreta';
   if (purplePlate) {
     const fusionFoil = classifyFusionPlateFoilRarity(m, null);
@@ -35895,6 +38072,9 @@ function classifyRarityFromArtMetrics(art, border) {
  */
 function mergeRarityClassification(nameRarity, artRarity, nameMetrics, artMetrics) {
   const art = artRarity || null;
+  if (nameMetrics && isUltraGoldNameStripMetrics(nameMetrics)) {
+    return 'Ultra Rara';
+  }
   if (nameMetrics && isFusionCommonPlateGlareNameStrip(nameMetrics)) {
     return 'Comum';
   }
@@ -36153,12 +38333,12 @@ function resolveVisionTypeAndRarityFromProbes(typeProbe, rarityProbe, detectedTy
     : null;
   const premium = new Set(['Ultra Rara', 'Secreta', 'Ultimate Rara', 'Starlight Rare']);
 
-  if (nm && (isFusionCommonPlateGlareNameStrip(nm) || isCommonBlackNameStripMetrics(nm))) {
-    rarity = 'Comum';
+  if (nm && isUltraGoldNameStripMetrics(nm)) {
+    rarity = 'Ultra Rara';
     lastStableDetectedCardRarity = rarity;
     lastStableDetectedCardRarityAt = Date.now();
-  } else if (nm && isUltraGoldNameStripMetrics(nm)) {
-    rarity = 'Ultra Rara';
+  } else if (nm && (isFusionCommonPlateGlareNameStrip(nm) || isCommonBlackNameStripMetrics(nm))) {
+    rarity = 'Comum';
     lastStableDetectedCardRarity = rarity;
     lastStableDetectedCardRarityAt = Date.now();
   } else if (nm && isSecretNameStripMetrics(nm)) {
@@ -36389,7 +38569,7 @@ async function autoCalibrate() {
   if (ocrAutoCalibrateBusy) {
     if (calibrator) calibrator.cancelRequested = true;
     ocrCalibrationGeneration++;
-    addOcrLog('A cancelar calibração anterior…');
+    addOcrLog('A cancelar calibração anterior…', 'warn');
     await new Promise((r) => setTimeout(r, 180));
   }
   ocrAutoCalibrateBusy = true;
@@ -36422,11 +38602,12 @@ async function autoCalibrate() {
   const typeCropRect = mapVisualBoxToVideoCrop(video, getEl('scanner-type-visual'));
   const cropRect = nameCropVisual ? refineNameCropForOcr(nameCropVisual) : null;
   if (!cropRect || cropRect.width < 4 || cropRect.height < 4) {
-    addOcrLog('Mira verde inválida — alinhe o nome da carta.');
+    addOcrLog('Mira verde inválida — alinhe o nome da carta.', 'warn');
     showToast(T('toast.ocr_bad'));
     ocrAutoCalibrateBusy = false;
     if (wasActive) {
       isOcrActive = true;
+      startOcrPreviewLoop();
       requestAnimationFrame(processOcrFrame);
     }
     return;
@@ -36499,6 +38680,7 @@ async function autoCalibrate() {
               isOcrActive = true;
               isProcessing = false;
               processingCooldown = false;
+              startOcrPreviewLoop();
               requestAnimationFrame(processOcrFrame);
               addOcrLog(T('ocr.log.calib_resumed'));
             }
@@ -36531,6 +38713,7 @@ async function autoCalibrate() {
       isOcrActive = true;
       isProcessing = false;
       processingCooldown = false;
+      startOcrPreviewLoop();
       setTimeout(() => requestAnimationFrame(processOcrFrame), 100);
     }
   }

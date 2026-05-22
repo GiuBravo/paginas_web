@@ -2087,14 +2087,25 @@
             aria-hidden="true"
           >
             <div id="scanner-visual" class="scanner-name-frame" aria-hidden="true"></div>
+            <div
+              id="scanner-passcode-visual"
+              class="scanner-passcode-frame"
+              aria-hidden="true"
+            ></div>
           </div>
         </div>
         <div id="ocr-under-camera" class="ocr-under-camera">
           <div id="ocr-focus-hint-static" class="ocr-focus-hint" data-i18n="ocr.focus_tap">
             📷 Tap the screen to focus
           </div>
+          <div
+            id="ocr-framing-hint"
+            class="ocr-framing-hint scanner-frame--seeking"
+            data-i18n="ocr.framing.seeking"
+            aria-live="polite"
+          ></div>
           <div id="ocr-crosshair-hint" class="ocr-crosshair-hint">
-            <span data-i18n="ocr.crosshair">🎯 Encaixe a carta na moldura azul (a verde é só o nome, sem atributo)</span>
+            <span data-i18n="ocr.crosshair">🎯 Azul: carta · Verde: nome</span>
           </div>
         </div>
         <div
@@ -2107,10 +2118,37 @@
             padding: 0 4px 4px;
           "
         >
+          <div class="ocr-preview-label" data-i18n="ocr.preview.name_label">Nome (robô)</div>
           <canvas
             id="preview-canvas"
             style="width: 100%; height: auto; display: block; border: 2px solid #0f0; background: #000"
           ></canvas>
+          <div
+            id="ocr-live-read"
+            class="ocr-live-read"
+            aria-live="polite"
+            data-i18n="ocr.live.no_text"
+          ></div>
+          <div class="ocr-preview-label ocr-preview-label--id" data-i18n="ocr.preview.id_label">
+            ID lido
+          </div>
+          <div
+            class="ocr-preview-sublabel ocr-preview-sublabel--id"
+            data-i18n="ocr.preview.id_hint"
+          >
+            Recorte da mira laranja (como a câmara vê)
+          </div>
+          <canvas
+            id="preview-passcode-canvas"
+            class="ocr-preview-passcode-canvas"
+            style="width: 100%; height: auto; display: block; border: 2px solid #f39c12; background: #000"
+          ></canvas>
+          <div
+            id="ocr-passcode-live-read"
+            class="ocr-passcode-live-read"
+            aria-live="polite"
+            data-i18n="ocr.live.passcode_no_text"
+          ></div>
           <div
             id="vision-label"
             class="ocr-vision-label"
@@ -2143,24 +2181,60 @@
             overflow-x: hidden;
           "
         >
-        <div
-          style="color: #c8f5d4; font-size: 13px; margin-bottom: 6px; font-weight: 600"
-          data-i18n="ocr.manual.title"
-        >
-          ⚙️ Configuração Manual
+        <div id="ocr-manual-type-rarity" class="ocr-manual-type-rarity">
+          <div class="ocr-manual-row" data-ocr-manual="type">
+            <span class="ocr-manual-row__label" data-i18n="ocr.vision.k_type">Tipo</span>
+            <button
+              type="button"
+              id="btn-ocr-manual-type-value"
+              class="ocr-manual-row__value"
+              aria-haspopup="listbox"
+              aria-expanded="false"
+            ></button>
+            <button
+              type="button"
+              id="btn-ocr-manual-type-auto"
+              class="ocr-manual-row__auto"
+              aria-pressed="true"
+              data-i18n="ocr.manual.auto_short"
+            >
+              Auto
+            </button>
+          </div>
+          <div class="ocr-manual-row" data-ocr-manual="rarity">
+            <span class="ocr-manual-row__label" data-i18n="ocr.vision.k_rarity">Raridade</span>
+            <button
+              type="button"
+              id="btn-ocr-manual-rarity-value"
+              class="ocr-manual-row__value"
+              aria-haspopup="listbox"
+              aria-expanded="false"
+            ></button>
+            <button
+              type="button"
+              id="btn-ocr-manual-rarity-auto"
+              class="ocr-manual-row__auto"
+              aria-pressed="true"
+              data-i18n="ocr.manual.auto_short"
+            >
+              Auto
+            </button>
+          </div>
+          <div
+            id="ocr-manual-calib-badge"
+            class="ocr-manual-calib-badge"
+            role="status"
+            hidden
+            data-i18n="ocr.vision.calibrating_badge"
+          >
+            A calibrar…
+          </div>
         </div>
         <select
           id="manual-card-type"
-          style="
-            width: 100%;
-            max-width: 100%;
-            box-sizing: border-box;
-            padding: 6px;
-            margin-bottom: 8px;
-            background: #111;
-            color: #fff;
-            border: 1px solid #2ecc71;
-          "
+          class="ocr-manual-native-select"
+          aria-hidden="true"
+          tabindex="-1"
         >
           <option value="AUTO" selected data-i18n-opt="ocr.manual.auto">Auto (detectar)</option>
           <option value="Magia" data-i18n-opt="ocr.type.spell">Magia</option>
@@ -2177,15 +2251,9 @@
         </select>
         <select
           id="manual-rarity"
-          style="
-            width: 100%;
-            max-width: 100%;
-            box-sizing: border-box;
-            padding: 6px;
-            background: #111;
-            color: #fff;
-            border: 1px solid #2ecc71;
-          "
+          class="ocr-manual-native-select"
+          aria-hidden="true"
+          tabindex="-1"
         >
           <option value="AUTO" selected data-i18n-opt="ocr.manual.auto">Auto (detectar)</option>
           <option value="Comum" data-i18n-opt="ocr.rarity.common">Comum</option>

@@ -24,3 +24,7 @@ desktop.ini
 .vscode/
 .idea/
 
+## OCR Paddle — modelos grandes (após clone: npm run vendor:ocr-models)
+public/ocr-models/**/*.onnx
+public/ocr-models/**/*.zip
+

@@ -11,6 +11,7 @@
     "loc:write-index": "node scripts/write-loc-into-index.mjs --write",
     "test": "node --check src/main.js && node scripts/catalog-cache-spec.mjs && node scripts/card-text-cache-spec.mjs && npm run build --silent && npm run build:monolith --silent",
     "vendor:ygo-deck-icons": "node scripts/vendor-ygo-deck-icons.mjs",
+    "vendor:ocr-models": "node scripts/vendor-ocr-models.mjs",
     "format": "prettier -w index.html src/main.js src/style.css vite.config.js",
     "doc:refresh-index-ids": "node scripts/generate-index-html-id-catalog-comment.mjs --write"
   },
@@ -19,6 +20,8 @@
     "vite": "^7.1.3"
   },
   "dependencies": {
-    "fflate": "^0.8.3"
+    "fflate": "^0.8.3",
+    "esearch-ocr": "^8.5.0",
+    "onnxruntime-web": "^1.22.0"
   }
 }
