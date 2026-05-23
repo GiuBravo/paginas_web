@@ -7,7 +7,6 @@ import {
 } from './calc.js';
 import {
   obter_nivel_maximo_efetivo,
-  obter_niveis_minimos_guia,
   obter_reinicio_maximo,
 } from './gameData.js';
 import {
@@ -26,8 +25,8 @@ import {
 } from './i18n.js';
 import {
   initTabelasReferencia,
-  injetarIconesTituloRef,
   renderizarTabelasReferencia,
+  sincronizarAbasRaridadeRef,
 } from './refTablesUi.js';
 import {
   initSelectRaridade,
@@ -39,6 +38,7 @@ import {
 } from './selectComIcone.js';
 import { initPainelSuperSoro, injetarIconeTituloSerum, renderizarPainelSuperSoro } from './serumUi.js';
 import { initPainelPresentes, renderizarPainelPresentes } from './giftsUi.js';
+import { ICONS, obterIconeAlma, sincronizarIconesAlma } from './icons.js';
 
 const STORAGE = {
   tema: 'tema_armazenado',
@@ -50,18 +50,20 @@ const STORAGE = {
   reinicioAtual: 'reinicio_atual_armazenado',
   levelAtual: 'level_atual_armazenado',
   pontosAlma: 'pontos_alma_armazenados',
+  pontosCreditos: 'pontos_creditos_armazenados',
   reinicioOrcamento: 'reinicio_orcamento_armazenado',
   levelOrcamento: 'level_orcamento_armazenado',
 };
 
 const CAMPOS_OBJETIVO = ['reinicio_desejado', 'reinicio_atual', 'level_desejado', 'level_atual'];
-const CAMPOS_ORCAMENTO = ['pontos_alma', 'reinicio_orcamento', 'level_orcamento'];
+const CAMPOS_ORCAMENTO = ['pontos_alma', 'pontos_creditos', 'reinicio_orcamento', 'level_orcamento'];
 
 let temaSelecionado = 'claro';
 let modoCalculadora = 'goal';
 let appAbaAtiva = 'cost';
 let textoUltimoResultado = '';
 let temporizadorCalculo = null;
+let ultimoResultadoOrcamento = null;
 
 const el = {
   raiz: document.getElementById('raiz_html'),
@@ -71,13 +73,14 @@ const el = {
   reinicioAtual: document.getElementById('reinicio_atual'),
   levelAtual: document.getElementById('level_atual'),
   pontosAlma: document.getElementById('pontos_alma'),
+  pontosCreditos: document.getElementById('pontos_creditos'),
   reinicioOrcamento: document.getElementById('reinicio_orcamento'),
   levelOrcamento: document.getElementById('level_orcamento'),
   panelObjetivo: document.getElementById('panel_modo_objetivo'),
   panelOrcamento: document.getElementById('panel_modo_orcamento'),
   resultadoObjetivo: document.getElementById('resultado_conteudo'),
   resultadoOrcamento: document.getElementById('resultado_modo_orcamento'),
-  orcamentoHeadline: document.getElementById('orcamento_headline'),
+  orcamentoResumo: document.getElementById('orcamento_resumo'),
   orcamentoBody: document.getElementById('orcamento_tabela_body'),
   botaoTema: document.getElementById('botao_tema'),
   botaoCopiar: document.getElementById('botao_copiar'),
@@ -90,6 +93,10 @@ const el = {
   badgeDesejado: document.getElementById('badge_reinicio_desejado'),
   badgeAtual: document.getElementById('badge_reinicio_atual'),
   guiaBody: document.getElementById('restart_guide_body'),
+  guiaTitulo: document.getElementById('guide_title_text'),
+  guiaColNivel: document.getElementById('guide_col_level'),
+  guiaLegendaDestino: document.getElementById('guide_legend_dest'),
+  guiaLegendaOrigem: document.getElementById('guide_legend_orig'),
 };
 
 function obterRaridade() {
@@ -107,25 +114,31 @@ function detectarModoInicial() {
   return salvo === 'budget' ? 'budget' : 'goal';
 }
 
+const APP_ABAS = ['cost', 'fortalecimento', 'gifts'];
+
 function detectarAppInicial() {
   const salvo = localStorage.getItem(STORAGE.app);
-  return salvo === 'gifts' ? 'gifts' : 'cost';
+  return APP_ABAS.includes(salvo) ? salvo : 'cost';
 }
 
 function aplicarAppUi() {
-  const cost = appAbaAtiva === 'cost';
-  document.getElementById('app_panel_cost')?.toggleAttribute('hidden', !cost);
-  document.getElementById('app_panel_gifts')?.toggleAttribute('hidden', cost);
-  document.getElementById('app_tab_cost')?.classList.toggle('app-tabs__btn--ativo', cost);
-  document.getElementById('app_tab_gifts')?.classList.toggle('app-tabs__btn--ativo', !cost);
-  document.getElementById('app_tab_cost')?.setAttribute('aria-selected', cost ? 'true' : 'false');
-  document.getElementById('app_tab_gifts')?.setAttribute('aria-selected', cost ? 'false' : 'true');
+  APP_ABAS.forEach((aba) => {
+    const ativo = appAbaAtiva === aba;
+    document.getElementById(`app_panel_${aba}`)?.toggleAttribute('hidden', !ativo);
+    document.getElementById(`app_tab_${aba}`)?.classList.toggle('app-tabs__btn--ativo', ativo);
+    document.getElementById(`app_tab_${aba}`)?.setAttribute('aria-selected', ativo ? 'true' : 'false');
+  });
   localStorage.setItem(STORAGE.app, appAbaAtiva);
-  if (!cost) renderizarPainelPresentes();
+  if (appAbaAtiva === 'gifts') renderizarPainelPresentes();
+  if (appAbaAtiva === 'fortalecimento') {
+    const raridadeSerum =
+      document.getElementById('serum_tabs')?.dataset.activeRarity || 'legendary';
+    renderizarPainelSuperSoro(raridadeSerum);
+  }
 }
 
 function definirApp(aba) {
-  appAbaAtiva = aba === 'gifts' ? 'gifts' : 'cost';
+  appAbaAtiva = APP_ABAS.includes(aba) ? aba : 'cost';
   aplicarAppUi();
 }
 
@@ -161,6 +174,8 @@ function aplicarModoUi() {
   document.getElementById('mode_tab_goal')?.setAttribute('aria-selected', goal ? 'true' : 'false');
   document.getElementById('mode_tab_budget')?.setAttribute('aria-selected', goal ? 'false' : 'true');
   localStorage.setItem(STORAGE.modo, modoCalculadora);
+  atualizarGuiaModo();
+  renderizarGuiaReinicios();
   executarCalculo();
 }
 
@@ -191,17 +206,101 @@ function atualizarOpcoesReinicio() {
 
 function renderizarGuiaReinicios() {
   if (!el.guiaBody) return;
-  const raridade = obterRaridade();
-  const niveis = obter_niveis_minimos_guia(raridade);
   el.guiaBody.innerHTML = '';
-  niveis.forEach((min, r) => {
+
+  const segmentos =
+    modoCalculadora === 'budget'
+      ? obterSegmentosPercursoOrcamento()
+      : obterSegmentosPercursoObjetivo();
+
+  segmentos.forEach(({ reinicio, nivelInicio, nivelFim }) => {
     const tr = document.createElement('tr');
-    tr.dataset.restart = String(r);
-    const reinicioLabel = t('restart.option', { n: r });
-    tr.innerHTML = `<td class="td-reinicio"><img src="/icons/reinicio.png?v=7" alt="" class="game-icon game-icon--sm" width="16" height="16" /><span>${reinicioLabel}</span></td><td class="td-nivel">${min}</td>`;
+    tr.dataset.restart = String(reinicio);
+    const reinicioLabel = t('restart.option', { n: reinicio });
+    const nivelTexto = formatarNivelPercurso(nivelInicio, nivelFim);
+    tr.innerHTML = `<td class="td-reinicio"><img src="/icons/reinicio.png?v=7" alt="" class="game-icon game-icon--sm" width="16" height="16" /><span>${reinicioLabel}</span></td><td class="td-nivel td-nivel--percurso">${nivelTexto}</td>`;
     el.guiaBody.appendChild(tr);
   });
+
   atualizarDestaquesGuia();
+}
+
+function formatarNivelPercurso(nivelInicio, nivelFim) {
+  if (nivelInicio === nivelFim) return `L${nivelFim}`;
+  return `L${nivelInicio} → L${nivelFim}`;
+}
+
+function obterSegmentosPercursoObjetivo() {
+  const raridade = obterRaridade();
+  const reinicioInicial = parseInt(el.reinicioAtual.value, 10);
+  const nivelInicial = parseInt(el.levelAtual.value, 10);
+  const reinicioFinal = parseInt(el.reinicioDesejado.value, 10);
+  const nivelFinal = parseInt(el.levelDesejado.value, 10);
+
+  if (
+    reinicioInicial > reinicioFinal ||
+    (reinicioInicial === reinicioFinal && nivelInicial > nivelFinal)
+  ) {
+    return [];
+  }
+
+  const segmentos = [];
+  for (let r = reinicioInicial; r <= reinicioFinal; r++) {
+    const inicio = r === reinicioInicial ? nivelInicial : 1;
+    let fim;
+    if (r === reinicioFinal) {
+      fim = nivelFinal;
+    } else {
+      const minRestart = obter_nivel_minimo_para_proximo_reinicio(r, raridade);
+      fim = Math.max(inicio, minRestart);
+    }
+    segmentos.push({ reinicio: r, nivelInicio: inicio, nivelFim: fim });
+  }
+  return segmentos;
+}
+
+function obterSegmentosPercursoOrcamento() {
+  const resultado = ultimoResultadoOrcamento;
+  if (!resultado) {
+    const reinicio = parseInt(el.reinicioOrcamento.value, 10);
+    const nivel = parseInt(el.levelOrcamento.value, 10);
+    return [{ reinicio, nivelInicio: nivel, nivelFim: nivel }];
+  }
+
+  const { reinicio_inicial, nivel_inicial, reinicio_final, linhas } = resultado;
+  const fimPorReinicio = new Map();
+  linhas.forEach((linha) => fimPorReinicio.set(linha.reinicio, linha.nivel));
+
+  const segmentos = [];
+  for (let r = reinicio_inicial; r <= reinicio_final; r++) {
+    const nivelInicio = r === reinicio_inicial ? nivel_inicial : 1;
+    const nivelFim = fimPorReinicio.get(r) ?? nivelInicio;
+    segmentos.push({ reinicio: r, nivelInicio, nivelFim });
+  }
+  return segmentos;
+}
+
+function atualizarGuiaModo() {
+  const budget = modoCalculadora === 'budget';
+  const chaveDestino = budget ? 'guide.legendBudgetEnd' : 'guide.legendDesired';
+  const chaveOrigem = budget ? 'guide.legendBudgetStart' : 'guide.legendCurrent';
+
+  if (el.guiaTitulo) {
+    el.guiaTitulo.setAttribute('data-i18n', 'guide.titleBudget');
+    el.guiaTitulo.textContent = t('guide.titleBudget');
+  }
+  if (el.guiaColNivel) {
+    el.guiaColNivel.setAttribute('data-i18n', 'guide.colBudgetLevel');
+    el.guiaColNivel.textContent = t('guide.colBudgetLevel');
+  }
+  if (el.guiaLegendaDestino) {
+    el.guiaLegendaDestino.setAttribute('data-i18n', chaveDestino);
+    el.guiaLegendaDestino.textContent = t(chaveDestino);
+  }
+  if (el.guiaLegendaOrigem) {
+    el.guiaLegendaOrigem.setAttribute('data-i18n', chaveOrigem);
+    el.guiaLegendaOrigem.textContent = t(chaveOrigem);
+  }
 }
 
 function atualizarBadgeReinicio(reinicio, badgeEl, raridade) {
@@ -218,21 +317,25 @@ function atualizarBadgeReinicio(reinicio, badgeEl, raridade) {
   badgeEl.hidden = false;
 }
 
+function atualizarLegendaGuia() {
+  atualizarGuiaModo();
+}
+
 function atualizarDestaquesGuia() {
-  const raridade = obterRaridade();
   let rDestaque;
   let rAtual;
   if (modoCalculadora === 'goal') {
     rDestaque = parseInt(el.reinicioDesejado.value, 10);
     rAtual = parseInt(el.reinicioAtual.value, 10);
   } else {
-    rDestaque = null;
     rAtual = parseInt(el.reinicioOrcamento.value, 10);
+    rDestaque =
+      ultimoResultadoOrcamento != null ? ultimoResultadoOrcamento.reinicio_final : null;
   }
   document.querySelectorAll('#restart_guide_body [data-restart]').forEach((row) => {
     const r = parseInt(row.dataset.restart, 10);
     row.classList.remove('guide-row--desired', 'guide-row--current', 'guide-row--both');
-    const isDesired = modoCalculadora === 'goal' && r === rDestaque;
+    const isDesired = rDestaque != null && r === rDestaque;
     const isCurrent = r === rAtual;
     if (isDesired && isCurrent) row.classList.add('guide-row--both');
     else if (isDesired) row.classList.add('guide-row--desired');
@@ -252,7 +355,7 @@ function atualizarUiReinicio() {
 
   atualizarBadgeReinicio(rDesejado, el.badgeDesejado, raridade);
   atualizarBadgeReinicio(rAtual, el.badgeAtual, raridade);
-  atualizarDestaquesGuia();
+  renderizarGuiaReinicios();
 }
 
 function salvarConfiguracao() {
@@ -262,6 +365,7 @@ function salvarConfiguracao() {
   localStorage.setItem(STORAGE.reinicioAtual, el.reinicioAtual.value);
   localStorage.setItem(STORAGE.levelAtual, el.levelAtual.value);
   if (el.pontosAlma) localStorage.setItem(STORAGE.pontosAlma, el.pontosAlma.value);
+  if (el.pontosCreditos) localStorage.setItem(STORAGE.pontosCreditos, el.pontosCreditos.value);
   if (el.reinicioOrcamento) {
     localStorage.setItem(STORAGE.reinicioOrcamento, el.reinicioOrcamento.value);
   }
@@ -278,6 +382,9 @@ function carregarConfiguracao() {
   el.levelAtual.value = localStorage.getItem(STORAGE.levelAtual) ?? '1';
   if (el.pontosAlma) {
     el.pontosAlma.value = localStorage.getItem(STORAGE.pontosAlma) ?? '2270';
+  }
+  if (el.pontosCreditos) {
+    el.pontosCreditos.value = localStorage.getItem(STORAGE.pontosCreditos) ?? '';
   }
   if (el.reinicioOrcamento) {
     el.reinicioOrcamento.value = localStorage.getItem(STORAGE.reinicioOrcamento) ?? '0';
@@ -302,8 +409,13 @@ function mostrarErro(code) {
   el.resultadoVazio.hidden = true;
   el.resultadoObjetivo.hidden = true;
   el.resultadoOrcamento.hidden = true;
+  if (el.orcamentoResumo) el.orcamentoResumo.hidden = true;
   el.botaoCopiar.disabled = true;
   textoUltimoResultado = '';
+  if (modoCalculadora === 'budget') {
+    ultimoResultadoOrcamento = null;
+    renderizarGuiaReinicios();
+  }
 
   if (code === 'CURRENT_AFTER_DESIRED') {
     el.reinicioAtual.closest('.field')?.classList.add('field--invalid');
@@ -344,37 +456,109 @@ function mostrarSucessoObjetivo(resultado) {
   el.botaoCopiar.disabled = false;
 }
 
+function renderizarResumoOrcamento(resultado) {
+  if (!el.orcamentoResumo) return;
+
+  const {
+    reinicio_inicial,
+    nivel_inicial,
+    reinicio_final,
+    nivel_final,
+    alma_sobra,
+    creditos_sobra,
+    creditos_total,
+    limitar_creditos,
+    raridade,
+  } = resultado;
+
+  const creditosResumo = limitar_creditos ? creditos_sobra : creditos_total;
+  const creditosLabel = limitar_creditos ? t('budget.leftover') : t('budget.totalCredits');
+  const iconeAlma = obterIconeAlma(raridade ?? obterRaridade());
+
+  el.orcamentoResumo.innerHTML = `
+    <div class="budget-summary__journey">
+      <span class="budget-summary__label">${t('budget.journey')}</span>
+      <div class="budget-milestones">
+        <div class="budget-milestone" title="${t('restart.option', { n: reinicio_inicial })}">
+          <img src="${ICONS.reinicio}" alt="" class="game-icon game-icon--xs" width="16" height="16" />
+          <span class="budget-milestone__badge">R${reinicio_inicial}</span>
+          <span class="budget-milestone__level">L${nivel_inicial}</span>
+        </div>
+        <span class="budget-summary__arrow" aria-hidden="true">→</span>
+        <div class="budget-milestone budget-milestone--final">
+          <img src="${ICONS.reinicio}" alt="" class="game-icon game-icon--xs" width="16" height="16" />
+          <span class="budget-milestone__badge">R${reinicio_final}</span>
+          <span class="budget-milestone__level">L${nivel_final}</span>
+        </div>
+      </div>
+    </div>
+    <div class="budget-summary__totals">
+      <span class="currency-chip currency-chip--alma">
+        <img src="${iconeAlma}" alt="" class="game-icon" width="22" height="22" data-icon-alma />
+        <span class="valor_alma">${formatNumber(alma_sobra)}</span>
+        <span class="currency-label">${t('budget.leftover')}</span>
+      </span>
+      <span class="currency-chip currency-chip--creditos">
+        <img src="${ICONS.creditos}" alt="" class="game-icon" width="22" height="22" />
+        <span class="valor_creditos">${formatNumber(creditosResumo)}</span>
+        <span class="currency-label">${creditosLabel}</span>
+      </span>
+    </div>`;
+  el.orcamentoResumo.hidden = false;
+}
+
+function renderizarTabelaOrcamento(linhas, raridade = obterRaridade()) {
+  if (!el.orcamentoBody) return;
+
+  const iconeAlma = obterIconeAlma(raridade);
+  const total = linhas.length;
+  el.orcamentoBody.innerHTML = linhas
+    .map((row, index) => {
+      const step = index + 1;
+      const isFinal = index === total - 1;
+      const rowClass = isFinal ? 'budget-row budget-row--final' : 'budget-row';
+
+      return `
+      <tr class="${rowClass}">
+        <td class="budget-td budget-td--step">${step}</td>
+        <td class="budget-td budget-td--restart">
+          <img src="${ICONS.reinicio}" alt="" class="game-icon game-icon--xs" width="14" height="14" />
+          <strong>R${row.reinicio}</strong>
+        </td>
+        <td class="budget-td budget-td--level"><span class="budget-level">L${row.nivel}</span></td>
+        <td class="budget-td budget-td--num budget-td--alma">
+          <span class="budget-cell-value budget-cell-value--alma">
+            <img src="${iconeAlma}" alt="" class="game-icon game-icon--xs" width="14" height="14" data-icon-alma />
+            <span>${formatNumber(row.gasto)}</span>
+          </span>
+        </td>
+        <td class="budget-td budget-td--num budget-td--sobra">
+          <span class="budget-cell-value budget-cell-value--sobra">
+            <img src="${iconeAlma}" alt="" class="game-icon game-icon--xs" width="14" height="14" data-icon-alma />
+            <span>${formatNumber(row.sobra)}</span>
+          </span>
+        </td>
+        <td class="budget-td budget-td--num budget-td--creditos">
+          <span class="budget-cell-value budget-cell-value--creditos">
+            <img src="${ICONS.creditos}" alt="" class="game-icon game-icon--xs" width="14" height="14" />
+            <span>${formatNumber(row.creditos)}</span>
+          </span>
+        </td>
+      </tr>`;
+    })
+    .join('');
+}
+
 function mostrarSucessoOrcamento(resultado) {
   limparEstadoErro();
   el.resultadoVazio.hidden = true;
   el.resultadoObjetivo.hidden = true;
   el.resultadoOrcamento.hidden = false;
 
-  if (el.orcamentoHeadline) {
-    el.orcamentoHeadline.innerHTML = t('budget.headline', {
-      r0: resultado.reinicio_inicial,
-      l0: resultado.nivel_inicial,
-      r1: resultado.reinicio_final,
-      l1: resultado.nivel_final,
-      left: formatNumber(resultado.alma_sobra),
-      credits: formatNumber(resultado.creditos_total),
-    });
-  }
-
-  if (el.orcamentoBody) {
-    el.orcamentoBody.innerHTML = resultado.linhas
-      .map(
-        (row) => `
-      <tr>
-        <td><strong>R${row.reinicio}</strong></td>
-        <td>L${row.nivel}</td>
-        <td>${formatNumber(row.gasto)}</td>
-        <td>${formatNumber(row.sobra)}</td>
-        <td><img src="/icons/creditos.png?v=7" alt="" class="game-icon game-icon--xs" width="14" height="14" /> ${formatNumber(row.creditos)}</td>
-      </tr>`,
-      )
-      .join('');
-  }
+  ultimoResultadoOrcamento = resultado;
+  renderizarResumoOrcamento(resultado);
+  renderizarTabelaOrcamento(resultado.linhas, resultado.raridade);
+  renderizarGuiaReinicios();
 
   textoUltimoResultado = texto_copia_simulacao(resultado);
   el.botaoCopiar.disabled = false;
@@ -398,11 +582,15 @@ function executarCalculoObjetivo() {
 
 function executarCalculoOrcamento() {
   const raridade = obterRaridade();
+  const creditosRaw = el.pontosCreditos?.value;
+  const creditos =
+    creditosRaw === '' || creditosRaw == null ? null : creditosRaw;
   const resultado = simular_progresso_alma(
     el.pontosAlma?.value ?? 0,
     raridade,
     parseInt(el.reinicioOrcamento.value, 10),
     parseInt(el.levelOrcamento.value, 10),
+    creditos,
   );
   if (!resultado.ok) {
     mostrarErro(resultado.code);
@@ -418,10 +606,13 @@ function executarCalculo() {
 
   if (modoCalculadora === 'budget') {
     if (!el.pontosAlma?.value && el.pontosAlma?.value !== '0') {
+      ultimoResultadoOrcamento = null;
+      renderizarGuiaReinicios();
       el.resultadoVazio.textContent = t('results.emptyBudget');
       el.resultadoVazio.hidden = false;
       el.resultadoObjetivo.hidden = true;
       el.resultadoOrcamento.hidden = true;
+      if (el.orcamentoResumo) el.orcamentoResumo.hidden = true;
       el.botaoCopiar.disabled = true;
       return;
     }
@@ -459,6 +650,7 @@ function resetarCalculadora() {
   localStorage.removeItem(STORAGE.reinicioAtual);
   localStorage.removeItem(STORAGE.levelAtual);
   localStorage.removeItem(STORAGE.pontosAlma);
+  localStorage.removeItem(STORAGE.pontosCreditos);
   localStorage.removeItem(STORAGE.reinicioOrcamento);
   localStorage.removeItem(STORAGE.levelOrcamento);
   carregarConfiguracao();
@@ -467,9 +659,20 @@ function resetarCalculadora() {
   executarCalculo();
 }
 
+function atualizarIconesAlmaUi() {
+  const raridade = obterRaridade();
+  sincronizarIconesAlma(raridade, document.getElementById('app_panel_cost'));
+  sincronizarIconesAlma(raridade, document.getElementById('app_tab_cost'));
+  sincronizarIconesAlma(raridade, document.querySelector('.app-header'));
+}
+
 function onRaridadeAlterada() {
+  const raridade = obterRaridade();
+  sincronizarAbasRaridadeRef(raridade);
+  renderizarTabelasReferencia(raridade);
   atualizarOpcoesReinicio();
   renderizarGuiaReinicios();
+  atualizarIconesAlmaUi();
   atualizarUiReinicio();
   executarCalculoComAtraso();
 }
@@ -503,11 +706,13 @@ function onLocaleChanged() {
   atualizarOpcoesReinicio();
   atualizarTextosRaridade();
   renderizarGuiaReinicios();
+  atualizarGuiaModo();
+  atualizarIconesAlmaUi();
   const raridadeSerum =
     document.getElementById('serum_tabs')?.dataset.activeRarity || 'legendary';
   renderizarPainelSuperSoro(raridadeSerum);
-  renderizarTabelasReferencia();
-  injetarIconesTituloRef();
+  sincronizarAbasRaridadeRef(obterRaridade());
+  renderizarTabelasReferencia(obterRaridade());
   renderizarPainelPresentes();
   applyTranslations();
   atualizarLangButtons();
@@ -535,12 +740,13 @@ function init() {
   carregarConfiguracao();
   atualizarOpcoesReinicio();
   sincronizarTodosSelectsComIcone();
+  atualizarIconesAlmaUi();
 
   renderizarGuiaReinicios();
+  atualizarGuiaModo();
   initPainelSuperSoro();
   initTabelasReferencia();
   initPainelPresentes();
-  injetarIconesTituloRef();
   initNumberStepper();
 
   applyTranslations();

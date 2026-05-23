@@ -118,6 +118,139 @@ export function obter_tabelas_raridade(raridade) {
 /** Linhas de reinício destacadas nas tabelas (nível alvo). */
 export const niveis_destaque_reinicio = [6, 11, 16, 21, 26, 31];
 
+/** Nível máximo alcançável no reinício R antes do próximo reinício. */
+export function obter_nivel_maximo_no_reinicio(raridade, reinicio) {
+  const niveis = obter_niveis_minimos_guia(raridade);
+  return niveis[reinicio] ?? nivel_maximo_com_dados;
+}
+
+/** Transição nível n → n+1 é possível estando no reinício R. */
+export function transicao_disponivel_no_reinicio(raridade, reinicio, nivelDe) {
+  return nivelDe + 1 <= obter_nivel_maximo_no_reinicio(raridade, reinicio);
+}
+
+function custo_cumulado_ate_nivel(mpPor, crPor, nivel) {
+  if (nivel < 2) return { mp: 0, cr: 0 };
+  let mp = 0;
+  let cr = 0;
+  for (let i = 2; i <= nivel; i++) {
+    mp += mpPor[i] ?? 0;
+    cr += crPor[i] ?? 0;
+  }
+  return { mp, cr };
+}
+
+/**
+ * Linhas no formato da planilha (Level, colunas por reinício, totais).
+ * @param {'per'|'cum'} modo
+ */
+export function obter_linhas_planilha_nivel(raridade, modo = 'per') {
+  const { mpPor, crPor } = obter_tabelas_raridade(raridade);
+  const maxR = obter_reinicio_maximo(raridade);
+  const maxL = obter_nivel_maximo_efetivo(raridade);
+  const linhas = [];
+  let totalAlma = 0;
+  let totalCreditos = 0;
+
+  for (let n = modo === 'per' ? 1 : 2; n <= (modo === 'per' ? maxL - 1 : maxL); n++) {
+    const cells = [];
+    for (let r = 0; r <= maxR; r++) {
+      if (modo === 'per') {
+        if (transicao_disponivel_no_reinicio(raridade, r, n)) {
+          cells.push({ mp: mpPor[n + 1] ?? null, cr: crPor[n + 1] ?? null });
+        } else {
+          cells.push({ mp: null, cr: null });
+        }
+      } else if (n <= obter_nivel_maximo_no_reinicio(raridade, r)) {
+        cells.push(custo_cumulado_ate_nivel(mpPor, crPor, n));
+      } else {
+        cells.push({ mp: null, cr: null });
+      }
+    }
+
+    let ativo = null;
+    for (let r = 0; r <= maxR; r++) {
+      if (cells[r].mp != null) {
+        ativo = cells[r];
+        break;
+      }
+    }
+
+    if (modo === 'per' && ativo) {
+      totalAlma += ativo.mp;
+      totalCreditos += ativo.cr;
+    } else if (modo === 'cum' && ativo) {
+      totalAlma = ativo.mp;
+      totalCreditos = ativo.cr;
+    }
+
+    const nivelDestaque = modo === 'per' ? n + 1 : n;
+    linhas.push({
+      rotulo:
+        modo === 'per'
+          ? { from: n, to: n + 1 }
+          : { from: 1, to: n },
+      cells,
+      totalAlma,
+      totalCreditos,
+      destaque: niveis_destaque_reinicio.includes(nivelDestaque),
+    });
+  }
+
+  const linhasComTotal = inserir_totalizadores_reinicio(raridade, modo, linhas);
+  return { linhas: linhasComTotal, maxR };
+}
+
+/** Soma Alma/Créditos de todas as subidas de nível no reinício R. */
+export function somar_custo_bloco_reinicio(raridade, reinicio) {
+  const { mpPor, crPor } = obter_tabelas_raridade(raridade);
+  const maxNivel = obter_nivel_maximo_no_reinicio(raridade, reinicio);
+  let mp = 0;
+  let cr = 0;
+  for (let n = 1; n < maxNivel; n++) {
+    if (transicao_disponivel_no_reinicio(raridade, reinicio, n)) {
+      mp += mpPor[n + 1] ?? 0;
+      cr += crPor[n + 1] ?? 0;
+    }
+  }
+  return { mp, cr };
+}
+
+function inserir_totalizadores_reinicio(raridade, modo, linhas) {
+  if (modo !== 'per') return linhas.map((linha) => ({ tipo: 'dado', ...linha }));
+
+  const marcos = obter_niveis_minimos_guia(raridade);
+  const maxR = obter_reinicio_maximo(raridade);
+  const saida = [];
+
+  for (const linha of linhas) {
+    saida.push({ tipo: 'dado', ...linha });
+    const nivelFim = linha.rotulo.to;
+    const indiceReinicio = marcos.indexOf(nivelFim);
+    if (indiceReinicio < 0 || indiceReinicio > maxR) continue;
+
+    const soma = somar_custo_bloco_reinicio(raridade, indiceReinicio);
+    const cells = [];
+    for (let r = 0; r <= maxR; r++) {
+      if (r === indiceReinicio) {
+        cells.push(soma);
+      } else {
+        cells.push({ mp: null, cr: null });
+      }
+    }
+    saida.push({
+      tipo: 'totalizador',
+      reinicio: indiceReinicio,
+      rotulo: { restart: indiceReinicio },
+      cells,
+      totalAlma: linha.totalAlma,
+      totalCreditos: linha.totalCreditos,
+    });
+  }
+
+  return saida;
+}
+
 /** Último nível com dados de custo para a raridade (Common para em 26). */
 export function obter_nivel_maximo_efetivo(raridade) {
   const arr = mp_cumulativo[raridade] ?? mp_cumulativo.legendary;

@@ -238,6 +238,6 @@ export function initSelectsNivel(ids, min = 1, max = 31) {
     const select = document.getElementById(id);
     if (!select) return;
     preencher_opcoes_nivel(select, min, max);
-    inicializarSelectComIcone(select, { tipoIcone: null, colunas: 2 });
+    inicializarSelectComIcone(select, { tipoIcone: null, colunas: 3 });
   });
 }

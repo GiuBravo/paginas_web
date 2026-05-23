@@ -151,19 +151,28 @@ export function validar_simulacao(reinicio, nivel, raridade = raridade_padrao) {
   return null;
 }
 
-/** Simula gasto de MP a partir do ponto atual (estilo wiki). */
-export function simular_progresso_alma(pontos, raridade, reinicio_inicial, nivel_inicial) {
+/** Simula gasto de MP e créditos a partir do ponto atual (estilo wiki). */
+export function simular_progresso_alma(
+  pontos,
+  raridade,
+  reinicio_inicial,
+  nivel_inicial,
+  creditos = null,
+) {
   const erro = validar_simulacao(reinicio_inicial, nivel_inicial, raridade);
   if (erro) return { ok: false, code: erro };
 
   const pontosNum = Math.max(0, Number(pontos) || 0);
-  const { mpPor, crCum } = obter_tabelas_raridade(raridade);
+  const limitarCreditos = creditos !== null && creditos !== '';
+  const creditosNum = limitarCreditos ? Math.max(0, Number(creditos) || 0) : null;
+  const { mpPor, crPor } = obter_tabelas_raridade(raridade);
   const regras = obter_tabelas_raridade(raridade).niveisMaximosPorReinicio;
   const maxR = obter_reinicio_maximo(raridade);
 
   let R = reinicio_inicial;
   let L = nivel_inicial;
   let MP = pontosNum;
+  let CR = creditosNum;
   const linhas = [];
   let ciclo = { R, gasto: 0, creditos: 0 };
   let total_creditos = 0;
@@ -186,15 +195,15 @@ export function simular_progresso_alma(pontos, raridade, reinicio_inicial, nivel
       }
     }
 
-    const custo = mpPor[L + 1];
-    if (!custo || MP < custo) break;
+    const custoMp = mpPor[L + 1];
+    const custoCr = crPor[L + 1];
+    if (!custoMp || MP < custoMp || !custoCr || (limitarCreditos && CR < custoCr)) break;
 
-    MP -= custo;
-    ciclo.gasto += custo;
-    const ganho =
-      (crCum[L + 1] ?? 0) - (L > 1 ? (crCum[L] ?? 0) : 0);
-    ciclo.creditos += ganho;
-    total_creditos += ganho;
+    MP -= custoMp;
+    if (limitarCreditos) CR -= custoCr;
+    ciclo.gasto += custoMp;
+    ciclo.creditos += custoCr;
+    total_creditos += custoCr;
     L += 1;
   }
 
@@ -212,9 +221,12 @@ export function simular_progresso_alma(pontos, raridade, reinicio_inicial, nivel
     reinicio_inicial,
     nivel_inicial,
     pontos_iniciais: pontosNum,
+    creditos_iniciais: creditosNum,
+    limitar_creditos: limitarCreditos,
     reinicio_final: R,
     nivel_final: L,
     alma_sobra: MP,
+    creditos_sobra: limitarCreditos ? CR : null,
     creditos_total: total_creditos,
     linhas,
   };

@@ -1,4 +1,4 @@
-/** Dados de relacionamento — presentes favoritos por mercenária (fonte: Lust Goddess Wiki). */
+/** Dados de relacionamento — presentes favoritos por mercenário (fonte: Lust Goddess Wiki). */
 
 export const META_PRESENTES = {
   pontosObjetivo: 35100,

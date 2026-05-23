@@ -76,6 +76,10 @@ export function applyTranslations() {
     el.innerHTML = t(el.getAttribute('data-i18n-html'));
   });
 
+  document.querySelectorAll('[data-i18n-aria]').forEach((el) => {
+    el.setAttribute('aria-label', t(el.getAttribute('data-i18n-aria')));
+  });
+
   const temaBtn = document.getElementById('botao_tema');
   const iconeTema = document.getElementById('icone_tema');
   if (temaBtn) {
@@ -169,6 +173,9 @@ export function mensagem_erro(code, raridade = raridade_padrao) {
 
 export function texto_copia_simulacao(resultado) {
   const fmt = formatNumber;
+  const creditosResumo = resultado.limitar_creditos
+    ? resultado.creditos_sobra
+    : resultado.creditos_total;
   const linhas = [
     t('copy.budgetHeadline', {
       r0: resultado.reinicio_inicial,
@@ -176,7 +183,7 @@ export function texto_copia_simulacao(resultado) {
       r1: resultado.reinicio_final,
       l1: resultado.nivel_final,
       left: fmt(resultado.alma_sobra),
-      credits: fmt(resultado.creditos_total),
+      credits: fmt(creditosResumo),
     }),
     ...resultado.linhas.map((row) =>
       t('copy.budgetRow', {

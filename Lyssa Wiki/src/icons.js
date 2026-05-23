@@ -19,6 +19,19 @@ export function obterIconeRaridade(raridade) {
   return ICONES_RARIDADE[raridade] ?? null;
 }
 
+/** Ícone de Alma (MP) conforme a raridade da mercenária. */
+export function obterIconeAlma(raridade = 'legendary') {
+  return obterIconeRaridade(raridade) ?? ICONS.alma;
+}
+
+export function sincronizarIconesAlma(raridade, root = document) {
+  const src = obterIconeAlma(raridade);
+  if (!root) return;
+  root.querySelectorAll('[data-icon-alma]').forEach((img) => {
+    img.src = src;
+  });
+}
+
 export function criarImgIcone(tipo, tamanho = 20, classe = 'game-icon') {
   const img = document.createElement('img');
   const src = ICONS[tipo] ?? obterIconeRaridade(tipo);

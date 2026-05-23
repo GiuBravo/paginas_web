@@ -1,113 +1,160 @@
 import { formatNumber, t } from './i18n.js';
 import {
-  creditos_cumulativo,
-  mp_cumulativo,
-  niveis_destaque_reinicio,
-  obter_tabelas_raridade,
+  obter_linhas_planilha_nivel,
+  obter_reinicio_maximo,
   raridades,
 } from './gameData.js';
-import { criarImgIcone } from './icons.js';
+import { obterIconeAlma, obterIconeRaridade } from './icons.js';
 
-const COLUNAS_RARIDADE = raridades;
-
-function celulaValor(valor, comIconeCreditos) {
+function celulaValor(valor, tipo, raridade) {
   if (valor == null) return '<td class="ref-table__na">—</td>';
-  const icone = comIconeCreditos
-    ? '<img src="/icons/creditos.png?v=7" alt="" class="game-icon game-icon--xs" width="14" height="14" /> '
-    : '<img src="/icons/alma.png?v=7" alt="" class="game-icon game-icon--xs" width="14" height="14" /> ';
+  const icone =
+    tipo === 'cr'
+      ? '<img src="/icons/creditos.png?v=7" alt="" class="game-icon game-icon--xs" width="14" height="14" /> '
+      : `<img src="${obterIconeAlma(raridade)}" alt="" class="game-icon game-icon--xs" width="14" height="14" /> `;
   return `<td class="ref-table__valor">${icone}${formatNumber(valor)}</td>`;
 }
 
-function montarTabela(dadosPorRaridade, rotulos, comIconeCreditos, destaqueNivel) {
+function rotuloLinha(linha, modo) {
+  if (linha.tipo === 'totalizador') {
+    return t('ref.rowTotalR', { restart: linha.rotulo.restart });
+  }
+  if (modo === 'per') {
+    return t('ref.levelPer', { from: linha.rotulo.from, to: linha.rotulo.to });
+  }
+  return t('ref.levelCum', { from: linha.rotulo.from, to: linha.rotulo.to });
+}
+
+function classeLinha(linha) {
+  if (linha.tipo === 'totalizador') return 'ref-table__row--totalizador';
+  if (linha.destaque) return 'ref-table__row--reboot';
+  return '';
+}
+
+function montarTabelaPlanilha(raridade, modo) {
+  const { linhas, maxR } = obter_linhas_planilha_nivel(raridade, modo);
+
+  const pares = [];
+  for (let r = 0; r <= maxR; r++) {
+    pares.push(
+      `<th scope="col">${t('ref.colRestartMp', { restart: r })}</th>`,
+      `<th scope="col">${t('ref.colRestartCr')}</th>`,
+    );
+  }
+
   const cabecalho = [
     `<th scope="col">${t('ref.colLevel')}</th>`,
-    ...COLUNAS_RARIDADE.map(
-      (r) => `<th scope="col">${t(`serum.rarity.${r}`)}</th>`,
-    ),
+    ...pares,
+    `<th scope="col">${t('ref.colTotalMp')}</th>`,
+    `<th scope="col">${t('ref.colTotalCr')}</th>`,
   ].join('');
 
-  const corpo = rotulos
-    .map((rotulo, indice) => {
-      if (indice < 2) return '';
-      const destaque = destaqueNivel(indice) ? ' ref-table__row--reboot' : '';
-      const celulas = COLUNAS_RARIDADE.map((r) => {
-        const arr = dadosPorRaridade[r] ?? [];
-        return celulaValor(arr[indice] ?? null, comIconeCreditos);
-      }).join('');
-      return `<tr class="${destaque}"><th scope="row">${rotulo}</th>${celulas}</tr>`;
+  const corpo = linhas
+    .map((linha) => {
+      const classe = classeLinha(linha);
+      const celulas = linha.cells
+        .flatMap((c) => [celulaValor(c.mp, 'mp', raridade), celulaValor(c.cr, 'cr', raridade)])
+        .join('');
+      const totais = [
+        celulaValor(linha.totalAlma, 'mp', raridade),
+        celulaValor(linha.totalCreditos, 'cr', raridade),
+      ].join('');
+      return `<tr class="${classe}"><th scope="row">${rotuloLinha(linha, modo)}</th>${celulas}${totais}</tr>`;
     })
     .join('');
 
-  return `<table class="ref-table"><thead><tr>${cabecalho}</tr></thead><tbody>${corpo}</tbody></table>`;
+  return `<table class="ref-table ref-table--planilha"><thead><tr>${cabecalho}</tr></thead><tbody>${corpo}</tbody></table>`;
 }
 
-function rotulos_cumulativos() {
-  const rows = [null, null];
-  for (let n = 2; n <= 31; n++) {
-    rows.push(t('ref.levelCum', { from: 1, to: n }));
-  }
-  return rows;
-}
-
-function rotulos_por_nivel() {
-  const rows = [null, null];
-  for (let n = 1; n < 31; n++) {
-    rows.push(t('ref.levelPer', { from: n, to: n + 1 }));
-  }
-  rows.push(null);
-  return rows;
-}
-
-function renderPainel(tipo, modo) {
-  const cumulativo = modo === 'cum';
-  const rotulos = cumulativo ? rotulos_cumulativos() : rotulos_por_nivel();
-  const destaque = (i) => niveis_destaque_reinicio.includes(i);
-
-  if (tipo === 'mp') {
-    if (cumulativo) {
-      return montarTabela(mp_cumulativo, rotulos, false, destaque);
-    }
-    const por = {};
-    raridades.forEach((r) => {
-      por[r] = obter_tabelas_raridade(r).mpPor;
-    });
-    return montarTabela(por, rotulos, false, destaque);
-  }
-
-  if (cumulativo) {
-    return montarTabela(creditos_cumulativo, rotulos, true, destaque);
-  }
-  const por = {};
-  raridades.forEach((r) => {
-    por[r] = obter_tabelas_raridade(r).crPor;
-  });
-  return montarTabela(por, rotulos, true, destaque);
-}
-
-export function renderizarTabelasReferencia() {
+export function renderizarTabelasReferencia(raridade = 'legendary') {
   const wrap = document.getElementById('ref_panel');
   if (!wrap) return;
 
-  const tipo = wrap.dataset.refType || 'mp';
-  const modo = wrap.dataset.refMode || 'cum';
-  wrap.innerHTML = renderPainel(tipo, modo);
+  const modo = wrap.dataset.refMode || 'per';
+  wrap.innerHTML = montarTabelaPlanilha(raridade, modo);
+
+  const subtitulo = document.getElementById('ref_guide_subtitulo');
+  if (subtitulo) {
+    subtitulo.textContent = t('ref.sheetTitle', {
+      rarity: t(`serum.rarity.${raridade}`),
+    });
+  }
+}
+
+function obterRaridadeAtivaRef() {
+  const tabs = document.getElementById('ref_rarity_tabs');
+  if (tabs?.dataset.activeRarity) return tabs.dataset.activeRarity;
+  return document.getElementById('raridade')?.value || 'legendary';
+}
+
+export function sincronizarAbasRaridadeRef(raridade) {
+  const tabs = document.getElementById('ref_rarity_tabs');
+  if (!tabs) return;
+  tabs.dataset.activeRarity = raridade;
+  tabs.querySelectorAll('[data-ref-rarity]').forEach((btn) => {
+    const ativo = btn.dataset.refRarity === raridade;
+    btn.classList.toggle('ref-rarity-tabs__btn--ativo', ativo);
+    btn.setAttribute('aria-selected', ativo ? 'true' : 'false');
+  });
+}
+
+export function initAbasRaridadeReferencia(raridadeInicial = 'legendary') {
+  const tabs = document.getElementById('ref_rarity_tabs');
+  if (!tabs) return;
+
+  tabs.innerHTML = '';
+  raridades.forEach((raridade) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'ref-rarity-tabs__btn';
+    btn.dataset.refRarity = raridade;
+    btn.setAttribute('role', 'tab');
+    btn.setAttribute('aria-selected', raridade === raridadeInicial ? 'true' : 'false');
+    btn.id = `ref_rarity_tab_${raridade}`;
+    const icone = obterIconeRaridade(raridade);
+    if (icone) {
+      const img = document.createElement('img');
+      img.src = icone;
+      img.alt = '';
+      img.width = 18;
+      img.height = 18;
+      img.className = 'game-icon game-icon--xs';
+      img.setAttribute('aria-hidden', 'true');
+      btn.appendChild(img);
+    }
+    btn.appendChild(document.createTextNode(t(`serum.rarity.${raridade}`)));
+    if (raridade === raridadeInicial) btn.classList.add('ref-rarity-tabs__btn--ativo');
+    tabs.appendChild(btn);
+  });
+
+  tabs.dataset.activeRarity = raridadeInicial;
+
+  tabs.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-ref-rarity]');
+    if (!btn) return;
+    const raridade = btn.dataset.refRarity;
+    const select = document.getElementById('raridade');
+    if (select && select.value !== raridade) {
+      select.value = raridade;
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+    } else {
+      sincronizarAbasRaridadeRef(raridade);
+      renderizarTabelasReferencia(raridade);
+    }
+  });
 }
 
 export function initTabelasReferencia() {
-  const tipoTabs = document.getElementById('ref_type_tabs');
   const modoTabs = document.getElementById('ref_mode_tabs');
   const panel = document.getElementById('ref_panel');
   if (!panel) return;
 
-  const setTipo = (tipo) => {
-    panel.dataset.refType = tipo;
-    tipoTabs?.querySelectorAll('[data-ref-type]').forEach((btn) => {
-      const ativo = btn.dataset.refType === tipo;
-      btn.classList.toggle('ref-tabs__btn--ativo', ativo);
-      btn.setAttribute('aria-selected', ativo ? 'true' : 'false');
-    });
-    renderizarTabelasReferencia();
-  };
+  const raridadeInicial =
+    document.getElementById('raridade')?.value ||
+    document.getElementById('ref_rarity_tabs')?.dataset.activeRarity ||
+    'legendary';
+
+  initAbasRaridadeReferencia(raridadeInicial);
 
   const setModo = (modo) => {
     panel.dataset.refMode = modo;
@@ -116,29 +163,17 @@ export function initTabelasReferencia() {
       btn.classList.toggle('ref-tabs__btn--ativo', ativo);
       btn.setAttribute('aria-selected', ativo ? 'true' : 'false');
     });
-    renderizarTabelasReferencia();
+    renderizarTabelasReferencia(obterRaridadeAtivaRef());
   };
-
-  tipoTabs?.addEventListener('click', (e) => {
-    const btn = e.target.closest('[data-ref-type]');
-    if (btn) setTipo(btn.dataset.refType);
-  });
 
   modoTabs?.addEventListener('click', (e) => {
     const btn = e.target.closest('[data-ref-mode]');
     if (btn) setModo(btn.dataset.refMode);
   });
 
-  renderizarTabelasReferencia();
+  panel.dataset.refMode = panel.dataset.refMode || 'per';
+  renderizarTabelasReferencia(raridadeInicial);
 }
 
-export function injetarIconesTituloRef() {
-  const mpBtn = document.querySelector('[data-ref-type="mp"]');
-  const crBtn = document.querySelector('[data-ref-type="cr"]');
-  if (mpBtn && !mpBtn.querySelector('img')) {
-    mpBtn.prepend(criarImgIcone('alma', 16, 'game-icon game-icon--xs'));
-  }
-  if (crBtn && !crBtn.querySelector('img')) {
-    crBtn.prepend(criarImgIcone('creditos', 16, 'game-icon game-icon--xs'));
-  }
-}
+/** @deprecated mantido para compatibilidade com main.js */
+export function injetarIconesTituloRef() {}
