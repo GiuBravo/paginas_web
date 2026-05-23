@@ -1,4 +1,7 @@
-// Custos de Super Soro por faixa de nível (fonte: lustgoddesswiki.online/tools/level-calculator)
+/**
+ * Dados estáticos do Super Soro (fortalecimento).
+ * Fonte: lustgoddesswiki.online/tools/level-calculator
+ */
 export const tabela_super_soro = {
   common: [
     ['+0 → +1', 6, 10, 18, 37, 85],

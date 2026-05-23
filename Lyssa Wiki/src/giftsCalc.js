@@ -1,3 +1,6 @@
+/**
+ * Lógica de presentes: inventário, pontos RP, linhas enriquecidas para tabelas.
+ */
 import {
   INVENTARIO_PADRAO,
   META_PRESENTES,
@@ -33,6 +36,7 @@ function contagemNaoFavorita(inventario, tier, favorita) {
   }, 0);
 }
 
+/** RP if the player only gives gifts matching this mercenary's preferred shapes. */
 export function calcularMelhoresPontos(merc, inventario) {
   return (
     contagemFavorita(inventario, 't1', merc.t1) * PONTOS_FAVORITO.t1 +
@@ -41,6 +45,7 @@ export function calcularMelhoresPontos(merc, inventario) {
   );
 }
 
+/** RP still needed to reach 35,100 after current points and inventory RP. */
 export function calcularPontosNecessarios(pontosAtuais, rpInventario = 0) {
   return Math.max(
     META_PRESENTES.pontosObjetivo - paraNumero(pontosAtuais) - paraNumero(rpInventario),
@@ -48,6 +53,7 @@ export function calcularPontosNecessarios(pontosAtuais, rpInventario = 0) {
   );
 }
 
+/** RP from using the entire inventory (favorite + non-favorite shapes). */
 export function calcularTotalPontos(merc, inventario) {
   const favT1 = contagemFavorita(inventario, 't1', merc.t1) * PONTOS_FAVORITO.t1;
   const favT2 = contagemFavorita(inventario, 't2', merc.t2) * PONTOS_FAVORITO.t2;
@@ -75,6 +81,10 @@ export function clonarInventario(origem = INVENTARIO_PADRAO()) {
   };
 }
 
+/**
+ * Builds one mercenary row for the gifts table.
+ * @returns Mercenary fields plus `currentPoints`, `bestPoints`, `totalPoints`, `requiredPoints`.
+ */
 export function enriquecerLinha(merc, pontosAtuais, inventario) {
   const pontos = paraNumero(pontosAtuais);
   const bestPoints = calcularMelhoresPontos(merc, inventario);

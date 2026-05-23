@@ -1,3 +1,6 @@
+/**
+ * UI da aba Presentes: calculadora de RP, favoritos, filtros e persistência.
+ */
 import {
   MERCENARIAS_PRESENTES,
   PONTOS_FAVORITO,
@@ -18,6 +21,18 @@ import {
   totalPresentesInventario,
 } from './giftsCalc.js';
 import { formatNumber, t } from './i18n.js';
+import {
+  assertNomeMerc,
+  assertTierPresente,
+  assertVariantePresente,
+  escapeAttr,
+  escapeHtml,
+  readStorageJson,
+  sanitizeInventarioPresentes,
+  sanitizePontosPorMerc,
+  sanitizeSearchQuery,
+  sanitizeAssetUrl,
+} from './security.js';
 
 const STORAGE = 'presentes_estado_v1';
 
@@ -43,17 +58,16 @@ function salvarEstado() {
 }
 
 function carregarEstado() {
-  try {
-    const raw = localStorage.getItem(STORAGE);
-    if (!raw) return;
-    const dados = JSON.parse(raw);
-    if (dados.inventario) inventario = clonarInventario(dados.inventario);
-    if (dados.pontosPorMerc) pontosPorMerc = dados.pontosPorMerc;
-    if (dados.subAbaAtiva === 'fav' || dados.subAbaAtiva === 'calc') {
-      subAbaAtiva = dados.subAbaAtiva;
-    }
-  } catch {
-    /* ignore */
+  const dados = readStorageJson(STORAGE);
+  if (!dados || typeof dados !== 'object') return;
+
+  const inv = sanitizeInventarioPresentes(dados.inventario);
+  if (inv) inventario = clonarInventario(inv);
+
+  pontosPorMerc = sanitizePontosPorMerc(dados.pontosPorMerc);
+
+  if (dados.subAbaAtiva === 'fav' || dados.subAbaAtiva === 'calc') {
+    subAbaAtiva = dados.subAbaAtiva;
   }
 }
 
@@ -91,9 +105,11 @@ function sincronizarInputInventario(tier, variant) {
 }
 
 function adicionarPresente(tier, variant, quantidade = 1) {
-  if (!tier || !variant) return;
-  inventario[tier][variant] = paraNumero(inventario[tier][variant]) + quantidade;
-  sincronizarInputInventario(tier, variant);
+  const tierOk = assertTierPresente(tier);
+  const variantOk = assertVariantePresente(variant);
+  if (!tierOk || !variantOk) return;
+  inventario[tierOk][variantOk] = paraNumero(inventario[tierOk][variantOk]) + quantidade;
+  sincronizarInputInventario(tierOk, variantOk);
   atualizarContadorPresentes();
   atualizarLinhasCalculadora();
   salvarEstado();
@@ -101,8 +117,10 @@ function adicionarPresente(tier, variant, quantidade = 1) {
 
 function htmlBotaoPresente(tier, variant, tamanho = 40) {
   const rotulo = `${t(ROTULOS_TIER[tier])} — ${t(CHAVES_FORMA[variant])}`;
-  return `<button type="button" class="gifts-gift-add" data-gift-add data-tier="${tier}" data-variant="${variant}" title="${t('gifts.addGiftClick', { label: rotulo })}" aria-label="${t('gifts.addGiftClick', { label: rotulo })}">
-        <img src="${caminhoPresente(tier, variant)}" alt="" width="${tamanho}" height="${tamanho}" loading="lazy" />
+  const src = escapeAttr(sanitizeAssetUrl(caminhoPresente(tier, variant)));
+  const titulo = escapeAttr(t('gifts.addGiftClick', { label: rotulo }));
+  return `<button type="button" class="gifts-gift-add" data-gift-add data-tier="${tier}" data-variant="${variant}" title="${titulo}" aria-label="${titulo}">
+        <img src="${src}" alt="" width="${tamanho}" height="${tamanho}" loading="lazy" />
       </button>`;
 }
 
@@ -145,8 +163,9 @@ function renderizarInputsInventario() {
 
 function onInventarioInput(evento) {
   const input = evento.target;
-  const tier = input.dataset.tier;
-  const variant = input.dataset.variant;
+  const tier = assertTierPresente(input.dataset.tier);
+  const variant = assertVariantePresente(input.dataset.variant);
+  if (!tier || !variant) return;
   inventario[tier][variant] = paraNumero(input.value);
   input.value = inventario[tier][variant] || '';
   atualizarContadorPresentes();
@@ -177,7 +196,7 @@ function ordenarLinhasCalc(linhas) {
 }
 
 function linhasCalculadoraFiltradas() {
-  const termo = buscaCalc.trim().toLowerCase();
+  const termo = sanitizeSearchQuery(buscaCalc).trim().toLowerCase();
   return MERCENARIAS_PRESENTES.filter(
     (m) => !termo || m.name.toLowerCase().includes(termo),
   ).map((m) => enriquecerLinha(m, obterPontosMerc(m.name), inventario));
@@ -192,16 +211,19 @@ function htmlLinhaCalculadora(row) {
   const pts = valorPontosExibicao(row.currentPoints, row.name);
   const faltam = row.requiredPoints;
   const classeFaltam = faltam === 0 ? 'gifts-rp-done' : 'gifts-rp-faltam';
-  return `<tr data-name="${row.name}">
+  const nomeAttr = escapeAttr(row.name);
+  const nomeHtml = escapeHtml(row.name);
+  const iconeSrc = escapeAttr(sanitizeAssetUrl(caminhoIconeMerc(row.name)));
+  return `<tr data-name="${nomeAttr}">
       <td class="gifts-table__icon">
-        <img src="${caminhoIconeMerc(row.name)}" alt="${row.name}" width="40" height="40" loading="lazy" />
+        <img src="${iconeSrc}" alt="${nomeAttr}" width="40" height="40" loading="lazy" />
       </td>
-      <td class="gifts-table__name">${row.name}</td>
+      <td class="gifts-table__name">${nomeHtml}</td>
       <td class="gifts-table__pref"><div class="gifts-pref-row">${htmlPreferenciasMerc(row)}</div></td>
       <td class="gifts-table__points">
         <div class="number-stepper gifts-points-stepper">
           <button type="button" class="number-stepper__btn" data-step="down" aria-label="-">▼</button>
-          <input type="text" class="gifts-points-input" inputmode="numeric" autocomplete="off" data-name="${row.name}" value="${pts}" placeholder="0" size="7" />
+          <input type="text" class="gifts-points-input" inputmode="numeric" autocomplete="off" data-name="${nomeAttr}" value="${escapeAttr(pts)}" placeholder="0" size="7" />
           <button type="button" class="number-stepper__btn" data-step="up" aria-label="+">▲</button>
         </div>
       </td>
@@ -213,7 +235,8 @@ function htmlLinhaCalculadora(row) {
 
 function bindPontosInput(input) {
   input.addEventListener('input', () => {
-    const nome = input.dataset.name;
+    const nome = assertNomeMerc(input.dataset.name);
+    if (!nome) return;
     const limpo = sanitizarPontos(input.value);
     if (limpo === '') {
       delete pontosPorMerc[nome];
@@ -243,7 +266,8 @@ function bindStepperPontos(container) {
     stepper.querySelectorAll('[data-step]').forEach((btn) => {
       btn.addEventListener('click', () => {
         const dir = btn.dataset.step === 'up' ? 1 : -1;
-        const nome = input.dataset.name;
+        const nome = assertNomeMerc(input.dataset.name);
+        if (!nome) return;
         const atual = obterPontosMerc(nome);
         const prox = Math.max(0, Math.floor((atual + dir * 2) / 2) * 2);
         if (prox === 0) {
@@ -326,7 +350,7 @@ function resetarPontosMercenarias() {
 }
 
 function linhasFavoritosFiltradas() {
-  const termo = buscaFav.trim().toLowerCase();
+  const termo = sanitizeSearchQuery(buscaFav).trim().toLowerCase();
   return MERCENARIAS_PRESENTES.filter((m) => {
     if (termo && !m.name.toLowerCase().includes(termo)) return false;
     if (filtrosPresente.t1.length && !filtrosPresente.t1.includes(m.t1)) return false;
@@ -343,13 +367,17 @@ function linhasFavoritosFiltradas() {
 }
 
 function htmlLinhaFavorito(row) {
+  const nomeAttr = escapeAttr(row.name);
+  const nomeHtml = escapeHtml(row.name);
+  const iconeSrc = escapeAttr(sanitizeAssetUrl(caminhoIconeMerc(row.name)));
+  const outfitSrc = escapeAttr(sanitizeAssetUrl(caminhoOutfit(row.name)));
   return `<tr>
       <td class="gifts-table__icon">
-        <img src="${caminhoIconeMerc(row.name)}" alt="${row.name}" width="40" height="40" loading="lazy" />
+        <img src="${iconeSrc}" alt="${nomeAttr}" width="40" height="40" loading="lazy" />
       </td>
-      <td class="gifts-table__name">${row.name}</td>
+      <td class="gifts-table__name">${nomeHtml}</td>
       <td class="gifts-table__outfit">
-        <img src="${caminhoOutfit(row.name)}" alt="" width="48" height="48" loading="lazy" data-outfit-name="${row.name}" />
+        <img src="${outfitSrc}" alt="" width="48" height="48" loading="lazy" data-outfit-name="${nomeAttr}" />
       </td>
       <td class="gifts-table__gift">${htmlBotaoPresente('t1', row.t1, 36)}</td>
       <td class="gifts-table__gift">${htmlBotaoPresente('t2', row.t2, 36)}</td>
@@ -363,8 +391,10 @@ function bindOutfitTooltips() {
 
   document.querySelectorAll('[data-outfit-name]').forEach((img) => {
     img.addEventListener('mouseenter', () => {
-      const nome = img.dataset.outfitName;
-      tooltip.innerHTML = `<img src="${caminhoOutfitDesc(nome)}" alt="" loading="lazy" />`;
+      const nome = assertNomeMerc(img.dataset.outfitName);
+      if (!nome) return;
+      const src = escapeAttr(sanitizeAssetUrl(caminhoOutfitDesc(nome)));
+      tooltip.innerHTML = `<img src="${src}" alt="" loading="lazy" />`;
       tooltip.hidden = false;
     });
     img.addEventListener('mousemove', (e) => {
@@ -398,11 +428,14 @@ function sincronizarFiltrosUi() {
 }
 
 function toggleFiltroPresente(tier, valor) {
-  const lista = filtrosPresente[tier];
-  if (lista.includes(valor)) {
-    filtrosPresente[tier] = lista.filter((v) => v !== valor);
+  const tierOk = assertTierPresente(tier);
+  const valorOk = assertVariantePresente(valor);
+  if (!tierOk || !valorOk) return;
+  const lista = filtrosPresente[tierOk];
+  if (lista.includes(valorOk)) {
+    filtrosPresente[tierOk] = lista.filter((v) => v !== valorOk);
   } else {
-    lista.push(valor);
+    lista.push(valorOk);
   }
   renderizarFavoritos();
 }
@@ -464,12 +497,14 @@ export function initPainelPresentes() {
   });
 
   el('gifts_calc_search')?.addEventListener('input', (e) => {
-    buscaCalc = e.target.value;
+    buscaCalc = sanitizeSearchQuery(e.target.value);
+    if (e.target.value !== buscaCalc) e.target.value = buscaCalc;
     renderizarCalculadora();
   });
 
   el('gifts_fav_search')?.addEventListener('input', (e) => {
-    buscaFav = e.target.value;
+    buscaFav = sanitizeSearchQuery(e.target.value);
+    if (e.target.value !== buscaFav) e.target.value = buscaFav;
     renderizarFavoritos();
   });
 

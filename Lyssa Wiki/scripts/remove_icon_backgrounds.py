@@ -1,4 +1,10 @@
-"""Remove flat backgrounds from game UI icons and export transparent PNGs."""
+"""
+Remove fundos sólidos dos ícones do jogo e exporta PNGs transparentes.
+
+Uso: npm run icons:process
+Saída: public/icons/ (reinicio.png, creditos.png, alma.png)
+Requer: Python, Pillow, numpy — ver doc/dados-jogo.md
+"""
 
 from collections import deque
 from pathlib import Path

@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:monolith": "node scripts/build-monolith.mjs",
     "preview": "vite preview",
     "icons:process": "python scripts/remove_icon_backgrounds.py"
   },

@@ -1,3 +1,10 @@
+/**
+ * Calculation engine: accumulated Soul/Credits cost and MP budget simulation.
+ * Consumed by main.js; game tables in gameData.js.
+ *
+ * @module calc
+ */
+
 import {
   nivel_maximo_com_dados,
   obter_nivel_maximo_efetivo,
@@ -11,12 +18,13 @@ export {
   obter_reinicio_maximo,
 } from './gameData.js';
 
+/** Default rarity when none is selected (legendary mercenary tables). */
 export const raridade_padrao = 'legendary';
 
-/** @deprecated use obter_reinicio_maximo(raridade) */
+/** @deprecated Prefer {@link obter_reinicio_maximo} with a rarity argument. */
 export const reinicio_maximo_com_dados = obter_reinicio_maximo(raridade_padrao);
 
-/** Custos lendários (compatível com planilha original). */
+/** Per-level Soul costs for legendary — kept for compatibility with the original spreadsheet. */
 export const lista_custos_alma_por_faixa = obter_tabelas_raridade(raridade_padrao).custosAlmaPorFaixa;
 export const lista_custos_creditos_por_faixa =
   obter_tabelas_raridade(raridade_padrao).custosCreditosPorFaixa;
@@ -26,10 +34,26 @@ export const lista_niveis_minimos_proximo_reinicio =
 
 export const lista_niveis_maximos_por_reinicio = lista_niveis_minimos_proximo_reinicio;
 
+/**
+ * Minimum level on restart `reinicio` required before the next restart is allowed.
+ * @param {number} reinicio - Current restart index (0-based).
+ * @param {string} [raridade] - Mercenary rarity key.
+ * @returns {number}
+ */
 export function obter_nivel_minimo_para_proximo_reinicio(reinicio, raridade = raridade_padrao) {
   return obter_nivel_minimo_proximo_reinicio(raridade, reinicio);
 }
 
+/**
+ * Total Soul and Credits spent to reach `nivel` within a single restart cycle,
+ * counting only level-ups from 2 → nivel (level 1 costs nothing).
+ *
+ * @param {number} nivel - Target level (1 … max).
+ * @param {string} raridade
+ * @returns {[number, number]} `[totalAlma, totalCreditos]`
+ * @throws {Error} `INVALID_RANGE` if nivel exceeds table length.
+ * @private
+ */
 function calcular_custo_acumulado_ate_nivel(nivel, raridade) {
   const { custosAlmaPorFaixa, custosCreditosPorFaixa } = obter_tabelas_raridade(raridade);
   if (nivel < 2) return [0, 0];
@@ -40,6 +64,17 @@ function calcular_custo_acumulado_ate_nivel(nivel, raridade) {
   return [total_alma, total_creditos];
 }
 
+/**
+ * Total Soul and Credits from account start (R0 L1) up to `(reinicio, nivel)`.
+ *
+ * Completed restarts `0 … reinicio-1` are charged up to each cycle’s restart threshold
+ * (`niveisMaximosPorReinicio[r]`). The current restart adds cost through `nivel`.
+ *
+ * @param {number} reinicio
+ * @param {number} nivel
+ * @param {string} [raridade]
+ * @returns {[number, number]} `[totalAlma, totalCreditos]`
+ */
 export function calcular_custo_total_desde_inicio(reinicio, nivel, raridade = raridade_padrao) {
   const { niveisMaximosPorReinicio } = obter_tabelas_raridade(raridade);
   let total_alma = 0;
@@ -61,6 +96,13 @@ export function calcular_custo_total_desde_inicio(reinicio, nivel, raridade = ra
   return [total_alma, total_creditos];
 }
 
+/**
+ * Validates Goal-mode inputs before calculating the delta.
+ *
+ * @returns {null | 'INVALID_RANGE' | 'CURRENT_AFTER_DESIRED'}
+ *   - `INVALID_RANGE` — R/L outside rarity caps.
+ *   - `CURRENT_AFTER_DESIRED` — current progress is past the desired point.
+ */
 export function validar_entrada(
   reinicio_desejado,
   level_desejado,
@@ -94,6 +136,15 @@ export function validar_entrada(
   return null;
 }
 
+/**
+ * Goal mode: remaining Soul and Credits between current and desired (R, L).
+ *
+ * @returns {{ ok: true, raridade: string, reinicio_desejado: number, level_desejado: number,
+ *   reinicio_atual: number, level_atual: number, total_alma_desejado: number,
+ *   total_creditos_desejado: number, total_alma_atual: number, total_creditos_atual: number,
+ *   alma_restante: number, creditos_restantes: number }
+ *   | { ok: false, code: string }}
+ */
 export function calcular_resultado(
   reinicio_desejado,
   level_desejado,
@@ -137,6 +188,10 @@ export function calcular_resultado(
   };
 }
 
+/**
+ * Validates the starting point for budget simulation.
+ * @returns {null | 'INVALID_RANGE'}
+ */
 export function validar_simulacao(reinicio, nivel, raridade = raridade_padrao) {
   const maxR = obter_reinicio_maximo(raridade);
   const maxL = obter_nivel_maximo_efetivo(raridade);
@@ -151,7 +206,24 @@ export function validar_simulacao(reinicio, nivel, raridade = raridade_padrao) {
   return null;
 }
 
-/** Simula gasto de MP e créditos a partir do ponto atual (estilo wiki). */
+/**
+ * Budget mode: simulates spending MP (Soul) level by level from `(reinicio_inicial, nivel_inicial)`.
+ *
+ * When `creditos` is provided (non-null, non-empty), spending stops if Credits run out as well.
+ * On reaching the restart threshold, records a row and advances to the next restart at L1.
+ *
+ * @param {number|string} pontos - Available MP.
+ * @param {string} raridade
+ * @param {number} reinicio_inicial
+ * @param {number} nivel_inicial
+ * @param {number|string|null} [creditos] - Optional credit cap; omit to ignore credits.
+ * @returns {{ ok: true, raridade: string, reinicio_inicial: number, nivel_inicial: number,
+ *   pontos_iniciais: number, creditos_iniciais: number|null, limitar_creditos: boolean,
+ *   reinicio_final: number, nivel_final: number, alma_sobra: number,
+ *   creditos_sobra: number|null, creditos_total: number,
+ *   linhas: Array<{ reinicio: number, nivel: number, gasto: number, sobra: number, creditos: number }> }
+ *   | { ok: false, code: string }}
+ */
 export function simular_progresso_alma(
   pontos,
   raridade,
@@ -174,10 +246,12 @@ export function simular_progresso_alma(
   let MP = pontosNum;
   let CR = creditosNum;
   const linhas = [];
+  /** Spend accumulated since last row or restart transition. */
   let ciclo = { R, gasto: 0, creditos: 0 };
   let total_creditos = 0;
 
   while (true) {
+    /* Restart gate: at minimum level for this R → record and bump restart. */
     if (R < maxR) {
       const nivel_necessario = regras[R];
       if (L >= nivel_necessario) {
@@ -207,6 +281,7 @@ export function simular_progresso_alma(
     L += 1;
   }
 
+  /* Final position (may be mid-cycle without enough MP for the next level). */
   linhas.push({
     reinicio: R,
     nivel: L,

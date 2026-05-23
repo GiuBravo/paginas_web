@@ -1,3 +1,8 @@
+/**
+ * Design tokens — cores, espaçamentos e tipografia.
+ * Tema escuro: classe .tema_escuro no <html> (definida em main.js).
+ * Preferência do sistema: :root:not(.tema_claro_forcado) com color-scheme dark.
+ */
 :root {
   --cor-titulo: rgb(255, 207, 47);
   --cor-fundo-pagina: #f4f4f6;
@@ -29,6 +34,7 @@
   --fonte: system-ui, 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
+/* Overrides quando o usuário escolhe modo escuro explicitamente */
 .tema_escuro {
   --cor-fundo-pagina: #121214;
   --cor-texto-principal: #f0f0f4;

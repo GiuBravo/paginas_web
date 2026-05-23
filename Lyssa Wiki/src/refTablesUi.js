@@ -1,3 +1,6 @@
+/**
+ * UI das tabelas de referência (acumulado / por nível) na aba Custo.
+ */
 import { formatNumber, t } from './i18n.js';
 import {
   obter_linhas_planilha_nivel,
@@ -5,13 +8,15 @@ import {
   raridades,
 } from './gameData.js';
 import { obterIconeAlma, obterIconeRaridade } from './icons.js';
+import { assertRaridade, escapeAttr, sanitizeAssetUrl } from './security.js';
 
 function celulaValor(valor, tipo, raridade) {
   if (valor == null) return '<td class="ref-table__na">—</td>';
-  const icone =
+  const src =
     tipo === 'cr'
-      ? '<img src="/icons/creditos.png?v=7" alt="" class="game-icon game-icon--xs" width="14" height="14" /> '
-      : `<img src="${obterIconeAlma(raridade)}" alt="" class="game-icon game-icon--xs" width="14" height="14" /> `;
+      ? sanitizeAssetUrl('/icons/creditos.png?v=7')
+      : sanitizeAssetUrl(obterIconeAlma(raridade));
+  const icone = `<img src="${escapeAttr(src)}" alt="" class="game-icon game-icon--xs" width="14" height="14" /> `;
   return `<td class="ref-table__valor">${icone}${formatNumber(valor)}</td>`;
 }
 
@@ -70,13 +75,14 @@ export function renderizarTabelasReferencia(raridade = 'legendary') {
   const wrap = document.getElementById('ref_panel');
   if (!wrap) return;
 
+  const raridadeSegura = assertRaridade(raridade);
   const modo = wrap.dataset.refMode || 'per';
-  wrap.innerHTML = montarTabelaPlanilha(raridade, modo);
+  wrap.innerHTML = montarTabelaPlanilha(raridadeSegura, modo);
 
   const subtitulo = document.getElementById('ref_guide_subtitulo');
   if (subtitulo) {
     subtitulo.textContent = t('ref.sheetTitle', {
-      rarity: t(`serum.rarity.${raridade}`),
+      rarity: t(`serum.rarity.${raridadeSegura}`),
     });
   }
 }

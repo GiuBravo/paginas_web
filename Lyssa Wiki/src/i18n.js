@@ -1,7 +1,12 @@
+/**
+ * Internacionalização: pt-BR e en via JSON, applyTranslations no DOM,
+ * formatação numérica e textos de erro/cópia para a calculadora.
+ */
 import ptBR from './locales/pt-BR.json';
 import en from './locales/en.json';
 import { nivel_maximo_com_dados, obter_reinicio_maximo, raridade_padrao } from './calc.js';
 import { obter_nivel_maximo_efetivo } from './gameData.js';
+import { readStorageString, sanitizeTranslationHtml } from './security.js';
 
 const LOCALES = {
   'pt-BR': ptBR,
@@ -15,8 +20,8 @@ let locale = 'pt-BR';
 let onLocaleChange = null;
 
 function detectDefaultLocale() {
-  const saved = localStorage.getItem(STORAGE_KEY);
-  if (saved && SUPPORTED.includes(saved)) return saved;
+  const saved = readStorageString(STORAGE_KEY, { allowed: SUPPORTED });
+  if (saved) return saved;
   const nav = (navigator.language || 'pt-BR').toLowerCase();
   return nav.startsWith('en') ? 'en' : 'pt-BR';
 }
@@ -73,7 +78,7 @@ export function applyTranslations() {
   });
 
   document.querySelectorAll('[data-i18n-html]').forEach((el) => {
-    el.innerHTML = t(el.getAttribute('data-i18n-html'));
+    el.innerHTML = sanitizeTranslationHtml(t(el.getAttribute('data-i18n-html')));
   });
 
   document.querySelectorAll('[data-i18n-aria]').forEach((el) => {

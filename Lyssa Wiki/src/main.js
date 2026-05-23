@@ -1,3 +1,8 @@
+/**
+ * Ponto de entrada da aplicação.
+ * Orquestra a aba Custo (objetivo/orçamento), tema, idioma, abas do app,
+ * guia de reinícios, persistência localStorage e delegação a refTablesUi / serumUi / giftsUi.
+ */
 import {
   calcular_resultado,
   nivel_maximo_com_dados,
@@ -39,7 +44,19 @@ import {
 import { initPainelSuperSoro, injetarIconeTituloSerum, renderizarPainelSuperSoro } from './serumUi.js';
 import { initPainelPresentes, renderizarPainelPresentes } from './giftsUi.js';
 import { ICONS, obterIconeAlma, sincronizarIconesAlma } from './icons.js';
+import {
+  assertAppAba,
+  assertModoCalculadora,
+  assertRaridade,
+  assertTema,
+  clampInt,
+  escapeAttr,
+  escapeHtml,
+  readStorageString,
+  sanitizeAssetUrl,
+} from './security.js';
 
+/** Chaves localStorage da aba Custo e preferências globais */
 const STORAGE = {
   tema: 'tema_armazenado',
   modo: 'modo_calculadora',
@@ -100,25 +117,27 @@ const el = {
 };
 
 function obterRaridade() {
-  return el.raridade?.value || raridade_padrao;
+  return assertRaridade(el.raridade?.value || raridade_padrao);
 }
 
+/* ——— Tema, idioma e abas do app ——— */
+
 function detectarTemaInicial() {
-  const salvo = localStorage.getItem(STORAGE.tema);
-  if (salvo === 'escuro' || salvo === 'claro') return salvo;
+  const salvo = readStorageString(STORAGE.tema, { allowed: ['claro', 'escuro'] });
+  if (salvo) return assertTema(salvo);
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'escuro' : 'claro';
 }
 
 function detectarModoInicial() {
-  const salvo = localStorage.getItem(STORAGE.modo);
-  return salvo === 'budget' ? 'budget' : 'goal';
+  const salvo = readStorageString(STORAGE.modo, { allowed: ['goal', 'budget'] });
+  return assertModoCalculadora(salvo ?? 'goal');
 }
 
 const APP_ABAS = ['cost', 'fortalecimento', 'gifts'];
 
 function detectarAppInicial() {
-  const salvo = localStorage.getItem(STORAGE.app);
-  return APP_ABAS.includes(salvo) ? salvo : 'cost';
+  const salvo = readStorageString(STORAGE.app, { allowed: APP_ABAS });
+  return assertAppAba(salvo ?? 'cost');
 }
 
 function aplicarAppUi() {
@@ -184,6 +203,8 @@ function definirModo(modo) {
   aplicarModoUi();
 }
 
+/* ——— Guia de reinícios e selects dependentes da raridade ——— */
+
 function atualizarOpcoesReinicio() {
   const raridade = obterRaridade();
   preencher_opcoes_reinicio(
@@ -216,9 +237,10 @@ function renderizarGuiaReinicios() {
   segmentos.forEach(({ reinicio, nivelInicio, nivelFim }) => {
     const tr = document.createElement('tr');
     tr.dataset.restart = String(reinicio);
-    const reinicioLabel = t('restart.option', { n: reinicio });
-    const nivelTexto = formatarNivelPercurso(nivelInicio, nivelFim);
-    tr.innerHTML = `<td class="td-reinicio"><img src="/icons/reinicio.png?v=7" alt="" class="game-icon game-icon--sm" width="16" height="16" /><span>${reinicioLabel}</span></td><td class="td-nivel td-nivel--percurso">${nivelTexto}</td>`;
+    const reinicioLabel = escapeHtml(t('restart.option', { n: reinicio }));
+    const nivelTexto = escapeHtml(formatarNivelPercurso(nivelInicio, nivelFim));
+    const iconeReinicio = escapeAttr(sanitizeAssetUrl('/icons/reinicio.png?v=7'));
+    tr.innerHTML = `<td class="td-reinicio"><img src="${iconeReinicio}" alt="" class="game-icon game-icon--sm" width="16" height="16" /><span>${reinicioLabel}</span></td><td class="td-nivel td-nivel--percurso">${nivelTexto}</td>`;
     el.guiaBody.appendChild(tr);
   });
 
@@ -372,25 +394,36 @@ function salvarConfiguracao() {
   if (el.levelOrcamento) localStorage.setItem(STORAGE.levelOrcamento, el.levelOrcamento.value);
 }
 
+/* ——— Persistência e exibição de resultados ——— */
+
+function lerIntArmazenado(chave, fallback, min, max) {
+  const bruto = readStorageString(chave, { maxLen: 16 });
+  if (bruto == null || bruto === '') return String(fallback);
+  return String(clampInt(bruto, min, max, fallback));
+}
+
 function carregarConfiguracao() {
+  const raridadeSalva = readStorageString(STORAGE.raridade, { allowed: ['common', 'rare', 'epic', 'legendary'] });
   if (el.raridade) {
-    el.raridade.value = localStorage.getItem(STORAGE.raridade) ?? raridade_padrao;
+    el.raridade.value = assertRaridade(raridadeSalva ?? raridade_padrao);
   }
-  el.reinicioDesejado.value = localStorage.getItem(STORAGE.reinicioDesejado) ?? '4';
-  el.levelDesejado.value = localStorage.getItem(STORAGE.levelDesejado) ?? '21';
-  el.reinicioAtual.value = localStorage.getItem(STORAGE.reinicioAtual) ?? '0';
-  el.levelAtual.value = localStorage.getItem(STORAGE.levelAtual) ?? '1';
+  el.reinicioDesejado.value = lerIntArmazenado(STORAGE.reinicioDesejado, 4, 0, 99);
+  el.levelDesejado.value = lerIntArmazenado(STORAGE.levelDesejado, 21, 1, 99);
+  el.reinicioAtual.value = lerIntArmazenado(STORAGE.reinicioAtual, 0, 0, 99);
+  el.levelAtual.value = lerIntArmazenado(STORAGE.levelAtual, 1, 1, 99);
   if (el.pontosAlma) {
-    el.pontosAlma.value = localStorage.getItem(STORAGE.pontosAlma) ?? '2270';
+    el.pontosAlma.value = lerIntArmazenado(STORAGE.pontosAlma, 2270, 0, 999_999_999);
   }
   if (el.pontosCreditos) {
-    el.pontosCreditos.value = localStorage.getItem(STORAGE.pontosCreditos) ?? '';
+    const creditos = readStorageString(STORAGE.pontosCreditos, { maxLen: 16 });
+    el.pontosCreditos.value =
+      creditos != null && creditos !== '' ? String(clampInt(creditos, 0, 999_999_999, 0)) : '';
   }
   if (el.reinicioOrcamento) {
-    el.reinicioOrcamento.value = localStorage.getItem(STORAGE.reinicioOrcamento) ?? '0';
+    el.reinicioOrcamento.value = lerIntArmazenado(STORAGE.reinicioOrcamento, 0, 0, 99);
   }
   if (el.levelOrcamento) {
-    el.levelOrcamento.value = localStorage.getItem(STORAGE.levelOrcamento) ?? '1';
+    el.levelOrcamento.value = lerIntArmazenado(STORAGE.levelOrcamento, 1, 1, 99);
   }
 }
 
@@ -473,20 +506,23 @@ function renderizarResumoOrcamento(resultado) {
 
   const creditosResumo = limitar_creditos ? creditos_sobra : creditos_total;
   const creditosLabel = limitar_creditos ? t('budget.leftover') : t('budget.totalCredits');
-  const iconeAlma = obterIconeAlma(raridade ?? obterRaridade());
+  const iconeAlma = escapeAttr(sanitizeAssetUrl(obterIconeAlma(raridade ?? obterRaridade())));
+  const iconeReinicio = escapeAttr(sanitizeAssetUrl(ICONS.reinicio));
+  const iconeCreditos = escapeAttr(sanitizeAssetUrl(ICONS.creditos));
+  const tituloInicio = escapeAttr(t('restart.option', { n: reinicio_inicial }));
 
   el.orcamentoResumo.innerHTML = `
     <div class="budget-summary__journey">
-      <span class="budget-summary__label">${t('budget.journey')}</span>
+      <span class="budget-summary__label">${escapeHtml(t('budget.journey'))}</span>
       <div class="budget-milestones">
-        <div class="budget-milestone" title="${t('restart.option', { n: reinicio_inicial })}">
-          <img src="${ICONS.reinicio}" alt="" class="game-icon game-icon--xs" width="16" height="16" />
+        <div class="budget-milestone" title="${tituloInicio}">
+          <img src="${iconeReinicio}" alt="" class="game-icon game-icon--xs" width="16" height="16" />
           <span class="budget-milestone__badge">R${reinicio_inicial}</span>
           <span class="budget-milestone__level">L${nivel_inicial}</span>
         </div>
         <span class="budget-summary__arrow" aria-hidden="true">→</span>
         <div class="budget-milestone budget-milestone--final">
-          <img src="${ICONS.reinicio}" alt="" class="game-icon game-icon--xs" width="16" height="16" />
+          <img src="${iconeReinicio}" alt="" class="game-icon game-icon--xs" width="16" height="16" />
           <span class="budget-milestone__badge">R${reinicio_final}</span>
           <span class="budget-milestone__level">L${nivel_final}</span>
         </div>
@@ -495,13 +531,13 @@ function renderizarResumoOrcamento(resultado) {
     <div class="budget-summary__totals">
       <span class="currency-chip currency-chip--alma">
         <img src="${iconeAlma}" alt="" class="game-icon" width="22" height="22" data-icon-alma />
-        <span class="valor_alma">${formatNumber(alma_sobra)}</span>
-        <span class="currency-label">${t('budget.leftover')}</span>
+        <span class="valor_alma">${escapeHtml(formatNumber(alma_sobra))}</span>
+        <span class="currency-label">${escapeHtml(t('budget.leftover'))}</span>
       </span>
       <span class="currency-chip currency-chip--creditos">
-        <img src="${ICONS.creditos}" alt="" class="game-icon" width="22" height="22" />
-        <span class="valor_creditos">${formatNumber(creditosResumo)}</span>
-        <span class="currency-label">${creditosLabel}</span>
+        <img src="${iconeCreditos}" alt="" class="game-icon" width="22" height="22" />
+        <span class="valor_creditos">${escapeHtml(formatNumber(creditosResumo))}</span>
+        <span class="currency-label">${escapeHtml(creditosLabel)}</span>
       </span>
     </div>`;
   el.orcamentoResumo.hidden = false;
@@ -510,7 +546,9 @@ function renderizarResumoOrcamento(resultado) {
 function renderizarTabelaOrcamento(linhas, raridade = obterRaridade()) {
   if (!el.orcamentoBody) return;
 
-  const iconeAlma = obterIconeAlma(raridade);
+  const iconeAlma = escapeAttr(sanitizeAssetUrl(obterIconeAlma(raridade)));
+  const iconeReinicio = escapeAttr(sanitizeAssetUrl(ICONS.reinicio));
+  const iconeCreditos = escapeAttr(sanitizeAssetUrl(ICONS.creditos));
   const total = linhas.length;
   el.orcamentoBody.innerHTML = linhas
     .map((row, index) => {
@@ -522,26 +560,26 @@ function renderizarTabelaOrcamento(linhas, raridade = obterRaridade()) {
       <tr class="${rowClass}">
         <td class="budget-td budget-td--step">${step}</td>
         <td class="budget-td budget-td--restart">
-          <img src="${ICONS.reinicio}" alt="" class="game-icon game-icon--xs" width="14" height="14" />
+          <img src="${iconeReinicio}" alt="" class="game-icon game-icon--xs" width="14" height="14" />
           <strong>R${row.reinicio}</strong>
         </td>
         <td class="budget-td budget-td--level"><span class="budget-level">L${row.nivel}</span></td>
         <td class="budget-td budget-td--num budget-td--alma">
           <span class="budget-cell-value budget-cell-value--alma">
             <img src="${iconeAlma}" alt="" class="game-icon game-icon--xs" width="14" height="14" data-icon-alma />
-            <span>${formatNumber(row.gasto)}</span>
+            <span>${escapeHtml(formatNumber(row.gasto))}</span>
           </span>
         </td>
         <td class="budget-td budget-td--num budget-td--sobra">
           <span class="budget-cell-value budget-cell-value--sobra">
             <img src="${iconeAlma}" alt="" class="game-icon game-icon--xs" width="14" height="14" data-icon-alma />
-            <span>${formatNumber(row.sobra)}</span>
+            <span>${escapeHtml(formatNumber(row.sobra))}</span>
           </span>
         </td>
         <td class="budget-td budget-td--num budget-td--creditos">
           <span class="budget-cell-value budget-cell-value--creditos">
-            <img src="${ICONS.creditos}" alt="" class="game-icon game-icon--xs" width="14" height="14" />
-            <span>${formatNumber(row.creditos)}</span>
+            <img src="${iconeCreditos}" alt="" class="game-icon game-icon--xs" width="14" height="14" />
+            <span>${escapeHtml(formatNumber(row.creditos))}</span>
           </span>
         </td>
       </tr>`;
@@ -701,6 +739,8 @@ function atualizarTextosRaridade() {
   });
   sincronizarTodosSelectsComIcone();
 }
+
+/* ——— Inicialização e eventos ——— */
 
 function onLocaleChanged() {
   atualizarOpcoesReinicio();

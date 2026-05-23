@@ -1,3 +1,7 @@
+/**
+ * Layout estrutural — reset, container .app, header, workspace em grid,
+ * media queries de colunas. Componentes visuais ficam em components.css.
+ */
 *,
 *::before,
 *::after {
@@ -16,6 +20,7 @@ input[type='number'] {
   appearance: textfield;
 }
 
+/* Tipografia base e fundo da página */
 body {
   margin: 0;
   min-height: 100vh;
@@ -27,6 +32,7 @@ body {
   transition: background 0.25s ease, color 0.25s ease;
 }
 
+/* Container central; largura máxima varia por aba ativa (:has) */
 .app {
   max-width: var(--largura-max);
   margin: 0 auto;

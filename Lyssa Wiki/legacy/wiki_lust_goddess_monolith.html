@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<!--
+  Wiki Lust Goddess — shell da aplicação (SPA estática).
+  Três abas: Custo (Alma/Créditos/Reinício), Fortalecimento (Super Soro), Presentes.
+  Lógica em src/main.js e módulos importados; estilos em src/styles/.
+  Ver doc/README.md
+-->
+<html lang="pt-BR" id="raiz_html">
+<head>
+  <!-- Meta, favicon e folhas de estilo (tokens → layout → componentes) -->
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self'; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'; upgrade-insecure-requests" />
+  <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+  <meta name="referrer" content="strict-origin-when-cross-origin" />
+  <title>Wiki Lust Goddess</title>
+  <link rel="icon" type="image/png" href="./relationship/images/mercs/Belle.png" />
+  <link rel="apple-touch-icon" href="./relationship/images/mercs/Belle.png" />
+  <script type="module">
+(function(){const t=document.createElement("link").relList;if(t&&t.supports&&t.supports("modulepreload"))return;for(const o of document.querySelectorAll('link[rel="modulepreload"]'))n(o);new MutationObserver(o=>{for(const r of o)if(r.type==="childList")for(const i of r.addedNodes)i.tagName==="LINK"&&i.rel==="modulepreload"&&n(i)}).observe(document,{childList:!0,subtree:!0});function a(o){const r={};return o.integrity&&(r.integrity=o.integrity),o.referrerPolicy&&(r.referrerPolicy=o.referrerPolicy),o.crossOrigin==="use-credentials"?r.credentials="include":o.crossOrigin==="anonymous"?r.credentials="omit":r.credentials="same-origin",r}function n(o){if(o.ep)return;o.ep=!0;const r=a(o);fetch(o.href,r)}})();const se=31,ft=["common","rare","epic","legendary"],$e={common:[null,null,25,75,150,250,400,600,850,1150,1500,1950,2550,3300,4200,5300,6700,8700,11400,14900,19400,25400,32900,42400,54400,69400,87400],rare:[null,null,25,75,150,250,380,540,730,950,1200,1530,1950,2450,3050,3800,4750,6150,8050,10450,13450,17150,21650,27150,34150,43150,55150,67300,79650,92200,105e3,118100],epic:[null,null,15,45,90,150,230,330,450,590,750,950,1200,1520,1920,2420,3070,3970,5070,6420,8220,10520,13520,17520,22520,28820,36820,45020,53420,62070,71020,80320],legendary:[null,null,5,15,30,50,90,150,230,330,450,600,800,1050,1370,1770,2270,2970,3820,4820,6120,7820,10020,12920,16620,21420,27420,33570,39870,46320,52970,59870]},Gt={common:[null,null,50,130,250,450,750,1250,2250,3750,5750,8750,12750,18750,26750,36750,49750,65750,84750,106750,131750,159750,191750,227750,267750,312750,362750],rare:[null,null,100,400,1e3,1900,3300,5300,8800,12800,17800,23800,31800,41800,53800,67800,83800,102800,124800,149800,177800,209800,245800,285800,330800,380800,435800,492800,552800,615800,681800,751800],epic:[null,null,300,900,1800,3200,5100,7600,11600,16600,22600,29600,38600,49600,62600,78600,97600,119600,145600,175600,209600,247600,289600,336600,386600,446600,511600,578600,648600,721600,798600,880600],legendary:[null,null,600,1500,2900,4800,7300,10800,16300,23300,32300,43300,57300,74300,94300,118300,146300,178300,214300,254300,298300,346300,398300,455300,517300,585300,660300,740300,826300,919300,1020300,1130300]},tt={common:[11,16,21,26],rare:[11,16,21,26],epic:[6,11,16,21,26],legendary:[6,11,16,21,26,31,31]},at={common:4,rare:4,epic:5,legendary:7};function P(e){return at[e]??at.legendary}function he(e){const t=tt[e]??tt.legendary,a=P(e),n=[];for(let o=0;o<=a;o++)o<t.length?n.push(t[o]):n.push(se);return n}function Ut(e,t){return he(e)[t]??se}function nt(e){const t=[null,null];if(!e||e.length<3)return t;t[2]=e[2];for(let a=3;a<e.length;a++)t[a]=e[a]-e[a-1];return t}const Te=new Map;function j(e){if(Te.has(e))return Te.get(e);const t=$e[e],a=Gt[e],n=nt(t),o=nt(a),r={mpCum:t,crCum:a,mpPor:n,crPor:o,custosAlmaPorFaixa:n.slice(2),custosCreditosPorFaixa:o.slice(2),niveisMaximosPorReinicio:he(e),reinicioMaximo:P(e)};return Te.set(e,r),r}const Vt=[6,11,16,21,26,31];function je(e,t){return he(e)[t]??se}function gt(e,t,a){return a+1<=je(e,t)}function Wt(e,t,a){if(a<2)return{mp:0,cr:0};let n=0,o=0;for(let r=2;r<=a;r++)n+=e[r]??0,o+=t[r]??0;return{mp:n,cr:o}}function Xt(e,t="per"){const{mpPor:a,crPor:n}=j(e),o=P(e),r=te(e),i=[];let l=0,u=0;for(let m=t==="per"?1:2;m<=(t==="per"?r-1:r);m++){const b=[];for(let v=0;v<=o;v++)t==="per"?gt(e,v,m)?b.push({mp:a[m+1]??null,cr:n[m+1]??null}):b.push({mp:null,cr:null}):m<=je(e,v)?b.push(Wt(a,n,m)):b.push({mp:null,cr:null});let C=null;for(let v=0;v<=o;v++)if(b[v].mp!=null){C=b[v];break}t==="per"&&C?(l+=C.mp,u+=C.cr):t==="cum"&&C&&(l=C.mp,u=C.cr);const h=t==="per"?m+1:m;i.push({rotulo:t==="per"?{from:m,to:m+1}:{from:1,to:m},cells:b,totalAlma:l,totalCreditos:u,destaque:Vt.includes(h)})}return{linhas:Kt(e,t,i),maxR:o}}function Jt(e,t){const{mpPor:a,crPor:n}=j(e),o=je(e,t);let r=0,i=0;for(let l=1;l<o;l++)gt(e,t,l)&&(r+=a[l+1]??0,i+=n[l+1]??0);return{mp:r,cr:i}}function Kt(e,t,a){if(t!=="per")return a.map(i=>({tipo:"dado",...i}));const n=he(e),o=P(e),r=[];for(const i of a){r.push({tipo:"dado",...i});const l=i.rotulo.to,u=n.indexOf(l);if(u<0||u>o)continue;const d=Jt(e,u),m=[];for(let b=0;b<=o;b++)b===u?m.push(d):m.push({mp:null,cr:null});r.push({tipo:"totalizador",reinicio:u,rotulo:{restart:u},cells:m,totalAlma:i.totalAlma,totalCreditos:i.totalCreditos})}return r}function te(e){const t=$e[e]??$e.legendary;for(let a=t.length-1;a>=2;a--)if(t[a]!=null)return a;return 2}const S="legendary";P(S);j(S).custosAlmaPorFaixa;j(S).custosCreditosPorFaixa;j(S).niveisMaximosPorReinicio;function pt(e,t=S){return Ut(t,e)}function ot(e,t){const{custosAlmaPorFaixa:a,custosCreditosPorFaixa:n}=j(t);if(e<2)return[0,0];const o=e-2;if(o>=a.length)throw new Error("INVALID_RANGE");const r=a.slice(0,o+1).reduce((l,u)=>l+u,0),i=n.slice(0,o+1).reduce((l,u)=>l+u,0);return[r,i]}function rt(e,t,a=S){const{niveisMaximosPorReinicio:n}=j(a);let o=0,r=0;for(let i=0;i<e;i++){const l=n[i]??se,[u,d]=ot(l,a);o+=u,r+=d}if(t>1){const[i,l]=ot(t,a);o+=i,r+=l}return[o,r]}function Qt(e,t,a,n,o=S){const r=P(o),i=te(o);return e<0||e>r||t<1||t>i||a<0||a>r||n<1||n>i?"INVALID_RANGE":e<a||e===a&&t<n?"CURRENT_AFTER_DESIRED":null}function Yt(e,t,a,n,o=S){const r=Qt(e,t,a,n,o);if(r)return{ok:!1,code:r};const[i,l]=rt(e,t,o),[u,d]=rt(a,n,o);return{ok:!0,raridade:o,reinicio_desejado:e,level_desejado:t,reinicio_atual:a,level_atual:n,total_alma_desejado:i,total_creditos_desejado:l,total_alma_atual:u,total_creditos_atual:d,alma_restante:i-u,creditos_restantes:l-d}}function Zt(e,t,a=S){const n=P(a),o=te(a);return e<0||e>n||t<1||t>o?"INVALID_RANGE":null}function ea(e,t,a,n,o=null){const r=Zt(a,n,t);if(r)return{ok:!1,code:r};const i=Math.max(0,Number(e)||0),l=o!==null&&o!=="",u=l?Math.max(0,Number(o)||0):null,{mpPor:d,crPor:m}=j(t),b=j(t).niveisMaximosPorReinicio,C=P(t);let h=a,v=n,B=i,W=u;const X=[];let p={gasto:0,creditos:0},E=0;for(;;){if(h<C){const Ht=b[h];if(v>=Ht){X.push({reinicio:h,nivel:v,gasto:p.gasto,sobra:B,creditos:p.creditos}),h+=1,v=1,p={R:h,gasto:0,creditos:0};continue}}const H=d[v+1],z=m[v+1];if(!H||B<H||!z||l&&W<z)break;B-=H,l&&(W-=z),p.gasto+=H,p.creditos+=z,E+=z,v+=1}return X.push({reinicio:h,nivel:v,gasto:p.gasto,sobra:B,creditos:p.creditos}),{ok:!0,raridade:t,reinicio_inicial:a,nivel_inicial:n,pontos_iniciais:i,creditos_iniciais:u,limitar_creditos:l,reinicio_final:h,nivel_final:v,alma_sobra:B,creditos_sobra:l?W:null,creditos_total:E,linhas:X}}const ta={"meta.title":"Wiki Lust Goddess","app.title":"Wiki Lust Goddess","app.subtitle.cost":"Custo","app.subtitle.fortalecimento":"fortalecimento","app.subtitle.gifts":"presentes","app.subtitle.and":" e ","mode.title":"Estilo de calculadora","mode.goal":"Objetivo (quanto falta)","mode.budget":"Orçamento (até onde chego)","section.desired":"Ponto desejado (objetivo)","section.current":"Ponto atual","section.budget":"Recursos disponíveis","field.restart":"Reinício","field.level":"Nível","field.levelRange":"1–31","field.levelRangeDynamic":"1–{max}","field.rarity":"Raridade do mercenário","field.mp":"Pontos de Alma (MP)","field.credits":"Créditos","field.budgetStart":"Ponto inicial","field.restartShort":"Reinício","results.title":"Resultados","results.desired":"Total desejado","results.current":"Total atual","results.remaining":"Restante necessário","results.total":"Total","results.empty":"Ajuste os campos acima para ver os totais.","results.emptyBudget":"Informe os recursos e o ponto inicial.","currency.alma":"Alma","currency.credits":"Créditos","btn.themeDark":"Modo escuro","btn.themeLight":"Modo claro","btn.copy":"Copiar resultado","btn.reset":"Resetar","btn.stepDown":"Diminuir","btn.stepUp":"Aumentar","hint.autoUpdate":"Atualiza automaticamente ao alterar os campos.","hint.budget":"Simula subidas de nível e reinícios automáticos até acabar Alma ou Créditos.","guide.title":"Guia de reinícios","guide.titleBudget":"Percurso","guide.colRestart":"Reinício","guide.colMin":"Nível mínimo","guide.colBudgetLevel":"Nível (de → até)","guide.colUnlocks":"Próximo reinício","guide.lastNote":"Reinício máximo","guide.unlocksRestart":"Reinício {n}","guide.legendDesired":"Objetivo","guide.legendCurrent":"Atual","guide.legendBudgetStart":"Ponto inicial","guide.legendBudgetEnd":"Até onde chega","badge.restartMin":"Nível {min} libera o reinício {next}","badge.restartMax":"Reinício {max} (máximo) — nível {min}","error.invalidRange":"Valores inválidos. Nível: 1–{max}. Reinício máximo nesta raridade: R{maxR}.","error.currentAfterDesired":"O ponto atual não pode estar após o desejado.","copy.success":"Resultado copiado!","copy.fail":"Erro ao copiar. Use Ctrl+C no texto abaixo.","copy.lineDesired":"Total desejado (reinício {restart}, nível {nivel}): {alma} Alma, {creditos} Créditos","copy.lineCurrent":"Total atual (reinício {restart}, nível {nivel}): {alma} Alma, {creditos} Créditos","copy.lineRemaining":"Restante necessário: {alma} Alma, {creditos} Créditos","copy.lineTotal":"Total: {alma} Alma, {creditos} Créditos","copy.budgetHeadline":"R{r0} L{l0} → R{r1} L{l1} | Sobra: {left} Alma | Créditos: {credits}","copy.budgetRow":"R{restart} L{level}: gasto {spend}, sobra {left}, créditos {credits}","budget.headline":"R{r0} L{l0} → R{r1} L{l1} · Sobra: {left} Alma · Créditos: {credits}","budget.journey":"Percurso","budget.leftover":"Sobra","budget.totalCredits":"Créditos totais","budget.colStep":"#","budget.colRestart":"Reinício","budget.colLevel":"Nível","budget.colSpend":"Gasto","budget.colLeft":"Sobra","budget.colCredits":"Créditos","restart.option":"Reinício {n}","lang.pt":"Português","lang.en":"Inglês","aria.language":"Idioma","aria.results":"Resultados do cálculo","aria.copyStatus":"Status da cópia","ref.title":"Tabelas de nível e reinício","ref.sheetTitle":"Subir nível — {rarity}","ref.tabMp":"Subir nível — Alma","ref.tabCr":"Subir nível — Créditos","ref.modeCum":"Acumulado (1 → n)","ref.modePer":"Por nível (n → n+1)","ref.colLevel":"Level","ref.colRestartMp":"(R{restart}) Alma","ref.colRestartCr":"Créditos","ref.colTotalMp":"Total de Alma","ref.colTotalCr":"Total de Créditos","ref.rowTotalR":"Total R{restart}","ref.levelCum":"1 → {to}","ref.levelPer":"{from} → {to}","serum.title":"Super Soro — custos de boost","serum.note":"Custos de boost por faixa de nível e raridade do mercenário.","serum.colBoost":"Boost","serum.colLv1_5":"Nv. 1–5","serum.colLv6_10":"Nv. 6–10","serum.colLv11_15":"Nv. 11–15","serum.colLv16_20":"Nv. 16–20","serum.colLv21_26":"Nv. 21–26","serum.colLv27_31":"Nv. 27–31","serum.rarity.common":"Comum","serum.rarity.rare":"Rara","serum.rarity.epic":"Épica","serum.rarity.legendary":"Lendária","appTab.cost":"Custo (Alma / Créditos / Reinício)","appTab.fortalecimento":"Fortalecimento","appTab.gifts":"Presentes","gifts.tabCalc":"Calculadora","gifts.tabFav":"Presentes favoritos","gifts.rulesTitle":"Como funciona","gifts.rulesStep1":"Existem 9 presentes: 3 formatos (esfera, pirâmide, aspa) em cada raridade — Raro, Épico e Lendário.","gifts.rulesStep2":"Cada mercenário prefere um formato por raridade. O presente certo rende mais pontos de relacionamento (RP).","gifts.rulesStep3":"Use a tabela abaixo para ver o que cada uma prefere e quanto RP seu inventário gera se você der os presentes certos.","gifts.rpFavorite":"Preferido","gifts.rpOther":"Outro formato","gifts.stockTitle":"Seu inventário","gifts.stockNote":"Quantos de cada presente você tem. Os três formatos são os mesmos em todas as raridades — só muda a cor e o valor em RP. Clique no ícone para adicionar +1.","gifts.addGiftClick":"Adicionar 1 — {label}","gifts.shape1":"Esfera","gifts.shape2":"Pirâmide","gifts.shape3":"Aspa","gifts.mercsTitle":"Progresso por mercenário","gifts.colPref":"Ela prefere","gifts.introCalc":"Calcule quanto de relacionamento seus presentes rendem em cada mercenário.","gifts.introFav":"Consulta rápida: qual presente cada mercenário prefere em cada raridade.","gifts.search":"Buscar mercenário…","gifts.dataPanel":"Dados","gifts.filters":"Filtros","gifts.colMerc":"Mercenário","gifts.colPoints":"Pontos atuais","gifts.tier1":"Raro","gifts.tier2":"Épico","gifts.tier3":"Lendário","gifts.colBest":"RP (só certos)","gifts.colBestHint":"só presentes que ela prefere","gifts.colRequired":"Faltam","gifts.colRequiredHint":"até a meta","gifts.colTotal":"RP (inventário)","gifts.colTotalHint":"todos os seus presentes neste mercenário","gifts.colOutfit":"Traje","gifts.colT1":"Tier 1","gifts.colT2":"Tier 2","gifts.colT3":"Tier 3","gifts.calcHint":"Meta: 35.100 RP (relacionamento máximo). Pontos atuais em múltiplos de 2.","gifts.favHint":"Tier 1: +12 RP · Tier 2: +24 RP · Tier 3: +60 RP (presentes favoritos).","gifts.dataTitle":"Dados","gifts.dataNote":"Quantidade de cada presente que você possui.","gifts.totalGifts":"Total de presentes:","gifts.resetGifts":"Resetar presentes","gifts.resetPoints":"Resetar pontos","gifts.filtersTitle":"Filtros","gifts.filterGifts":"Presentes","gifts.resetFilters":"Resetar filtros","gifts.fav.total":"Total: {n}","gifts.confirmResetGifts":"Resetar todos os presentes no painel de dados?","gifts.confirmResetPoints":"Resetar todos os pontos dos mercenários?"},aa={"meta.title":"Lust Goddess Wiki","app.title":"Lust Goddess Wiki","app.subtitle.cost":"Cost","app.subtitle.fortalecimento":"strengthening","app.subtitle.gifts":"gifts","app.subtitle.and":" and ","mode.title":"Calculator style","mode.goal":"Goal (how much left)","mode.budget":"Budget (how far I get)","section.desired":"Target point (goal)","section.current":"Current point","section.budget":"Available resources","field.restart":"Restart","field.level":"Level","field.levelRange":"1–31","field.levelRangeDynamic":"1–{max}","field.rarity":"Mercenary rarity","field.mp":"Alma points (MP)","field.credits":"Credits","field.budgetStart":"Starting point","field.restartShort":"Restart","results.title":"Results","results.desired":"Target total","results.current":"Current total","results.remaining":"Remaining required","results.total":"Total","results.empty":"Adjust the fields above to see totals.","results.emptyBudget":"Enter your resources and starting point.","currency.alma":"Alma","currency.credits":"Credits","btn.themeDark":"Dark mode","btn.themeLight":"Light mode","btn.copy":"Copy result","btn.reset":"Reset","btn.stepDown":"Decrease","btn.stepUp":"Increase","hint.autoUpdate":"Updates automatically when you change the fields.","hint.budget":"Simulates level-ups and automatic restarts until Alma or Credits run out.","guide.title":"Restart guide","guide.titleBudget":"Path","guide.colRestart":"Restart","guide.colMin":"Minimum level","guide.colBudgetLevel":"Level (from → to)","guide.colUnlocks":"Next restart","guide.lastNote":"Maximum restart","guide.unlocksRestart":"Restart {n}","guide.legendDesired":"Target","guide.legendCurrent":"Current","guide.legendBudgetStart":"Starting point","guide.legendBudgetEnd":"How far you get","badge.restartMin":"Level {min} unlocks restart {next}","badge.restartMax":"Restart {max} (maximum) — level {min}","error.invalidRange":"Invalid values. Level: 1–{max}. Max restart for this rarity: R{maxR}.","error.currentAfterDesired":"Current point cannot be after the target.","copy.success":"Result copied!","copy.fail":"Copy failed. Use Ctrl+C on the text below.","copy.lineDesired":"Target total (restart {restart}, level {level}): {alma} Alma, {credits} Credits","copy.lineCurrent":"Current total (restart {restart}, level {level}): {alma} Alma, {credits} Credits","copy.lineRemaining":"Remaining required: {alma} Alma, {credits} Credits","copy.lineTotal":"Total: {alma} Alma, {credits} Credits","copy.budgetHeadline":"R{r0} L{l0} → R{r1} L{l1} | Left: {left} Alma | Credits: {credits}","copy.budgetRow":"R{restart} L{level}: spent {spend}, left {left}, credits {credits}","budget.headline":"R{r0} L{l0} → R{r1} L{l1} · Left: {left} Alma · Credits: {credits}","budget.journey":"Path","budget.leftover":"Leftover","budget.totalCredits":"Total credits","budget.colStep":"#","budget.colRestart":"Restart","budget.colLevel":"Level","budget.colSpend":"Spent","budget.colLeft":"Left","budget.colCredits":"Credits","restart.option":"Restart {n}","lang.pt":"Portuguese","lang.en":"English","aria.language":"Language","aria.results":"Calculation results","aria.copyStatus":"Copy status","ref.title":"Level & restart tables","ref.sheetTitle":"Level up — {rarity}","ref.tabMp":"Level up — Alma","ref.tabCr":"Level up — Credits","ref.modeCum":"Cumulative (1 → n)","ref.modePer":"Per level (n → n+1)","ref.colLevel":"Level","ref.colRestartMp":"(R{restart}) Alma","ref.colRestartCr":"Credits","ref.colTotalMp":"Total Alma","ref.colTotalCr":"Total Credits","ref.rowTotalR":"Total R{restart}","ref.levelCum":"1 → {to}","ref.levelPer":"{from} → {to}","serum.title":"Super Serum — boost costs","serum.note":"Boost costs by level bracket and mercenary rarity.","serum.colBoost":"Boost","serum.colLv1_5":"Lv. 1–5","serum.colLv6_10":"Lv. 6–10","serum.colLv11_15":"Lv. 11–15","serum.colLv16_20":"Lv. 16–20","serum.colLv21_26":"Lv. 21–26","serum.colLv27_31":"Lv. 27–31","serum.rarity.common":"Common","serum.rarity.rare":"Rare","serum.rarity.epic":"Epic","serum.rarity.legendary":"Legendary","appTab.cost":"Cost (Alma / Credits / Restart)","appTab.fortalecimento":"Strengthening","appTab.gifts":"Gifts","gifts.tabCalc":"Calculator","gifts.tabFav":"Favourite gifts","gifts.rulesTitle":"How it works","gifts.rulesStep1":"There are 9 gifts: 3 shapes (orb, pyramid, cross) in each rarity — Rare, Epic, and Legendary.","gifts.rulesStep2":"Each mercenary prefers one shape per rarity. The right gift earns more relationship points (RP).","gifts.rulesStep3":"Use the table below to see each mercenary’s preferences and how much RP your inventory gives if you use the right gifts.","gifts.rpFavorite":"Preferred","gifts.rpOther":"Other shape","gifts.stockTitle":"Your inventory","gifts.stockNote":"How many of each gift you own. The three shapes are the same across rarities — only color and RP value change. Click an icon to add +1.","gifts.addGiftClick":"Add 1 — {label}","gifts.shape1":"Orb","gifts.shape2":"Pyramid","gifts.shape3":"Cross","gifts.mercsTitle":"Progress per mercenary","gifts.colPref":"She prefers","gifts.introCalc":"See how much relationship progress your gifts give each mercenary.","gifts.introFav":"Quick lookup: which gift each mercenary prefers per rarity.","gifts.search":"Search mercenary…","gifts.dataPanel":"Data","gifts.filters":"Filters","gifts.colMerc":"Mercenary","gifts.colPoints":"Current RP","gifts.tier1":"Rare","gifts.tier2":"Epic","gifts.tier3":"Legendary","gifts.colBest":"RP (matched)","gifts.colBestHint":"only gifts she prefers","gifts.colRequired":"Still need","gifts.colRequiredHint":"until goal","gifts.colTotal":"RP (inventory)","gifts.colTotalHint":"all your gifts on this mercenary","gifts.colOutfit":"Outfit","gifts.colT1":"Tier 1","gifts.colT2":"Tier 2","gifts.colT3":"Tier 3","gifts.calcHint":"Goal: 35,100 RP (max relationship). Current RP must be multiples of 2.","gifts.favHint":"Tier 1: +12 RP · Tier 2: +24 RP · Tier 3: +60 RP (favourite gifts).","gifts.dataTitle":"Data","gifts.dataNote":"How many of each gift type you own.","gifts.totalGifts":"Total gifts:","gifts.resetGifts":"Reset gifts","gifts.resetPoints":"Reset points","gifts.filtersTitle":"Filters","gifts.filterGifts":"Gifts","gifts.resetFilters":"Reset filters","gifts.fav.total":"Total: {n}","gifts.confirmResetGifts":"Reset all gifts in the data panel?","gifts.confirmResetPoints":"Reset all mercenary points?"},vt={pontosObjetivo:35100},k={t1:12,t2:24,t3:60},fe={t1:10,t2:20,t3:50},le=["t1","t2","t3"],ce=["1","2","3"],ae=[{name:"Alisha",t1:"1",t2:"1",t3:"1"},{name:"Arachne",t1:"2",t2:"2",t3:"3"},{name:"Asha",t1:"1",t2:"2",t3:"3"},{name:"Bea",t1:"1",t2:"1",t3:"2"},{name:"Belle",t1:"3",t2:"3",t3:"3"},{name:"Blanche",t1:"2",t2:"1",t3:"2"},{name:"Bonita",t1:"3",t2:"1",t3:"3"},{name:"Britney",t1:"3",t2:"1",t3:"2"},{name:"Casey",t1:"2",t2:"2",t3:"2"},{name:"Charlotte",t1:"3",t2:"1",t3:"1"},{name:"Esther",t1:"1",t2:"2",t3:"2"},{name:"Grace",t1:"2",t2:"2",t3:"1"},{name:"Harper",t1:"1",t2:"3",t3:"1"},{name:"Hilda",t1:"3",t2:"3",t3:"2"},{name:"Irma",t1:"2",t2:"2",t3:"3"},{name:"Kiana",t1:"2",t2:"3",t3:"2"},{name:"Kirsten",t1:"3",t2:"3",t3:"2"},{name:"Kitty",t1:"1",t2:"3",t3:"3"},{name:"Lilith",t1:"3",t2:"1",t3:"3"},{name:"Lola",t1:"2",t2:"2",t3:"2"},{name:"Lorraine",t1:"3",t2:"2",t3:"2"},{name:"Lucretia",t1:"2",t2:"2",t3:"3"},{name:"Mitsuki",t1:"3",t2:"2",t3:"1"},{name:"Morana",t1:"2",t2:"3",t3:"3"},{name:"Naomi",t1:"3",t2:"3",t3:"3"},{name:"Nicole",t1:"2",t2:"3",t3:"1"},{name:"Nonna",t1:"1",t2:"1",t3:"2"},{name:"Nymeria",t1:"1",t2:"2",t3:"2"},{name:"O-Rinn",t1:"1",t2:"3",t3:"2"},{name:"Omega",t1:"3",t2:"3",t3:"1"},{name:"Pixie",t1:"2",t2:"2",t3:"2"},{name:"Ravenna",t1:"1",t2:"1",t3:"2"},{name:"Regina",t1:"2",t2:"1",t3:"1"},{name:"River",t1:"2",t2:"2",t3:"2"},{name:"Rose",t1:"1",t2:"2",t3:"1"},{name:"Selina",t1:"1",t2:"2",t3:"3"},{name:"Shelby",t1:"3",t2:"3",t3:"1"},{name:"Sixtine",t1:"3",t2:"1",t3:"1"},{name:"Thora",t1:"1",t2:"1",t3:"1"},{name:"Tsintah",t1:"2",t2:"3",t3:"1"},{name:"Vespina",t1:"1",t2:"2",t3:"1"},{name:"Victoria",t1:"2",t2:"1",t3:"3"},{name:"Vivienne",t1:"2",t2:"1",t3:"3"},{name:"Wendy",t1:"1",t2:"1",t3:"3"},{name:"Zelia",t1:"3",t2:"3",t3:"3"},{name:"Zoe & Chloe",t1:"1",t2:"3",t3:"3"}],_t=()=>({t1:{1:0,2:0,3:0},t2:{1:0,2:0,3:0},t3:{1:0,2:0,3:0}}),na=new Set(ae.map(e=>e.name));function ye(e){return na.has(e)}function we(e){return(ye(e)?e:String(e??"")).replace(/[\\/:*?"<>|]/g,"_").slice(0,80)}function bt(e){return ye(e)?`/relationship/images/mercs/${we(e)}.png`:"/relationship/images/mercs/placeholder.png"}function ht(e,t){return!le.includes(e)||!ce.includes(String(t))?"/relationship/images/gifts/T1-1.png":`/relationship/images/gifts/${{t1:"T1",t2:"T2",t3:"T3"}[e]}-${t}.png`}function oa(e){return ye(e)?`/relationship/images/outfits/${we(e)}.png`:"/relationship/images/outfits/placeholder.png"}function ra(e){return ye(e)?`/relationship/images/outfits-desc/${we(e)}.png`:"/relationship/images/outfits-desc/placeholder.png"}const ia=new Set(ae.map(e=>e.name)),sa=new Set(ft),la=new Set(["cost","fortalecimento","gifts"]),ca=new Set(["goal","budget"]),ua=new Set(["claro","escuro"]),da=120,ma=64,fa=512e3,ga=999999,pa=35100;function A(e){return String(e??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;")}const y=A;function R(e){if(typeof e!="string")return"";const t=e.trim();if(!t)return"";const a=t.toLowerCase();if(a.startsWith("javascript:")||a.startsWith("data:")||a.startsWith("vbscript:")||a.startsWith("blob:")||t.startsWith("//"))return"";if(/^https?:\/\//i.test(t))try{const o=new URL(t);return typeof window<"u"&&o.origin!==window.location.origin?"":`${o.pathname}${o.search}`}catch{return""}const n=t.replace(/\\/g,"/");return n.split("/").includes("..")?"":n.startsWith("/")||n.startsWith("./")||n.startsWith("../")?t:""}function _e(e,t=da){return String(e??"").replace(/[\0-\x1f\x7f]/g,"").slice(0,t)}function yt(e,t,a,n=t){const o=Number.parseInt(String(e),10);return Number.isFinite(o)?Math.min(a,Math.max(t,o)):n}function Re(e,t,a){return(t instanceof Set?t:new Set(t)).has(e)?e:a}function De(e,t="legendary"){return Re(e,sa,t)}function va(e,t="cost"){return Re(e,la,t)}function _a(e,t="goal"){return Re(e,ca,t)}function ba(e,t="claro"){return Re(e,ua,t)}function ze(e){return le.includes(e)?e:null}function qe(e){return ce.includes(String(e))?String(e):null}function Ee(e){return ia.has(e)?e:null}function U(e,{allowed:t,maxLen:a=ma}={}){try{const n=localStorage.getItem(e);return n==null||n.length>a?null:t?(t instanceof Set?t:new Set(t)).has(n)?n:null:n}catch{return null}}function ha(e,t=fa){try{const a=localStorage.getItem(e);return a==null||a.length>t?null:JSON.parse(a)}catch{return null}}const ya=new Set(["B","STRONG","I","EM","BR","SPAN"]);function Ra(e){if(typeof e!="string"||!e.trim())return"";const t=new DOMParser().parseFromString(e,"text/html"),a=document.createDocumentFragment();function n(r,i){r.childNodes.forEach(l=>{if(l.nodeType===Node.TEXT_NODE){i.appendChild(document.createTextNode(l.textContent));return}if(l.nodeType!==Node.ELEMENT_NODE)return;const u=l.tagName;if(!ya.has(u))return;const d=document.createElement(u.toLowerCase());if(u==="BR"){i.appendChild(d);return}n(l,d),i.appendChild(d)})}n(t.body,a);const o=document.createElement("div");return o.appendChild(a),o.innerHTML}function Ea(e){const t={t1:{1:0,2:0,3:0},t2:{1:0,2:0,3:0},t3:{1:0,2:0,3:0}};if(!e||typeof e!="object")return null;const a=structuredClone(t);for(const n of le){const o=e[n];if(!(!o||typeof o!="object"))for(const r of ce){const i=Number(o[r]);Number.isFinite(i)&&i>=0&&i<=ga&&(a[n][r]=Math.floor(i))}}return a}function Ca(e){if(!e||typeof e!="object"||Array.isArray(e))return{};const t={};for(const[a,n]of Object.entries(e)){if(!Ee(a))continue;const o=Number(n);!Number.isFinite(o)||o<0||o>pa||(t[a]=Math.floor(o/2)*2)}return t}const xe={"pt-BR":ta,en:aa},Rt="idioma_armazenado",Et=["pt-BR","en"];let N="pt-BR",Oe=null;function Aa(){const e=U(Rt,{allowed:Et});return e||((navigator.language||"pt-BR").toLowerCase().startsWith("en")?"en":"pt-BR")}function La(e,t={}){return e.replace(/\{(\w+)\}/g,(a,n)=>t[n]!==void 0?String(t[n]):`{${n}}`)}function Sa(){return N}function c(e,t){const n=(xe[N]||xe["pt-BR"])[e]??xe["pt-BR"][e]??e;return La(n,t)}function _(e){return e.toLocaleString(N==="en"?"en-US":"pt-BR")}function Ia(e){Oe=e}function it(e){Et.includes(e)&&(N=e,localStorage.setItem(Rt,N),document.documentElement.lang=N==="en"?"en":"pt-BR",document.title=c("meta.title"),Ce(),Oe&&Oe(N))}function Ta(){N=Aa(),document.documentElement.lang=N==="en"?"en":"pt-BR",document.title=c("meta.title")}function Ce(){var o;document.querySelectorAll("[data-i18n]").forEach(r=>{const i=r.getAttribute("data-i18n"),l=c(i);r.tagName==="INPUT"&&r.placeholder!==void 0?r.placeholder=l:r.textContent=l}),document.querySelectorAll("[data-i18n-html]").forEach(r=>{r.innerHTML=Ra(c(r.getAttribute("data-i18n-html")))}),document.querySelectorAll("[data-i18n-aria]").forEach(r=>{r.setAttribute("aria-label",c(r.getAttribute("data-i18n-aria")))});const e=document.getElementById("botao_tema"),t=document.getElementById("icone_tema");if(e){const r=document.documentElement.classList.contains("tema_escuro");e.setAttribute("aria-label",c(r?"btn.themeLight":"btn.themeDark")),t&&(t.src=r?"/icons/sun.svg":"/icons/moon.svg")}const a=document.getElementById("lang_pt"),n=document.getElementById("lang_en");a&&a.setAttribute("aria-label",c("lang.pt")),n&&n.setAttribute("aria-label",c("lang.en")),(o=document.querySelector(".lang-switcher"))==null||o.setAttribute("aria-label",c("aria.language"))}function Ct(e,t=S){const a=P(t);e.forEach(n=>{const o=document.getElementById(n);if(!o)return;const r=o.value;o.innerHTML="";for(let i=0;i<=a;i++){const l=document.createElement("option");l.value=String(i),l.textContent=c("restart.option",{n:i}),o.appendChild(l)}r!==""&&parseInt(r,10)<=a?o.value=r:r!==""&&(o.value=String(a))})}function At(e,t){return e===0&&t===1}function xa(e){const t=_;return At(e.reinicio_atual,e.level_atual)?c("copy.lineTotal",{alma:t(e.alma_restante),creditos:t(e.creditos_restantes),credits:t(e.creditos_restantes)}):[c("copy.lineDesired",{restart:e.reinicio_desejado,nivel:e.level_desejado,level:e.level_desejado,alma:t(e.total_alma_desejado),creditos:t(e.total_creditos_desejado),credits:t(e.total_creditos_desejado)}),c("copy.lineCurrent",{restart:e.reinicio_atual,nivel:e.level_atual,level:e.level_atual,alma:t(e.total_alma_atual),creditos:t(e.total_creditos_atual),credits:t(e.total_creditos_atual)}),c("copy.lineRemaining",{alma:t(e.alma_restante),creditos:t(e.creditos_restantes),credits:t(e.creditos_restantes)})].join(`
+`)}function Pa(e,t=S){const a=P(t),n=te(t);return e==="INVALID_RANGE"?c("error.invalidRange",{max:n,maxR:a}):e==="CURRENT_AFTER_DESIRED"?c("error.currentAfterDesired"):c("error.invalidRange",{max:n,maxR:a})}function Ba(e){const t=_,a=e.limitar_creditos?e.creditos_sobra:e.creditos_total;return[c("copy.budgetHeadline",{r0:e.reinicio_inicial,l0:e.nivel_inicial,r1:e.reinicio_final,l1:e.nivel_final,left:t(e.alma_sobra),credits:t(a)}),...e.linhas.map(o=>c("copy.budgetRow",{restart:o.reinicio,level:o.nivel,spend:t(o.gasto),left:t(o.sobra),credits:t(o.creditos)}))].join(`
+`)}const q="8",w={reinicio:`/icons/reinicio.png?v=${q}`,alma:`/icons/alma.png?v=${q}`,creditos:`/icons/creditos.png?v=${q}`,serum:`/icons/serum.png?v=${q}`},$a={common:`/icons/rarity-common.svg?v=${q}`,rare:`/icons/rarity-rare.svg?v=${q}`,epic:`/icons/rarity-epic.svg?v=${q}`,legendary:`/icons/rarity-legendary.svg?v=${q}`};function Ae(e){return $a[e]??null}function Le(e="legendary"){return Ae(e)??w.alma}function ke(e,t){const a=R(t);a&&(e.src=a)}function Pe(e,t=document){const a=Le(e);t&&t.querySelectorAll("[data-icon-alma]").forEach(n=>{ke(n,a)})}function Lt(e,t=20,a="game-icon"){const n=document.createElement("img"),o=w[e]??Ae(e);return ke(n,o),n.alt="",n.width=t,n.height=t,n.className=a,n.setAttribute("aria-hidden","true"),n}function Oa(e,t=20,a="game-icon"){const n=document.createElement("img");return ke(n,e),n.alt="",n.width=t,n.height=t,n.className=a,n.setAttribute("aria-hidden","true"),n}function me(e,t,a){if(e==null)return'<td class="ref-table__na">—</td>';const n=R(t==="cr"?"/icons/creditos.png?v=7":Le(a));return`<td class="ref-table__valor">${`<img src="${y(n)}" alt="" class="game-icon game-icon--xs" width="14" height="14" /> `}${_(e)}</td>`}function Ma(e,t){return e.tipo==="totalizador"?c("ref.rowTotalR",{restart:e.rotulo.restart}):t==="per"?c("ref.levelPer",{from:e.rotulo.from,to:e.rotulo.to}):c("ref.levelCum",{from:e.rotulo.from,to:e.rotulo.to})}function Na(e){return e.tipo==="totalizador"?"ref-table__row--totalizador":e.destaque?"ref-table__row--reboot":""}function ja(e,t){const{linhas:a,maxR:n}=Xt(e,t),o=[];for(let l=0;l<=n;l++)o.push(`<th scope="col">${c("ref.colRestartMp",{restart:l})}</th>`,`<th scope="col">${c("ref.colRestartCr")}</th>`);const r=[`<th scope="col">${c("ref.colLevel")}</th>`,...o,`<th scope="col">${c("ref.colTotalMp")}</th>`,`<th scope="col">${c("ref.colTotalCr")}</th>`].join(""),i=a.map(l=>{const u=Na(l),d=l.cells.flatMap(b=>[me(b.mp,"mp",e),me(b.cr,"cr",e)]).join(""),m=[me(l.totalAlma,"mp",e),me(l.totalCreditos,"cr",e)].join("");return`<tr class="${u}"><th scope="row">${Ma(l,t)}</th>${d}${m}</tr>`}).join("");return`<table class="ref-table ref-table--planilha"><thead><tr>${r}</tr></thead><tbody>${i}</tbody></table>`}function re(e="legendary"){const t=document.getElementById("ref_panel");if(!t)return;const a=De(e),n=t.dataset.refMode||"per";t.innerHTML=ja(a,n);const o=document.getElementById("ref_guide_subtitulo");o&&(o.textContent=c("ref.sheetTitle",{rarity:c(`serum.rarity.${a}`)}))}function wa(){var t;const e=document.getElementById("ref_rarity_tabs");return e!=null&&e.dataset.activeRarity?e.dataset.activeRarity:((t=document.getElementById("raridade"))==null?void 0:t.value)||"legendary"}function Fe(e){const t=document.getElementById("ref_rarity_tabs");t&&(t.dataset.activeRarity=e,t.querySelectorAll("[data-ref-rarity]").forEach(a=>{const n=a.dataset.refRarity===e;a.classList.toggle("ref-rarity-tabs__btn--ativo",n),a.setAttribute("aria-selected",n?"true":"false")}))}function Da(e="legendary"){const t=document.getElementById("ref_rarity_tabs");t&&(t.innerHTML="",ft.forEach(a=>{const n=document.createElement("button");n.type="button",n.className="ref-rarity-tabs__btn",n.dataset.refRarity=a,n.setAttribute("role","tab"),n.setAttribute("aria-selected",a===e?"true":"false"),n.id=`ref_rarity_tab_${a}`;const o=Ae(a);if(o){const r=document.createElement("img");r.src=o,r.alt="",r.width=18,r.height=18,r.className="game-icon game-icon--xs",r.setAttribute("aria-hidden","true"),n.appendChild(r)}n.appendChild(document.createTextNode(c(`serum.rarity.${a}`))),a===e&&n.classList.add("ref-rarity-tabs__btn--ativo"),t.appendChild(n)}),t.dataset.activeRarity=e,t.addEventListener("click",a=>{const n=a.target.closest("[data-ref-rarity]");if(!n)return;const o=n.dataset.refRarity,r=document.getElementById("raridade");r&&r.value!==o?(r.value=o,r.dispatchEvent(new Event("change",{bubbles:!0}))):(Fe(o),re(o))}))}function za(){var o,r;const e=document.getElementById("ref_mode_tabs"),t=document.getElementById("ref_panel");if(!t)return;const a=((o=document.getElementById("raridade"))==null?void 0:o.value)||((r=document.getElementById("ref_rarity_tabs"))==null?void 0:r.dataset.activeRarity)||"legendary";Da(a);const n=i=>{t.dataset.refMode=i,e==null||e.querySelectorAll("[data-ref-mode]").forEach(l=>{const u=l.dataset.refMode===i;l.classList.toggle("ref-tabs__btn--ativo",u),l.setAttribute("aria-selected",u?"true":"false")}),re(wa())};e==null||e.addEventListener("click",i=>{const l=i.target.closest("[data-ref-mode]");l&&n(l.dataset.refMode)}),t.dataset.refMode=t.dataset.refMode||"per",re(a)}const ge=new Map;function qa(e,t){e.addEventListener("mouseenter",()=>{t.querySelectorAll(".select-com-icone__opcao--hover").forEach(a=>{a.classList.remove("select-com-icone__opcao--hover")}),e.classList.add("select-com-icone__opcao--hover")}),e.addEventListener("mouseleave",()=>{e.classList.remove("select-com-icone__opcao--hover")})}function Me(e,t,a){return a?a(e.value):t&&w[t]?w[t]:null}function St(e,t){if(!e)return;const a=R(t);a?(e.src=a,e.hidden=!1):e.hidden=!0}function ka(e,t,a,n,o,r,i,l,u){e.value=n.value,t.querySelectorAll('[role="option"]').forEach(d=>{d.removeAttribute("aria-selected")}),a.setAttribute("aria-selected","true"),o.textContent=n.textContent,St(r,Me(n,i,l)),u(),e.dispatchEvent(new Event("change",{bubbles:!0}))}function He(e,t={}){const{tipoIcone:a=null,resolverIcone:n=null,colunas:o=1}=t,r=!!(a&&w[a])||!!n;if(!e||ge.has(e))return ge.get(e);const i=document.createElement("div");i.className="select-com-icone",o>1&&i.classList.add("select-com-icone--colunas");const l=document.createElement("button");l.type="button",l.id=`${e.id}_trigger`,l.className="select-com-icone__trigger",l.setAttribute("aria-haspopup","listbox"),l.setAttribute("aria-expanded","false");const u=document.createElement("span");u.className="select-com-icone__trigger-text";let d=null;r?(d=document.createElement("img"),d.alt="",d.width=20,d.height=20,d.className="game-icon select-com-icone__trigger-icon",d.setAttribute("aria-hidden","true"),l.append(d,u)):(l.classList.add("select-com-icone__trigger--sem-icone"),l.append(u));const m=document.createElement("ul");m.className="select-com-icone__lista",o>1&&(m.classList.add("select-com-icone__lista--grid"),m.style.setProperty("--select-colunas",String(o))),m.setAttribute("role","listbox"),m.hidden=!0,e.classList.add("select-com-icone__nativo"),e.setAttribute("aria-hidden","true"),e.tabIndex=-1,e.parentNode.insertBefore(i,e),i.append(e,l,m);const C=document.querySelector(`label[for="${e.id}"]`);C&&C.setAttribute("for",l.id);function h(){m.hidden=!0,m.setAttribute("hidden",""),l.setAttribute("aria-expanded","false"),i.classList.remove("select-com-icone--aberto")}function v(){var p;m.hidden=!1,m.removeAttribute("hidden"),l.setAttribute("aria-expanded","true"),i.classList.add("select-com-icone--aberto"),(p=m.querySelector('[aria-selected="true"]'))==null||p.scrollIntoView({block:"nearest"})}function B(){const p=e.options[e.selectedIndex];u.textContent=(p==null?void 0:p.textContent)??"",d&&p&&St(d,Me(p,a,n))}function W(){m.innerHTML="",Array.from(e.options).forEach(p=>{const E=document.createElement("li");E.className="select-com-icone__opcao",o>1&&E.classList.add("select-com-icone__opcao--compacto"),E.setAttribute("role","option"),E.dataset.value=p.value,p.selected&&E.setAttribute("aria-selected","true");const H=Me(p,a,n);if(H){E.append(Oa(H,18,"game-icon game-icon--sm select-com-icone__opcao-icon"));const z=document.createElement("span");z.textContent=p.textContent,E.append(z)}else E.textContent=p.textContent;qa(E,m),E.addEventListener("click",()=>{ka(e,m,E,p,u,d,a,n,h)}),m.appendChild(E)}),B()}l.addEventListener("click",()=>{m.hidden?v():h()}),document.addEventListener("click",p=>{i.contains(p.target)||h()}),document.addEventListener("keydown",p=>{p.key==="Escape"&&h()});const X={sincronizarOpcoes:W,atualizarTrigger:B,abrir:v,fechar:h};return ge.set(e,X),W(),X}function be(){ge.forEach(e=>e.sincronizarOpcoes())}function It(e,t=1,a=31){if(!e)return;const n=e.value;e.innerHTML="";for(let o=t;o<=a;o++){const r=document.createElement("option");r.value=String(o),r.textContent=String(o),e.appendChild(r)}n!==""&&(e.value=n)}function Tt(e){if(!e)return;const t=e.value||"legendary";e.innerHTML="",["common","rare","epic","legendary"].forEach(a=>{const n=document.createElement("option");n.value=a,n.setAttribute("data-i18n",`serum.rarity.${a}`),e.appendChild(n)}),e.value=t}function Fa(e){e.forEach(t=>{const a=document.getElementById(t);a&&He(a,{tipoIcone:"reinicio",colunas:1})})}function Ha(e="raridade"){const t=document.getElementById(e);t&&(Tt(t),He(t,{resolverIcone:a=>Ae(a),colunas:1}))}function Ga(e,t=1,a=31){e.forEach(n=>{const o=document.getElementById(n);o&&(It(o,t,a),He(o,{tipoIcone:null,colunas:3}))})}const Ua={common:[["+0 → +1",6,10,18,37,85],["+1 → +2",24,40,72,148,340],["+2 → +3",96,160,288,592,1360],["+3 → +4",384,640,1152,2368,5440]],rare:[["+0 → +1",10,17,37,78,140,null],["+1 → +2",40,68,148,312,560,null],["+2 → +3",160,272,592,1248,2240,null],["+3 → +4",640,1088,2368,4992,8960,null]],epic:[["+0 → +1",30,40,75,115,175,null],["+1 → +2",120,160,300,460,700,null],["+2 → +3",480,640,1200,1840,2800,null],["+3 → +4",1920,2560,4800,7360,11200,null]],legendary:[["+0 → +1",100,110,138,173,220,null],["+1 → +2",400,440,552,692,880,null],["+2 → +3",1600,1760,2208,2768,3520,null],["+3 → +4",6400,7040,8832,11072,14080,null]]},Va=["common","rare","epic","legendary"],Wa="/icons/serum.png?v=7",Xa=["serum.colBoost","serum.colLv1_5","serum.colLv6_10","serum.colLv11_15","serum.colLv16_20","serum.colLv21_26","serum.colLv27_31"];function xt(e){const t=Ua[e]??[],a=Xa.map((o,r)=>`<th scope="col"${r===0?' class="serum-table__th-boost"':""}>${c(o)}</th>`).join(""),n=t.map(o=>{const[r,...i]=o,l=i.map(u=>u==null?'<td class="serum-table__na">—</td>':`<td class="serum-table__valor"><img src="${Wa}" alt="" class="game-icon game-icon--xs" width="16" height="16" /> ${_(u)}</td>`).join("");return`<tr><th scope="row">${r}</th>${l}</tr>`}).join("");return`<table class="serum-table"><thead><tr>${a}</tr></thead><tbody>${n}</tbody></table>`}function Ja(){const e=document.getElementById("serum_guide_titulo");!e||e.querySelector("img")||e.insertBefore(Lt("serum",22,"game-icon"),e.firstChild)}function Ge(e="legendary"){const t=document.getElementById("serum_tabs"),a=document.getElementById("serum_panel");!t||!a||(t.innerHTML="",Va.forEach(n=>{const o=document.createElement("button");o.type="button",o.className="serum-tabs__btn",o.dataset.rarity=n,o.setAttribute("role","tab"),o.setAttribute("aria-selected",n===e?"true":"false"),o.id=`serum_tab_${n}`,o.appendChild(Lt(n,18,"game-icon game-icon--xs")),o.appendChild(document.createTextNode(c(`serum.rarity.${n}`))),n===e&&o.classList.add("serum-tabs__btn--ativo"),t.appendChild(o)}),a.innerHTML=xt(e),a.dataset.rarity=e)}function Ka(){const e=document.getElementById("serum_tabs");e&&(Ja(),Ge(e.dataset.activeRarity||"legendary"),e.addEventListener("click",t=>{const a=t.target.closest("[data-rarity]");if(!a)return;const n=a.dataset.rarity;e.dataset.activeRarity=n,e.querySelectorAll(".serum-tabs__btn").forEach(r=>{const i=r.dataset.rarity===n;r.classList.toggle("serum-tabs__btn--ativo",i),r.setAttribute("aria-selected",i?"true":"false")});const o=document.getElementById("serum_panel");o&&(o.innerHTML=xt(n),o.dataset.rarity=n)}))}function T(e){const t=Number(e);return Number.isFinite(t)&&t>=0?t:0}function st(e){if(e===""||e==null)return"";const t=String(e).replace(/\D/g,"");if(!t)return"";let a=Number(t);return!Number.isFinite(a)||a<0?"":(a=Math.min(a,vt.pontosObjetivo),String(Math.floor(a/2)*2))}function Q(e,t,a){var n;return T((n=e[t])==null?void 0:n[a])}function Be(e,t,a){const n=e[t]||{};return Object.entries(n).reduce((o,[r,i])=>r===String(a)?o:o+T(i),0)}function Qa(e,t){return Q(t,"t1",e.t1)*k.t1+Q(t,"t2",e.t2)*k.t2+Q(t,"t3",e.t3)*k.t3}function Ya(e,t=0){return Math.max(vt.pontosObjetivo-T(e)-T(t),0)}function Za(e,t){const a=Q(t,"t1",e.t1)*k.t1,n=Q(t,"t2",e.t2)*k.t2,o=Q(t,"t3",e.t3)*k.t3,r=Be(t,"t1",e.t1)*fe.t1,i=Be(t,"t2",e.t2)*fe.t2,l=Be(t,"t3",e.t3)*fe.t3;return a+n+o+r+i+l}function en(e){return Object.values(e).reduce((t,a)=>t+Object.values(a).reduce((n,o)=>n+T(o),0),0)}function Ue(e=_t()){return{t1:{...e.t1},t2:{...e.t2},t3:{...e.t3}}}function Pt(e,t,a){const n=T(t),o=Qa(e,a),r=Za(e,a);return{...e,currentPoints:n,bestPoints:o,totalPoints:r,requiredPoints:Ya(n,r)}}const Bt="presentes_estado_v1";let I="calc",x=Ue(),D={},pe="",M={chave:"name",dir:"asc"},ne="",$={t1:[],t2:[],t3:[]},J={chave:"name",dir:1};function g(e){return document.getElementById(e)}function V(){localStorage.setItem(Bt,JSON.stringify({inventario:x,pontosPorMerc:D,subAbaAtiva:I}))}function tn(){const e=ha(Bt);if(!e||typeof e!="object")return;const t=Ea(e.inventario);t&&(x=Ue(t)),D=Ca(e.pontosPorMerc),(e.subAbaAtiva==="fav"||e.subAbaAtiva==="calc")&&(I=e.subAbaAtiva)}function Ve(e){return T(D[e]??0)}function lt(e){var a,n,o,r,i,l;I=e==="fav"?"fav":"calc",(a=g("gifts_panel_calc"))==null||a.toggleAttribute("hidden",I!=="calc"),(n=g("gifts_panel_fav"))==null||n.toggleAttribute("hidden",I!=="fav"),(o=g("gifts_tab_calc"))==null||o.classList.toggle("gifts-tabs__btn--ativo",I==="calc"),(r=g("gifts_tab_fav"))==null||r.classList.toggle("gifts-tabs__btn--ativo",I==="fav"),(i=g("gifts_tab_calc"))==null||i.setAttribute("aria-selected",I==="calc"?"true":"false"),(l=g("gifts_tab_fav"))==null||l.setAttribute("aria-selected",I==="fav"?"true":"false");const t=g("gifts_intro_text");if(t){const u=I==="calc"?"gifts.introCalc":"gifts.introFav";t.setAttribute("data-i18n",u),t.textContent=c(u)}V(),I==="calc"?ue():Z()}const Ne={t1:"gifts.tier1",t2:"gifts.tier2",t3:"gifts.tier3"},$t={1:"gifts.shape1",2:"gifts.shape2",3:"gifts.shape3"};function an(e,t){var n;const a=(n=g("gifts_inventario_grid"))==null?void 0:n.querySelector(`.gifts-stock-cell__input[data-tier="${e}"][data-variant="${t}"]`);a&&(a.value=x[e][t]||"")}function nn(e,t,a=1){const n=ze(e),o=qe(t);!n||!o||(x[n][o]=T(x[n][o])+a,an(n,o),We(),Je(),V())}function oe(e,t,a=40){const n=`${c(Ne[e])} — ${c($t[t])}`,o=y(R(ht(e,t))),r=y(c("gifts.addGiftClick",{label:n}));return`<button type="button" class="gifts-gift-add" data-gift-add data-tier="${e}" data-variant="${t}" title="${r}" aria-label="${r}">
+        <img src="${o}" alt="" width="${a}" height="${a}" loading="lazy" />
+      </button>`}function on(e){return le.map(t=>{const a=e[t];return`<div class="gifts-pref-item gifts-pref-item--${t}">
+        ${oe(t,a,34)}
+        <span class="gifts-pref-item__rp gifts-rp-fav">+${k[t]}</span>
+      </div>`}).join("")}function Ot(){const e=g("gifts_inventario_grid");e&&(e.innerHTML=le.map(t=>{const a=ce.map(n=>{const o=x[t][n]??0;return`<div class="gifts-stock-cell">
+          ${oe(t,n,40)}
+          <input type="number" min="0" step="1" class="gifts-stock-cell__input" data-tier="${t}" data-variant="${n}" value="${o||""}" inputmode="numeric" aria-label="${c(Ne[t])} ${c($t[n])}" />
+          <span class="gifts-stock-cell__rp"><span class="gifts-rp-fav">+${k[t]}</span><span class="gifts-rp-norm"> / +${fe[t]}</span></span>
+        </div>`}).join("");return`<div class="gifts-stock-row gifts-stock-row--${t}">
+        <span class="gifts-stock-row__tier">${c(Ne[t])}</span>
+        <div class="gifts-stock-row__cells">${a}</div>
+      </div>`}).join(""),e.querySelectorAll(".gifts-stock-cell__input").forEach(t=>{t.addEventListener("input",ct),t.addEventListener("change",ct)}),We())}function ct(e){const t=e.target,a=ze(t.dataset.tier),n=qe(t.dataset.variant);!a||!n||(x[a][n]=T(t.value),t.value=x[a][n]||"",We(),Je(),V())}function We(){const e=g("gifts_total_presentes");e&&(e.textContent=_(en(x)))}function rn(e){const t=M.dir==="asc"?1:-1,a=M.chave;return[...e].sort((n,o)=>{if(a==="currentPoints"){const r=(n.currentPoints-o.currentPoints)*t;return r!==0?r:n.name.localeCompare(o.name)}return a==="name"?n.name.localeCompare(o.name)*t:(n[a]-o[a])*t})}function sn(){const e=_e(pe).trim().toLowerCase();return ae.filter(t=>!e||t.name.toLowerCase().includes(e)).map(t=>Pt(t,Ve(t.name),x))}function ln(e,t){return D[t]==null?"":_(T(e))}function cn(e){const t=ln(e.currentPoints,e.name),a=e.requiredPoints,n=a===0?"gifts-rp-done":"gifts-rp-faltam",o=y(e.name),r=A(e.name),i=y(R(bt(e.name)));return`<tr data-name="${o}">
+      <td class="gifts-table__icon">
+        <img src="${i}" alt="${o}" width="40" height="40" loading="lazy" />
+      </td>
+      <td class="gifts-table__name">${r}</td>
+      <td class="gifts-table__pref"><div class="gifts-pref-row">${on(e)}</div></td>
+      <td class="gifts-table__points">
+        <div class="number-stepper gifts-points-stepper">
+          <button type="button" class="number-stepper__btn" data-step="down" aria-label="-">▼</button>
+          <input type="text" class="gifts-points-input" inputmode="numeric" autocomplete="off" data-name="${o}" value="${y(t)}" placeholder="0" size="7" />
+          <button type="button" class="number-stepper__btn" data-step="up" aria-label="+">▲</button>
+        </div>
+      </td>
+      <td class="gifts-table__num gifts-table__num--highlight" data-col="best" title="${c("gifts.colBestHint")}">${_(e.bestPoints)}</td>
+      <td class="gifts-table__num" data-col="total" title="${c("gifts.colTotalHint")}">${_(e.totalPoints)}</td>
+      <td class="gifts-table__num ${n}" data-col="required">${_(a)}</td>
+    </tr>`}function un(e){e.addEventListener("input",()=>{const t=Ee(e.dataset.name);if(!t)return;const a=st(e.value);if(a==="")delete D[t],e.value="";else{const n=T(a);D[t]=n,e.value=_(n)}Xe(t),V()}),e.addEventListener("blur",()=>{const t=st(e.value);if(t===""){e.value="";return}e.value=_(T(t))})}function dn(e){e.querySelectorAll(".gifts-points-stepper").forEach(t=>{const a=t.querySelector(".gifts-points-input");t.querySelectorAll("[data-step]").forEach(n=>{n.addEventListener("click",()=>{const o=n.dataset.step==="up"?1:-1,r=Ee(a.dataset.name);if(!r)return;const i=Ve(r),l=Math.max(0,Math.floor((i+o*2)/2)*2);l===0?(delete D[r],a.value=""):(D[r]=l,a.value=_(l)),Xe(r),V()})}),un(a)})}function Xe(e){var l;const t=ae.find(u=>u.name===e),a=(l=g("gifts_calc_body"))==null?void 0:l.querySelector(`tr[data-name="${CSS.escape(e)}"]`);if(!t||!a)return;const n=Pt(t,Ve(e),x),o=a.querySelector('[data-col="best"]'),r=a.querySelector('[data-col="total"]'),i=a.querySelector('[data-col="required"]');o&&(o.textContent=_(n.bestPoints)),r&&(r.textContent=_(n.totalPoints)),i&&(i.textContent=_(n.requiredPoints),i.classList.toggle("gifts-rp-done",n.requiredPoints===0),i.classList.toggle("gifts-rp-faltam",n.requiredPoints>0))}function Je(){ae.forEach(e=>Xe(e.name))}function ue(){const e=g("gifts_calc_body");if(!e)return;const t=rn(sn());e.innerHTML=t.map(cn).join(""),dn(e),mn()}function mn(){document.querySelectorAll("#gifts_calc_table th[data-sort]").forEach(e=>{const t=e.dataset.sort===M.chave;e.classList.toggle("gifts-th--sorted",t),e.dataset.dir=t?M.dir:""})}function fn(e){const t=e.currentTarget.dataset.sort;M.chave===t?M.dir=M.dir==="asc"?"desc":"asc":(M.chave=t,M.dir=t==="name"?"asc":"desc"),ue()}function gn(){x=Ue(_t()),Ot(),Je(),V()}function pn(){D={},ue(),V()}function vn(){const e=_e(ne).trim().toLowerCase();return ae.filter(t=>!(e&&!t.name.toLowerCase().includes(e)||$.t1.length&&!$.t1.includes(t.t1)||$.t2.length&&!$.t2.includes(t.t2)||$.t3.length&&!$.t3.includes(t.t3))).sort((t,a)=>{const n=J.chave,o=t[n]??t.name,r=a[n]??a.name;return String(o).localeCompare(String(r),void 0,{sensitivity:"base"})*J.dir})}function _n(e){const t=y(e.name),a=A(e.name),n=y(R(bt(e.name))),o=y(R(oa(e.name)));return`<tr>
+      <td class="gifts-table__icon">
+        <img src="${n}" alt="${t}" width="40" height="40" loading="lazy" />
+      </td>
+      <td class="gifts-table__name">${a}</td>
+      <td class="gifts-table__outfit">
+        <img src="${o}" alt="" width="48" height="48" loading="lazy" data-outfit-name="${t}" />
+      </td>
+      <td class="gifts-table__gift">${oe("t1",e.t1,36)}</td>
+      <td class="gifts-table__gift">${oe("t2",e.t2,36)}</td>
+      <td class="gifts-table__gift">${oe("t3",e.t3,36)}</td>
+    </tr>`}function bn(){const e=g("gifts_outfit_tooltip");e&&document.querySelectorAll("[data-outfit-name]").forEach(t=>{t.addEventListener("mouseenter",()=>{const a=Ee(t.dataset.outfitName);if(!a)return;const n=y(R(ra(a)));e.innerHTML=`<img src="${n}" alt="" loading="lazy" />`,e.hidden=!1}),t.addEventListener("mousemove",a=>{e.style.left=`${a.clientX+16}px`,e.style.top=`${a.clientY-8}px`}),t.addEventListener("mouseleave",()=>{e.hidden=!0})})}function Z(){const e=g("gifts_fav_body"),t=g("gifts_fav_total");if(!e)return;const a=vn();e.innerHTML=a.map(_n).join(""),t&&(t.textContent=c("gifts.fav.total",{n:a.length})),bn(),hn()}function hn(){["t1","t2","t3"].forEach(e=>{document.querySelectorAll(`#gifts_filtro_${e} [data-gift]`).forEach(t=>{t.classList.toggle("gifts-filter-gift--ativo",$[e].includes(t.dataset.gift))})})}function yn(e,t){const a=ze(e),n=qe(t);if(!a||!n)return;const o=$[a];o.includes(n)?$[a]=o.filter(r=>r!==n):o.push(n),Z()}function Rn(){$={t1:[],t2:[],t3:[]},ne="";const e=g("gifts_fav_search");e&&(e.value=""),Z()}function ut(){const e=g("gifts_filtro_panel"),t=g("gifts_fav_layout");!e||!t||(e.classList.toggle("gifts-data-panel--aberto"),t.classList.toggle("gifts-fav-layout--filtros-aberto",e.classList.contains("gifts-data-panel--aberto")))}function En(){["t1","t2","t3"].forEach(e=>{const t=g(`gifts_filtro_${e}`);t&&(t.innerHTML=ce.map(a=>`<button type="button" class="gifts-filter-gift" data-gift="${a}" aria-label="${e}-${a}">
+          <img src="${ht(e,a)}" alt="" width="32" height="32" loading="lazy" />
+        </button>`).join(""),t.querySelectorAll("[data-gift]").forEach(a=>{a.addEventListener("click",()=>yn(e,a.dataset.gift))}))})}function Mt(){Ot(),ue(),Z()}function Cn(){var e,t,a,n,o,r,i,l,u;tn(),En(),lt(I),(e=g("gifts_tabs"))==null||e.addEventListener("click",d=>{const m=d.target.closest("[data-gifts-tab]");m&&lt(m.dataset.giftsTab)}),(t=g("app_panel_gifts"))==null||t.addEventListener("click",d=>{const m=d.target.closest("[data-gift-add]");m&&(nn(m.dataset.tier,m.dataset.variant),m.classList.add("gifts-gift-add--pulse"),window.setTimeout(()=>m.classList.remove("gifts-gift-add--pulse"),280))}),(a=g("gifts_calc_search"))==null||a.addEventListener("input",d=>{pe=_e(d.target.value),d.target.value!==pe&&(d.target.value=pe),ue()}),(n=g("gifts_fav_search"))==null||n.addEventListener("input",d=>{ne=_e(d.target.value),d.target.value!==ne&&(d.target.value=ne),Z()}),document.querySelectorAll("#gifts_calc_table th[data-sort]").forEach(d=>{d.addEventListener("click",fn)}),document.querySelectorAll("#gifts_fav_table th[data-sort]").forEach(d=>{d.addEventListener("click",()=>{const m=d.dataset.sort;J.chave===m?J.dir*=-1:(J.chave=m,J.dir=1),Z()})}),(o=g("gifts_toggle_filtros"))==null||o.addEventListener("click",ut),(r=g("gifts_fechar_filtros"))==null||r.addEventListener("click",ut),(i=g("gifts_reset_inventario"))==null||i.addEventListener("click",()=>{window.confirm(c("gifts.confirmResetGifts"))&&gn()}),(l=g("gifts_reset_pontos"))==null||l.addEventListener("click",()=>{window.confirm(c("gifts.confirmResetPoints"))&&pn()}),(u=g("gifts_reset_filtros"))==null||u.addEventListener("click",Rn)}const f={tema:"tema_armazenado",modo:"modo_calculadora",app:"app_aba_ativa",raridade:"raridade_armazenada",reinicioDesejado:"reinicio_desejado_armazenado",levelDesejado:"level_desejado_armazenado",reinicioAtual:"reinicio_atual_armazenado",levelAtual:"level_atual_armazenado",pontosAlma:"pontos_alma_armazenados",pontosCreditos:"pontos_creditos_armazenados",reinicioOrcamento:"reinicio_orcamento_armazenado",levelOrcamento:"level_orcamento_armazenado"},Ke=["reinicio_desejado","reinicio_atual","level_desejado","level_atual"],Qe=["pontos_alma","pontos_creditos","reinicio_orcamento","level_orcamento"];let ie="claro",O="goal",K="cost",Y="",dt=null,ee=null;const s={raiz:document.getElementById("raiz_html"),raridade:document.getElementById("raridade"),reinicioDesejado:document.getElementById("reinicio_desejado"),levelDesejado:document.getElementById("level_desejado"),reinicioAtual:document.getElementById("reinicio_atual"),levelAtual:document.getElementById("level_atual"),pontosAlma:document.getElementById("pontos_alma"),pontosCreditos:document.getElementById("pontos_creditos"),reinicioOrcamento:document.getElementById("reinicio_orcamento"),levelOrcamento:document.getElementById("level_orcamento"),panelObjetivo:document.getElementById("panel_modo_objetivo"),panelOrcamento:document.getElementById("panel_modo_orcamento"),resultadoObjetivo:document.getElementById("resultado_conteudo"),resultadoOrcamento:document.getElementById("resultado_modo_orcamento"),orcamentoResumo:document.getElementById("orcamento_resumo"),orcamentoBody:document.getElementById("orcamento_tabela_body"),botaoTema:document.getElementById("botao_tema"),botaoCopiar:document.getElementById("botao_copiar"),botaoResetar:document.getElementById("botao_resetar"),mensagemCopia:document.getElementById("mensagem_copia"),mensagemErro:document.getElementById("mensagem_erro"),resultadoVazio:document.getElementById("resultado_vazio"),labelMaxDesejado:document.getElementById("label_max_desejado"),labelMaxAtual:document.getElementById("label_max_atual"),badgeDesejado:document.getElementById("badge_reinicio_desejado"),badgeAtual:document.getElementById("badge_reinicio_atual"),guiaBody:document.getElementById("restart_guide_body"),guiaTitulo:document.getElementById("guide_title_text"),guiaColNivel:document.getElementById("guide_col_level"),guiaLegendaDestino:document.getElementById("guide_legend_dest"),guiaLegendaOrigem:document.getElementById("guide_legend_orig")};function L(){var e;return De(((e=s.raridade)==null?void 0:e.value)||S)}function An(){const e=U(f.tema,{allowed:["claro","escuro"]});return e?ba(e):window.matchMedia("(prefers-color-scheme: dark)").matches?"escuro":"claro"}function Ln(){const e=U(f.modo,{allowed:["goal","budget"]});return _a(e??"goal")}const Ye=["cost","fortalecimento","gifts"];function Sn(){const e=U(f.app,{allowed:Ye});return va(e??"cost")}function Nt(){var e;if(Ye.forEach(t=>{var n,o,r;const a=K===t;(n=document.getElementById(`app_panel_${t}`))==null||n.toggleAttribute("hidden",!a),(o=document.getElementById(`app_tab_${t}`))==null||o.classList.toggle("app-tabs__btn--ativo",a),(r=document.getElementById(`app_tab_${t}`))==null||r.setAttribute("aria-selected",a?"true":"false")}),localStorage.setItem(f.app,K),K==="gifts"&&Mt(),K==="fortalecimento"){const t=((e=document.getElementById("serum_tabs"))==null?void 0:e.dataset.activeRarity)||"legendary";Ge(t)}}function In(e){K=Ye.includes(e)?e:"cost",Nt()}function jt(){ie==="escuro"?(s.raiz.classList.add("tema_escuro"),s.raiz.classList.remove("tema_claro_forcado")):(s.raiz.classList.remove("tema_escuro"),s.raiz.classList.add("tema_claro_forcado")),localStorage.setItem(f.tema,ie),Ce()}function Tn(){ie=ie==="claro"?"escuro":"claro",jt()}function wt(){var t,a;const e=Sa();(t=document.getElementById("lang_pt"))==null||t.classList.toggle("lang-btn--ativo",e==="pt-BR"),(a=document.getElementById("lang_en"))==null||a.classList.toggle("lang-btn--ativo",e==="en")}function Dt(){var t,a,n,o,r,i;const e=O==="goal";(t=s.panelObjetivo)==null||t.toggleAttribute("hidden",!e),(a=s.panelOrcamento)==null||a.toggleAttribute("hidden",e),(n=document.getElementById("mode_tab_goal"))==null||n.classList.toggle("mode-switcher__btn--ativo",e),(o=document.getElementById("mode_tab_budget"))==null||o.classList.toggle("mode-switcher__btn--ativo",!e),(r=document.getElementById("mode_tab_goal"))==null||r.setAttribute("aria-selected",e?"true":"false"),(i=document.getElementById("mode_tab_budget"))==null||i.setAttribute("aria-selected",e?"false":"true"),localStorage.setItem(f.modo,O),Ze(),F(),Ie()}function xn(e){O=e==="budget"?"budget":"goal",Dt()}function Se(){const e=L();Ct(["reinicio_desejado","reinicio_atual","reinicio_orcamento"],e);const t=te(e),a=c("field.levelRangeDynamic",{max:t})||`1–${t}`;["level_desejado","level_atual","level_orcamento"].forEach(n=>{const o=document.getElementById(n);It(o,1,t)}),s.labelMaxDesejado&&(s.labelMaxDesejado.textContent=a),s.labelMaxAtual&&(s.labelMaxAtual.textContent=a),document.querySelectorAll("#panel_modo_orcamento .field__max").forEach(n=>{n.textContent=a}),be()}function F(){if(!s.guiaBody)return;s.guiaBody.innerHTML="",(O==="budget"?$n():Bn()).forEach(({reinicio:t,nivelInicio:a,nivelFim:n})=>{const o=document.createElement("tr");o.dataset.restart=String(t);const r=A(c("restart.option",{n:t})),i=A(Pn(a,n)),l=y(R("/icons/reinicio.png?v=7"));o.innerHTML=`<td class="td-reinicio"><img src="${l}" alt="" class="game-icon game-icon--sm" width="16" height="16" /><span>${r}</span></td><td class="td-nivel td-nivel--percurso">${i}</td>`,s.guiaBody.appendChild(o)}),On()}function Pn(e,t){return e===t?`L${t}`:`L${e} → L${t}`}function Bn(){const e=L(),t=parseInt(s.reinicioAtual.value,10),a=parseInt(s.levelAtual.value,10),n=parseInt(s.reinicioDesejado.value,10),o=parseInt(s.levelDesejado.value,10);if(t>n||t===n&&a>o)return[];const r=[];for(let i=t;i<=n;i++){const l=i===t?a:1;let u;if(i===n)u=o;else{const d=pt(i,e);u=Math.max(l,d)}r.push({reinicio:i,nivelInicio:l,nivelFim:u})}return r}function $n(){const e=ee;if(!e){const l=parseInt(s.reinicioOrcamento.value,10),u=parseInt(s.levelOrcamento.value,10);return[{reinicio:l,nivelInicio:u,nivelFim:u}]}const{reinicio_inicial:t,nivel_inicial:a,reinicio_final:n,linhas:o}=e,r=new Map;o.forEach(l=>r.set(l.reinicio,l.nivel));const i=[];for(let l=t;l<=n;l++){const u=l===t?a:1,d=r.get(l)??u;i.push({reinicio:l,nivelInicio:u,nivelFim:d})}return i}function Ze(){const e=O==="budget",t=e?"guide.legendBudgetEnd":"guide.legendDesired",a=e?"guide.legendBudgetStart":"guide.legendCurrent";s.guiaTitulo&&(s.guiaTitulo.setAttribute("data-i18n","guide.titleBudget"),s.guiaTitulo.textContent=c("guide.titleBudget")),s.guiaColNivel&&(s.guiaColNivel.setAttribute("data-i18n","guide.colBudgetLevel"),s.guiaColNivel.textContent=c("guide.colBudgetLevel")),s.guiaLegendaDestino&&(s.guiaLegendaDestino.setAttribute("data-i18n",t),s.guiaLegendaDestino.textContent=c(t)),s.guiaLegendaOrigem&&(s.guiaLegendaOrigem.setAttribute("data-i18n",a),s.guiaLegendaOrigem.textContent=c(a))}function mt(e,t,a){if(!t)return;const n=t.querySelector(".restart-badge__text");if(!n)return;const o=pt(e,a),r=P(a);e>=r?n.textContent=c("badge.restartMax",{min:o,max:r}):n.textContent=c("badge.restartMin",{min:o,next:e+1}),t.hidden=!1}function On(){let e,t;O==="goal"?(e=parseInt(s.reinicioDesejado.value,10),t=parseInt(s.reinicioAtual.value,10)):(t=parseInt(s.reinicioOrcamento.value,10),e=ee!=null?ee.reinicio_final:null),document.querySelectorAll("#restart_guide_body [data-restart]").forEach(a=>{const n=parseInt(a.dataset.restart,10);a.classList.remove("guide-row--desired","guide-row--current","guide-row--both");const o=e!=null&&n===e,r=n===t;o&&r?a.classList.add("guide-row--both"):o?a.classList.add("guide-row--desired"):r&&a.classList.add("guide-row--current")})}function de(){const e=L(),t=parseInt(s.reinicioDesejado.value,10),a=parseInt(s.reinicioAtual.value,10),n=te(e),o=c("field.levelRangeDynamic",{max:n});s.labelMaxDesejado&&(s.labelMaxDesejado.textContent=o),s.labelMaxAtual&&(s.labelMaxAtual.textContent=o),mt(t,s.badgeDesejado,e),mt(a,s.badgeAtual,e),F()}function Mn(){localStorage.setItem(f.raridade,L()),localStorage.setItem(f.reinicioDesejado,s.reinicioDesejado.value),localStorage.setItem(f.levelDesejado,s.levelDesejado.value),localStorage.setItem(f.reinicioAtual,s.reinicioAtual.value),localStorage.setItem(f.levelAtual,s.levelAtual.value),s.pontosAlma&&localStorage.setItem(f.pontosAlma,s.pontosAlma.value),s.pontosCreditos&&localStorage.setItem(f.pontosCreditos,s.pontosCreditos.value),s.reinicioOrcamento&&localStorage.setItem(f.reinicioOrcamento,s.reinicioOrcamento.value),s.levelOrcamento&&localStorage.setItem(f.levelOrcamento,s.levelOrcamento.value)}function G(e,t,a,n){const o=U(e,{maxLen:16});return o==null||o===""?String(t):String(yt(o,a,n,t))}function zt(){const e=U(f.raridade,{allowed:["common","rare","epic","legendary"]});if(s.raridade&&(s.raridade.value=De(e??S)),s.reinicioDesejado.value=G(f.reinicioDesejado,4,0,99),s.levelDesejado.value=G(f.levelDesejado,21,1,99),s.reinicioAtual.value=G(f.reinicioAtual,0,0,99),s.levelAtual.value=G(f.levelAtual,1,1,99),s.pontosAlma&&(s.pontosAlma.value=G(f.pontosAlma,2270,0,999999999)),s.pontosCreditos){const t=U(f.pontosCreditos,{maxLen:16});s.pontosCreditos.value=t!=null&&t!==""?String(yt(t,0,999999999,0)):""}s.reinicioOrcamento&&(s.reinicioOrcamento.value=G(f.reinicioOrcamento,0,0,99)),s.levelOrcamento&&(s.levelOrcamento.value=G(f.levelOrcamento,1,1,99))}function qt(){s.mensagemErro.hidden=!0,s.mensagemErro.textContent="",[...Ke,...Qe].forEach(e=>{var t,a;(a=(t=document.getElementById(e))==null?void 0:t.closest(".field"))==null||a.classList.remove("field--invalid")})}function kt(e){var a,n;const t=L();s.mensagemErro.textContent=Pa(e,t),s.mensagemErro.hidden=!1,s.resultadoVazio.hidden=!0,s.resultadoObjetivo.hidden=!0,s.resultadoOrcamento.hidden=!0,s.orcamentoResumo&&(s.orcamentoResumo.hidden=!0),s.botaoCopiar.disabled=!0,Y="",O==="budget"&&(ee=null,F()),e==="CURRENT_AFTER_DESIRED"?((a=s.reinicioAtual.closest(".field"))==null||a.classList.add("field--invalid"),(n=s.levelAtual.closest(".field"))==null||n.classList.add("field--invalid")):(O==="goal"?Ke:Qe).forEach(r=>{var i,l;(l=(i=document.getElementById(r))==null?void 0:i.closest(".field"))==null||l.classList.add("field--invalid")})}function Nn(e){qt(),s.resultadoVazio.hidden=!0,s.resultadoObjetivo.hidden=!1,s.resultadoOrcamento.hidden=!0;const t={"alma-desejado":e.total_alma_desejado,"creditos-desejado":e.total_creditos_desejado,"alma-atual":e.total_alma_atual,"creditos-atual":e.total_creditos_atual,"alma-restante":e.alma_restante,"creditos-restante":e.creditos_restantes};Object.entries(t).forEach(([n,o])=>{document.querySelectorAll(`[data-result="${n}"]`).forEach(r=>{r.textContent=_(o)})});const a=At(e.reinicio_atual,e.level_atual);s.resultadoObjetivo.classList.toggle("results-body--inicio",a),Y=xa(e),s.botaoCopiar.disabled=!1}function jn(e){if(!s.orcamentoResumo)return;const{reinicio_inicial:t,nivel_inicial:a,reinicio_final:n,nivel_final:o,alma_sobra:r,creditos_sobra:i,creditos_total:l,limitar_creditos:u,raridade:d}=e,m=u?i:l,b=c(u?"budget.leftover":"budget.totalCredits"),C=y(R(Le(d??L()))),h=y(R(w.reinicio)),v=y(R(w.creditos)),B=y(c("restart.option",{n:t}));s.orcamentoResumo.innerHTML=`
+    <div class="budget-summary__journey">
+      <span class="budget-summary__label">${A(c("budget.journey"))}</span>
+      <div class="budget-milestones">
+        <div class="budget-milestone" title="${B}">
+          <img src="${h}" alt="" class="game-icon game-icon--xs" width="16" height="16" />
+          <span class="budget-milestone__badge">R${t}</span>
+          <span class="budget-milestone__level">L${a}</span>
+        </div>
+        <span class="budget-summary__arrow" aria-hidden="true">→</span>
+        <div class="budget-milestone budget-milestone--final">
+          <img src="${h}" alt="" class="game-icon game-icon--xs" width="16" height="16" />
+          <span class="budget-milestone__badge">R${n}</span>
+          <span class="budget-milestone__level">L${o}</span>
+        </div>
+      </div>
+    </div>
+    <div class="budget-summary__totals">
+      <span class="currency-chip currency-chip--alma">
+        <img src="${C}" alt="" class="game-icon" width="22" height="22" data-icon-alma />
+        <span class="valor_alma">${A(_(r))}</span>
+        <span class="currency-label">${A(c("budget.leftover"))}</span>
+      </span>
+      <span class="currency-chip currency-chip--creditos">
+        <img src="${v}" alt="" class="game-icon" width="22" height="22" />
+        <span class="valor_creditos">${A(_(m))}</span>
+        <span class="currency-label">${A(b)}</span>
+      </span>
+    </div>`,s.orcamentoResumo.hidden=!1}function wn(e,t=L()){if(!s.orcamentoBody)return;const a=y(R(Le(t))),n=y(R(w.reinicio)),o=y(R(w.creditos)),r=e.length;s.orcamentoBody.innerHTML=e.map((i,l)=>{const u=l+1;return`
+      <tr class="${l===r-1?"budget-row budget-row--final":"budget-row"}">
+        <td class="budget-td budget-td--step">${u}</td>
+        <td class="budget-td budget-td--restart">
+          <img src="${n}" alt="" class="game-icon game-icon--xs" width="14" height="14" />
+          <strong>R${i.reinicio}</strong>
+        </td>
+        <td class="budget-td budget-td--level"><span class="budget-level">L${i.nivel}</span></td>
+        <td class="budget-td budget-td--num budget-td--alma">
+          <span class="budget-cell-value budget-cell-value--alma">
+            <img src="${a}" alt="" class="game-icon game-icon--xs" width="14" height="14" data-icon-alma />
+            <span>${A(_(i.gasto))}</span>
+          </span>
+        </td>
+        <td class="budget-td budget-td--num budget-td--sobra">
+          <span class="budget-cell-value budget-cell-value--sobra">
+            <img src="${a}" alt="" class="game-icon game-icon--xs" width="14" height="14" data-icon-alma />
+            <span>${A(_(i.sobra))}</span>
+          </span>
+        </td>
+        <td class="budget-td budget-td--num budget-td--creditos">
+          <span class="budget-cell-value budget-cell-value--creditos">
+            <img src="${o}" alt="" class="game-icon game-icon--xs" width="14" height="14" />
+            <span>${A(_(i.creditos))}</span>
+          </span>
+        </td>
+      </tr>`}).join("")}function Dn(e){qt(),s.resultadoVazio.hidden=!0,s.resultadoObjetivo.hidden=!0,s.resultadoOrcamento.hidden=!1,ee=e,jn(e),wn(e.linhas,e.raridade),F(),Y=Ba(e),s.botaoCopiar.disabled=!1}function zn(){const e=L(),t=Yt(parseInt(s.reinicioDesejado.value,10),parseInt(s.levelDesejado.value,10),parseInt(s.reinicioAtual.value,10),parseInt(s.levelAtual.value,10),e);if(!t.ok){kt(t.code);return}Nn(t)}function qn(){var o,r;const e=L(),t=(o=s.pontosCreditos)==null?void 0:o.value,a=t===""||t==null?null:t,n=ea(((r=s.pontosAlma)==null?void 0:r.value)??0,e,parseInt(s.reinicioOrcamento.value,10),parseInt(s.levelOrcamento.value,10),a);if(!n.ok){kt(n.code);return}Dn(n)}function Ie(){var e,t;if(Mn(),de(),s.mensagemCopia.textContent="",O==="budget"){if(!((e=s.pontosAlma)!=null&&e.value)&&((t=s.pontosAlma)==null?void 0:t.value)!=="0"){ee=null,F(),s.resultadoVazio.textContent=c("results.emptyBudget"),s.resultadoVazio.hidden=!1,s.resultadoObjetivo.hidden=!0,s.resultadoOrcamento.hidden=!0,s.orcamentoResumo&&(s.orcamentoResumo.hidden=!0),s.botaoCopiar.disabled=!0;return}s.resultadoVazio.textContent=c("results.empty"),qn();return}s.resultadoVazio.textContent=c("results.empty"),zn()}function ve(){clearTimeout(dt),dt=setTimeout(Ie,300)}async function kn(){if(Y)try{await navigator.clipboard.writeText(Y),s.mensagemCopia.textContent=c("copy.success"),setTimeout(()=>{s.mensagemCopia.textContent=""},2e3)}catch{s.mensagemCopia.textContent=c("copy.fail"),alert(`${c("copy.fail")}
+
+${Y}`)}}function Fn(){localStorage.removeItem(f.reinicioDesejado),localStorage.removeItem(f.levelDesejado),localStorage.removeItem(f.reinicioAtual),localStorage.removeItem(f.levelAtual),localStorage.removeItem(f.pontosAlma),localStorage.removeItem(f.pontosCreditos),localStorage.removeItem(f.reinicioOrcamento),localStorage.removeItem(f.levelOrcamento),zt(),Se(),de(),Ie()}function et(){const e=L();Pe(e,document.getElementById("app_panel_cost")),Pe(e,document.getElementById("app_tab_cost")),Pe(e,document.querySelector(".app-header"))}function Hn(){const e=L();Fe(e),re(e),Se(),F(),et(),de(),ve()}function Gn(){document.querySelectorAll(".number-stepper").forEach(e=>{const t=e.querySelector('input[type="number"]');e.querySelectorAll("[data-step]").forEach(a=>{a.addEventListener("click",()=>{const n=a.dataset.step==="up"?1:-1,o=t.min!==""?Number(t.min):0,r=Math.max(o,(Number(t.value)||0)+n);t.value=String(r),t.dispatchEvent(new Event("input",{bubbles:!0}))})})})}function Ft(){var e;Tt(s.raridade),Array.from(((e=s.raridade)==null?void 0:e.options)??[]).forEach(t=>{const a=t.getAttribute("data-i18n");a&&(t.textContent=c(a))}),be()}function Un(){var t;Se(),Ft(),F(),Ze(),et();const e=((t=document.getElementById("serum_tabs"))==null?void 0:t.dataset.activeRarity)||"legendary";Ge(e),Fe(L()),re(L()),Mt(),Ce(),wt(),de(),Ie()}function Vn(){var e,t,a,n,o;Ta(),ie=An(),O=Ln(),K=Sn(),jt(),Ha("raridade"),Ft(),Ct(["reinicio_desejado","reinicio_atual","reinicio_orcamento"]),Fa(["reinicio_desejado","reinicio_atual","reinicio_orcamento"]),Ga(["level_desejado","level_atual","level_orcamento"],1,se),be(),zt(),Se(),be(),et(),F(),Ze(),Ka(),za(),Cn(),Gn(),Ce(),wt(),de(),Dt(),Nt(),Ia(Un),s.botaoTema.addEventListener("click",Tn),s.botaoCopiar.addEventListener("click",kn),s.botaoResetar.addEventListener("click",Fn),(e=s.raridade)==null||e.addEventListener("change",Hn),(t=document.getElementById("mode_tabs"))==null||t.addEventListener("click",r=>{const i=r.target.closest("[data-mode]");i&&xn(i.dataset.mode)}),(a=document.getElementById("app_tabs"))==null||a.addEventListener("click",r=>{const i=r.target.closest("[data-app]");i&&In(i.dataset.app)}),(n=document.getElementById("lang_pt"))==null||n.addEventListener("click",()=>it("pt-BR")),(o=document.getElementById("lang_en"))==null||o.addEventListener("click",()=>it("en")),Ke.forEach(r=>{var i;(i=document.getElementById(r))==null||i.addEventListener("change",ve)}),Qe.forEach(r=>{const i=document.getElementById(r);i==null||i.addEventListener("change",ve),i==null||i.addEventListener("input",ve)})}Vn();
+
+</script>
+  <style>
+:root{--cor-titulo: rgb(255, 207, 47);--cor-fundo-pagina: #f4f4f6;--cor-texto-principal: #1a1a1e;--cor-texto-secundario: #5c5c66;--cor-fundo-card: #ffffff;--cor-borda: #d8d8e0;--cor-sombra: rgba(0, 0, 0, .08);--cor-texto-alma: #c9a227;--cor-texto-creditos: #5a6a7a;--cor-botao-copiar: #2e7d4a;--cor-botao-copiar-hover: #256b3f;--cor-botao-reset: #6c757d;--cor-botao-reset-hover: #5a6268;--cor-botao-tema: #7c3aed;--cor-botao-tema-hover: #6d28d9;--cor-erro-fundo: #dc2626;--cor-erro-texto: #ffffff;--cor-foco: #7c3aed;--cor-lang-ativo: #7c3aed;--cor-lang-fundo: #ebebef;--raio: 10px;--espaco-xs: .25rem;--espaco-sm: .5rem;--espaco-md: 1rem;--espaco-lg: 1.5rem;--espaco-xl: 2rem;--largura-max: 1040px;--fonte: system-ui, "Segoe UI", Tahoma, Geneva, Verdana, sans-serif}.tema_escuro{--cor-fundo-pagina: #121214;--cor-texto-principal: #f0f0f4;--cor-texto-secundario: #a0a0b0;--cor-fundo-card: #1c1c22;--cor-borda: #3a3a48;--cor-sombra: rgba(0, 0, 0, .35);--cor-texto-alma: #ffcc41;--cor-texto-creditos: #8a9aaa;--cor-botao-copiar: #388e3c;--cor-botao-copiar-hover: #2d7a32;--cor-botao-reset: #5a6268;--cor-botao-reset-hover: #4a5258;--cor-lang-fundo: #2a2a34}@media(prefers-color-scheme:dark){:root:not(.tema_claro_forcado){color-scheme:dark}}*,*:before,*:after{box-sizing:border-box}input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}input[type=number]{-moz-appearance:textfield;-webkit-appearance:textfield;appearance:textfield}body{margin:0;min-height:100vh;font-family:var(--fonte);font-size:1rem;line-height:1.5;background:var(--cor-fundo-pagina);color:var(--cor-texto-principal);transition:background .25s ease,color .25s ease}.app{max-width:var(--largura-max);margin:0 auto;padding:var(--espaco-lg) var(--espaco-md) var(--espaco-xl)}.app:has(#app_panel_gifts:not([hidden])){max-width:min(100%,1320px)}.app:has(#app_panel_cost:not([hidden])){max-width:min(100%,1680px)}.app-header{display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:var(--espaco-md);margin-bottom:var(--espaco-lg);padding-bottom:var(--espaco-md);border-bottom:1px solid var(--cor-borda)}.app-header__brand{flex:1 1 200px}.app-title{margin:0;font-size:1.5rem;font-weight:700;color:var(--cor-titulo);letter-spacing:-.02em}.app-subtitle{display:flex;flex-wrap:wrap;align-items:center;gap:0;margin:var(--espaco-xs) 0 0;font-size:.95rem;color:var(--cor-texto-secundario)}.app-header__controls{display:flex;flex-wrap:wrap;align-items:center;gap:var(--espaco-sm)}.workspace{display:grid;gap:var(--espaco-lg);margin-top:var(--espaco-lg);margin-bottom:var(--espaco-lg)}.workspace__main{display:flex;flex-direction:column;gap:var(--espaco-sm);min-width:0}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:var(--espaco-md)}@media(min-width:880px){.workspace{grid-template-columns:1fr minmax(260px,300px);align-items:start}.restart-guide{position:sticky;top:var(--espaco-md)}}@media(max-width:600px){.form-grid{grid-template-columns:1fr}.app-header__controls{width:100%;justify-content:flex-end}}.actions{display:flex;flex-wrap:wrap;gap:var(--espaco-sm);margin-bottom:var(--espaco-sm);padding:var(--espaco-md);background:var(--cor-fundo-card);border:1px solid var(--cor-borda);border-radius:var(--raio);box-shadow:0 2px 8px var(--cor-sombra)}.actions .btn{flex:1 1 140px;min-height:44px}#panel_modo_orcamento:not([hidden])~.actions{width:100%;max-width:min(100%,28rem);margin-inline:auto}#panel_modo_orcamento:not([hidden])~.actions .btn{flex:1 1 0;min-width:0}.copy-status{min-height:1.25rem;margin:0 0 var(--espaco-lg);font-size:.875rem;font-weight:600;text-align:center;color:var(--cor-botao-copiar)}.copy-status:empty{display:none}.game-icon{display:inline-block;flex-shrink:0;object-fit:contain;vertical-align:middle}.game-icon--sm{width:1rem;height:1rem}.game-icon--xs{width:.875rem;height:.875rem}.visually-hidden{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}.calc-toolbar{display:flex;flex-wrap:wrap;align-items:flex-end;gap:var(--espaco-md);margin-bottom:var(--espaco-md);padding:var(--espaco-md);background:var(--cor-fundo-card);border:1px solid var(--cor-borda);border-radius:var(--raio);box-shadow:0 2px 8px var(--cor-sombra)}.calc-toolbar .field--raridade{flex:1 1 200px;min-width:180px;margin:0}.mode-switcher{display:flex;flex-wrap:wrap;gap:.35rem;flex:2 1 280px}.mode-switcher__btn{flex:1 1 140px;padding:.55rem .85rem;font-size:.82rem;font-weight:600;font-family:inherit;color:var(--cor-texto-secundario);background:var(--cor-fundo-pagina);border:1px solid var(--cor-borda);border-radius:var(--raio);cursor:pointer;transition:background .15s ease,color .15s ease,border-color .15s ease}.mode-switcher__btn:hover{border-color:var(--cor-botao-tema);color:var(--cor-titulo)}.mode-switcher__btn--ativo{color:#fff;background:var(--cor-botao-tema);border-color:var(--cor-botao-tema)}.number-stepper{display:flex;align-items:stretch;gap:0;max-width:100%}.number-stepper input{flex:1;min-width:0;text-align:center;border-radius:0;border-left:none;border-right:none}.number-stepper__btn{flex-shrink:0;width:2.5rem;padding:0;font-size:.7rem;line-height:1;color:var(--cor-texto-secundario);background:var(--cor-fundo-pagina);border:1px solid var(--cor-borda);cursor:pointer}.number-stepper__btn:first-child{border-radius:var(--raio) 0 0 var(--raio)}.number-stepper__btn:last-child{border-radius:0 var(--raio) var(--raio) 0}.field-hint{margin:var(--espaco-sm) 0 0;font-size:.82rem;color:var(--cor-texto-secundario)}.card--orcamento{width:100%;max-width:min(100%,28rem);margin-inline:auto;padding:var(--espaco-lg)}.card--orcamento .card__title{margin-bottom:var(--espaco-lg);padding-bottom:var(--espaco-md);border-bottom:1px solid var(--cor-borda)}.budget-form{display:flex;flex-direction:column;align-items:stretch;gap:var(--espaco-lg)}.budget-form__resources{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--espaco-md);width:100%}@media(max-width:520px){.budget-form__resources{grid-template-columns:1fr}}.budget-form__mp{display:flex;flex-direction:column;align-items:center;gap:var(--espaco-sm);width:100%}.budget-form__mp-label{display:inline-flex;align-items:center;justify-content:center;gap:.35rem;margin:0;font-size:.78rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--cor-texto-secundario);text-align:center}.number-stepper--alma{width:fit-content;max-width:100%}.number-stepper--alma input{flex:0 0 auto;width:6.5rem;min-width:5rem;min-height:52px;font-size:1.35rem;font-weight:700;color:var(--cor-texto-alma);font-variant-numeric:tabular-nums;background:var(--cor-fundo-pagina)}.number-stepper--alma .number-stepper__btn{width:3rem;min-height:52px;font-size:1.25rem;font-weight:700;line-height:1;color:var(--cor-texto-secundario);transition:background .15s ease,color .15s ease,border-color .15s ease}.number-stepper--alma .number-stepper__btn:hover{color:var(--cor-titulo);background:#7c3aed1f;border-color:var(--cor-botao-tema)}.number-stepper--alma .number-stepper__btn:active{background:#7c3aed33}.number-stepper--creditos{width:fit-content;max-width:100%}.number-stepper--creditos input{flex:0 0 auto;width:6.5rem;min-width:5rem;min-height:52px;font-size:1.35rem;font-weight:700;color:var(--cor-texto-creditos);font-variant-numeric:tabular-nums;background:var(--cor-fundo-pagina)}.number-stepper--creditos .number-stepper__btn{width:3rem;min-height:52px;font-size:1.25rem;font-weight:700;line-height:1;color:var(--cor-texto-secundario);transition:background .15s ease,color .15s ease,border-color .15s ease}.number-stepper--creditos .number-stepper__btn:hover{color:var(--cor-texto-creditos);background:#5a6a7a1f;border-color:var(--cor-texto-creditos)}.number-stepper--creditos .number-stepper__btn:active{background:#5a6a7a33}.budget-form__point{width:100%;margin:0;padding:var(--espaco-md);border:1px solid var(--cor-borda);border-radius:calc(var(--raio) - 2px);background:var(--cor-fundo-pagina)}.budget-form__point-legend{display:block;width:100%;margin:0 0 var(--espaco-md);padding:0;font-size:.78rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--cor-texto-secundario)}.budget-form__row{display:flex;flex-direction:column;gap:var(--espaco-md)}.budget-form__field-label{display:flex;align-items:center;gap:.35rem;margin-bottom:var(--espaco-xs);font-size:.82rem;font-weight:600;color:var(--cor-texto-secundario)}.budget-form__field-label.label-select-nivel{justify-content:space-between}.field--budget-select{margin:0;min-width:0}.field--budget-select .select-com-icone__trigger{min-height:44px}.card--orcamento .select-com-icone__trigger-text,.card--orcamento .select-com-icone__opcao{white-space:nowrap}.card--orcamento .select-com-icone__trigger-text{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}.budget-summary{display:flex;flex-direction:column;gap:var(--espaco-md);margin-bottom:var(--espaco-lg);padding:var(--espaco-md);background:var(--cor-fundo-pagina);border:1px solid var(--cor-borda);border-radius:calc(var(--raio) - 2px)}.budget-summary__label{display:block;margin-bottom:var(--espaco-xs);font-size:.78rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--cor-texto-secundario)}.budget-milestones{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:var(--espaco-sm) var(--espaco-md)}.budget-milestone{display:inline-flex;align-items:center;gap:.4rem;padding:.4rem .7rem;background:var(--cor-fundo-card);border:1px solid var(--cor-borda);border-radius:999px}.budget-milestone--final{border-color:#7c3aed8c;background:#7c3aed1f}.budget-milestone__badge{font-weight:700;font-size:.9rem}.budget-milestone__level{font-weight:700;font-size:.9rem;color:var(--cor-titulo);font-variant-numeric:tabular-nums}.budget-summary__arrow{font-size:1.1rem;font-weight:700;color:var(--cor-texto-secundario)}.budget-summary__totals{display:flex;flex-wrap:wrap;justify-content:center;gap:var(--espaco-sm) var(--espaco-md)}.budget-summary__journey{text-align:center}.budget-table-wrap{overflow-x:auto;border:1px solid var(--cor-borda);border-radius:calc(var(--raio) - 2px)}.budget-table{width:100%;table-layout:fixed;border-collapse:collapse;font-size:.85rem}.budget-col--step{width:2.25rem}.budget-col--restart{width:26%}.budget-col--level{width:14%}.budget-col--spend,.budget-col--left,.budget-col--credits{width:19%}.budget-table th,.budget-table td{padding:.55rem .65rem;border-bottom:1px solid var(--cor-borda);vertical-align:middle}.budget-table thead th{position:sticky;top:0;z-index:1;background:var(--cor-fundo-card);font-size:.76rem;font-weight:700;color:var(--cor-texto-secundario);white-space:nowrap}.budget-table thead th.budget-th--restart,.budget-td--restart{text-align:left}.budget-table thead th.budget-th--step,.budget-td--step{text-align:center;color:var(--cor-texto-secundario);font-size:.78rem;font-weight:600}.budget-table thead th.budget-th--level,.budget-td--level{text-align:center}.budget-table thead th.budget-th--num,.budget-td--num{text-align:right;font-variant-numeric:tabular-nums}.budget-th__inner{display:inline-flex;align-items:center;justify-content:flex-end;gap:.3rem;max-width:100%}.budget-th.th-with-icon img,.budget-td--restart img{flex-shrink:0;vertical-align:middle}.budget-td--restart{white-space:nowrap;font-weight:600}.budget-td--restart img{margin-right:.2rem}.budget-level{display:inline-block;min-width:2.25rem;font-weight:700;color:var(--cor-titulo)}.budget-td--alma{font-weight:600;color:var(--cor-texto-alma)}.budget-td--sobra{font-weight:600}.budget-cell-value{display:inline-flex;align-items:center;justify-content:flex-end;gap:.3rem;width:100%;font-weight:600}.budget-cell-value--alma{color:var(--cor-texto-alma)}.budget-cell-value--creditos{color:var(--cor-texto-creditos)}.budget-row:nth-child(2n){background:#7f7f7f0f}.budget-row--final{background:#2e7d4a24!important}.budget-row--final td{border-bottom:none}.budget-table tbody tr:last-child td{border-bottom:none}@media(min-width:640px){.budget-summary{flex-direction:row;align-items:center;justify-content:space-between}.budget-summary__journey{text-align:left}.budget-summary__totals{justify-content:flex-end}}.ref-guide{margin-top:var(--espaco-lg);padding:var(--espaco-md);background:var(--cor-fundo-card);border:1px solid var(--cor-borda);border-radius:var(--raio);box-shadow:0 2px 8px var(--cor-sombra)}.ref-guide__title{margin:0 0 var(--espaco-xs);font-size:1rem;font-weight:700}.ref-guide__subtitle{margin:0 0 var(--espaco-md);font-size:.85rem;color:var(--cor-texto-secundario)}.ref-rarity-tabs{display:flex;flex-wrap:wrap;gap:.35rem;margin-bottom:var(--espaco-sm)}.ref-rarity-tabs__btn{display:inline-flex;align-items:center;gap:.35rem;padding:.4rem .75rem;font-size:.8rem;font-weight:600;font-family:inherit;color:var(--cor-texto-secundario);background:var(--cor-fundo-pagina);border:1px solid var(--cor-borda);border-radius:999px;cursor:pointer}.ref-rarity-tabs__btn:hover{border-color:var(--cor-botao-tema);color:var(--cor-texto-principal)}.ref-rarity-tabs__btn--ativo{color:#fff;background:var(--cor-botao-tema);border-color:var(--cor-botao-tema)}.ref-tabs{display:flex;flex-wrap:wrap;gap:.35rem;margin-bottom:var(--espaco-sm)}.ref-tabs__btn{display:inline-flex;align-items:center;gap:.35rem;padding:.4rem .75rem;font-size:.8rem;font-weight:600;font-family:inherit;color:var(--cor-texto-secundario);background:var(--cor-fundo-pagina);border:1px solid var(--cor-borda);border-radius:999px;cursor:pointer}.ref-tabs__btn--ativo{color:#fff;background:var(--cor-botao-tema);border-color:var(--cor-botao-tema)}.ref-guide__table-wrap{overflow-x:visible;margin-top:var(--espaco-sm)}@media(max-width:900px){.ref-guide__table-wrap{overflow-x:auto}}.ref-table{width:100%;border-collapse:collapse;font-size:.78rem;table-layout:fixed}.ref-table--planilha{font-size:.7rem}.ref-table--planilha th,.ref-table--planilha td{padding:.28rem .3rem}.ref-table th,.ref-table td{padding:.4rem .45rem;text-align:center;border-bottom:1px solid var(--cor-borda);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ref-table--planilha thead th:first-child,.ref-table--planilha tbody th[scope=row]{width:4.5rem;min-width:4.5rem}.ref-table th[scope=row],.ref-table thead th:first-child{text-align:left;font-weight:700}.ref-table thead th{color:var(--cor-texto-secundario);font-size:.72rem}.ref-table__valor{font-variant-numeric:tabular-nums}.ref-table__na{color:var(--cor-texto-secundario)}.ref-table__row--reboot{background:#7c3aed1a}.ref-table__row--reboot th[scope=row]{color:var(--cor-botao-tema)}.ref-table__row--totalizador{background:#c9a22724;border-top:2px solid rgba(201,162,39,.45);border-bottom:2px solid rgba(201,162,39,.25)}.ref-table__row--totalizador th[scope=row]{color:var(--cor-texto-alma);font-weight:800;letter-spacing:.02em}.ref-table__row--totalizador .ref-table__valor{font-weight:700}.tema_escuro .ref-table__row--totalizador{background:#ffcc4114;border-top-color:#ffcc4159;border-bottom-color:#ffcc4133}.serum-table__valor img{vertical-align:middle;margin-right:.15rem}.label-with-icon{display:inline-flex;align-items:center;gap:.4rem}.restart-guide__title{display:flex;align-items:center;gap:.4rem}.subtitle-part{display:inline-flex;align-items:center;gap:.25rem}.subtitle-part__icons{display:inline-flex;align-items:center;gap:.15rem}.subtitle-sep{margin-inline:.15rem}.subtitle-icons{display:inline-flex;align-items:center;gap:.35rem;margin-left:.5rem;vertical-align:middle}.restart-badge{display:inline-flex;align-items:center;gap:.4rem;margin-top:var(--espaco-sm);padding:.35rem .65rem;font-size:.8rem;font-weight:600;color:var(--cor-botao-tema);background:#7c3aed1f;border:1px solid rgba(124,58,237,.35);border-radius:999px}.tema_escuro .restart-badge{background:#7c3aed38}.result-values{display:flex;flex-wrap:wrap;justify-content:center;gap:.65rem 1rem}.currency-chip{display:inline-flex;align-items:center;gap:.35rem;padding:.35rem .55rem;background:var(--cor-fundo-pagina);border:1px solid var(--cor-borda);border-radius:999px}.currency-chip--alma .valor_alma{font-weight:700;color:var(--cor-texto-alma);font-variant-numeric:tabular-nums}.currency-chip--creditos .valor_creditos{font-weight:700;color:var(--cor-texto-creditos);font-variant-numeric:tabular-nums}.currency-chip .currency-label{font-size:.85em;font-weight:600;color:var(--cor-texto-secundario)}.result-row--highlight .currency-chip{padding:.45rem .65rem}.result-row--highlight .currency-chip .valor_alma,.result-row--highlight .currency-chip .valor_creditos{font-size:1.15em}.lang-switcher{display:inline-flex;padding:3px;background:var(--cor-lang-fundo);border-radius:var(--raio);border:1px solid var(--cor-borda)}.lang-btn{min-width:44px;min-height:44px;padding:.35rem .85rem;white-space:nowrap;border:none;border-radius:calc(var(--raio) - 2px);background:transparent;color:var(--cor-texto-secundario);font-size:.875rem;font-weight:600;cursor:pointer;transition:background .2s,color .2s,box-shadow .2s}.lang-btn--icon{display:inline-flex;align-items:center;justify-content:center;min-width:44px;padding:.4rem .55rem}.lang-btn__flag{display:block;border-radius:3px;box-shadow:0 1px 2px #0003}.lang-btn:hover{color:var(--cor-texto-principal)}.lang-btn--ativo{background:transparent}.lang-btn--ativo .lang-btn__flag{outline:2px solid var(--cor-texto-principal);outline-offset:2px}.lang-btn:focus-visible{outline:2px solid var(--cor-foco);outline-offset:2px}.btn{padding:.65rem 1rem;border:none;border-radius:var(--raio);font-size:1rem;font-weight:600;cursor:pointer;transition:background .2s,opacity .2s,transform .1s}.btn:focus-visible{outline:2px solid var(--cor-foco);outline-offset:2px}.btn:disabled{opacity:.45;cursor:not-allowed}.btn--theme{min-height:44px;background:transparent;border:1px solid var(--cor-borda)}.btn--theme:hover:not(:disabled){background:var(--cor-lang-fundo);border-color:var(--cor-texto-secundario)}.btn--icon-only{display:inline-flex;align-items:center;justify-content:center;width:44px;min-width:44px;padding:.5rem}.btn--icon-only img{display:block}.btn--copy{background:var(--cor-botao-copiar);color:#fff}.btn--copy:hover:not(:disabled){background:var(--cor-botao-copiar-hover)}.btn--reset{background:var(--cor-botao-reset);color:#fff}.btn--reset:hover:not(:disabled){background:var(--cor-botao-reset-hover)}.card{padding:var(--espaco-md);background:var(--cor-fundo-card);border:1px solid var(--cor-borda);border-radius:var(--raio);box-shadow:0 2px 8px var(--cor-sombra)}.card__title{margin:0 0 var(--espaco-md);font-size:1.05rem;font-weight:700}.card__title--icon,.results-panel__title--icon{display:flex;align-items:center;gap:.45rem;flex-wrap:wrap}.results-panel__title--icon{justify-content:center}.result-label.label-with-icon{display:inline-flex;align-items:center;gap:.35rem}.select-com-icone{position:relative;width:100%}.select-com-icone__nativo{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}.select-com-icone__trigger{position:relative;display:flex;align-items:center;gap:.5rem;width:100%;min-height:44px;padding:.6rem 2rem .6rem .75rem;font-size:1rem;font-family:inherit;font-weight:600;text-align:left;color:var(--cor-texto-principal);background:var(--cor-fundo-pagina);border:1px solid var(--cor-borda);border-radius:calc(var(--raio) - 2px);cursor:pointer;transition:border-color .2s,box-shadow .2s}.select-com-icone__trigger:after{content:"";position:absolute;right:.85rem;top:50%;width:.45rem;height:.45rem;border-right:2px solid var(--cor-texto-secundario);border-bottom:2px solid var(--cor-texto-secundario);transform:translateY(-65%) rotate(45deg);pointer-events:none}.select-com-icone__trigger:hover{border-color:var(--cor-foco)}.select-com-icone__trigger:focus-visible{outline:2px solid var(--cor-foco);outline-offset:2px}.select-com-icone--aberto .select-com-icone__trigger{border-color:var(--cor-foco);box-shadow:0 0 0 3px #7c3aed40}.select-com-icone__lista{position:absolute;z-index:20;top:calc(100% + 4px);left:0;right:0;max-height:min(24rem,55vh);overflow-y:auto;margin:0;padding:.35rem 0;list-style:none;background:var(--cor-fundo-card);border:1px solid var(--cor-borda);border-radius:calc(var(--raio) - 2px);box-shadow:0 8px 24px var(--cor-sombra)}.select-com-icone__lista:not(.select-com-icone__lista--grid){max-height:none;overflow-y:visible}.select-com-icone__lista[hidden]{display:none!important}.select-com-icone__lista--grid:not([hidden]){display:grid;grid-template-columns:repeat(var(--select-colunas, 2),1fr);gap:.3rem;padding:.45rem;--linhas-visiveis: 11;--altura-linha-nivel: 2rem;grid-auto-rows:var(--altura-linha-nivel);max-height:calc(var(--linhas-visiveis) * var(--altura-linha-nivel) + (var(--linhas-visiveis) - 1) * .3rem + .9rem);overflow-y:auto}.select-com-icone__lista--grid .select-com-icone__opcao--compacto{height:var(--altura-linha-nivel);min-height:var(--altura-linha-nivel);box-sizing:border-box;padding:.2rem .35rem}.label-select-nivel{cursor:pointer}.select-com-icone__trigger--sem-icone{justify-content:center}.select-com-icone__opcao--compacto{justify-content:center;padding:.45rem .35rem;margin:0;font-variant-numeric:tabular-nums}@media(max-height:640px){.select-com-icone__lista--grid:not([hidden]){max-height:min(calc(var(--linhas-visiveis) * var(--altura-linha-nivel) + (var(--linhas-visiveis) - 1) * .3rem + .9rem),52vh)}}.select-com-icone__opcao-icon{flex-shrink:0}.select-com-icone__opcao{display:flex;align-items:center;gap:.5rem;padding:.55rem .75rem;margin:0 .25rem;cursor:pointer;font-weight:600;border-left:4px solid transparent;border-right:4px solid transparent;border-radius:4px;transition:background .15s ease,border-color .15s ease,box-shadow .15s ease}.select-com-icone__opcao[aria-selected=true]{background:#7c3aed1a;border-left-color:#7c3aed73;border-right-color:#7c3aed73}.select-com-icone__opcao:hover,.select-com-icone__opcao--hover{background:#7c3aed38;border-left-color:var(--cor-botao-tema);border-right-color:var(--cor-botao-tema);box-shadow:inset 0 0 0 1px #7c3aed40}.select-com-icone__opcao:focus-visible{outline:none;background:#7c3aed33;border-left-color:var(--cor-foco);border-right-color:var(--cor-foco)}.restart-guide__table th.th-with-icon img,.restart-guide__table .td-reinicio img{vertical-align:middle;margin-right:.25rem}.field{margin-bottom:var(--espaco-md)}.field:last-child{margin-bottom:0}.field label{display:flex;flex-wrap:wrap;align-items:baseline;gap:.35rem;margin-bottom:var(--espaco-sm);font-weight:600;font-size:.9rem}.field__max{font-weight:500;font-size:.8rem;color:var(--cor-texto-secundario)}.field input{width:100%;min-height:44px;padding:.6rem .75rem;font-size:1rem;font-family:inherit;color:var(--cor-texto-principal);background:var(--cor-fundo-pagina);border:1px solid var(--cor-borda);border-radius:calc(var(--raio) - 2px);transition:border-color .2s,box-shadow .2s}.field .select-com-icone__trigger{width:100%}.field input:focus{outline:none;border-color:var(--cor-foco);box-shadow:0 0 0 3px #7c3aed40}.field input:focus-visible{outline:2px solid var(--cor-foco);outline-offset:1px}.field--invalid input,.field--invalid .select-com-icone__trigger{border-color:var(--cor-erro-fundo)}.restart-guide{padding:var(--espaco-md);background:var(--cor-fundo-card);border:1px solid var(--cor-borda);border-radius:var(--raio);box-shadow:0 2px 8px var(--cor-sombra)}.restart-guide__title{margin:0 0 var(--espaco-md);font-size:1rem;font-weight:700}.restart-guide__table-wrap{overflow:hidden;margin-bottom:var(--espaco-md)}.restart-guide__table{width:100%;border-collapse:collapse;font-size:.875rem;table-layout:fixed}.restart-guide__table th,.restart-guide__table td{padding:.5rem;text-align:left;border-bottom:1px solid var(--cor-borda);white-space:nowrap;vertical-align:middle}.restart-guide__table th{font-size:.78rem;font-weight:700;text-transform:none;letter-spacing:0;color:var(--cor-texto-secundario);line-height:1.2}.restart-guide__table col.col-reinicio{width:58%}.restart-guide__table col.col-nivel{width:42%}.restart-guide__table th.th-with-icon img,.restart-guide__table .td-reinicio img{vertical-align:middle;margin-right:.3rem}.restart-guide__table th:nth-child(2),.restart-guide__table td:nth-child(2){text-align:center}.restart-guide__table td{font-size:.85rem;line-height:1.35}.restart-guide__table .td-reinicio{font-weight:700;white-space:nowrap}.restart-guide__table tbody tr:last-child td{border-bottom:none}.restart-guide__table tbody tr{background:transparent}.restart-guide__table td:nth-child(2){font-weight:700;color:var(--cor-titulo);font-variant-numeric:tabular-nums}.restart-guide__table .td-nivel--percurso{font-size:.8rem;white-space:nowrap}.restart-guide__table tbody tr.guide-row--desired{background:#7c3aed1f}.restart-guide__table tbody tr.guide-row--current{background:#2e7d4a24}.restart-guide__table tbody tr.guide-row--both{background:linear-gradient(90deg,#7c3aed29,#2e7d4a29)}.restart-guide__legend{display:flex;flex-wrap:wrap;gap:var(--espaco-md);margin:0;padding:0;list-style:none;font-size:.8rem;color:var(--cor-texto-secundario)}.restart-guide__legend li{display:flex;align-items:center;gap:.35rem}.legend-swatch{width:12px;height:12px;border-radius:3px;flex-shrink:0}.serum-guide{margin-top:var(--espaco-lg);padding:var(--espaco-md);background:var(--cor-fundo-card);border:1px solid var(--cor-borda);border-radius:var(--raio);box-shadow:0 2px 8px var(--cor-sombra)}.serum-guide__title{margin:0 0 var(--espaco-xs);font-size:1rem;font-weight:700}.serum-guide__note{margin:0 0 var(--espaco-md);font-size:.82rem;color:var(--cor-texto-secundario);line-height:1.45}.serum-tabs{display:flex;flex-wrap:wrap;gap:.35rem;margin-bottom:var(--espaco-md)}.serum-tabs__btn{display:inline-flex;align-items:center;gap:.35rem;padding:.4rem .75rem;font-size:.8rem;font-weight:600;font-family:inherit;color:var(--cor-texto-secundario);background:var(--cor-fundo-pagina);border:1px solid var(--cor-borda);border-radius:999px;cursor:pointer;transition:background .15s ease,color .15s ease,border-color .15s ease}.serum-tabs__btn:hover{border-color:var(--cor-botao-tema);color:var(--cor-titulo)}.serum-tabs__btn--ativo{color:#fff;background:var(--cor-botao-tema);border-color:var(--cor-botao-tema)}.serum-guide__table-wrap{overflow-x:auto}.serum-table{width:100%;min-width:520px;border-collapse:collapse;font-size:.82rem}.serum-table th,.serum-table td{padding:.45rem .5rem;text-align:center;border-bottom:1px solid var(--cor-borda);vertical-align:middle}.serum-table thead th{font-size:.75rem;font-weight:700;color:var(--cor-texto-secundario);white-space:nowrap}.serum-table__th-boost,.serum-table tbody th[scope=row]{text-align:left;font-weight:700;white-space:nowrap}.serum-table__valor{font-variant-numeric:tabular-nums;font-weight:600;color:var(--cor-titulo)}.serum-table__na{color:var(--cor-texto-secundario)}.serum-table tbody tr:last-child th,.serum-table tbody tr:last-child td{border-bottom:none}.legend-swatch--desired{background:#7c3aed73}.legend-swatch--current{background:#2e7d4a8c}.results-panel{padding:var(--espaco-lg);background:var(--cor-fundo-card);border:1px solid var(--cor-borda);border-radius:var(--raio);box-shadow:0 2px 12px var(--cor-sombra)}.results-panel__title{margin:0 0 var(--espaco-md);font-size:1.1rem;font-weight:700;text-align:center}.mensagem_erro{margin:0 0 var(--espaco-md);padding:var(--espaco-md);background:var(--cor-erro-fundo);color:var(--cor-erro-texto);border-radius:calc(var(--raio) - 2px);font-weight:600;font-size:.95rem;text-align:center}.mensagem_erro[hidden]{display:none}.results-empty{margin:0;text-align:center;color:var(--cor-texto-secundario);font-size:.95rem}.results-empty[hidden],.results-body[hidden],.result-row--simples{display:none}.results-body--inicio .result-row--simples{display:flex}.results-body--inicio .result-row--detalhe,.results-body--inicio .linha_separadora{display:none!important}.result-row{display:flex;flex-direction:column;gap:var(--espaco-xs);margin-bottom:var(--espaco-md);text-align:center}.result-row:last-child{margin-bottom:0}.result-label{font-size:.9rem;font-weight:600;color:var(--cor-texto-secundario)}@media(min-width:480px){.result-values{justify-content:flex-end}}.linha_separadora{border:none;height:1px;background:var(--cor-borda);margin:var(--espaco-md) 0}@media(min-width:480px){.result-row{flex-direction:row;justify-content:space-between;align-items:center;text-align:left}.result-values{text-align:right}}.app-tabs{display:flex;flex-wrap:wrap;gap:var(--espaco-xs);margin-bottom:var(--espaco-md);padding:var(--espaco-xs);background:var(--cor-fundo-card);border:1px solid var(--cor-borda);border-radius:var(--raio)}.app-tabs__btn{display:inline-flex;align-items:center;justify-content:center;gap:.4rem;flex:1 1 auto;min-width:140px;padding:.55rem 1rem;font:inherit;font-size:.9rem;font-weight:600;color:var(--cor-texto-secundario);background:transparent;border:1px solid transparent;border-radius:calc(var(--raio) - 2px);cursor:pointer;transition:background .15s,color .15s,border-color .15s}.app-tabs__icons{display:inline-flex;align-items:center;gap:.15rem;flex-shrink:0}.app-tabs__btn:hover{color:var(--cor-titulo);background:var(--cor-fundo-hover)}.app-tabs__btn--ativo{color:var(--cor-titulo);background:var(--cor-fundo-pagina);border-color:var(--cor-borda);box-shadow:0 1px 4px var(--cor-sombra)}.fortalecimento-app,.gifts-app{margin-top:var(--espaco-md)}.gifts-tabs{display:flex;flex-wrap:wrap;gap:var(--espaco-xs);margin-bottom:var(--espaco-md)}.gifts-tabs__btn{padding:.45rem .9rem;font:inherit;font-size:.88rem;font-weight:600;color:var(--cor-texto-secundario);background:var(--cor-fundo-card);border:1px solid var(--cor-borda);border-radius:calc(var(--raio) - 2px);cursor:pointer}.gifts-tabs__btn--ativo{color:var(--cor-titulo);border-color:var(--cor-destaque);background:var(--cor-fundo-pagina)}.gifts-intro{margin:0 0 var(--espaco-md);font-size:.92rem;color:var(--cor-texto-secundario)}.gifts-toolbar{display:flex;flex-wrap:wrap;gap:var(--espaco-sm);align-items:center;margin-bottom:var(--espaco-md)}.gifts-search{flex:1 1 200px;min-width:0;padding:.5rem .75rem;font:inherit;border:1px solid var(--cor-borda);border-radius:calc(var(--raio) - 2px);background:var(--cor-fundo-input);color:var(--cor-texto-principal)}.gifts-hint,.gifts-fav-total{margin:var(--espaco-sm) 0 0;font-size:.85rem;color:var(--cor-texto-secundario)}.gifts-panel[hidden]{display:none!important}.gifts-calc-page:not([hidden]){display:flex;flex-direction:column;gap:var(--espaco-md)}.gifts-rules__title,.gifts-stock__title,.gifts-mercs__title{margin:0 0 var(--espaco-sm);font-size:1rem;font-weight:700;color:var(--cor-titulo)}.gifts-rules__steps{margin:0 0 var(--espaco-md);padding-left:1.25rem;font-size:.9rem;color:var(--cor-texto-principal);line-height:1.55}.gifts-rules__steps li+li{margin-top:.35rem}.gifts-rules__pts{display:grid;gap:.25rem;max-width:22rem;font-size:.85rem}.gifts-rules__pts-row{display:grid;grid-template-columns:1.1fr repeat(3,1fr);gap:.35rem;align-items:center;text-align:center}.gifts-rules__pts-head{font-weight:700;color:var(--cor-texto-secundario);font-size:.75rem;text-transform:uppercase}.gifts-rules__pts-row>span:first-child{text-align:left;color:var(--cor-texto-secundario)}.gifts-rp-fav{font-weight:700;color:#4ade80}.gifts-rp-norm{color:var(--cor-texto-secundario);font-size:.8em}.gifts-rp-faltam{color:#f87171;font-weight:700}.gifts-rp-done{color:#4ade80;font-weight:700}.gifts-table--calc td[data-col=required].gifts-rp-faltam,.gifts-table--calc th.gifts-table__th-faltam,.gifts-table--calc th.gifts-table__th-faltam .gifts-th-main{color:#f87171}.gifts-stock__header{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-start;gap:var(--espaco-sm);margin-bottom:var(--espaco-md)}.gifts-stock__note{margin:0;font-size:.88rem;color:var(--cor-texto-secundario);max-width:42rem}.gifts-stock__total{margin:0;font-size:.9rem;white-space:nowrap}.gifts-stock__shape-head{display:grid;grid-template-columns:5.5rem repeat(3,1fr);gap:var(--espaco-xs);margin-bottom:.35rem;padding:0 .25rem;font-size:.75rem;font-weight:700;color:var(--cor-texto-secundario);text-align:center}.gifts-stock__shape-spacer{display:block}.gifts-inventario-grid{display:flex;flex-direction:column;gap:var(--espaco-sm)}.gifts-stock-row{display:grid;grid-template-columns:5.5rem 1fr;gap:var(--espaco-xs);align-items:stretch;padding:.5rem;border-radius:calc(var(--raio) - 2px);background:var(--cor-fundo-pagina);border:1px solid var(--cor-borda)}.gifts-stock-row--t1{border-left:3px solid #3b82f6}.gifts-stock-row--t2{border-left:3px solid #a855f7}.gifts-stock-row--t3{border-left:3px solid #ef4444}.gifts-stock-row__tier{display:flex;align-items:center;font-size:.8rem;font-weight:700;color:var(--cor-titulo)}.gifts-stock-row__cells{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--espaco-xs)}.gifts-stock-cell{display:flex;flex-direction:column;align-items:center;gap:.2rem;padding:.35rem .25rem;border-radius:6px;background:var(--cor-fundo-card)}.gifts-stock-cell__input{width:100%;max-width:3.5rem;padding:.35rem;text-align:center;font:inherit;font-size:.9rem;border:1px solid var(--cor-borda);border-radius:calc(var(--raio) - 2px);background:var(--cor-fundo-input);color:var(--cor-texto-principal)}.gifts-stock-cell__rp{font-size:.7rem;line-height:1.2;text-align:center}.gifts-stock__actions{display:flex;flex-wrap:wrap;gap:var(--espaco-sm);margin-top:var(--espaco-md)}.gifts-mercs__header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--espaco-sm);margin-bottom:var(--espaco-md)}.gifts-mercs__header .gifts-search{flex:1 1 220px;max-width:320px;margin-bottom:0}.gifts-pref-row{display:flex;flex-wrap:nowrap;gap:.35rem;justify-content:center}.gifts-gift-add{display:inline-flex;align-items:center;justify-content:center;padding:.15rem;margin:0;border:none;border-radius:6px;background:transparent;cursor:pointer;transition:transform .12s ease,background .12s ease,box-shadow .12s ease}.gifts-gift-add:hover{background:var(--cor-fundo-hover);transform:scale(1.06)}.gifts-gift-add:active{transform:scale(.96)}.gifts-gift-add--pulse{animation:gifts-gift-pulse .28s ease}@keyframes gifts-gift-pulse{0%{box-shadow:0 0 #4ade808c}to{box-shadow:0 0 0 8px #4ade8000}}.gifts-gift-add img{display:block;pointer-events:none}.gifts-pref-item{display:flex;flex-direction:column;align-items:center;gap:.1rem;padding:.2rem;border-radius:6px;background:var(--cor-fundo-pagina);border:1px solid var(--cor-borda)}.gifts-pref-item--t1{box-shadow:inset 0 0 0 1px #3b82f659}.gifts-pref-item--t2{box-shadow:inset 0 0 0 1px #a855f759}.gifts-pref-item--t3{box-shadow:inset 0 0 0 1px #ef444459}.gifts-pref-item__rp{font-size:.65rem;font-weight:700;line-height:1}.gifts-th-main{display:block;font-weight:700}.gifts-th-sub{display:block;font-size:.65rem;font-weight:500;color:var(--cor-texto-secundario);margin-top:.15rem;line-height:1.25;white-space:normal;max-width:9rem}.gifts-table--calc .gifts-table__th-pref,.gifts-table--calc .gifts-table__pref{min-width:9.5rem}.gifts-table--calc thead th.gifts-table__th-rp{white-space:normal;min-width:7.5rem;vertical-align:bottom;line-height:1.25}.gifts-table--calc .gifts-table__name{min-width:6.25rem}.gifts-table--calc .gifts-table__num{min-width:5.5rem;padding-left:.65rem;padding-right:.65rem}.gifts-table--calc td.gifts-table__pref{padding:.35rem .4rem}.gifts-table__num--highlight{font-weight:700;color:var(--cor-titulo)}.gifts-fav-layout{display:grid;gap:var(--espaco-md)}.gifts-data-panel{display:none;padding:var(--espaco-md);background:var(--cor-fundo-card);border:1px solid var(--cor-borda);border-radius:var(--raio);box-shadow:0 2px 12px var(--cor-sombra)}.gifts-data-panel--aberto{display:block}@media(min-width:900px){.gifts-fav-layout{grid-template-columns:1fr minmax(260px,300px);align-items:start}.gifts-fav-layout .gifts-data-panel{display:block;position:sticky;top:var(--espaco-md)}.gifts-fav-layout .gifts-toolbar .btn--secondary{display:none}}.gifts-data-panel__header{display:flex;align-items:center;justify-content:space-between;gap:var(--espaco-sm);margin-bottom:var(--espaco-sm)}.gifts-data-panel__header h3{margin:0;font-size:1rem}.gifts-data-panel__note{margin:0 0 var(--espaco-md);font-size:.85rem;color:var(--cor-texto-secundario)}.gifts-panel-close{padding:.2rem .5rem;font-size:1rem;line-height:1;background:transparent;border:none;color:var(--cor-texto-secundario);cursor:pointer}@media(min-width:900px){.gifts-panel-close{display:none}}.gifts-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--cor-borda);border-radius:var(--raio);background:var(--cor-fundo-card)}.gifts-table--calc{min-width:1120px}.gifts-table{width:100%;border-collapse:collapse;font-size:.88rem;table-layout:auto}.gifts-table th,.gifts-table td{padding:.45rem .5rem;border-bottom:1px solid var(--cor-borda);vertical-align:middle}.gifts-table thead th{font-weight:700;font-size:.8rem;color:var(--cor-texto-secundario);background:var(--cor-fundo-pagina);white-space:nowrap;cursor:pointer;-webkit-user-select:none;user-select:none}.gifts-table thead th:hover,.gifts-th--sorted{color:var(--cor-titulo)}.gifts-table tbody tr:last-child td,.gifts-table tbody tr:last-child th{border-bottom:none}.gifts-table__icon{width:48px;text-align:center}.gifts-table__icon img{border-radius:4px;object-fit:cover}.gifts-table__name{font-weight:600;white-space:nowrap}.gifts-table__num{font-variant-numeric:tabular-nums;text-align:center}.gifts-table__gift{text-align:center}.gifts-table__outfit img{border-radius:4px;cursor:help}.gifts-table__points{min-width:12.5rem}.gifts-points-stepper{width:100%;max-width:12.5rem;margin:0 auto}.gifts-points-stepper input{flex:1 1 auto;min-width:5.75rem;font-size:.88rem;font-variant-numeric:tabular-nums;letter-spacing:.02em}.gifts-points-stepper input::placeholder{font-variant-numeric:tabular-nums}.gifts-filter-group-title{margin:var(--espaco-md) 0 var(--espaco-xs);font-size:.85rem;font-weight:700;color:var(--cor-texto-secundario)}.gifts-filter-gifts-row{display:flex;gap:.35rem;margin-bottom:var(--espaco-xs)}.gifts-filter-gift{padding:.15rem;background:transparent;border:2px solid transparent;border-radius:6px;cursor:pointer}.gifts-filter-gift--ativo{border-color:var(--cor-destaque);background:var(--cor-fundo-hover)}.gifts-outfit-tooltip{position:fixed;z-index:1000;pointer-events:none;max-width:min(320px,90vw);padding:.25rem;background:var(--cor-fundo-card);border:1px solid var(--cor-borda);border-radius:var(--raio);box-shadow:0 4px 20px var(--cor-sombra)}.gifts-outfit-tooltip img{display:block;max-width:100%;height:auto;border-radius:calc(var(--raio) - 2px)}.btn--secondary{background:var(--cor-fundo-card);color:var(--cor-titulo);border:1px solid var(--cor-borda)}.btn--secondary:hover{background:var(--cor-fundo-hover)}
+
+</style>
+</head>
+<body>
+  <div class="app">
+    <!-- Cabeçalho: título, subtítulo com ícones do jogo, idioma e tema -->
+    <header class="app-header">
+      <div class="app-header__brand">
+        <h1 class="app-title" data-i18n="app.title">Wiki Lust Goddess</h1>
+        <p class="app-subtitle">
+          <span class="subtitle-part">
+            <span class="subtitle-part__icons" aria-hidden="true">
+              <img src="./icons/rarity-legendary.svg?v=8" data-icon-alma alt="" class="game-icon game-icon--sm" width="20" height="20" />
+              <img src="./icons/creditos.png?v=7" alt="" class="game-icon game-icon--sm" width="20" height="20" />
+              <img src="./icons/reinicio.png?v=7" alt="" class="game-icon game-icon--sm" width="20" height="20" />
+            </span>
+            <span data-i18n="app.subtitle.cost">Custo</span>
+          </span><span class="subtitle-sep">,</span>
+          <span class="subtitle-part">
+            <span class="subtitle-part__icons" aria-hidden="true">
+              <img src="./icons/serum.png?v=7" alt="" class="game-icon game-icon--sm" width="20" height="20" />
+            </span>
+            <span data-i18n="app.subtitle.fortalecimento">fortalecimento</span>
+          </span>
+          <span class="subtitle-sep" data-i18n="app.subtitle.and"> e </span>
+          <span class="subtitle-part">
+            <span class="subtitle-part__icons" aria-hidden="true">
+              <img src="./relationship/images/gifts/T1-1.png" alt="" class="game-icon game-icon--sm" width="20" height="20" />
+              <img src="./relationship/images/gifts/T2-1.png" alt="" class="game-icon game-icon--sm" width="20" height="20" />
+              <img src="./relationship/images/gifts/T3-1.png" alt="" class="game-icon game-icon--sm" width="20" height="20" />
+            </span>
+            <span data-i18n="app.subtitle.gifts">presentes</span>
+          </span>
+        </p>
+      </div>
+      <div class="app-header__controls">
+        <div class="lang-switcher" role="group" aria-label="Idioma">
+          <button type="button" class="lang-btn lang-btn--icon" data-lang="pt-BR" id="lang_pt" aria-label="Português">
+            <img src="./icons/flag-pt.svg" alt="" class="lang-btn__flag" width="28" height="19" />
+          </button>
+          <button type="button" class="lang-btn lang-btn--icon" data-lang="en" id="lang_en" aria-label="English">
+            <img src="./icons/flag-en.svg" alt="" class="lang-btn__flag" width="28" height="19" />
+          </button>
+        </div>
+        <button type="button" id="botao_tema" class="btn btn--theme btn--icon-only" aria-label="Modo escuro">
+          <img id="icone_tema" src="./icons/moon.svg" alt="" width="22" height="22" />
+        </button>
+      </div>
+    </header>
+
+    <!-- Navegação principal entre as três ferramentas (cost | fortalecimento | gifts) -->
+    <nav class="app-tabs" role="tablist" aria-label="Ferramentas" id="app_tabs">
+      <button type="button" class="app-tabs__btn app-tabs__btn--ativo" data-app="cost" role="tab" aria-selected="true" id="app_tab_cost">
+        <span class="app-tabs__icons" aria-hidden="true">
+          <img src="./icons/rarity-legendary.svg?v=8" data-icon-alma alt="" class="game-icon game-icon--sm" width="18" height="18" />
+          <img src="./icons/creditos.png?v=7" alt="" class="game-icon game-icon--sm" width="18" height="18" />
+          <img src="./icons/reinicio.png?v=7" alt="" class="game-icon game-icon--sm" width="18" height="18" />
+        </span>
+        <span data-i18n="appTab.cost">Custo (Alma / Créditos / Reinício)</span>
+      </button>
+      <button type="button" class="app-tabs__btn" data-app="fortalecimento" role="tab" aria-selected="false" id="app_tab_fortalecimento">
+        <img src="./icons/serum.png?v=7" alt="" class="game-icon game-icon--sm" width="18" height="18" aria-hidden="true" />
+        <span data-i18n="appTab.fortalecimento">Fortalecimento</span>
+      </button>
+      <button type="button" class="app-tabs__btn" data-app="gifts" role="tab" aria-selected="false" id="app_tab_gifts">
+        <span class="app-tabs__icons" aria-hidden="true">
+          <img src="./relationship/images/gifts/T1-1.png" alt="" class="game-icon game-icon--sm" width="18" height="18" />
+          <img src="./relationship/images/gifts/T2-1.png" alt="" class="game-icon game-icon--sm" width="18" height="18" />
+          <img src="./relationship/images/gifts/T3-1.png" alt="" class="game-icon game-icon--sm" width="18" height="18" />
+        </span>
+        <span data-i18n="appTab.gifts">Presentes</span>
+      </button>
+    </nav>
+
+    <!-- ========== ABA CUSTO: calculadora Alma / Créditos / Reinício ========== -->
+    <div id="app_panel_cost">
+    <!-- Barra: modo Objetivo vs Orçamento + seletor de raridade -->
+    <div class="calc-toolbar" role="region" aria-labelledby="calc_toolbar_titulo">
+      <h2 class="visually-hidden" id="calc_toolbar_titulo" data-i18n="mode.title">Estilo de calculadora</h2>
+      <div class="mode-switcher" role="tablist" aria-label="Estilo de calculadora" id="mode_tabs">
+        <button type="button" class="mode-switcher__btn mode-switcher__btn--ativo" data-mode="goal" role="tab" aria-selected="true" id="mode_tab_goal" data-i18n="mode.goal">Objetivo (quanto falta)</button>
+        <button type="button" class="mode-switcher__btn" data-mode="budget" role="tab" aria-selected="false" id="mode_tab_budget" data-i18n="mode.budget">Orçamento (até onde chego)</button>
+      </div>
+      <div class="field field--raridade">
+        <label for="raridade" data-i18n="field.rarity">Raridade do mercenário</label>
+        <select id="raridade" name="raridade"></select>
+      </div>
+    </div>
+
+    <div class="workspace">
+      <div class="workspace__main">
+        <!-- Modo objetivo: ponto desejado vs ponto atual -->
+        <div id="panel_modo_objetivo" class="calc-panel">
+        <div class="form-grid">
+          <section class="card" aria-labelledby="legenda_desejado">
+            <h2 class="card__title card__title--icon" id="legenda_desejado">
+              <img src="./icons/reinicio.png?v=7" alt="" class="game-icon" width="20" height="20" />
+              <span data-i18n="section.desired">Ponto desejado (objetivo)</span>
+            </h2>
+            <div class="field">
+              <label for="reinicio_desejado" class="label-with-icon">
+                <img src="./icons/reinicio.png?v=7" alt="" class="game-icon" width="20" height="20" />
+                <span data-i18n="field.restart">Reinício</span>
+              </label>
+              <select id="reinicio_desejado" name="reinicio_desejado"></select>
+              <span class="restart-badge" id="badge_reinicio_desejado" hidden>
+                <img src="./icons/reinicio.png?v=7" alt="" class="game-icon game-icon--sm" width="18" height="18" />
+                <span class="restart-badge__text"></span>
+              </span>
+            </div>
+            <div class="field">
+              <label for="level_desejado" class="label-select-nivel">
+                <span data-i18n="field.level">Nível</span>
+                <span class="field__max" id="label_max_desejado">1–31</span>
+              </label>
+              <select id="level_desejado" name="level_desejado"></select>
+            </div>
+          </section>
+
+          <section class="card" aria-labelledby="legenda_atual">
+            <h2 class="card__title card__title--icon" id="legenda_atual">
+              <img src="./icons/reinicio.png?v=7" alt="" class="game-icon" width="20" height="20" />
+              <span data-i18n="section.current">Ponto atual</span>
+            </h2>
+            <div class="field">
+              <label for="reinicio_atual" class="label-with-icon">
+                <img src="./icons/reinicio.png?v=7" alt="" class="game-icon" width="20" height="20" />
+                <span data-i18n="field.restart">Reinício</span>
+              </label>
+              <select id="reinicio_atual" name="reinicio_atual"></select>
+              <span class="restart-badge" id="badge_reinicio_atual" hidden>
+                <img src="./icons/reinicio.png?v=7" alt="" class="game-icon game-icon--sm" width="18" height="18" />
+                <span class="restart-badge__text"></span>
+              </span>
+            </div>
+            <div class="field">
+              <label for="level_atual" class="label-select-nivel">
+                <span data-i18n="field.level">Nível</span>
+                <span class="field__max" id="label_max_atual">1–31</span>
+              </label>
+              <select id="level_atual" name="level_atual"></select>
+            </div>
+          </section>
+        </div>
+        </div>
+
+        <!-- Modo orçamento: MP/créditos disponíveis + ponto inicial -->
+        <div id="panel_modo_orcamento" class="calc-panel" hidden>
+          <section class="card card--orcamento" aria-labelledby="legenda_orcamento">
+            <h2 class="card__title card__title--icon" id="legenda_orcamento">
+              <img src="./icons/rarity-legendary.svg?v=8" data-icon-alma alt="" class="game-icon" width="20" height="20" />
+              <img src="./icons/creditos.png?v=7" alt="" class="game-icon" width="20" height="20" />
+              <span data-i18n="section.budget">Recursos disponíveis</span>
+            </h2>
+
+            <div class="budget-form">
+              <div class="budget-form__resources">
+                <div class="budget-form__mp">
+                  <label for="pontos_alma" class="budget-form__mp-label">
+                    <img src="./icons/rarity-legendary.svg?v=8" data-icon-alma alt="" class="game-icon game-icon--sm" width="16" height="16" />
+                    <span data-i18n="field.mp">Pontos de Alma (MP)</span>
+                  </label>
+                  <div class="number-stepper number-stepper--alma">
+                    <button
+                      type="button"
+                      class="number-stepper__btn"
+                      data-step="down"
+                      data-i18n-aria="btn.stepDown"
+                      aria-label="Diminuir"
+                    >
+                      <span aria-hidden="true">−</span>
+                    </button>
+                    <input
+                      type="number"
+                      id="pontos_alma"
+                      name="pontos_alma"
+                      min="0"
+                      step="1"
+                      value="2270"
+                      inputmode="numeric"
+                      aria-describedby="legenda_orcamento"
+                    />
+                    <button
+                      type="button"
+                      class="number-stepper__btn"
+                      data-step="up"
+                      data-i18n-aria="btn.stepUp"
+                      aria-label="Aumentar"
+                    >
+                      <span aria-hidden="true">+</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="budget-form__mp budget-form__credits">
+                  <label for="pontos_creditos" class="budget-form__mp-label">
+                    <img src="./icons/creditos.png?v=7" alt="" class="game-icon game-icon--sm" width="16" height="16" />
+                    <span data-i18n="field.credits">Créditos</span>
+                  </label>
+                  <div class="number-stepper number-stepper--creditos">
+                    <button
+                      type="button"
+                      class="number-stepper__btn"
+                      data-step="down"
+                      data-i18n-aria="btn.stepDown"
+                      aria-label="Diminuir"
+                    >
+                      <span aria-hidden="true">−</span>
+                    </button>
+                    <input
+                      type="number"
+                      id="pontos_creditos"
+                      name="pontos_creditos"
+                      min="0"
+                      step="1"
+                      value=""
+                      placeholder="0"
+                      inputmode="numeric"
+                      aria-describedby="legenda_orcamento"
+                    />
+                    <button
+                      type="button"
+                      class="number-stepper__btn"
+                      data-step="up"
+                      data-i18n-aria="btn.stepUp"
+                      aria-label="Aumentar"
+                    >
+                      <span aria-hidden="true">+</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <fieldset class="budget-form__point">
+                <legend class="budget-form__point-legend" data-i18n="field.budgetStart">Ponto inicial</legend>
+                <div class="budget-form__row">
+                  <div class="field field--budget-select">
+                    <label for="reinicio_orcamento" class="budget-form__field-label">
+                      <img src="./icons/reinicio.png?v=7" alt="" class="game-icon game-icon--sm" width="16" height="16" />
+                      <span data-i18n="field.restartShort">Reinício</span>
+                    </label>
+                    <select id="reinicio_orcamento" name="reinicio_orcamento"></select>
+                  </div>
+                  <div class="field field--budget-select">
+                    <label for="level_orcamento" class="budget-form__field-label label-select-nivel">
+                      <span data-i18n="field.level">Nível</span>
+                      <span class="field__max" data-i18n="field.levelRange">1–31</span>
+                    </label>
+                    <select id="level_orcamento" name="level_orcamento"></select>
+                  </div>
+                </div>
+              </fieldset>
+            </div>
+          </section>
+        </div>
+
+        <div class="actions">
+          <button type="button" id="botao_copiar" class="btn btn--copy" disabled data-i18n="btn.copy">Copiar resultado</button>
+          <button type="button" id="botao_resetar" class="btn btn--reset" data-i18n="btn.reset">Resetar</button>
+        </div>
+        <p id="mensagem_copia" class="copy-status" aria-live="polite" aria-atomic="true"></p>
+      </div>
+
+      <!-- Guia lateral: segmentos de reinício no percurso (atual → objetivo ou simulação) -->
+      <aside class="restart-guide" aria-labelledby="guia_reinicios_titulo">
+        <h2 class="restart-guide__title" id="guia_reinicios_titulo">
+          <img src="./icons/reinicio.png?v=7" alt="" class="game-icon" width="22" height="22" />
+          <span id="guide_title_text" data-i18n="guide.title">Guia de reinícios</span>
+        </h2>
+        <div class="restart-guide__table-wrap">
+          <table class="restart-guide__table">
+            <colgroup>
+              <col class="col-reinicio" />
+              <col class="col-nivel" />
+            </colgroup>
+            <thead>
+              <tr>
+                <th scope="col" class="th-with-icon">
+                  <img src="./icons/reinicio.png?v=7" alt="" class="game-icon game-icon--sm" width="16" height="16" />
+                  <span data-i18n="guide.colRestart">Reinício</span>
+                </th>
+                <th scope="col" class="th-with-icon th-with-icon--nivel">
+                  <span id="guide_col_level" data-i18n="guide.colMin">Nível mínimo</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody id="restart_guide_body"></tbody>
+          </table>
+        </div>
+        <ul class="restart-guide__legend" aria-hidden="false">
+          <li>
+            <img src="./icons/reinicio.png?v=7" alt="" class="game-icon game-icon--sm" width="14" height="14" />
+            <span class="legend-swatch legend-swatch--current"></span>
+            <span id="guide_legend_orig" data-i18n="guide.legendCurrent">Atual</span>
+          </li>
+          <li>
+            <img src="./icons/reinicio.png?v=7" alt="" class="game-icon game-icon--sm" width="14" height="14" />
+            <span class="legend-swatch legend-swatch--desired"></span>
+            <span id="guide_legend_dest" data-i18n="guide.legendDesired">Objetivo</span>
+          </li>
+        </ul>
+      </aside>
+    </div>
+
+    <!-- Resultados: totais (objetivo) ou tabela passo a passo (orçamento) -->
+    <section
+      id="bloco_resultado"
+      class="results-panel"
+      aria-labelledby="titulo_resultados"
+      aria-live="polite"
+    >
+      <h2 class="results-panel__title results-panel__title--icon" id="titulo_resultados">
+        <img src="./icons/rarity-legendary.svg?v=8" data-icon-alma alt="" class="game-icon game-icon--sm" width="20" height="20" />
+        <img src="./icons/creditos.png?v=7" alt="" class="game-icon game-icon--sm" width="20" height="20" />
+        <span data-i18n="results.title">Resultados</span>
+      </h2>
+      <p id="mensagem_erro" class="mensagem_erro" role="alert" hidden></p>
+      <p id="resultado_vazio" class="results-empty" data-i18n="results.empty"></p>
+
+      <div id="resultado_conteudo" class="results-body" hidden>
+        <div class="result-row result-row--simples result-row--highlight">
+          <span class="result-label label-with-icon">
+            <img src="./icons/rarity-legendary.svg?v=8" data-icon-alma alt="" class="game-icon game-icon--sm" width="18" height="18" />
+            <img src="./icons/creditos.png?v=7" alt="" class="game-icon game-icon--sm" width="18" height="18" />
+            <span data-i18n="results.total">Total</span>
+          </span>
+          <span class="result-values">
+            <span class="currency-chip currency-chip--alma">
+              <img src="./icons/rarity-legendary.svg?v=8" data-icon-alma alt="" class="game-icon" width="24" height="24" />
+              <span class="valor_alma" data-result="alma-restante">0</span>
+              <span class="currency-label" data-i18n="currency.alma">Alma</span>
+            </span>
+            <span class="currency-chip currency-chip--creditos">
+              <img src="./icons/creditos.png?v=7" alt="" class="game-icon" width="24" height="24" />
+              <span class="valor_creditos" data-result="creditos-restante">0</span>
+              <span class="currency-label" data-i18n="currency.credits">Créditos</span>
+            </span>
+          </span>
+        </div>
+        <div class="result-row result-row--detalhe">
+          <span class="result-label label-with-icon">
+            <img src="./icons/reinicio.png?v=7" alt="" class="game-icon game-icon--sm" width="18" height="18" />
+            <span data-i18n="results.desired">Total desejado</span>
+          </span>
+          <span class="result-values">
+            <span class="currency-chip currency-chip--alma">
+              <img src="./icons/rarity-legendary.svg?v=8" data-icon-alma alt="" class="game-icon" width="22" height="22" />
+              <span class="valor_alma" data-result="alma-desejado">0</span>
+              <span class="currency-label" data-i18n="currency.alma">Alma</span>
+            </span>
+            <span class="currency-chip currency-chip--creditos">
+              <img src="./icons/creditos.png?v=7" alt="" class="game-icon" width="22" height="22" />
+              <span class="valor_creditos" data-result="creditos-desejado">0</span>
+              <span class="currency-label" data-i18n="currency.credits">Créditos</span>
+            </span>
+          </span>
+        </div>
+        <div class="result-row result-row--detalhe">
+          <span class="result-label label-with-icon">
+            <img src="./icons/reinicio.png?v=7" alt="" class="game-icon game-icon--sm" width="18" height="18" />
+            <span data-i18n="results.current">Total atual</span>
+          </span>
+          <span class="result-values">
+            <span class="currency-chip currency-chip--alma">
+              <img src="./icons/rarity-legendary.svg?v=8" data-icon-alma alt="" class="game-icon" width="22" height="22" />
+              <span class="valor_alma" data-result="alma-atual">0</span>
+              <span class="currency-label" data-i18n="currency.alma">Alma</span>
+            </span>
+            <span class="currency-chip currency-chip--creditos">
+              <img src="./icons/creditos.png?v=7" alt="" class="game-icon" width="22" height="22" />
+              <span class="valor_creditos" data-result="creditos-atual">0</span>
+              <span class="currency-label" data-i18n="currency.credits">Créditos</span>
+            </span>
+          </span>
+        </div>
+        <hr class="linha_separadora result-row--detalhe" />
+        <div class="result-row result-row--detalhe result-row--highlight">
+          <span class="result-label label-with-icon">
+            <img src="./icons/rarity-legendary.svg?v=8" data-icon-alma alt="" class="game-icon game-icon--sm" width="18" height="18" />
+            <img src="./icons/creditos.png?v=7" alt="" class="game-icon game-icon--sm" width="18" height="18" />
+            <span data-i18n="results.remaining">Restante necessário</span>
+          </span>
+          <span class="result-values">
+            <span class="currency-chip currency-chip--alma">
+              <img src="./icons/rarity-legendary.svg?v=8" data-icon-alma alt="" class="game-icon" width="24" height="24" />
+              <span class="valor_alma" data-result="alma-restante">0</span>
+              <span class="currency-label" data-i18n="currency.alma">Alma</span>
+            </span>
+            <span class="currency-chip currency-chip--creditos">
+              <img src="./icons/creditos.png?v=7" alt="" class="game-icon" width="24" height="24" />
+              <span class="valor_creditos" data-result="creditos-restante">0</span>
+              <span class="currency-label" data-i18n="currency.credits">Créditos</span>
+            </span>
+          </span>
+        </div>
+      </div>
+
+      <div id="resultado_modo_orcamento" class="results-body results-body--budget" hidden>
+        <div id="orcamento_resumo" class="budget-summary" hidden></div>
+        <div class="budget-table-wrap">
+          <table class="budget-table" id="orcamento_tabela">
+            <colgroup>
+              <col class="budget-col budget-col--step" />
+              <col class="budget-col budget-col--restart" />
+              <col class="budget-col budget-col--level" />
+              <col class="budget-col budget-col--spend" />
+              <col class="budget-col budget-col--left" />
+              <col class="budget-col budget-col--credits" />
+            </colgroup>
+            <thead>
+              <tr>
+                <th scope="col" class="budget-th budget-th--step" data-i18n="budget.colStep">#</th>
+                <th scope="col" class="budget-th budget-th--restart th-with-icon">
+                  <img src="./icons/reinicio.png?v=7" alt="" class="game-icon game-icon--xs" width="14" height="14" />
+                  <span data-i18n="budget.colRestart">Reinício</span>
+                </th>
+                <th scope="col" class="budget-th budget-th--level" data-i18n="budget.colLevel">Nível</th>
+                <th scope="col" class="budget-th budget-th--num th-with-icon">
+                  <span class="budget-th__inner">
+                    <img src="./icons/rarity-legendary.svg?v=8" data-icon-alma alt="" class="game-icon game-icon--xs" width="14" height="14" />
+                    <span data-i18n="budget.colSpend">Gasto</span>
+                  </span>
+                </th>
+                <th scope="col" class="budget-th budget-th--num th-with-icon">
+                  <span class="budget-th__inner">
+                    <img src="./icons/rarity-legendary.svg?v=8" data-icon-alma alt="" class="game-icon game-icon--xs" width="14" height="14" />
+                    <span data-i18n="budget.colLeft">Sobra</span>
+                  </span>
+                </th>
+                <th scope="col" class="budget-th budget-th--num th-with-icon">
+                  <span class="budget-th__inner">
+                    <img src="./icons/creditos.png?v=7" alt="" class="game-icon game-icon--xs" width="14" height="14" />
+                    <span data-i18n="budget.colCredits">Créditos</span>
+                  </span>
+                </th>
+              </tr>
+            </thead>
+            <tbody id="orcamento_tabela_body"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tabelas de referência por raridade (acumulado / por nível) -->
+    <section class="ref-guide" aria-labelledby="ref_guide_titulo">
+      <h2 class="ref-guide__title" id="ref_guide_titulo" data-i18n="ref.title">Tabelas de nível e reinício</h2>
+      <p class="ref-guide__subtitle" id="ref_guide_subtitulo" aria-live="polite"></p>
+      <div class="ref-rarity-tabs" id="ref_rarity_tabs" role="tablist" aria-label="Raridade do mercenário" data-active-rarity="legendary"></div>
+      <div class="ref-tabs ref-tabs--modo" id="ref_mode_tabs" role="tablist">
+        <button type="button" class="ref-tabs__btn" data-ref-mode="cum" role="tab" aria-selected="false" data-i18n="ref.modeCum">Acumulado (1 → n)</button>
+        <button type="button" class="ref-tabs__btn ref-tabs__btn--ativo" data-ref-mode="per" role="tab" aria-selected="true" data-i18n="ref.modePer">Por nível (n → n+1)</button>
+      </div>
+      <div class="ref-guide__table-wrap" id="ref_panel" data-ref-mode="per" role="tabpanel" aria-live="polite"></div>
+    </section>
+
+    </div>
+
+    <!-- ========== ABA FORTALECIMENTO: Super Soro ========== -->
+    <div id="app_panel_fortalecimento" class="fortalecimento-app" hidden>
+      <section class="serum-guide" aria-labelledby="serum_guide_titulo">
+        <h2 class="serum-guide__title" id="serum_guide_titulo" data-i18n="serum.title">Super Soro — custos de boost</h2>
+        <p class="serum-guide__note" data-i18n="serum.note">Custos de boost por faixa de nível e raridade do mercenário.</p>
+        <div class="serum-tabs" id="serum_tabs" role="tablist" aria-label="Raridade" data-active-rarity="legendary"></div>
+        <div class="serum-guide__table-wrap" id="serum_panel" role="tabpanel" aria-live="polite"></div>
+      </section>
+    </div>
+
+    <!-- ========== ABA PRESENTES: calculadora de RP e favoritos ========== -->
+    <div id="app_panel_gifts" class="gifts-app" hidden>
+      <div class="gifts-tabs" role="tablist" id="gifts_tabs" aria-label="Ferramentas de presentes">
+        <button type="button" class="gifts-tabs__btn gifts-tabs__btn--ativo" data-gifts-tab="calc" id="gifts_tab_calc" role="tab" aria-selected="true" data-i18n="gifts.tabCalc">Calculadora</button>
+        <button type="button" class="gifts-tabs__btn" data-gifts-tab="fav" id="gifts_tab_fav" role="tab" aria-selected="false" data-i18n="gifts.tabFav">Presentes favoritos</button>
+      </div>
+
+      <p class="gifts-intro" id="gifts_intro_text" data-i18n="gifts.introCalc">Calcule quanto de relacionamento seus presentes rendem em cada mercenário.</p>
+
+      <div id="gifts_panel_calc" class="gifts-panel gifts-calc-page">
+        <section class="gifts-rules card" aria-labelledby="gifts_rules_titulo">
+          <h3 class="gifts-rules__title" id="gifts_rules_titulo" data-i18n="gifts.rulesTitle">Como funciona</h3>
+          <ol class="gifts-rules__steps">
+            <li data-i18n="gifts.rulesStep1">Existem 9 presentes: 3 formatos (esfera, pirâmide, aspa) em cada raridade — Raro, Épico e Lendário.</li>
+            <li data-i18n="gifts.rulesStep2">Cada mercenário prefere um formato por raridade. O presente certo rende mais pontos de relacionamento (RP).</li>
+            <li data-i18n="gifts.rulesStep3">Use a tabela abaixo para ver o que cada uma prefere e quanto RP seu inventário gera se você der os presentes certos.</li>
+          </ol>
+          <div class="gifts-rules__pts" role="table" aria-label="Pontos por presente">
+            <div class="gifts-rules__pts-row gifts-rules__pts-head">
+              <span></span>
+              <span data-i18n="gifts.tier1">Raro</span>
+              <span data-i18n="gifts.tier2">Épico</span>
+              <span data-i18n="gifts.tier3">Lendário</span>
+            </div>
+            <div class="gifts-rules__pts-row">
+              <span data-i18n="gifts.rpFavorite">Preferido</span>
+              <span class="gifts-rp-fav">+12</span>
+              <span class="gifts-rp-fav">+24</span>
+              <span class="gifts-rp-fav">+60</span>
+            </div>
+            <div class="gifts-rules__pts-row">
+              <span data-i18n="gifts.rpOther">Outro formato</span>
+              <span class="gifts-rp-norm">+10</span>
+              <span class="gifts-rp-norm">+20</span>
+              <span class="gifts-rp-norm">+50</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="gifts-stock card" aria-labelledby="gifts_stock_titulo">
+          <div class="gifts-stock__header">
+            <div>
+              <h3 class="gifts-stock__title" id="gifts_stock_titulo" data-i18n="gifts.stockTitle">Seu inventário</h3>
+              <p class="gifts-stock__note" data-i18n="gifts.stockNote">Quantos de cada presente você tem. Os três formatos são os mesmos em todas as raridades — só muda a cor e o valor em RP.</p>
+            </div>
+            <p class="gifts-stock__total">
+              <span data-i18n="gifts.totalGifts">Total de presentes:</span>
+              <strong id="gifts_total_presentes">0</strong>
+            </p>
+          </div>
+          <div class="gifts-stock__shape-head" aria-hidden="true">
+            <span class="gifts-stock__shape-spacer"></span>
+            <span data-i18n="gifts.shape1">Esfera</span>
+            <span data-i18n="gifts.shape2">Pirâmide</span>
+            <span data-i18n="gifts.shape3">Aspa</span>
+          </div>
+          <div class="gifts-inventario-grid" id="gifts_inventario_grid"></div>
+          <div class="gifts-stock__actions">
+            <button type="button" class="btn btn--reset" id="gifts_reset_inventario" data-i18n="gifts.resetGifts">Resetar presentes</button>
+            <button type="button" class="btn btn--reset" id="gifts_reset_pontos" data-i18n="gifts.resetPoints">Resetar pontos dos mercenários</button>
+          </div>
+        </section>
+
+        <section class="gifts-mercs card" aria-labelledby="gifts_mercs_titulo">
+          <div class="gifts-mercs__header">
+            <h3 class="gifts-mercs__title" id="gifts_mercs_titulo" data-i18n="gifts.mercsTitle">Progresso por mercenário</h3>
+            <input type="search" id="gifts_calc_search" class="gifts-search" data-i18n="gifts.search" placeholder="Buscar mercenário…" autocomplete="off" />
+          </div>
+          <div class="gifts-table-wrap">
+            <table class="gifts-table gifts-table--calc" id="gifts_calc_table">
+              <thead>
+                <tr>
+                  <th scope="col" class="gifts-table__th-icon"></th>
+                  <th scope="col" data-sort="name" data-i18n="gifts.colMerc">Mercenário</th>
+                  <th scope="col" class="gifts-table__th-pref" data-i18n="gifts.colPref">Ela prefere</th>
+                  <th scope="col" data-sort="currentPoints">
+                    <span class="gifts-th-main" data-i18n="gifts.colPoints">Pontos atuais</span>
+                  </th>
+                  <th scope="col" data-sort="bestPoints" class="gifts-table__th-rp">
+                    <span class="gifts-th-main" data-i18n="gifts.colBest">RP (só certos)</span>
+                    <span class="gifts-th-sub" data-i18n="gifts.colBestHint">presentes que ela prefere</span>
+                  </th>
+                  <th scope="col" data-sort="totalPoints" class="gifts-table__th-rp">
+                    <span class="gifts-th-main" data-i18n="gifts.colTotal">RP (inventário)</span>
+                    <span class="gifts-th-sub" data-i18n="gifts.colTotalHint">todos os seus presentes</span>
+                  </th>
+                  <th scope="col" data-sort="requiredPoints" class="gifts-table__th-rp gifts-table__th-faltam">
+                    <span class="gifts-th-main" data-i18n="gifts.colRequired">Faltam</span>
+                    <span class="gifts-th-sub" data-i18n="gifts.colRequiredHint">até 35.100 RP</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody id="gifts_calc_body"></tbody>
+            </table>
+          </div>
+          <p class="gifts-hint" data-i18n="gifts.calcHint">Meta: 35.100 RP (relacionamento máximo). Pontos atuais em múltiplos de 2.</p>
+        </section>
+      </div>
+
+      <div id="gifts_panel_fav" class="gifts-panel" hidden>
+        <div class="gifts-fav-layout" id="gifts_fav_layout">
+          <div class="gifts-fav-main">
+            <div class="gifts-toolbar">
+              <input type="search" id="gifts_fav_search" class="gifts-search" data-i18n="gifts.search" placeholder="Buscar mercenário…" autocomplete="off" />
+              <button type="button" class="btn btn--secondary" id="gifts_toggle_filtros" data-i18n="gifts.filters">Filtros</button>
+            </div>
+            <div class="gifts-table-wrap">
+              <table class="gifts-table gifts-table--fav" id="gifts_fav_table">
+                <thead>
+                  <tr>
+                    <th scope="col" class="gifts-table__th-icon"></th>
+                    <th scope="col" data-sort="name" data-i18n="gifts.colMerc">Mercenário</th>
+                    <th scope="col" data-i18n="gifts.colOutfit">Traje</th>
+                    <th scope="col" data-i18n="gifts.colT1">Tier 1</th>
+                    <th scope="col" data-i18n="gifts.colT2">Tier 2</th>
+                    <th scope="col" data-i18n="gifts.colT3">Tier 3</th>
+                  </tr>
+                </thead>
+                <tbody id="gifts_fav_body"></tbody>
+              </table>
+            </div>
+            <p class="gifts-fav-total" id="gifts_fav_total"></p>
+            <p class="gifts-hint" data-i18n="gifts.favHint">Tier 1: +12 RP · Tier 2: +24 RP · Tier 3: +60 RP (presentes favoritos).</p>
+          </div>
+          <aside class="gifts-data-panel gifts-data-panel--filtros" id="gifts_filtro_panel" aria-labelledby="gifts_filtro_titulo">
+            <div class="gifts-data-panel__header">
+              <h3 id="gifts_filtro_titulo" data-i18n="gifts.filtersTitle">Filtros</h3>
+              <button type="button" class="gifts-panel-close" id="gifts_fechar_filtros" aria-label="Fechar">✕</button>
+            </div>
+            <h4 class="gifts-filter-group-title" data-i18n="gifts.filterGifts">Presentes</h4>
+            <div class="gifts-filter-gifts-row" id="gifts_filtro_t1"></div>
+            <div class="gifts-filter-gifts-row" id="gifts_filtro_t2"></div>
+            <div class="gifts-filter-gifts-row" id="gifts_filtro_t3"></div>
+            <button type="button" class="btn btn--reset" id="gifts_reset_filtros" data-i18n="gifts.resetFilters">Resetar filtros</button>
+          </aside>
+        </div>
+      </div>
+
+      <div id="gifts_outfit_tooltip" class="gifts-outfit-tooltip" hidden></div>
+    </div>
+  </div>
+
+  <!-- Entrada ES modules: orquestra aba Custo; demais abas em giftsUi.js / serumUi.js -->
+</body>
+</html>

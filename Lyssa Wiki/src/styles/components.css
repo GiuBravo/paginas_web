@@ -1,3 +1,10 @@
+/**
+ * Componentes da UI — ícones, cards, formulários, tabelas, abas,
+ * resultados, orçamento, referência, Super Soro e presentes.
+ * Depende de tokens.css (variáveis --cor-*, --espaco-*, --raio).
+ */
+
+/* ——— Ícones do jogo e utilitários de acessibilidade ——— */
 .game-icon {
   display: inline-block;
   flex-shrink: 0;
@@ -15,6 +22,7 @@
   height: 0.875rem;
 }
 
+/* Texto só para leitores de tela */
 .visually-hidden {
   position: absolute;
   width: 1px;
@@ -27,6 +35,7 @@
   border: 0;
 }
 
+/* ——— Barra da calculadora (modo + raridade) ——— */
 .calc-toolbar {
   display: flex;
   flex-wrap: wrap;
@@ -546,6 +555,7 @@
   }
 }
 
+/* ——— Tabelas de referência (aba Custo) ——— */
 .ref-guide {
   margin-top: var(--espaco-lg);
   padding: var(--espaco-md);
@@ -878,6 +888,7 @@
   outline-offset: 2px;
 }
 
+/* ——— Botões (copiar, resetar, tema) ——— */
 .btn {
   padding: 0.65rem 1rem;
   border: none;
@@ -940,6 +951,7 @@
   background: var(--cor-botao-reset-hover);
 }
 
+/* Card: blocos “Ponto desejado”, “Ponto atual”, presentes, etc. */
 .card {
   padding: var(--espaco-md);
   background: var(--cor-fundo-card);
@@ -1216,6 +1228,7 @@
   border-color: var(--cor-erro-fundo);
 }
 
+/* ——— Guia lateral de reinícios (workspace) ——— */
 .restart-guide {
   padding: var(--espaco-md);
   background: var(--cor-fundo-card);
@@ -1378,6 +1391,9 @@
 }
 
 .serum-tabs__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
   padding: 0.4rem 0.75rem;
   font-size: 0.8rem;
   font-weight: 600;
@@ -1457,6 +1473,7 @@
   background: rgba(46, 125, 74, 0.55);
 }
 
+/* ——— Painel de resultados (objetivo e orçamento) ——— */
 .results-panel {
   padding: var(--espaco-lg);
   background: var(--cor-fundo-card);

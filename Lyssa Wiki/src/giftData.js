@@ -1,4 +1,7 @@
-/** Dados de relacionamento — presentes favoritos por mercenário (fonte: Lust Goddess Wiki). */
+/**
+ * Dados de relacionamento — presentes favoritos por mercenário.
+ * Fonte: Lust Goddess Wiki / comunidade. Ver doc/dados-jogo.md
+ */
 
 export const META_PRESENTES = {
   pontosObjetivo: 35100,
@@ -67,23 +70,36 @@ export const INVENTARIO_PADRAO = () => ({
   t3: { 1: 0, 2: 0, 3: 0 },
 });
 
+const NOMES_MERC_SET = new Set(MERCENARIAS_PRESENTES.map((m) => m.name));
+
+function mercenarioConhecido(nome) {
+  return NOMES_MERC_SET.has(nome);
+}
+
 export function nomeArquivoMerc(nome) {
-  return nome.replace(/[\\/:*?"<>|]/g, '_');
+  const seguro = mercenarioConhecido(nome) ? nome : String(nome ?? '');
+  return seguro.replace(/[\\/:*?"<>|]/g, '_').slice(0, 80);
 }
 
 export function caminhoIconeMerc(nome) {
+  if (!mercenarioConhecido(nome)) return '/relationship/images/mercs/placeholder.png';
   return `/relationship/images/mercs/${nomeArquivoMerc(nome)}.png`;
 }
 
 export function caminhoPresente(tier, variante) {
+  if (!TIERS_PRESENTE.includes(tier) || !VARIANTES_PRESENTE.includes(String(variante))) {
+    return '/relationship/images/gifts/T1-1.png';
+  }
   const mapa = { t1: 'T1', t2: 'T2', t3: 'T3' };
   return `/relationship/images/gifts/${mapa[tier]}-${variante}.png`;
 }
 
 export function caminhoOutfit(nome) {
+  if (!mercenarioConhecido(nome)) return '/relationship/images/outfits/placeholder.png';
   return `/relationship/images/outfits/${nomeArquivoMerc(nome)}.png`;
 }
 
 export function caminhoOutfitDesc(nome) {
+  if (!mercenarioConhecido(nome)) return '/relationship/images/outfits-desc/placeholder.png';
   return `/relationship/images/outfits-desc/${nomeArquivoMerc(nome)}.png`;
 }

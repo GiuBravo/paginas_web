@@ -1,3 +1,6 @@
+/**
+ * Renderização da aba Fortalecimento — tabela Super Soro por raridade.
+ */
 import { formatNumber, t } from './i18n.js';
 import { criarImgIcone } from './icons.js';
 import { raridades_super_soro, tabela_super_soro } from './serum.js';
@@ -59,7 +62,8 @@ export function renderizarPainelSuperSoro(raridadeAtiva = 'legendary') {
     btn.setAttribute('role', 'tab');
     btn.setAttribute('aria-selected', raridade === raridadeAtiva ? 'true' : 'false');
     btn.id = `serum_tab_${raridade}`;
-    btn.textContent = t(`serum.rarity.${raridade}`);
+    btn.appendChild(criarImgIcone(raridade, 18, 'game-icon game-icon--xs'));
+    btn.appendChild(document.createTextNode(t(`serum.rarity.${raridade}`)));
     if (raridade === raridadeAtiva) btn.classList.add('serum-tabs__btn--ativo');
     tabs.appendChild(btn);
   });

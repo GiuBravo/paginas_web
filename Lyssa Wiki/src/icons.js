@@ -1,3 +1,8 @@
+/**
+ * URLs de ícones com cache bust; sincronização do ícone de Alma por raridade.
+ */
+import { sanitizeAssetUrl } from './security.js';
+
 const ICON_CACHE = '8';
 
 export const ICONS = {
@@ -24,18 +29,23 @@ export function obterIconeAlma(raridade = 'legendary') {
   return obterIconeRaridade(raridade) ?? ICONS.alma;
 }
 
+function aplicarSrcSeguro(img, src) {
+  const seguro = sanitizeAssetUrl(src);
+  if (seguro) img.src = seguro;
+}
+
 export function sincronizarIconesAlma(raridade, root = document) {
   const src = obterIconeAlma(raridade);
   if (!root) return;
   root.querySelectorAll('[data-icon-alma]').forEach((img) => {
-    img.src = src;
+    aplicarSrcSeguro(img, src);
   });
 }
 
 export function criarImgIcone(tipo, tamanho = 20, classe = 'game-icon') {
   const img = document.createElement('img');
   const src = ICONS[tipo] ?? obterIconeRaridade(tipo);
-  img.src = src;
+  aplicarSrcSeguro(img, src);
   img.alt = '';
   img.width = tamanho;
   img.height = tamanho;
@@ -46,7 +56,7 @@ export function criarImgIcone(tipo, tamanho = 20, classe = 'game-icon') {
 
 export function criarImgPorSrc(src, tamanho = 20, classe = 'game-icon') {
   const img = document.createElement('img');
-  img.src = src;
+  aplicarSrcSeguro(img, src);
   img.alt = '';
   img.width = tamanho;
   img.height = tamanho;

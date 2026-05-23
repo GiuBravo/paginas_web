@@ -1,8 +1,18 @@
 <!DOCTYPE html>
+<!--
+  Wiki Lust Goddess — shell da aplicação (SPA estática).
+  Três abas: Custo (Alma/Créditos/Reinício), Fortalecimento (Super Soro), Presentes.
+  Lógica em src/main.js e módulos importados; estilos em src/styles/.
+  Ver doc/README.md
+-->
 <html lang="pt-BR" id="raiz_html">
 <head>
+  <!-- Meta, favicon e folhas de estilo (tokens → layout → componentes) -->
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'; upgrade-insecure-requests" />
+  <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+  <meta name="referrer" content="strict-origin-when-cross-origin" />
   <title>Wiki Lust Goddess</title>
   <link rel="icon" type="image/png" href="/relationship/images/mercs/Belle.png" />
   <link rel="apple-touch-icon" href="/relationship/images/mercs/Belle.png" />
@@ -12,6 +22,7 @@
 </head>
 <body>
   <div class="app">
+    <!-- Cabeçalho: título, subtítulo com ícones do jogo, idioma e tema -->
     <header class="app-header">
       <div class="app-header__brand">
         <h1 class="app-title" data-i18n="app.title">Wiki Lust Goddess</h1>
@@ -56,6 +67,7 @@
       </div>
     </header>
 
+    <!-- Navegação principal entre as três ferramentas (cost | fortalecimento | gifts) -->
     <nav class="app-tabs" role="tablist" aria-label="Ferramentas" id="app_tabs">
       <button type="button" class="app-tabs__btn app-tabs__btn--ativo" data-app="cost" role="tab" aria-selected="true" id="app_tab_cost">
         <span class="app-tabs__icons" aria-hidden="true">
@@ -79,7 +91,9 @@
       </button>
     </nav>
 
+    <!-- ========== ABA CUSTO: calculadora Alma / Créditos / Reinício ========== -->
     <div id="app_panel_cost">
+    <!-- Barra: modo Objetivo vs Orçamento + seletor de raridade -->
     <div class="calc-toolbar" role="region" aria-labelledby="calc_toolbar_titulo">
       <h2 class="visually-hidden" id="calc_toolbar_titulo" data-i18n="mode.title">Estilo de calculadora</h2>
       <div class="mode-switcher" role="tablist" aria-label="Estilo de calculadora" id="mode_tabs">
@@ -94,6 +108,7 @@
 
     <div class="workspace">
       <div class="workspace__main">
+        <!-- Modo objetivo: ponto desejado vs ponto atual -->
         <div id="panel_modo_objetivo" class="calc-panel">
         <div class="form-grid">
           <section class="card" aria-labelledby="legenda_desejado">
@@ -148,6 +163,7 @@
         </div>
         </div>
 
+        <!-- Modo orçamento: MP/créditos disponíveis + ponto inicial -->
         <div id="panel_modo_orcamento" class="calc-panel" hidden>
           <section class="card card--orcamento" aria-labelledby="legenda_orcamento">
             <h2 class="card__title card__title--icon" id="legenda_orcamento">
@@ -264,6 +280,7 @@
         <p id="mensagem_copia" class="copy-status" aria-live="polite" aria-atomic="true"></p>
       </div>
 
+      <!-- Guia lateral: segmentos de reinício no percurso (atual → objetivo ou simulação) -->
       <aside class="restart-guide" aria-labelledby="guia_reinicios_titulo">
         <h2 class="restart-guide__title" id="guia_reinicios_titulo">
           <img src="/icons/reinicio.png?v=7" alt="" class="game-icon" width="22" height="22" />
@@ -304,6 +321,7 @@
       </aside>
     </div>
 
+    <!-- Resultados: totais (objetivo) ou tabela passo a passo (orçamento) -->
     <section
       id="bloco_resultado"
       class="results-panel"
@@ -442,6 +460,7 @@
       </div>
     </section>
 
+    <!-- Tabelas de referência por raridade (acumulado / por nível) -->
     <section class="ref-guide" aria-labelledby="ref_guide_titulo">
       <h2 class="ref-guide__title" id="ref_guide_titulo" data-i18n="ref.title">Tabelas de nível e reinício</h2>
       <p class="ref-guide__subtitle" id="ref_guide_subtitulo" aria-live="polite"></p>
@@ -455,6 +474,7 @@
 
     </div>
 
+    <!-- ========== ABA FORTALECIMENTO: Super Soro ========== -->
     <div id="app_panel_fortalecimento" class="fortalecimento-app" hidden>
       <section class="serum-guide" aria-labelledby="serum_guide_titulo">
         <h2 class="serum-guide__title" id="serum_guide_titulo" data-i18n="serum.title">Super Soro — custos de boost</h2>
@@ -464,6 +484,7 @@
       </section>
     </div>
 
+    <!-- ========== ABA PRESENTES: calculadora de RP e favoritos ========== -->
     <div id="app_panel_gifts" class="gifts-app" hidden>
       <div class="gifts-tabs" role="tablist" id="gifts_tabs" aria-label="Ferramentas de presentes">
         <button type="button" class="gifts-tabs__btn gifts-tabs__btn--ativo" data-gifts-tab="calc" id="gifts_tab_calc" role="tab" aria-selected="true" data-i18n="gifts.tabCalc">Calculadora</button>
@@ -605,6 +626,7 @@
     </div>
   </div>
 
+  <!-- Entrada ES modules: orquestra aba Custo; demais abas em giftsUi.js / serumUi.js -->
   <script type="module" src="/src/main.js"></script>
 </body>
 </html>

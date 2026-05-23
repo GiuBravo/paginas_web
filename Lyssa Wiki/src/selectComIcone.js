@@ -1,4 +1,9 @@
+/**
+ * Select customizado com ícones (reinício, raridade, nível).
+ * Mantém o <select> nativo para valor e acessibilidade.
+ */
 import { criarImgIcone, criarImgPorSrc, ICONS, obterIconeRaridade } from './icons.js';
+import { sanitizeAssetUrl } from './security.js';
 
 const instancias = new Map();
 
@@ -22,8 +27,9 @@ function resolverSrcIcone(opcao, tipoIcone, resolverIcone) {
 
 function aplicarIconeNoTrigger(triggerIcon, src) {
   if (!triggerIcon) return;
-  if (src) {
-    triggerIcon.src = src;
+  const seguro = sanitizeAssetUrl(src);
+  if (seguro) {
+    triggerIcon.src = seguro;
     triggerIcon.hidden = false;
   } else {
     triggerIcon.hidden = true;

@@ -1,3 +1,8 @@
+/**
+ * Tabelas do jogo por raridade: custos cumulativos MP/créditos,
+ * regras de reinício e helpers para planilhas de referência.
+ * Fonte: wiki/planilha da comunidade — ver doc/dados-jogo.md
+ */
 export const nivel_maximo_com_dados = 31;
 
 export const raridades = ['common', 'rare', 'epic', 'legendary'];
@@ -83,6 +88,12 @@ export function obter_nivel_minimo_proximo_reinicio(raridade, reinicio) {
   return niveis[reinicio] ?? nivel_maximo_com_dados;
 }
 
+/**
+ * Converts cumulative cost arrays (index = level) into per-level-up cost.
+ * Indices 0–1 stay null; index 2 is the cost of 1→2.
+ * @param {(number|null)[]} cumulativo
+ * @returns {(number|null)[]}
+ */
 function derivar_por_nivel(cumulativo) {
   const por = [null, null];
   if (!cumulativo || cumulativo.length < 3) return por;
@@ -95,6 +106,20 @@ function derivar_por_nivel(cumulativo) {
 
 const cache_por_nivel = new Map();
 
+/**
+ * Cached derived tables for a rarity — used by calc.js and reference UI.
+ * @param {string} raridade - `common` | `rare` | `epic` | `legendary`
+ * @returns {{
+ *   mpCum: (number|null)[],
+ *   crCum: (number|null)[],
+ *   mpPor: (number|null)[],
+ *   crPor: (number|null)[],
+ *   custosAlmaPorFaixa: number[],
+ *   custosCreditosPorFaixa: number[],
+ *   niveisMaximosPorReinicio: number[],
+ *   reinicioMaximo: number
+ * }}
+ */
 export function obter_tabelas_raridade(raridade) {
   if (cache_por_nivel.has(raridade)) return cache_por_nivel.get(raridade);
   const mpCum = mp_cumulativo[raridade];
