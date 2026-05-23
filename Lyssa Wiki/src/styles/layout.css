@@ -1,0 +1,135 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: var(--fonte);
+  font-size: 1rem;
+  line-height: 1.5;
+  background: var(--cor-fundo-pagina);
+  color: var(--cor-texto-principal);
+  transition: background 0.25s ease, color 0.25s ease;
+}
+
+.app {
+  max-width: var(--largura-max);
+  margin: 0 auto;
+  padding: var(--espaco-lg) var(--espaco-md) var(--espaco-xl);
+}
+
+/* Aba Presentes: tabela larga com várias colunas */
+.app:has(#app_panel_gifts:not([hidden])) {
+  max-width: min(100%, 1320px);
+}
+
+.app-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--espaco-md);
+  margin-bottom: var(--espaco-lg);
+  padding-bottom: var(--espaco-md);
+  border-bottom: 1px solid var(--cor-borda);
+}
+
+.app-header__brand {
+  flex: 1 1 200px;
+}
+
+.app-title {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--cor-titulo);
+  letter-spacing: -0.02em;
+}
+
+.app-subtitle {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  margin: var(--espaco-xs) 0 0;
+  font-size: 0.95rem;
+  color: var(--cor-texto-secundario);
+}
+
+.app-header__controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espaco-sm);
+}
+
+.workspace {
+  display: grid;
+  gap: var(--espaco-lg);
+  margin-top: var(--espaco-lg);
+  margin-bottom: var(--espaco-lg);
+}
+
+.workspace__main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-sm);
+  min-width: 0;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--espaco-md);
+}
+
+@media (min-width: 880px) {
+  .workspace {
+    grid-template-columns: 1fr minmax(260px, 300px);
+    align-items: start;
+  }
+
+  .restart-guide {
+    position: sticky;
+    top: var(--espaco-md);
+  }
+}
+
+@media (max-width: 600px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .app-header__controls {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espaco-sm);
+  margin-bottom: var(--espaco-sm);
+}
+
+.actions .btn {
+  flex: 1 1 140px;
+  min-height: 44px;
+}
+
+.copy-status {
+  min-height: 1.25rem;
+  margin: 0 0 var(--espaco-lg);
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-align: center;
+  color: var(--cor-botao-copiar);
+}
+
+.copy-status:empty {
+  display: none;
+}

@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="pt-BR" id="raiz_html">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Calculadora de Custo - Lust Goddess</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="stylesheet" href="/src/styles/tokens.css" />
+  <link rel="stylesheet" href="/src/styles/layout.css" />
+  <link rel="stylesheet" href="/src/styles/components.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="app-header">
+      <div class="app-header__brand">
+        <h1 class="app-title" data-i18n="app.title">Calculadora de Custo</h1>
+        <p class="app-subtitle">
+          <span data-i18n="app.subtitle">Lust Goddess — Alma e Créditos</span>
+          <span class="subtitle-icons" aria-hidden="true">
+            <img src="/icons/alma.png?v=7" alt="" class="game-icon game-icon--sm" width="20" height="20" title="Alma" />
+            <img src="/icons/creditos.png?v=7" alt="" class="game-icon game-icon--sm" width="20" height="20" title="Créditos" />
+            <img src="/icons/reinicio.png?v=7" alt="" class="game-icon game-icon--sm" width="20" height="20" title="Reinício" />
+            <img src="/icons/serum.png?v=7" alt="" class="game-icon game-icon--sm" width="20" height="20" title="Super Soro" />
+          </span>
+        </p>
+      </div>
+      <div class="app-header__controls">
+        <div class="lang-switcher" role="group" aria-label="Idioma">
+          <button type="button" class="lang-btn lang-btn--icon" data-lang="pt-BR" id="lang_pt" aria-label="Português">
+            <img src="/icons/flag-pt.svg" alt="" class="lang-btn__flag" width="28" height="19" />
+          </button>
+          <button type="button" class="lang-btn lang-btn--icon" data-lang="en" id="lang_en" aria-label="English">
+            <img src="/icons/flag-en.svg" alt="" class="lang-btn__flag" width="28" height="19" />
+          </button>
+        </div>
+        <button type="button" id="botao_tema" class="btn btn--theme btn--icon-only" aria-label="Modo escuro">
+          <img id="icone_tema" src="/icons/moon.svg" alt="" width="22" height="22" />
+        </button>
+      </div>
+    </header>
+
+    <nav class="app-tabs" role="tablist" aria-label="Ferramentas" id="app_tabs">
+      <button type="button" class="app-tabs__btn app-tabs__btn--ativo" data-app="cost" role="tab" aria-selected="true" id="app_tab_cost" data-i18n="appTab.cost">Custo (Alma / Créditos)</button>
+      <button type="button" class="app-tabs__btn" data-app="gifts" role="tab" aria-selected="false" id="app_tab_gifts" data-i18n="appTab.gifts">Presentes</button>
+    </nav>
+
+    <div id="app_panel_cost">
+    <div class="calc-toolbar" role="region" aria-labelledby="calc_toolbar_titulo">
+      <h2 class="visually-hidden" id="calc_toolbar_titulo" data-i18n="mode.title">Estilo de calculadora</h2>
+      <div class="mode-switcher" role="tablist" aria-label="Estilo de calculadora" id="mode_tabs">
+        <button type="button" class="mode-switcher__btn mode-switcher__btn--ativo" data-mode="goal" role="tab" aria-selected="true" id="mode_tab_goal" data-i18n="mode.goal">Objetivo (quanto falta)</button>
+        <button type="button" class="mode-switcher__btn" data-mode="budget" role="tab" aria-selected="false" id="mode_tab_budget" data-i18n="mode.budget">Orçamento (até onde chego)</button>
+      </div>
+      <div class="field field--raridade">
+        <label for="raridade" data-i18n="field.rarity">Raridade da mercenária</label>
+        <select id="raridade" name="raridade"></select>
+      </div>
+    </div>
+
+    <div class="workspace">
+      <div class="workspace__main">
+        <div id="panel_modo_objetivo" class="calc-panel">
+        <div class="form-grid">
+          <section class="card" aria-labelledby="legenda_desejado">
+            <h2 class="card__title card__title--icon" id="legenda_desejado">
+              <img src="/icons/reinicio.png?v=7" alt="" class="game-icon" width="20" height="20" />
+              <span data-i18n="section.desired">Ponto desejado (objetivo)</span>
+            </h2>
+            <div class="field">
+              <label for="reinicio_desejado" class="label-with-icon">
+                <img src="/icons/reinicio.png?v=7" alt="" class="game-icon" width="20" height="20" />
+                <span data-i18n="field.restart">Reinício</span>
+              </label>
+              <select id="reinicio_desejado" name="reinicio_desejado"></select>
+              <span class="restart-badge" id="badge_reinicio_desejado" hidden>
+                <img src="/icons/reinicio.png?v=7" alt="" class="game-icon game-icon--sm" width="18" height="18" />
+                <span class="restart-badge__text"></span>
+              </span>
+            </div>
+            <div class="field">
+              <label for="level_desejado" class="label-select-nivel">
+                <span data-i18n="field.level">Nível</span>
+                <span class="field__max" id="label_max_desejado">1–31</span>
+              </label>
+              <select id="level_desejado" name="level_desejado"></select>
+            </div>
+          </section>
+
+          <section class="card" aria-labelledby="legenda_atual">
+            <h2 class="card__title card__title--icon" id="legenda_atual">
+              <img src="/icons/reinicio.png?v=7" alt="" class="game-icon" width="20" height="20" />
+              <span data-i18n="section.current">Ponto atual</span>
+            </h2>
+            <div class="field">
+              <label for="reinicio_atual" class="label-with-icon">
+                <img src="/icons/reinicio.png?v=7" alt="" class="game-icon" width="20" height="20" />
+                <span data-i18n="field.restart">Reinício</span>
+              </label>
+              <select id="reinicio_atual" name="reinicio_atual"></select>
+              <span class="restart-badge" id="badge_reinicio_atual" hidden>
+                <img src="/icons/reinicio.png?v=7" alt="" class="game-icon game-icon--sm" width="18" height="18" />
+                <span class="restart-badge__text"></span>
+              </span>
+            </div>
+            <div class="field">
+              <label for="level_atual" class="label-select-nivel">
+                <span data-i18n="field.level">Nível</span>
+                <span class="field__max" id="label_max_atual">1–31</span>
+              </label>
+              <select id="level_atual" name="level_atual"></select>
+            </div>
+          </section>
+        </div>
+        </div>
+
+        <div id="panel_modo_orcamento" class="calc-panel" hidden>
+          <section class="card card--orcamento" aria-labelledby="legenda_orcamento">
+            <h2 class="card__title card__title--icon" id="legenda_orcamento">
+              <img src="/icons/alma.png?v=7" alt="" class="game-icon" width="20" height="20" />
+              <span data-i18n="section.budget">Pontos de Alma disponíveis</span>
+            </h2>
+            <div class="field">
+              <label for="pontos_alma" class="label-with-icon">
+                <img src="/icons/alma.png?v=7" alt="" class="game-icon" width="20" height="20" />
+                <span data-i18n="field.mp">Pontos de Alma (MP)</span>
+              </label>
+              <div class="number-stepper">
+                <button type="button" class="number-stepper__btn" data-step="down" aria-label="Diminuir">▼</button>
+                <input type="number" id="pontos_alma" name="pontos_alma" min="0" step="1" value="2270" inputmode="numeric" />
+                <button type="button" class="number-stepper__btn" data-step="up" aria-label="Aumentar">▲</button>
+              </div>
+            </div>
+            <div class="field">
+              <label for="reinicio_orcamento" class="label-with-icon">
+                <img src="/icons/reinicio.png?v=7" alt="" class="game-icon" width="20" height="20" />
+                <span data-i18n="field.restart">Reinício</span>
+              </label>
+              <select id="reinicio_orcamento" name="reinicio_orcamento"></select>
+            </div>
+            <div class="field">
+              <label for="level_orcamento" class="label-select-nivel">
+                <span data-i18n="field.level">Nível</span>
+                <span class="field__max" data-i18n="field.levelRange">1–31</span>
+              </label>
+              <select id="level_orcamento" name="level_orcamento"></select>
+            </div>
+            <p class="field-hint" data-i18n="hint.budget">Simula subidas de nível e reinícios automáticos até acabar os pontos.</p>
+          </section>
+        </div>
+
+        <div class="actions">
+          <button type="button" id="botao_copiar" class="btn btn--copy" disabled data-i18n="btn.copy">Copiar resultado</button>
+          <button type="button" id="botao_resetar" class="btn btn--reset" data-i18n="btn.reset">Resetar</button>
+        </div>
+        <p id="mensagem_copia" class="copy-status" aria-live="polite" aria-atomic="true"></p>
+      </div>
+
+      <aside class="restart-guide" aria-labelledby="guia_reinicios_titulo">
+        <h2 class="restart-guide__title" id="guia_reinicios_titulo">
+          <img src="/icons/reinicio.png?v=7" alt="" class="game-icon" width="22" height="22" />
+          <span data-i18n="guide.title">Guia de reinícios</span>
+        </h2>
+        <div class="restart-guide__table-wrap">
+          <table class="restart-guide__table">
+            <colgroup>
+              <col class="col-reinicio" />
+              <col class="col-nivel" />
+            </colgroup>
+            <thead>
+              <tr>
+                <th scope="col" class="th-with-icon">
+                  <img src="/icons/reinicio.png?v=7" alt="" class="game-icon game-icon--sm" width="16" height="16" />
+                  <span data-i18n="guide.colRestart">Reinício</span>
+                </th>
+                <th scope="col" class="th-with-icon th-with-icon--nivel">
+                  <span data-i18n="guide.colMin">Nível mínimo</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody id="restart_guide_body"></tbody>
+          </table>
+        </div>
+        <ul class="restart-guide__legend" aria-hidden="false">
+          <li>
+            <img src="/icons/reinicio.png?v=7" alt="" class="game-icon game-icon--sm" width="14" height="14" />
+            <span class="legend-swatch legend-swatch--desired"></span>
+            <span data-i18n="guide.legendDesired">Objetivo</span>
+          </li>
+          <li>
+            <img src="/icons/reinicio.png?v=7" alt="" class="game-icon game-icon--sm" width="14" height="14" />
+            <span class="legend-swatch legend-swatch--current"></span>
+            <span data-i18n="guide.legendCurrent">Atual</span>
+          </li>
+        </ul>
+      </aside>
+    </div>
+
+    <section
+      id="bloco_resultado"
+      class="results-panel"
+      aria-labelledby="titulo_resultados"
+      aria-live="polite"
+    >
+      <h2 class="results-panel__title results-panel__title--icon" id="titulo_resultados">
+        <img src="/icons/alma.png?v=7" alt="" class="game-icon game-icon--sm" width="20" height="20" />
+        <img src="/icons/creditos.png?v=7" alt="" class="game-icon game-icon--sm" width="20" height="20" />
+        <span data-i18n="results.title">Resultados</span>
+      </h2>
+      <p id="mensagem_erro" class="mensagem_erro" role="alert" hidden></p>
+      <p id="resultado_vazio" class="results-empty" data-i18n="results.empty"></p>
+
+      <div id="resultado_conteudo" class="results-body" hidden>
+        <div class="result-row result-row--simples result-row--highlight">
+          <span class="result-label label-with-icon">
+            <img src="/icons/alma.png?v=7" alt="" class="game-icon game-icon--sm" width="18" height="18" />
+            <img src="/icons/creditos.png?v=7" alt="" class="game-icon game-icon--sm" width="18" height="18" />
+            <span data-i18n="results.total">Total</span>
+          </span>
+          <span class="result-values">
+            <span class="currency-chip currency-chip--alma">
+              <img src="/icons/alma.png?v=7" alt="" class="game-icon" width="24" height="24" />
+              <span class="valor_alma" data-result="alma-restante">0</span>
+              <span class="currency-label" data-i18n="currency.alma">Alma</span>
+            </span>
+            <span class="currency-chip currency-chip--creditos">
+              <img src="/icons/creditos.png?v=7" alt="" class="game-icon" width="24" height="24" />
+              <span class="valor_creditos" data-result="creditos-restante">0</span>
+              <span class="currency-label" data-i18n="currency.credits">Créditos</span>
+            </span>
+          </span>
+        </div>
+        <div class="result-row result-row--detalhe">
+          <span class="result-label label-with-icon">
+            <img src="/icons/reinicio.png?v=7" alt="" class="game-icon game-icon--sm" width="18" height="18" />
+            <span data-i18n="results.desired">Total desejado</span>
+          </span>
+          <span class="result-values">
+            <span class="currency-chip currency-chip--alma">
+              <img src="/icons/alma.png?v=7" alt="" class="game-icon" width="22" height="22" />
+              <span class="valor_alma" data-result="alma-desejado">0</span>
+              <span class="currency-label" data-i18n="currency.alma">Alma</span>
+            </span>
+            <span class="currency-chip currency-chip--creditos">
+              <img src="/icons/creditos.png?v=7" alt="" class="game-icon" width="22" height="22" />
+              <span class="valor_creditos" data-result="creditos-desejado">0</span>
+              <span class="currency-label" data-i18n="currency.credits">Créditos</span>
+            </span>
+          </span>
+        </div>
+        <div class="result-row result-row--detalhe">
+          <span class="result-label label-with-icon">
+            <img src="/icons/reinicio.png?v=7" alt="" class="game-icon game-icon--sm" width="18" height="18" />
+            <span data-i18n="results.current">Total atual</span>
+          </span>
+          <span class="result-values">
+            <span class="currency-chip currency-chip--alma">
+              <img src="/icons/alma.png?v=7" alt="" class="game-icon" width="22" height="22" />
+              <span class="valor_alma" data-result="alma-atual">0</span>
+              <span class="currency-label" data-i18n="currency.alma">Alma</span>
+            </span>
+            <span class="currency-chip currency-chip--creditos">
+              <img src="/icons/creditos.png?v=7" alt="" class="game-icon" width="22" height="22" />
+              <span class="valor_creditos" data-result="creditos-atual">0</span>
+              <span class="currency-label" data-i18n="currency.credits">Créditos</span>
+            </span>
+          </span>
+        </div>
+        <hr class="linha_separadora result-row--detalhe" />
+        <div class="result-row result-row--detalhe result-row--highlight">
+          <span class="result-label label-with-icon">
+            <img src="/icons/alma.png?v=7" alt="" class="game-icon game-icon--sm" width="18" height="18" />
+            <img src="/icons/creditos.png?v=7" alt="" class="game-icon game-icon--sm" width="18" height="18" />
+            <span data-i18n="results.remaining">Restante necessário</span>
+          </span>
+          <span class="result-values">
+            <span class="currency-chip currency-chip--alma">
+              <img src="/icons/alma.png?v=7" alt="" class="game-icon" width="24" height="24" />
+              <span class="valor_alma" data-result="alma-restante">0</span>
+              <span class="currency-label" data-i18n="currency.alma">Alma</span>
+            </span>
+            <span class="currency-chip currency-chip--creditos">
+              <img src="/icons/creditos.png?v=7" alt="" class="game-icon" width="24" height="24" />
+              <span class="valor_creditos" data-result="creditos-restante">0</span>
+              <span class="currency-label" data-i18n="currency.credits">Créditos</span>
+            </span>
+          </span>
+        </div>
+      </div>
+
+      <div id="resultado_modo_orcamento" class="results-body results-body--budget" hidden>
+        <p id="orcamento_headline" class="budget-headline"></p>
+        <div class="budget-table-wrap">
+          <table class="budget-table" id="orcamento_tabela">
+            <thead>
+              <tr>
+                <th scope="col" data-i18n="budget.colRestart">Reinício</th>
+                <th scope="col" data-i18n="budget.colLevel">Nível</th>
+                <th scope="col" data-i18n="budget.colSpend">Gasto Alma</th>
+                <th scope="col" data-i18n="budget.colLeft">Sobra</th>
+                <th scope="col" data-i18n="budget.colCredits">Créditos</th>
+              </tr>
+            </thead>
+            <tbody id="orcamento_tabela_body"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section class="ref-guide" aria-labelledby="ref_guide_titulo">
+      <h2 class="ref-guide__title" id="ref_guide_titulo" data-i18n="ref.title">Tabelas de nível e reinício</h2>
+      <div class="ref-tabs ref-tabs--tipo" id="ref_type_tabs" role="tablist">
+        <button type="button" class="ref-tabs__btn ref-tabs__btn--ativo" data-ref-type="mp" role="tab" aria-selected="true" data-i18n="ref.tabMp">Subir nível — Alma</button>
+        <button type="button" class="ref-tabs__btn" data-ref-type="cr" role="tab" aria-selected="false" data-i18n="ref.tabCr">Subir nível — Créditos</button>
+      </div>
+      <div class="ref-tabs ref-tabs--modo" id="ref_mode_tabs" role="tablist">
+        <button type="button" class="ref-tabs__btn ref-tabs__btn--ativo" data-ref-mode="cum" role="tab" aria-selected="true" data-i18n="ref.modeCum">Acumulado (1 → n)</button>
+        <button type="button" class="ref-tabs__btn" data-ref-mode="per" role="tab" aria-selected="false" data-i18n="ref.modePer">Por nível (n → n+1)</button>
+      </div>
+      <div class="ref-guide__table-wrap" id="ref_panel" data-ref-type="mp" data-ref-mode="cum" role="tabpanel" aria-live="polite"></div>
+    </section>
+
+    <section class="serum-guide" aria-labelledby="serum_guide_titulo">
+      <h2 class="serum-guide__title" id="serum_guide_titulo" data-i18n="serum.title">Super Soro — custos de boost</h2>
+      <p class="serum-guide__note" data-i18n="serum.note">Custos de boost por faixa de nível e raridade da mercenária.</p>
+      <div class="serum-tabs" id="serum_tabs" role="tablist" aria-label="Raridade" data-active-rarity="legendary"></div>
+      <div class="serum-guide__table-wrap" id="serum_panel" role="tabpanel" aria-live="polite"></div>
+    </section>
+    </div>
+
+    <div id="app_panel_gifts" class="gifts-app" hidden>
+      <div class="gifts-tabs" role="tablist" id="gifts_tabs" aria-label="Ferramentas de presentes">
+        <button type="button" class="gifts-tabs__btn gifts-tabs__btn--ativo" data-gifts-tab="calc" id="gifts_tab_calc" role="tab" aria-selected="true" data-i18n="gifts.tabCalc">Calculadora</button>
+        <button type="button" class="gifts-tabs__btn" data-gifts-tab="fav" id="gifts_tab_fav" role="tab" aria-selected="false" data-i18n="gifts.tabFav">Presentes favoritos</button>
+      </div>
+
+      <p class="gifts-intro" id="gifts_intro_text" data-i18n="gifts.introCalc">Calcule quanto de relacionamento seus presentes rendem em cada mercenária.</p>
+
+      <div id="gifts_panel_calc" class="gifts-panel gifts-calc-page">
+        <section class="gifts-rules card" aria-labelledby="gifts_rules_titulo">
+          <h3 class="gifts-rules__title" id="gifts_rules_titulo" data-i18n="gifts.rulesTitle">Como funciona</h3>
+          <ol class="gifts-rules__steps">
+            <li data-i18n="gifts.rulesStep1">Existem 9 presentes: 3 formatos (esfera, pirâmide, aspa) em cada raridade — Raro, Épico e Lendário.</li>
+            <li data-i18n="gifts.rulesStep2">Cada mercenária prefere um formato por raridade. O presente certo rende mais pontos de relacionamento (RP).</li>
+            <li data-i18n="gifts.rulesStep3">Use a tabela abaixo para ver o que cada uma prefere e quanto RP seu inventário gera se você der os presentes certos.</li>
+          </ol>
+          <div class="gifts-rules__pts" role="table" aria-label="Pontos por presente">
+            <div class="gifts-rules__pts-row gifts-rules__pts-head">
+              <span></span>
+              <span data-i18n="gifts.tier1">Raro</span>
+              <span data-i18n="gifts.tier2">Épico</span>
+              <span data-i18n="gifts.tier3">Lendário</span>
+            </div>
+            <div class="gifts-rules__pts-row">
+              <span data-i18n="gifts.rpFavorite">Preferido</span>
+              <span class="gifts-rp-fav">+12</span>
+              <span class="gifts-rp-fav">+24</span>
+              <span class="gifts-rp-fav">+60</span>
+            </div>
+            <div class="gifts-rules__pts-row">
+              <span data-i18n="gifts.rpOther">Outro formato</span>
+              <span class="gifts-rp-norm">+10</span>
+              <span class="gifts-rp-norm">+20</span>
+              <span class="gifts-rp-norm">+50</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="gifts-stock card" aria-labelledby="gifts_stock_titulo">
+          <div class="gifts-stock__header">
+            <div>
+              <h3 class="gifts-stock__title" id="gifts_stock_titulo" data-i18n="gifts.stockTitle">Seu inventário</h3>
+              <p class="gifts-stock__note" data-i18n="gifts.stockNote">Quantos de cada presente você tem. Os três formatos são os mesmos em todas as raridades — só muda a cor e o valor em RP.</p>
+            </div>
+            <p class="gifts-stock__total">
+              <span data-i18n="gifts.totalGifts">Total de presentes:</span>
+              <strong id="gifts_total_presentes">0</strong>
+            </p>
+          </div>
+          <div class="gifts-stock__shape-head" aria-hidden="true">
+            <span class="gifts-stock__shape-spacer"></span>
+            <span data-i18n="gifts.shape1">Esfera</span>
+            <span data-i18n="gifts.shape2">Pirâmide</span>
+            <span data-i18n="gifts.shape3">Aspa</span>
+          </div>
+          <div class="gifts-inventario-grid" id="gifts_inventario_grid"></div>
+          <div class="gifts-stock__actions">
+            <button type="button" class="btn btn--reset" id="gifts_reset_inventario" data-i18n="gifts.resetGifts">Resetar presentes</button>
+            <button type="button" class="btn btn--reset" id="gifts_reset_pontos" data-i18n="gifts.resetPoints">Resetar pontos das mercenárias</button>
+          </div>
+        </section>
+
+        <section class="gifts-mercs card" aria-labelledby="gifts_mercs_titulo">
+          <div class="gifts-mercs__header">
+            <h3 class="gifts-mercs__title" id="gifts_mercs_titulo" data-i18n="gifts.mercsTitle">Progresso por mercenária</h3>
+            <input type="search" id="gifts_calc_search" class="gifts-search" data-i18n="gifts.search" placeholder="Buscar mercenária…" autocomplete="off" />
+          </div>
+          <div class="gifts-table-wrap">
+            <table class="gifts-table gifts-table--calc" id="gifts_calc_table">
+              <thead>
+                <tr>
+                  <th scope="col" class="gifts-table__th-icon"></th>
+                  <th scope="col" data-sort="name" data-i18n="gifts.colMerc">Mercenária</th>
+                  <th scope="col" class="gifts-table__th-pref" data-i18n="gifts.colPref">Ela prefere</th>
+                  <th scope="col" data-sort="currentPoints">
+                    <span class="gifts-th-main" data-i18n="gifts.colPoints">Pontos atuais</span>
+                  </th>
+                  <th scope="col" data-sort="bestPoints" class="gifts-table__th-rp">
+                    <span class="gifts-th-main" data-i18n="gifts.colBest">RP (só certos)</span>
+                    <span class="gifts-th-sub" data-i18n="gifts.colBestHint">presentes que ela prefere</span>
+                  </th>
+                  <th scope="col" data-sort="totalPoints" class="gifts-table__th-rp">
+                    <span class="gifts-th-main" data-i18n="gifts.colTotal">RP (inventário)</span>
+                    <span class="gifts-th-sub" data-i18n="gifts.colTotalHint">todos os seus presentes</span>
+                  </th>
+                  <th scope="col" data-sort="requiredPoints" class="gifts-table__th-rp gifts-table__th-faltam">
+                    <span class="gifts-th-main" data-i18n="gifts.colRequired">Faltam</span>
+                    <span class="gifts-th-sub" data-i18n="gifts.colRequiredHint">até 35.100 RP</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody id="gifts_calc_body"></tbody>
+            </table>
+          </div>
+          <p class="gifts-hint" data-i18n="gifts.calcHint">Meta: 35.100 RP (relacionamento máximo). Pontos atuais em múltiplos de 2.</p>
+        </section>
+      </div>
+
+      <div id="gifts_panel_fav" class="gifts-panel" hidden>
+        <div class="gifts-fav-layout" id="gifts_fav_layout">
+          <div class="gifts-fav-main">
+            <div class="gifts-toolbar">
+              <input type="search" id="gifts_fav_search" class="gifts-search" data-i18n="gifts.search" placeholder="Buscar mercenária…" autocomplete="off" />
+              <button type="button" class="btn btn--secondary" id="gifts_toggle_filtros" data-i18n="gifts.filters">Filtros</button>
+            </div>
+            <div class="gifts-table-wrap">
+              <table class="gifts-table gifts-table--fav" id="gifts_fav_table">
+                <thead>
+                  <tr>
+                    <th scope="col" class="gifts-table__th-icon"></th>
+                    <th scope="col" data-sort="name" data-i18n="gifts.colMerc">Mercenária</th>
+                    <th scope="col" data-i18n="gifts.colOutfit">Traje</th>
+                    <th scope="col" data-i18n="gifts.colT1">Tier 1</th>
+                    <th scope="col" data-i18n="gifts.colT2">Tier 2</th>
+                    <th scope="col" data-i18n="gifts.colT3">Tier 3</th>
+                  </tr>
+                </thead>
+                <tbody id="gifts_fav_body"></tbody>
+              </table>
+            </div>
+            <p class="gifts-fav-total" id="gifts_fav_total"></p>
+            <p class="gifts-hint" data-i18n="gifts.favHint">Tier 1: +12 RP · Tier 2: +24 RP · Tier 3: +60 RP (presentes favoritos).</p>
+          </div>
+          <aside class="gifts-data-panel gifts-data-panel--filtros" id="gifts_filtro_panel" aria-labelledby="gifts_filtro_titulo">
+            <div class="gifts-data-panel__header">
+              <h3 id="gifts_filtro_titulo" data-i18n="gifts.filtersTitle">Filtros</h3>
+              <button type="button" class="gifts-panel-close" id="gifts_fechar_filtros" aria-label="Fechar">✕</button>
+            </div>
+            <h4 class="gifts-filter-group-title" data-i18n="gifts.filterGifts">Presentes</h4>
+            <div class="gifts-filter-gifts-row" id="gifts_filtro_t1"></div>
+            <div class="gifts-filter-gifts-row" id="gifts_filtro_t2"></div>
+            <div class="gifts-filter-gifts-row" id="gifts_filtro_t3"></div>
+            <button type="button" class="btn btn--reset" id="gifts_reset_filtros" data-i18n="gifts.resetFilters">Resetar filtros</button>
+          </aside>
+        </div>
+      </div>
+
+      <div id="gifts_outfit_tooltip" class="gifts-outfit-tooltip" hidden></div>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,52 @@
+:root {
+  --cor-titulo: rgb(255, 207, 47);
+  --cor-fundo-pagina: #f4f4f6;
+  --cor-texto-principal: #1a1a1e;
+  --cor-texto-secundario: #5c5c66;
+  --cor-fundo-card: #ffffff;
+  --cor-borda: #d8d8e0;
+  --cor-sombra: rgba(0, 0, 0, 0.08);
+  --cor-texto-alma: #c9a227;
+  --cor-texto-creditos: #5a6a7a;
+  --cor-botao-copiar: #2e7d4a;
+  --cor-botao-copiar-hover: #256b3f;
+  --cor-botao-reset: #6c757d;
+  --cor-botao-reset-hover: #5a6268;
+  --cor-botao-tema: #7c3aed;
+  --cor-botao-tema-hover: #6d28d9;
+  --cor-erro-fundo: #dc2626;
+  --cor-erro-texto: #ffffff;
+  --cor-foco: #7c3aed;
+  --cor-lang-ativo: #7c3aed;
+  --cor-lang-fundo: #ebebef;
+  --raio: 10px;
+  --espaco-xs: 0.25rem;
+  --espaco-sm: 0.5rem;
+  --espaco-md: 1rem;
+  --espaco-lg: 1.5rem;
+  --espaco-xl: 2rem;
+  --largura-max: 1040px;
+  --fonte: system-ui, 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.tema_escuro {
+  --cor-fundo-pagina: #121214;
+  --cor-texto-principal: #f0f0f4;
+  --cor-texto-secundario: #a0a0b0;
+  --cor-fundo-card: #1c1c22;
+  --cor-borda: #3a3a48;
+  --cor-sombra: rgba(0, 0, 0, 0.35);
+  --cor-texto-alma: #ffcc41;
+  --cor-texto-creditos: #8a9aaa;
+  --cor-botao-copiar: #388e3c;
+  --cor-botao-copiar-hover: #2d7a32;
+  --cor-botao-reset: #5a6268;
+  --cor-botao-reset-hover: #4a5258;
+  --cor-lang-fundo: #2a2a34;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not(.tema_claro_forcado) {
+    color-scheme: dark;
+  }
+}
