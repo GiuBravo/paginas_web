@@ -102,6 +102,16 @@ export function getPaddleOcrInitError() {
 }
 
 /**
+ * Nova sessão do scanner: permite novo `init` se o motor ainda não existe.
+ * @returns {void}
+ */
+export function syncPaddleOcrSessionStart() {
+  if (paddleRecEngine) return;
+  paddleInitError = null;
+  paddleInitPromise = null;
+}
+
+/**
  * Reconhece texto num canvas (faixa do nome já pré-processada).
  * @param {HTMLCanvasElement} canvas
  * @returns {Promise<{ text: string, confidence: number }|null>}

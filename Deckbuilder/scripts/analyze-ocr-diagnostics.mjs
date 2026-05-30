@@ -27,6 +27,7 @@ function loadPayload(path) {
 const payload = loadPayload(input);
 const samples = payload.session?.samples || [];
 console.log(`\n=== OCR diagnóstico: ${input} ===`);
+console.log(`Schema: v${payload.session?.schemaVersion ?? '?'}`);
 console.log(`Amostras: ${samples.length}\n`);
 
 const rarityUi = {};
@@ -36,6 +37,11 @@ const rarityArt = {};
 const mismatches = [];
 const typeUi = {};
 const typeFrame = {};
+const passcodeRaw = [];
+const passcodeCands = [];
+const passcodeVariants = {};
+let passcodeConfSum = 0;
+let passcodeConfN = 0;
 
 for (const s of samples) {
   const ui = s.lastDetectedCardRarityUi || '(vazio)';
@@ -62,6 +68,18 @@ for (const s of samples) {
     s.typeProbe?.classifiedTypeMerged ||
     s.typeProbe?.classifiedTypeFromFrameOnly;
   if (frame) typeFrame[frame] = (typeFrame[frame] || 0) + 1;
+
+  const pp = s.passcodeProbe;
+  if (pp?.sidecar?.raw) passcodeRaw.push({ seq: s.seq, raw: pp.sidecar.raw });
+  if (pp?.sidecar?.candidates?.length) {
+    passcodeCands.push({ seq: s.seq, cands: pp.sidecar.candidates, conf: pp.sidecar.confidence });
+  }
+  if (typeof pp?.sidecar?.confidence === 'number') {
+    passcodeConfSum += pp.sidecar.confidence;
+    passcodeConfN++;
+  }
+  const bv = pp?.bestVariant || pp?.sidecar?.variantId;
+  if (bv) passcodeVariants[bv] = (passcodeVariants[bv] || 0) + 1;
 }
 
 const printMap = (title, map) => {
@@ -90,8 +108,25 @@ for (const m of mismatches.slice(0, 25)) {
   );
 }
 
+console.log('\n=== Passcode / ID ===');
+console.log(`  Amostras com OCR bruto: ${passcodeRaw.length}`);
+console.log(`  Amostras com candidatos: ${passcodeCands.length}`);
+console.log(
+  `  Confiança média: ${passcodeConfN ? Math.round((passcodeConfSum / passcodeConfN) * 10) / 10 : '—'}`
+);
+printMap('Variantes vencedoras (bestVariant):', passcodeVariants);
+console.log('Exemplos raw (até 15):');
+for (const r of passcodeRaw.slice(0, 15)) {
+  console.log(`  #${r.seq} ${r.raw}`);
+}
+console.log('\nExemplos candidatos (até 15):');
+for (const c of passcodeCands.slice(0, 15)) {
+  console.log(`  #${c.seq} conf=${c.conf ?? '—'} → ${(c.cands || []).join(', ')}`);
+}
+
 if (payload.analysisSummary) {
   console.log('\n(Resumo embutido no export)');
   console.log(`  UI vs moldura tipo: ${payload.analysisSummary.uiVsFrameMismatchCount ?? '?'}`);
   console.log(`  UI vs detetada raridade: ${payload.analysisSummary.rarityMismatchCount ?? '?'}`);
+  console.log(`  Passcode com candidatos: ${payload.analysisSummary.passcodeSamplesWithCandidates ?? '?'}`);
 }

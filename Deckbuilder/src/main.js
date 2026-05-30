@@ -354,6 +354,10 @@ let deckSnapshotForSurface = null;
 let surfaceFilterFxTimer = null;
 /** Debounce só do toast de mudança de página (som/pulso ficam síncronos ao gesto — evita bloqueio de áudio e fila de toasts). */
 let surfacePageFxTimer = null;
+/** Atraso antes de aplicar pré-visualização hover nos selects custom (tema, ordenação, deck salvo, …). */
+const NATIVE_SELECT_HOVER_PREVIEW_MS = 280;
+/** Atraso antes de pré-visualizar filtro/API ao hover nas sugestões de combo. */
+const FILTER_COMBO_HOVER_PREVIEW_MS = 380;
 /** Scroll automático pós-add: tenta focar a pilha/carta recém adicionada. */
 let pendingDeckScrollTarget = null;
 /** Snapshot mobile `{ rvEl, rv, vp }` antes de `updateUI`; `rvEl` é `#results-view` quando existir. `generatePDF` / `#preview-frame` repõem scroll após layout assíncrono. */
@@ -5636,7 +5640,7 @@ function applyDeckSortToQueue() {
  * @returns {Promise<void>}
  */
 async function deckSortAndRefresh(opts) {
-  requestCardSurfaceFeedback('deck_sort');
+  if (!opts || !opts.preview) requestCardSurfaceFeedback('deck_sort');
   getDeckSortCriterion();
   if (!opts || !opts.preview)
     setUiPref(UI_PREF_KEYS.deckSort, String(getDeckSortCriterion() || 'custom'));
@@ -6402,6 +6406,7 @@ function clearLanguageSensitiveApiCaches() {
       'toast.zip_ydk_saved': 'ZIP with YDKs saved.',
       'toast.surface.page': 'Suggestions: page {n}',
       'toast.surface.theme': 'Thème updated',
+      'toast.surface.api_lang': 'Langue des cartes (API) updated',
       'toast.surface.suggestions_view': 'Suggestion view mode changed',
       'toast.surface.deck_view': 'Deck view mode changed',
       'toast.surface.sort': 'Result sort updated',
@@ -6998,6 +7003,7 @@ function clearLanguageSensitiveApiCaches() {
       'toast.zip_ydk_saved': 'ZIP with YDKs saved.',
       'toast.surface.page': 'Suggestions: page {n}',
       'toast.surface.theme': 'Design updated',
+      'toast.surface.api_lang': 'Kartensprache (API) updated',
       'toast.surface.suggestions_view': 'Suggestion view mode changed',
       'toast.surface.deck_view': 'Deck view mode changed',
       'toast.surface.sort': 'Result sort updated',
@@ -7594,6 +7600,7 @@ function clearLanguageSensitiveApiCaches() {
       'toast.zip_ydk_saved': 'ZIP with YDKs saved.',
       'toast.surface.page': 'Suggestions: page {n}',
       'toast.surface.theme': 'Tema updated',
+      'toast.surface.api_lang': 'Lingua carte (API) updated',
       'toast.surface.suggestions_view': 'Suggestion view mode changed',
       'toast.surface.deck_view': 'Deck view mode changed',
       'toast.surface.sort': 'Result sort updated',
@@ -8197,15 +8204,11 @@ const STRINGS = {
   'ocr.btn.debug': { pt: 'EXPORTAR DEBUG (JSON)', en: 'EXPORT DEBUG (JSON)' },
   'ocr.btn.printbot': { pt: 'PRINT ROB\u00d4', en: 'PRINT BOT' },
   'ocr.crosshair': {
-    pt: '\uD83C\uDFAF Azul: carta \u00b7 Verde: nome \u00b7 Laranja estreita: ID',
-    en: '\uD83C\uDFAF Blue: card \u00b7 Green: name \u00b7 Narrow orange: ID',
+    pt: 'Enquadrar a carta.',
+    en: 'Frame the card.',
   },
   'ocr.preview.name_label': { pt: 'Nome lido', en: 'Name read' },
   'ocr.preview.id_label': { pt: 'ID lido', en: 'ID read' },
-  'ocr.preview.id_hint': {
-    pt: 'Recorte da mira laranja (como a c\u00e2mara v\u00ea)',
-    en: 'Orange frame crop (camera view)',
-  },
   'ocr.live.passcode_no_text': { pt: 'ID: \u2014', en: 'ID: \u2014' },
   'ocr.live.passcode_reading': {
     pt: 'ID: \u00ab{raw}\u00bb \u00b7 candidatos {cands} \u00b7 {engine} {conf}% \u00b7 {status}',
@@ -8266,7 +8269,7 @@ const STRINGS = {
   'ocr.type.trap': { pt: 'Armadilha', en: 'Trap' },
   'ocr.type.xyz': { pt: 'Monstro Xyz', en: 'Xyz Monster' },
   'ocr.focus_tap': {
-    pt: '\uD83D\uDCF7 Toque no ecr\u00e3 para focar',
+    pt: '\uD83D\uDCF7 Toque na tela para focar',
     en: '\uD83D\uDCF7 Tap the screen to focus',
   },
   'ocr.status.initial': { pt: 'ESTADO: A analisar\u2026', en: 'STATUS: Analyzing\u2026' },
@@ -8292,11 +8295,43 @@ const STRINGS = {
     pt: '\u26A0\uFE0F OCR foil indispon\u00edvel: {msg}',
     en: '\u26A0\uFE0F Foil OCR unavailable: {msg}',
   },
+  'ocr.log.paddle_fallback_tesseract': {
+    pt: '\u26A0\uFE0F Paddle indispon\u00edvel \u2014 a usar Tesseract nos passes foil',
+    en: '\u26A0\uFE0F Paddle unavailable \u2014 using Tesseract for foil passes',
+  },
   'ocr.framing.seeking': {
     pt: '\uD83D\uDCD0 Alinhe a carta \u00e0 moldura azul',
     en: '\uD83D\uDCD0 Align the card to the blue frame',
   },
   'ocr.framing.aligned': { pt: '\u2713 Enquadrado', en: '\u2713 Framed' },
+  'ocr.framing.find_card': {
+    pt: '\uD83D\uDD0D Aponte para a carta inteira',
+    en: '\uD83D\uDD0D Point at the full card',
+  },
+  'ocr.framing.move_closer': { pt: '\u2B06\uFE0F Aproxime a c\u00e2mara', en: '\u2B06\uFE0F Move closer' },
+  'ocr.framing.move_back': { pt: '\u2B07\uFE0F Afaste a c\u00e2mara', en: '\u2B07\uFE0F Move back' },
+  'ocr.framing.shift_left': {
+    pt: '\u2B05\uFE0F Mova a carta \u00e0 esquerda',
+    en: '\u2B05\uFE0F Shift card left',
+  },
+  'ocr.framing.shift_right': {
+    pt: '\u27A1\uFE0F Mova a carta \u00e0 direita',
+    en: '\u27A1\uFE0F Shift card right',
+  },
+  'ocr.framing.shift_up': { pt: '\u2B06\uFE0F Suba a carta', en: '\u2B06\uFE0F Move card up' },
+  'ocr.framing.shift_down': { pt: '\u2B07\uFE0F Des\u00e7a a carta', en: '\u2B07\uFE0F Move card down' },
+  'ocr.framing.hold_steady': {
+    pt: '\u270B Segure firme um instante',
+    en: '\u270B Hold steady for a moment',
+  },
+  'ocr.framing.locked': {
+    pt: '\uD83D\uDD12 Enquadramento travado',
+    en: '\uD83D\uDD12 Framing locked',
+  },
+  'ocr.framing.tap_lock': {
+    pt: 'Toque na tela para focar',
+    en: 'Tap the screen to focus',
+  },
   'ocr.log.scanning': { pt: '\uD83D\uDD0D A digitalizar\u2026', en: '\uD83D\uDD0D Scanning\u2026' },
   'ocr.log.error': { pt: '\u274C Erro: {msg}', en: '\u274C Error: {msg}' },
   'ocr.log.reading': {
@@ -8850,6 +8885,10 @@ const STRINGS = {
   'toast.zip_ydk_saved': { pt: 'ZIP com YDKs salvo.', en: 'ZIP with YDKs saved.' },
   'toast.surface.page': { pt: 'Sugest\u00f5es: p\u00e1gina {n}', en: 'Suggestions: page {n}' },
   'toast.surface.theme': { pt: 'Tema atualizado', en: 'Theme updated' },
+  'toast.surface.api_lang': {
+    pt: 'Idioma das cartas (API) atualizado',
+    en: 'Card language (API) updated',
+  },
   'toast.surface.suggestions_view': {
     pt: 'Modo de visualiza\u00e7\u00e3o das sugest\u00f5es alterado',
     en: 'Suggestion view mode changed',
@@ -11026,14 +11065,16 @@ function changeTheme(themeName, opts) {
   const utc = UI_THEME_CLASSES;
   for (let ti = 0; ti < utc.length; ti++) root.classList.remove(utc[ti]);
   if (themeName) root.classList.add(themeName);
-  if (!opts || !opts.preview) {
+  const isCommit = !opts || !opts.preview;
+  if (isCommit) {
     setUiPref(UI_PREF_KEYS.theme, themeName);
     try {
       localStorage.setItem('selectedTheme', themeName);
     } catch (_) {}
+    requestCardSurfaceFeedback('theme');
   }
-  requestCardSurfaceFeedback('theme');
   renderResults();
+  if (isCommit) flushPendingCardSurfaceFeedbackIfAny();
 }
 
 /**
@@ -14103,6 +14144,33 @@ function applyTcgOcgBanStatusPreviewRow(raw) {
 }
 
 /**
+ * Cancela pré-visualização hover pendente nas sugestões de filtro combo.
+ *
+ * @returns {void}
+ */
+function cancelFilterComboHoverPreviewTimer() {
+  if (filterComboHoverPreviewTimer) {
+    clearTimeout(filterComboHoverPreviewTimer);
+    filterComboHoverPreviewTimer = null;
+  }
+}
+
+/**
+ * Agenda pré-visualização de filtro após pausa no item (evita rajadas de API/toasts ao passar o rato).
+ *
+ * @param {string} kind
+ * @param {unknown} valueText
+ * @returns {void}
+ */
+function scheduleFilterComboSuggestRowPreview(kind, valueText) {
+  cancelFilterComboHoverPreviewTimer();
+  filterComboHoverPreviewTimer = setTimeout(() => {
+    filterComboHoverPreviewTimer = null;
+    onFilterComboSuggestRowEnter(kind, valueText);
+  }, FILTER_COMBO_HOVER_PREVIEW_MS);
+}
+
+/**
  * Hover numa linha do painel flutuante: grava baseline na 1ª vez, aplica filtro pré-visualizado e dispara {@link performSearch} com sync de URL suspenso.
  *
  * @param {string} kind Tipo do campo (`cardset`, `type`, `banlist`, …).
@@ -14218,6 +14286,7 @@ function bindFilterComboSuggestScrollReposition() {
  * @returns {void}
  */
 function hideFilterComboSuggestPanel(revertPreview) {
+  cancelFilterComboHoverPreviewTimer();
   const panel = getEl('filter-combo-suggest-panel');
   if (panel) panel.style.display = 'none';
   filterComboSuggestAnchorInput = null;
@@ -14228,7 +14297,10 @@ function hideFilterComboSuggestPanel(revertPreview) {
     restoreDeckbuilderFilterBaseline(snap);
     filterUrlSyncSuspended = false;
     filterPreviewSearchSeq++;
-    void performSearch(true);
+    suppressFilterSurfaceFeedback = true;
+    void performSearch(true).finally(() => {
+      suppressFilterSurfaceFeedback = false;
+    });
   }
 }
 
@@ -14241,6 +14313,7 @@ function hideFilterComboSuggestPanel(revertPreview) {
  * @returns {void}
  */
 function commitFilterComboPick(kind, rawText, inp) {
+  cancelFilterComboHoverPreviewTimer();
   const hadRowPreview = !!filterPreviewBaselineSnapshot;
   if (hadRowPreview) filterPreviewBaselineSnapshot = null;
   filterUrlSyncSuspended = false;
@@ -14260,6 +14333,7 @@ function commitFilterComboPick(kind, rawText, inp) {
     paintAllMultiTextChips();
     syncDatePeriodGroupVisibility();
     currentPage = 1;
+    requestCardSurfaceFeedback('filter');
     sortAndRender();
     scheduleDeckbuilderFilterUrlSync();
     // Ao "confirmar" uma sugestão nós limpamos o input via JS (não dispara 'input').
@@ -14698,7 +14772,7 @@ function refreshFilterComboSuggestPanel(inp, kind) {
     } else {
       div.innerHTML = filterSuggestRowInnerHtml(kind, row);
     }
-    div.addEventListener('mouseenter', () => onFilterComboSuggestRowEnter(kind, row.value));
+    div.addEventListener('mouseenter', () => scheduleFilterComboSuggestRowPreview(kind, row.value));
     div.addEventListener('mousedown', (e) => {
       e.preventDefault();
       commitFilterComboPick(kind, row.value, inp);
@@ -14992,6 +15066,9 @@ function ensureNativeCustomSelectPanel() {
   panel.className = 'ui-native-custom-select-panel';
   panel.setAttribute('role', 'listbox');
   document.body.appendChild(panel);
+  panel.addEventListener('mouseleave', () => {
+    cancelNativeCustomSelectHoverPreviewTimer();
+  });
   return panel;
 }
 
@@ -15159,6 +15236,7 @@ function armNativeCustomSelectOutsidePointerClose() {
  * @returns {Promise<void>}
  */
 async function hideNativeCustomSelectPanel(revertPreview) {
+  cancelNativeCustomSelectHoverPreviewTimer();
   disarmNativeCustomSelectOutsidePointerClose();
   const panel = getEl('ui-native-custom-select-panel');
   if (panel) {
@@ -15174,6 +15252,33 @@ async function hideNativeCustomSelectPanel(revertPreview) {
   nativeCustomSelectBaseline = null;
   nativeCustomSelectCtx = null;
   if (revertPreview && snap) await restoreNativeSelectPreview(snap);
+}
+
+/**
+ * Cancela pré-visualização hover pendente no painel de select custom.
+ *
+ * @returns {void}
+ */
+function cancelNativeCustomSelectHoverPreviewTimer() {
+  if (nativeCustomSelectHoverTimer) {
+    clearTimeout(nativeCustomSelectHoverTimer);
+    nativeCustomSelectHoverTimer = null;
+  }
+}
+
+/**
+ * Agenda pré-visualização de select custom após pausa no item (evita toasts/re-renders ao passar o rato).
+ *
+ * @param {string} kind
+ * @param {string} value
+ * @returns {void}
+ */
+function scheduleNativeCustomSelectRowPreview(kind, value) {
+  cancelNativeCustomSelectHoverPreviewTimer();
+  nativeCustomSelectHoverTimer = setTimeout(() => {
+    nativeCustomSelectHoverTimer = null;
+    void onNativeCustomSelectRowEnter(kind, value);
+  }, NATIVE_SELECT_HOVER_PREVIEW_MS);
 }
 
 /**
@@ -15219,6 +15324,7 @@ async function onNativeCustomSelectRowEnter(kind, value) {
  * @returns {Promise<void>}
  */
 async function commitNativeCustomSelect(kind, value) {
+  cancelNativeCustomSelectHoverPreviewTimer();
   const hadPreview = !!nativeCustomSelectBaseline;
   nativeCustomSelectBaseline = null;
   nativeSelectPreviewGen++;
@@ -15253,9 +15359,14 @@ async function commitNativeCustomSelect(kind, value) {
       setUiPref(UI_PREF_KEYS.deckBanlist, value || '');
     } catch (_) {}
     paintDeckValidityFlag();
+    requestCardSurfaceFeedback('banlist_deck');
     updateUI();
   } else if (kind === 'api-lang') {
+    const prevLang = normalizeApiCardLangPref(getUiLang());
+    const nextLang = normalizeApiCardLangPref(value);
+    if (prevLang !== nextLang) requestCardSurfaceFeedback('api_lang');
     setApiCardLang(value);
+    if (prevLang !== nextLang) flushPendingCardSurfaceFeedbackIfAny();
   } else if (kind === 'ocr-manual-type' || kind === 'ocr-manual-rarity') {
     try {
       syncOcrManualRowDisplays(lastDetectedCardType, lastDetectedCardRarity, { calibrating: false });
@@ -15313,7 +15424,7 @@ function refreshNativeCustomSelectPanel() {
     if (rowAccent) div.style.setProperty('--suggest-row-accent', rowAccent);
     else div.style.removeProperty('--suggest-row-accent');
     div.addEventListener('mouseenter', () => {
-      void onNativeCustomSelectRowEnter(kind, v);
+      scheduleNativeCustomSelectRowPreview(kind, v);
     });
     div.addEventListener('mousedown', (e) => {
       e.preventDefault();
@@ -16297,6 +16408,8 @@ let filterUrlSyncSuspended = false;
 let filterPreviewBaselineSnapshot = null;
 /** Contador anti‑corrida das pré‑buscas ao mover o rato nas sugestões. */
 let filterPreviewSearchSeq = 0;
+/** Suprime toast de filtro em buscas de revert de pré-visualização hover. */
+let suppressFilterSurfaceFeedback = false;
 /** Input que abriu o painel flutuante de sugestões de filtro. */
 let filterComboSuggestAnchorInput = null;
 /** Kind do input de sugestão ativo (`type`, `subtype`, …). */
@@ -16313,6 +16426,10 @@ let nativeCustomSelectCtx = null;
 let nativeCustomSelectOutsideDown = null;
 /** Scroll/resize já ligados ao painel de select custom. */
 let nativeCustomSelectScrollBound = false;
+/** Timer de debounce da pré-visualização hover no painel de select custom. */
+let nativeCustomSelectHoverTimer = null;
+/** Timer de debounce da pré-visualização hover nas sugestões de filtro combo. */
+let filterComboHoverPreviewTimer = null;
 
 /**
  * Indica se `URLSearchParams` contém algum parâmetro de filtro serializado (`flt_*`).
@@ -20086,16 +20203,18 @@ function compareCardsBySortCriterion(a, b, criterion, direction, banlistType) {
  * @returns {void}
  */
 function sortAndRender(opts) {
-  if (!cardSurfaceFeedbackReason) requestCardSurfaceFeedback('sort');
+  const isCommit = !opts || !opts.preview;
+  if (isCommit && !cardSurfaceFeedbackReason) requestCardSurfaceFeedback('sort');
   const criterion = String(getVal('sort-by', ''));
-  if (!opts || !opts.preview) setUiPref(UI_PREF_KEYS.resultsSort, criterion);
+  if (isCommit) setUiPref(UI_PREF_KEYS.resultsSort, criterion);
   if (criterion === 'random') {
     shuffleArrayInPlace(searchResults);
     currentPage = 1;
     renderResults();
     try {
-      if (!opts || !opts.preview) scheduleDeckbuilderFilterUrlSync();
+      if (isCommit) scheduleDeckbuilderFilterUrlSync();
     } catch (_) {}
+    if (isCommit) flushPendingCardSurfaceFeedbackIfAny();
     return;
   }
   if (criterion === 'genesys_points') {
@@ -20130,8 +20249,9 @@ function sortAndRender(opts) {
   currentPage = 1;
   renderResults();
   try {
-    if (!opts || !opts.preview) scheduleDeckbuilderFilterUrlSync();
+    if (isCommit) scheduleDeckbuilderFilterUrlSync();
   } catch (_) {}
+  if (isCommit) flushPendingCardSurfaceFeedbackIfAny();
 }
 
 /**
@@ -20277,25 +20397,110 @@ function formatCardTypeForUi(typeStr) {
 }
 
 /**
- * Toast genérico no contentor `#toast-container` (sucesso ou erro curto, auto-remove ~2 s).
+ * Metadados visuais/sonoros por tipo de toast “clássico” ({@link showToast}).
+ * `family` reutiliza gradientes `toast-sfc-*`; `chime` mapeia para {@link playCardSurfaceChime}.
+ */
+const TOAST_KIND_DEFS = Object.freeze({
+  success: { icon: '✔', family: 'pop', chime: 'toast_success' },
+  error: { icon: '✖', family: 'alert', chime: 'toast_error' },
+  save: { icon: '◆', family: 'dock', chime: 'toast_save' },
+  deck: { icon: '▣', family: 'shuffle', chime: 'toast_deck' },
+  export: { icon: '⤓', family: 'pdfui', chime: 'toast_export' },
+  import: { icon: '⤒', family: 'layout', chime: 'toast_import' },
+  filter: { icon: '◎', family: 'sift', chime: 'filter' },
+  search: { icon: '⌕', family: 'slide', chime: 'toast_search' },
+  ocr: { icon: '◫', family: 'spin', chime: 'toast_ocr' },
+  info: { icon: 'ℹ', family: 'tipui', chime: 'toast_info' },
+  warning: { icon: '⚠', family: 'alert', chime: 'toast_warning' },
+  clipboard: { icon: '⎘', family: 'layout', chime: 'toast_clipboard' },
+  random: { icon: '✧', family: 'spin', chime: 'random_pick' },
+  add: { icon: '▴', family: 'pop', chime: 'deck_add' },
+  remove: { icon: '▾', family: 'sink', chime: 'deck_remove' },
+});
+
+/**
+ * Deduz tipo de toast a partir de variante explícita, `opts.kind` ou texto da mensagem (PT/EN).
+ *
+ * @param {string} msg
+ * @param {string} variant
+ * @param {string|undefined} explicitKind
+ * @returns {string}
+ */
+function inferToastKind(msg, variant, explicitKind) {
+  if (explicitKind && TOAST_KIND_DEFS[explicitKind]) return explicitKind;
+  if (variant === 'error') return 'error';
+  if (variant === 'info') return 'info';
+  if (variant === 'warning') return 'warning';
+  const m = String(msg || '').toLowerCase();
+  if (
+    /falhou|fail|erro|inválid|invalid|imposs|missing|não encontr|not found|não foi|could not|unable|denied|rejeit|reject/.test(
+      m
+    )
+  )
+    return 'error';
+  if (/ocr|scanner|calibr|tesseract|paddle/.test(m)) return 'ocr';
+  if (/clipboard|copiado|copied|cola|paste/.test(m)) return 'clipboard';
+  if (/pdf|ydk|csv|zip|export|exporta|imagem|image/.test(m)) return 'export';
+  if (/import|importa|importado|imported/.test(m)) return 'import';
+  if (/aleat|random/.test(m)) return 'random';
+  if (/−1x|-1x|remov|removed|retirad/.test(m)) return 'remove';
+  if (/→|added|adicionad|\+1x|\+\dx/.test(m)) return 'add';
+  if (/salv|saved|guard|renomead|renamed|restaur|loaded|carregado|draft/.test(m)) return 'save';
+  if (/deck|baralho|side|principal|extra|pilha/.test(m)) return 'deck';
+  if (
+    /filtro|filter|busca|search|scan|raridade|rarity|setcode|set |arquet|archetype|banlist|termo|term/.test(
+      m
+    )
+  )
+    return 'filter';
+  if (/carreg|loading|wait|aguarde|ligada|info/.test(m)) return 'info';
+  if (/limite|limit|max|máx|já selecion|already|dup|duplic|short|curto|need|precisa|pick|escolh/.test(m))
+    return 'warning';
+  return 'success';
+}
+
+/**
+ * Som + vibração (mobile) para toasts clássicos.
+ *
+ * @param {string} kind Chave em {@link TOAST_KIND_DEFS}.
+ * @param {string} variant `success` | `error` | `info` | `warning`.
+ * @returns {void}
+ */
+function emitToastSensoryFeedback(kind, variant) {
+  const def = TOAST_KIND_DEFS[kind] || TOAST_KIND_DEFS.success;
+  const chimeKind = variant === 'error' ? 'toast_error' : def.chime;
+  playCardSurfaceChime(chimeKind);
+  pulseToastHaptic(variant === 'error' ? 'alert' : def.family);
+}
+
+/**
+ * Toast genérico no contentor `#toast-container`: cores/ícones por tipo, som distinto e vibração no mobile.
  *
  * @param {string} msg Texto (passado por {@link escapeHtml} no markup).
- * @param {{ variant?: 'success'|'error' }} [opts] `variant` altera classe e ícone.
+ * @param {{ variant?: 'success'|'error'|'info'|'warning', kind?: string }} [opts] `kind` força tipo visual/sonoro.
  * @returns {void}
  */
 function showToast(msg, opts) {
   const container = getEl('toast-container');
-  if (!container) return;
+  if (!container || !msg) return;
+  const variant =
+    opts && opts.variant && ['success', 'error', 'info', 'warning'].includes(String(opts.variant))
+      ? String(opts.variant)
+      : 'success';
+  const kind = inferToastKind(msg, variant, opts && opts.kind);
+  const def = TOAST_KIND_DEFS[kind] || TOAST_KIND_DEFS.success;
+  const family = variant === 'error' ? 'alert' : def.family;
+  const icon = variant === 'error' ? '✖' : def.icon;
   const toast = document.createElement('div');
-  const variant = opts && opts.variant ? String(opts.variant) : 'success';
-  toast.className = `toast${variant === 'error' ? ' toast-error' : ''}`;
-  const ic = variant === 'error' ? '✖' : '✔';
   const long = String(msg).length > 90;
-  if (long) toast.classList.add('toast--long');
-  toast.innerHTML = `<span>${ic}</span> ${escapeHtml(msg)}`;
+  toast.className = `toast toast-styled toast-surface toast-sfc-${family} toast-tk-${kind}${
+    variant === 'error' ? ' toast-tk-error' : ''
+  }${long ? ' toast--long' : ''}`;
+  toast.innerHTML = `<span class="toast-surface-ic" aria-hidden="true">${icon}</span> ${escapeHtml(msg)}`;
   container.appendChild(toast);
-  const ttl = long ? 4200 : 2000;
+  const ttl = long ? 4200 : variant === 'error' ? 2800 : 2000;
   setTimeout(() => toast.remove(), ttl);
+  emitToastSensoryFeedback(kind, variant);
 }
 
 /**
@@ -20317,6 +20522,17 @@ function consumeCardSurfaceFeedback() {
   const r = cardSurfaceFeedbackReason;
   cardSurfaceFeedbackReason = null;
   return r;
+}
+
+/**
+ * Aplica feedback superficial pendente se {@link renderResults} / {@link updateUI} não o consumiram (ex.: estado de carregamento).
+ *
+ * @returns {void}
+ */
+function flushPendingCardSurfaceFeedbackIfAny() {
+  if (isUpdatingUi) return;
+  const pending = consumeCardSurfaceFeedback();
+  if (pending) applyCardSurfaceFeedback(pending);
 }
 
 /**
@@ -20493,6 +20709,7 @@ const SURFACE_FAMILY_BY_REASON = Object.freeze({
   page: 'slide',
   sort: 'tilt',
   theme: 'aura',
+  api_lang: 'layout',
   suggestions_view: 'layout',
   deck_view: 'layout',
   filters_column_show: 'rail',
@@ -20769,6 +20986,78 @@ function playCardSurfaceChime(kind) {
         beep(392, 'sine', t0 + 0.19, 0.11, 0.055);
         stopAt = 0.34;
         break;
+      case 'api_lang':
+        beep(466.16, 'triangle', t0, 0.07, 0.07);
+        beep(587.33, 'triangle', t0 + 0.08, 0.08, 0.065);
+        beep(698.46, 'triangle', t0 + 0.17, 0.09, 0.055);
+        stopAt = 0.32;
+        break;
+      case 'toast_error':
+        beep(185, 'sawtooth', t0, 0.07, 0.08);
+        beep(164.81, 'sawtooth', t0 + 0.08, 0.09, 0.07);
+        beep(146.83, 'square', t0 + 0.18, 0.11, 0.055);
+        stopAt = 0.34;
+        break;
+      case 'toast_success':
+        beep(523.25, 'sine', t0, 0.08, 0.085);
+        beep(659.25, 'sine', t0 + 0.09, 0.1, 0.075);
+        stopAt = 0.24;
+        break;
+      case 'toast_save':
+        beep(392, 'sine', t0, 0.07, 0.075);
+        beep(493.88, 'sine', t0 + 0.08, 0.08, 0.07);
+        beep(587.33, 'sine', t0 + 0.17, 0.1, 0.065);
+        stopAt = 0.32;
+        break;
+      case 'toast_deck':
+        beep(349.23, 'triangle', t0, 0.08, 0.075);
+        beep(440, 'triangle', t0 + 0.09, 0.09, 0.07);
+        beep(523.25, 'triangle', t0 + 0.19, 0.1, 0.06);
+        stopAt = 0.34;
+        break;
+      case 'toast_export':
+        beep(329.63, 'square', t0, 0.05, 0.06);
+        beep(415.3, 'square', t0 + 0.06, 0.05, 0.055);
+        beep(523.25, 'square', t0 + 0.12, 0.06, 0.05);
+        beep(659.25, 'square', t0 + 0.19, 0.07, 0.045);
+        stopAt = 0.32;
+        break;
+      case 'toast_import':
+        beep(659.25, 'square', t0, 0.05, 0.055);
+        beep(523.25, 'square', t0 + 0.06, 0.05, 0.05);
+        beep(415.3, 'square', t0 + 0.12, 0.06, 0.048);
+        beep(329.63, 'square', t0 + 0.19, 0.07, 0.042);
+        stopAt = 0.32;
+        break;
+      case 'toast_search':
+        beep(880, 'sine', t0, 0.04, 0.06);
+        beep(1046.5, 'sine', t0 + 0.05, 0.05, 0.055);
+        beep(1318.51, 'sine', t0 + 0.11, 0.06, 0.045);
+        stopAt = 0.22;
+        break;
+      case 'toast_ocr':
+        beep(622.25, 'sawtooth', t0, 0.04, 0.05);
+        beep(739.99, 'sawtooth', t0 + 0.05, 0.05, 0.048);
+        beep(880, 'sine', t0 + 0.11, 0.07, 0.055);
+        stopAt = 0.24;
+        break;
+      case 'toast_info':
+        beep(698.46, 'sine', t0, 0.09, 0.065);
+        beep(880, 'sine', t0 + 0.1, 0.1, 0.055);
+        stopAt = 0.24;
+        break;
+      case 'toast_warning':
+        beep(277.18, 'triangle', t0, 0.06, 0.065);
+        beep(349.23, 'triangle', t0 + 0.07, 0.07, 0.06);
+        beep(440, 'triangle', t0 + 0.15, 0.08, 0.055);
+        stopAt = 0.28;
+        break;
+      case 'toast_clipboard':
+        beep(523.25, 'sine', t0, 0.05, 0.07);
+        beep(783.99, 'sine', t0 + 0.06, 0.06, 0.06);
+        beep(1046.5, 'sine', t0 + 0.13, 0.07, 0.05);
+        stopAt = 0.24;
+        break;
       default:
         beep(440, 'sine', t0, 0.1, 0.075);
         stopAt = 0.14;
@@ -20821,17 +21110,29 @@ const SURFACE_HAPTIC_PATTERNS = Object.freeze({
 });
 
 /**
+ * Vibração curta no mobile (requer gesto prévio do utilizador).
+ *
+ * @param {string} hapticKey Família háptica (`pop`, `alert`, …) ou motivo de superfície.
+ * @returns {void}
+ */
+function pulseToastHaptic(hapticKey) {
+  if (!deckbuilderUsesMobileLayoutCssBreakpoint()) return;
+  if (!__hasUserGesture || !navigator.vibrate) return;
+  const fam =
+    hapticKey && SURFACE_HAPTIC_PATTERNS[hapticKey] ? hapticKey : mapReasonToSurfaceFamily(hapticKey);
+  const pat = SURFACE_HAPTIC_PATTERNS[fam];
+  if (pat) navigator.vibrate(pat);
+  else navigator.vibrate(22);
+}
+
+/**
  * Dispara vibração curta mapeada pela família de `kind`, se houver gesto do utilizador e API disponível.
  *
  * @param {string} kind Motivo de feedback.
  * @returns {void}
  */
 function pulseCardSurfaceHaptic(kind) {
-  if (!__hasUserGesture || !navigator.vibrate) return;
-  const fam = mapReasonToSurfaceFamily(kind);
-  const pat = SURFACE_HAPTIC_PATTERNS[fam];
-  if (pat) navigator.vibrate(pat);
-  else navigator.vibrate(22);
+  pulseToastHaptic(mapReasonToSurfaceFamily(kind));
 }
 
 /** Ícone textual (uma glifo) por família superficial no toast temático. */
@@ -20863,6 +21164,7 @@ const SURFACE_TOAST_SKIP_REASONS = new Set(['random_restore', 'random_pick', 'se
 const SURFACE_TOAST_MESSAGE_KEYS = Object.freeze({
   filter_reset: 'toast.filters_reset',
   theme: 'toast.surface.theme',
+  api_lang: 'toast.surface.api_lang',
   suggestions_view: 'toast.surface.suggestions_view',
   deck_view: 'toast.surface.deck_view',
   sort: 'toast.surface.sort',
@@ -24786,8 +25088,7 @@ async function computeUnexpandedSearchResults(initial, requestId) {
     hasMdRarityFilter ||
     hasTcgOcgBanstatusFilter;
 
-  const ocrDisp = getEl('ocr-container')?.style.display;
-  if (ocrDisp === 'block' || ocrDisp === 'flex') return { kind: 'skip' };
+  if (ocrScannerUiOpen) return { kind: 'skip' };
 
   if (!initial && !hasFnameQuery && !hasDescQuery && !hasOtherFilters) {
     return { kind: 'clear' };
@@ -25385,7 +25686,8 @@ async function performSearch(initial = false) {
       if (c && c.id != null) cardCache[c.id] = c;
     }
     if (initial || pack.hasFnameQuery || pack.hasDescQuery || pack.hasOtherFilters) currentPage = 1;
-    if (!cardSurfaceFeedbackReason) requestCardSurfaceFeedback('filter');
+    if (!cardSurfaceFeedbackReason && !filterPreviewBaselineSnapshot && !suppressFilterSurfaceFeedback)
+      requestCardSurfaceFeedback('filter');
     activeCardSearchInFlight = false;
     sortAndRender();
   } finally {
@@ -25490,12 +25792,14 @@ function paintOcrScannerEmptyResultsView(variant) {
  * Reconstrói `#results-view` conforme {@link currentView}: fatia paginada de {@link searchResults}, estados vazio/carregando,
  * modo lista ou grelha com cartões interativos. Em lista chama {@link fitResultsListLayoutAfterRender} e pode re-invocar-se para overflow em fullscreen.
  *
+ * @param {{ ocrScannerRender?: boolean }} [opts] `ocrScannerRender`: render interno do scanner (não redirecionar para {@link updateScannerResultsUI}).
  * @returns {void}
  */
-function renderResults() {
+function renderResults(opts) {
   const container = getEl('results-view');
   if (!container) return;
-  if (document.documentElement.classList.contains('ocr-scanner-active') && !__insideOcrResultsRender) {
+  const ocrScannerRender = !!(opts && opts.ocrScannerRender);
+  if (document.documentElement.classList.contains('ocr-scanner-active') && !ocrScannerRender) {
     updateScannerResultsUI();
     maybePaintSuggestionSurfaceAnimations();
     if (!isUpdatingUi) {
@@ -25828,7 +26132,7 @@ function renderResults() {
   container.appendChild(frag);
   // Ajuste responsivo do modo lista: colunas e itens por página sem scroll.
   // Se precisar re-render, agenda no próximo frame para evitar thrash.
-  if (viewLayout === 'list') {
+  if (viewLayout === 'list' && !ocrScannerRender) {
     const needsRerender = fitResultsListLayoutAfterRender();
     if (needsRerender && !__resultsListRerenderQueued) {
       __resultsListRerenderQueued = true;
@@ -29505,10 +29809,15 @@ const TESSERACT_NAME_OCR_PARAMS = Object.freeze({
   tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 ,:ÁÉÍÓÚÂÊÎÔÛÃÕÇ',
   tessedit_pageseg_mode: '7',
 });
-/** Só dígitos — passcode no canto da carta. */
+/** Só dígitos — passcode no canto da carta (linha de 8 dígitos). */
 const TESSERACT_PASSCODE_OCR_PARAMS = Object.freeze({
   tessedit_char_whitelist: '0123456789',
-  tessedit_pageseg_mode: '8',
+  tessedit_pageseg_mode: '7',
+});
+/** Um dígito por coluna (fallback quando a linha inteira falha). */
+const TESSERACT_PASSCODE_DIGIT_OCR_PARAMS = Object.freeze({
+  tessedit_char_whitelist: '0123456789',
+  tessedit_pageseg_mode: '10',
 });
 /** Worker Tesseract (`Tesseract.createWorker()`); `null` até o primeiro scan bem-sucedido. */
 let ocrWorker = null;
@@ -29518,6 +29827,8 @@ let paddleOcrModulePromise = null;
 let lastPaddleRecognizeAt = 0;
 /** Último OCR de passcode (throttle — alivia travadas na câmara). */
 let lastPasscodeOcrAt = 0;
+/** Votos de passcode 8 dígitos entre frames (mesmo ID repetido → aceitar). */
+let passcodeIdVoteMap = new Map();
 /** Promessa do OCR de passcode em curso (não bloqueia o loop de frames). */
 let passcodeOcrInFlight = null;
 /** Última sonda rápida tipo/raridade (sem Tesseract). */
@@ -29540,10 +29851,36 @@ let passcodeOcrCanvasReuse = null;
 let passcodePreviewEnhCanvas = null;
 /** Última tentativa de leitura de passcode (para UI/log). */
 let lastPasscodeSidecar = null;
+/** Detalhe da última inferência ID (variantes, PSM, colunas) — export diagnóstico. */
+let lastPasscodeOcrDiagnostics = null;
 /** Histórico de luminância para feedback de enquadramento. */
 const ocrFramingLumHistory = [];
+/** Histórico de centro do recorte (estabilidade de posição). */
+const ocrFramingPosHistory = [];
 /** `seeking` | `aligned` */
 let ocrFramingState = 'seeking';
+/** Módulo {@link ./ocr-card-track.mjs} após primeiro import. */
+let ocrCardTrackMod = null;
+/** @type {Promise<object>|null} */
+let ocrCardTrackModPromise = null;
+/** Moldura azul posicionada por deteção (não CSS fixo). */
+let ocrCardTrackOverlayActive = false;
+/** Última dica direcional (`shift_left`, etc.). */
+let lastOcrDirectionHintKey = '';
+/** Votação temporal de leituras do nome. */
+const ocrReadVoteBuffer = [];
+/** Último pacote de tracking (para diagnóstico / warp). */
+let lastOcrCardTrackPack = null;
+/** Último {@link resolveScannerCrops} (throttle deteção). */
+let lastResolvedScannerCrops = null;
+/** Instantâneo da última deteção de carta. */
+let lastScannerCropDetectAt = 0;
+/** Canvas carta retificada (590×860) para OCR. */
+let ocrCanonicalCardCanvas = null;
+/** Chave do último warp (evita redesenho por frame). */
+let ocrCanonicalCardKey = '';
+/** Instantâneo do último warp. */
+let ocrCanonicalCardAt = 0;
 /** Última linha exibida em `#ocr-live-read` (evita repintar igual). */
 let lastOcrLiveReadKey = '';
 /** Último texto enviado ao log de leitura OCR. */
@@ -29576,10 +29913,31 @@ let processingCooldown = false;
 const OCR_SCANNER_COOLDOWN_MS = 380;
 /** Chave da cena (carta enquadrada) — troca de carta limpa cooldown/throttle ID. */
 let lastScannerSceneKey = '';
+/** Posição do recorte na mira (estável sob variação de luz). */
+let lastScannerScenePositionKey = '';
+/** Impressão digital estável do conteúdo (troca de carta na mesma posição). */
+let lastStableContentFp = '';
+let pendingContentFp = '';
+let pendingContentFpFrames = 0;
+let pendingContentFpSince = 0;
+let pendingPosKey = '';
+let pendingPosKeyFrames = 0;
+let pendingPosKeySince = 0;
+/** Última leitura válida mantida na UI entre frames sem OCR. */
+let lastOcrLiveReadSticky = null;
+let lastOcrPasscodeLiveSticky = null;
+let lastOcrLiveReadAt = 0;
+let lastOcrPasscodeLiveReadAt = 0;
+/** Tempo mínimo que uma leitura fica visível (evita flicker com sol/tracking). */
+const OCR_LIVE_READ_HOLD_MS = 6500;
 /** Evita chamadas concorrentes a {@link startScanner} (duplo clique / propagacao). */
 let scannerStartInFlight = false;
-/** Evita recursão quando {@link updateScannerResultsUI} delega a {@link renderResults} com `searchResults` temporário. */
-let __insideOcrResultsRender = false;
+/** Painel OCR aberto (não usar só `style.display` — falhas parciais deixavam toggle preso). */
+let ocrScannerUiOpen = false;
+/** Profundidade de {@link updateScannerResultsUI} (evita reentrância síncrona com {@link renderResults}). */
+let __ocrScannerResultsUiDepth = 0;
+/** Evita reentrância em {@link closeScannerUi} durante falhas em cascata. */
+let closeScannerUiInFlight = false;
 /** Texto da última query `smartSearch` (throttle ~900 ms). */
 let lastApiSearchCleaned = '';
 let lastApiSearchTime = 0;
@@ -29604,6 +29962,10 @@ let lastOcrFrameErrorLogAt = 0;
 let ocrDeferHeavyUntilPaddle = false;
 /** Último log «a aguardar Paddle» (throttle). */
 let lastOcrPaddleWaitLogAt = 0;
+/** Início da espera pelo Paddle na sessão (timeout → Tesseract). */
+let ocrPaddleWaitStartedAt = 0;
+/** Após timeout, deixa de bloquear o OCR no foil. */
+let ocrPaddleWarmupGivenUp = false;
 /** Limite de amostras por sessão antes de ignorar novas (mantém o JSON descarregável). */
 const OCR_DIAG_MAX_SAMPLES = 120;
 let lastScanHapticKey = '';
@@ -29996,6 +30358,31 @@ function scoreOcrDistinctiveTokenOverlap(ocrNormUpper, cardNormUpper) {
 }
 
 /**
+ * Quão bem tokens longos do OCR aparecem no nome da carta (rejeição genérica de falsos positivos).
+ * @param {string} ocrNormUpper
+ * @param {string} cardNormUpper
+ * @returns {number} 0–1
+ */
+function scoreOcrDistinctiveTokensFoundInCard(ocrNormUpper, cardNormUpper) {
+  const ocrParts = ocrNormUpper.split(/\s+/).filter((w) => w.length >= 6 && !OCR_STOP_WORDS.has(w));
+  if (!ocrParts.length) return 1;
+  const cardParts = cardNormUpper.split(/\s+/).filter((w) => w.length >= 3);
+  let matched = 0;
+  for (const op of ocrParts) {
+    if (ocrTokenMatchesCardName(op, cardNormUpper)) {
+      matched++;
+      continue;
+    }
+    let best = 0;
+    for (const cp of cardParts) {
+      best = Math.max(best, calculateSimilarity(op.toLowerCase(), cp.toLowerCase()));
+    }
+    if (best >= 0.72) matched++;
+  }
+  return matched / ocrParts.length;
+}
+
+/**
  * Detecta token do OCR “quase igual” ao da carta (ex.: 1 letra trocada) sem ser match forte.
  * @param {string} ocrNormUpper
  * @param {string} cardNormUpper
@@ -30025,6 +30412,32 @@ function hasOcrNearMissDistinctiveToken(ocrNormUpper, cardNormUpper) {
  * @param {string|null|undefined} uiCardType
  * @returns {number} 0–1
  */
+/** Tipos Extra Deck frequentemente trocados por foil/reflexo no scanner. */
+const SCANNER_EXTRA_DECK_TYPES = new Set([
+  'Monstro Fusão',
+  'Monstro Sincro',
+  'Monstro Xyz',
+  'Monstro Link',
+  'Monstro Ritual',
+]);
+
+/**
+ * Tipo inferido na visão compatível com a carta API (relaxa Fusão↔Sincro, etc.).
+ * @param {string|null|undefined} uiCardType
+ * @param {object} card
+ * @returns {boolean}
+ */
+function scannerUiTypeMatchesApiLoose(uiCardType, card) {
+  if (!uiCardType || uiCardType === 'AUTO') return true;
+  const typeSc = scoreApiCardTypeAgainstUi(card, uiCardType);
+  if (typeSc >= 0.22) return true;
+  if (!SCANNER_EXTRA_DECK_TYPES.has(uiCardType)) return typeSc > 0;
+  for (const t of SCANNER_EXTRA_DECK_TYPES) {
+    if (scoreApiCardTypeAgainstUi(card, t) >= 0.9) return true;
+  }
+  return false;
+}
+
 function scoreApiCardTypeAgainstUi(card, uiCardType) {
   if (!uiCardType || uiCardType === 'AUTO') return 0.5;
   const apiT = String(card.type || '').toLowerCase();
@@ -30245,7 +30658,7 @@ async function smartSearch(
   const throttleMs =
     typeof document !== 'undefined' &&
     document.documentElement.classList.contains('ocr-scanner-active')
-      ? 420
+      ? 260
       : 900;
   if (
     !bypassThrottle &&
@@ -30679,7 +31092,13 @@ function isScannerPlausibleMatch(ocrCleaned, card, visionContext) {
   const names = cardNormalizedNames(card);
   if (!names.length) return false;
   const a = normalizeForSim(ocrCleaned);
-  if (a.length < 8) return false;
+  const minLen =
+    visionContext?.cardType === 'Magia' ||
+    visionContext?.cardType === 'Monstro Link' ||
+    visionContext?.cardType === 'Monstro Xyz'
+      ? 6
+      : 8;
+  if (a.length < minLen) return false;
   let bestSim = 0;
   let bestB = names[0];
   for (let ni = 0; ni < names.length; ni++) {
@@ -30691,14 +31110,21 @@ function isScannerPlausibleMatch(ocrCleaned, card, visionContext) {
     }
   }
   const overlap = scoreOcrDistinctiveTokenOverlap(a, bestB);
+  const ocrInCard = scoreOcrDistinctiveTokensFoundInCard(a, bestB);
+  const orphans = countOcrOrphanTokensAgainstCard(a, bestB);
   const fusionish = visionContext?.cardType === 'Monstro Fusão';
   const simMin = fusionish ? 0.56 : 0.62;
   const overlapMin = fusionish ? 0.36 : 0.4;
   if (bestSim < simMin && overlap < overlapMin) return false;
+  if (ocrInCard < 0.34 && bestSim < 0.78) return false;
+  if (orphans >= 2 && bestSim < 0.82) return false;
   if (bestSim >= 0.68 || overlap >= overlapMin + 0.08) {
+    if (ocrInCard < 0.5 && bestSim < 0.74) return false;
     if (visionContext?.cardType) {
-      const typeSc = scoreApiCardTypeAgainstUi(card, visionContext.cardType);
-      if (typeSc < 0.15) return false;
+      if (!scannerUiTypeMatchesApiLoose(visionContext.cardType, card)) {
+        return false;
+      }
+      if (bestSim < 0.35) return false;
     }
     return true;
   }
@@ -30713,6 +31139,36 @@ function isScannerPlausibleMatch(ocrCleaned, card, visionContext) {
  */
 function acceptScannerCardMatch(ocrCleaned, card, visionContext) {
   if (!card) return false;
+  const uiType = visionContext?.cardType;
+  if (uiType && uiType !== 'AUTO' && !scannerUiTypeMatchesApiLoose(uiType, card)) {
+    return false;
+  }
+  if (uiType && uiType !== 'AUTO') {
+    const typeSc = scoreApiCardTypeAgainstUi(card, uiType);
+    if (typeSc < 0.5) {
+      const names = cardNormalizedNames(card);
+      const a = normalizeForSim(ocrCleaned);
+      let bestSim = 0;
+      let bestB = names[0] || '';
+      for (let ni = 0; ni < names.length; ni++) {
+        const b = normalizeForSim(names[ni]);
+        const sim = calculateSimilarity(a.toLowerCase(), b.toLowerCase());
+        if (sim > bestSim) {
+          bestSim = sim;
+          bestB = b;
+        }
+      }
+      const ocrInCard = scoreOcrDistinctiveTokensFoundInCard(
+        a.toUpperCase(),
+        normalizeForSim(bestB).toUpperCase()
+      );
+      if (typeSc < 0.25) {
+        if (!(bestSim >= 0.9 && ocrInCard >= 0.75)) return false;
+      } else if (!(bestSim >= 0.86 && ocrInCard >= 0.62)) {
+        return false;
+      }
+    }
+  }
   return (
     isStrongMatch(ocrCleaned, card, visionContext) ||
     isScannerPlausibleMatch(ocrCleaned, card, visionContext)
@@ -30727,9 +31183,54 @@ function acceptScannerCardMatch(ocrCleaned, card, visionContext) {
  * @returns {Promise<object|null>}
  */
 async function smartSearchScanner(cleaned, visionContext, bypassThrottle = false) {
-  const card = await smartSearch(cleaned, bypassThrottle, null, visionContext);
-  if (!card) return null;
-  return acceptScannerCardMatch(cleaned, card, visionContext) ? card : null;
+  let card = await smartSearch(cleaned, bypassThrottle, null, visionContext);
+  if (card && acceptScannerCardMatch(cleaned, card, visionContext)) return card;
+  if (!bypassThrottle) {
+    card = await smartSearch(cleaned, true, null, visionContext);
+    if (card && acceptScannerCardMatch(cleaned, card, visionContext)) return card;
+  }
+  const uiType = visionContext?.cardType;
+  if (uiType && uiType !== 'AUTO') {
+    const looseCtx = { ...visionContext, cardType: 'AUTO' };
+    const cardLoose = await smartSearch(cleaned, true, null, looseCtx);
+    if (cardLoose && acceptScannerCardMatch(cleaned, cardLoose, visionContext)) return cardLoose;
+  }
+  if (card && scannerNameMatchStrongEnough(cleaned, card)) return card;
+  const tokens = cleaned
+    .split(/\s+/)
+    .map((w) => w.replace(/[^A-ZÁÉÍÓÚÂÊÎÔÛÃÕÇ0-9]/gi, ''))
+    .filter((w) => w.length >= 6)
+    .sort((a, b) => b.length - a.length);
+  for (let ti = 0; ti < Math.min(2, tokens.length); ti++) {
+    const tok = tokens[ti];
+    const cardTok = await smartSearch(tok, true, null, visionContext);
+    if (cardTok && scannerNameMatchStrongEnough(cleaned, cardTok)) return cardTok;
+    if (cardTok && acceptScannerCardMatch(cleaned, cardTok, visionContext)) return cardTok;
+  }
+  return null;
+}
+
+/**
+ * Aceita carta quando o nome OCR é claramente o da API, mesmo com tipo UI errado.
+ * @param {string} ocrCleaned
+ * @param {object} card
+ * @returns {boolean}
+ */
+function scannerNameMatchStrongEnough(ocrCleaned, card) {
+  const names = cardNormalizedNames(card);
+  if (!names.length) return false;
+  const a = normalizeForSim(ocrCleaned);
+  if (a.length < 6) return false;
+  for (let ni = 0; ni < names.length; ni++) {
+    const b = normalizeForSim(names[ni]);
+    const sim = calculateSimilarity(a.toLowerCase(), b.toLowerCase());
+    const overlap = scoreOcrDistinctiveTokenOverlap(a, b);
+    const ocrInCard = scoreOcrDistinctiveTokensFoundInCard(a.toUpperCase(), b.toUpperCase());
+    if (isStrongMatchAgainstB(ocrCleaned, b)) return true;
+    if (sim >= 0.72 && overlap >= 0.42 && ocrInCard >= 0.55) return true;
+    if (sim >= 0.68 && ocrInCard >= 0.62) return true;
+  }
+  return false;
 }
 
 /**
@@ -30751,9 +31252,10 @@ function isStrongMatch(ocrCleaned, card, visionContext) {
     }
   }
   if (!nameOk) return false;
-  if (visionContext?.cardType) {
-    const typeSc = scoreApiCardTypeAgainstUi(card, visionContext.cardType);
-    if (typeSc < 0.2) return false;
+  if (visionContext?.cardType && visionContext.cardType !== 'AUTO') {
+    if (!scannerUiTypeMatchesApiLoose(visionContext.cardType, card)) {
+      return false;
+    }
   }
   return true;
 }
@@ -30851,10 +31353,7 @@ function addOcrLog(msg, kind = 'info') {
     'border-bottom:1px solid rgba(255,255,255,0.06)',
     'padding:4px 2px',
     'font-size:11px',
-    'line-height:1.25',
-    'white-space:nowrap',
-    'overflow:hidden',
-    'text-overflow:ellipsis',
+    'line-height:1.3',
     'max-width:100%',
     `color:${colors[kind] || colors.info}`,
     "font-family:ui-monospace,Consolas,monospace",
@@ -30965,11 +31464,122 @@ function logOcrPaddleWarmupWait() {
 }
 
 /**
+ * Tempo máximo (ms) a aguardar Paddle antes de usar Tesseract em cartas foil.
+ * @returns {number}
+ */
+function paddleWarmupMaxWaitMs() {
+  return ocrScannerIsMobile() ? 6000 : 4500;
+}
+
+/**
+ * @returns {boolean} `true` se o loop deve adiar OCR pesado à espera do Paddle.
+ */
+function shouldDeferOcrForPaddleWarmup() {
+  if (paddleOcrReadyFlag) return false;
+  if (ocrPaddleWarmupGivenUp) return false;
+  if (!scannerSessionLikelyNeedsPaddle()) return false;
+  const now = Date.now();
+  if (!ocrPaddleWaitStartedAt) ocrPaddleWaitStartedAt = now;
+  if (now - ocrPaddleWaitStartedAt > paddleWarmupMaxWaitMs()) {
+    ocrPaddleWarmupGivenUp = true;
+    ocrDeferHeavyUntilPaddle = false;
+    addOcrLog(T('ocr.log.paddle_fallback_tesseract'), 'warn');
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Garante Paddle ONNX carregado (cada abertura do scanner, não só a primeira).
+ * @returns {Promise<void>}
+ */
+function ensurePaddleOcrWarm() {
+  return getPaddleOcrModule()
+    .then(async (m) => {
+      if (typeof m.syncPaddleOcrSessionStart === 'function') m.syncPaddleOcrSessionStart();
+      if (m.isPaddleOcrReady && m.isPaddleOcrReady()) {
+        paddleOcrReadyFlag = true;
+        ocrPaddleWarmupGivenUp = false;
+        ocrPaddleWaitStartedAt = 0;
+        return;
+      }
+      if (!paddleOcrReadyFlag) addOcrLog(T('ocr.log.paddle_loading'));
+      const ok = await m.initPaddleOcrRec();
+      if (ok) {
+        paddleOcrReadyFlag = true;
+        ocrPaddleWarmupGivenUp = false;
+        ocrPaddleWaitStartedAt = 0;
+        addOcrLog(T('ocr.log.paddle_ready'), 'ok');
+      } else {
+        const pe = m.getPaddleOcrInitError();
+        addOcrLog(
+          T('ocr.log.paddle_fail', {
+            msg: pe && pe.message ? pe.message : 'init failed',
+          }),
+          'warn'
+        );
+        ocrPaddleWarmupGivenUp = true;
+      }
+    })
+    .catch((pe) => {
+      addOcrLog(T('ocr.log.paddle_fail', { msg: pe && pe.message ? pe.message : String(pe) }), 'warn');
+      ocrPaddleWarmupGivenUp = true;
+    });
+}
+
+/**
  * Intervalo mínimo entre OCR de passcode (corre em paralelo ao nome, mas com menos frequência).
  * @returns {number}
  */
 function passcodeOcrThrottleMs() {
-  return ocrScannerIsMobile() ? 480 : 420;
+  return ocrScannerIsMobile() ? 360 : 300;
+}
+
+function resetPasscodeIdVotes() {
+  passcodeIdVoteMap.clear();
+}
+
+/**
+ * Acumula leituras de 8 dígitos entre frames (aceita quando o mesmo ID repete).
+ * @param {string[]} candidates
+ * @param {number} score
+ * @returns {void}
+ */
+function notePasscodeIdVotes(candidates, score) {
+  const now = Date.now();
+  const list = candidates || [];
+  for (let ci = 0; ci < list.length; ci++) {
+    const id = String(list[ci]);
+    if (id.length !== 8) continue;
+    const prev = passcodeIdVoteMap.get(id) || { count: 0, score: 0, at: 0 };
+    passcodeIdVoteMap.set(id, {
+      count: prev.count + 1,
+      score: Math.max(prev.score, score || 0),
+      at: now,
+    });
+  }
+  if (passcodeIdVoteMap.size > 28) {
+    for (const [k, v] of passcodeIdVoteMap) {
+      if (now - v.at > 14000) passcodeIdVoteMap.delete(k);
+    }
+  }
+}
+
+/**
+ * @param {number} [minCount]
+ * @returns {string|null}
+ */
+function pickPasscodeIdFromVotes(minCount = 2) {
+  let bestId = null;
+  let best = null;
+  for (const [id, v] of passcodeIdVoteMap) {
+    if (v.count < minCount) continue;
+    if (!best || v.count > best.count || (v.count === best.count && v.score > best.score)) {
+      best = v;
+      bestId = id;
+    }
+  }
+  return bestId;
 }
 
 /**
@@ -30978,8 +31588,8 @@ function passcodeOcrThrottleMs() {
  * @returns {number}
  */
 function getOcrMaxPassesPerFrame(foilName) {
-  if (ocrScannerIsMobile()) return foilName ? 3 : 2;
-  return foilName ? 4 : 3;
+  if (ocrScannerIsMobile()) return foilName ? 4 : 3;
+  return foilName ? 5 : 3;
 }
 
 /**
@@ -31127,6 +31737,8 @@ async function exportOcrDiagnosticsAsZip(stamp, payload, session, summaryText, g
                 hasRawNameVisual: !!im.rawNameVisualJpeg,
                 hasTypeMira: !!im.typeMiraJpeg,
                 hasFrameLeft: !!im.frameProbeLeftJpeg,
+                hasPasscodeRaw: !!im.rawPasscodeJpeg,
+                hasPasscodeRobot: !!im.robotPasscodeJpeg,
               }
             : null,
         };
@@ -31135,7 +31747,7 @@ async function exportOcrDiagnosticsAsZip(stamp, payload, session, summaryText, g
   };
   files['diagnostics_slim.json'] = strToU8(JSON.stringify(slimPayload, null, 2));
   files['README.txt'] = strToU8(
-    'OCR diagnóstico Yu-Gi-Oh!\n- gallery.html: abrir no browser (robô + tipos)\n- diagnostics.json: dados completos\n- images/: JPEGs por amostra\n- diagnostics_slim.json: JSON sem base64 (leitura rápida)\n'
+    'OCR diagnóstico Yu-Gi-Oh!\n- gallery.html: abrir no browser (robô nome + passcode/ID)\n- diagnostics.json: dados completos (schema v4 inclui passcodeProbe)\n- images/: JPEGs por amostra (nome + passcode)\n- diagnostics_slim.json: JSON sem base64 (leitura rápida)\n'
   );
   for (const s of session.samples || []) {
     const pad = String(s.seq).padStart(3, '0');
@@ -31150,6 +31762,11 @@ async function exportOcrDiagnosticsAsZip(stamp, payload, session, summaryText, g
     add('rawNameRegionJpeg', 'raw_name');
     add('typeMiraJpeg', 'type_mira');
     add('frameProbeLeftJpeg', 'frame_border');
+    add('rawPasscodeJpeg', 'passcode_raw');
+    add('robotPasscodeJpeg', 'passcode_robot');
+    add('passcodeBinDarkJpeg', 'passcode_bin_dark');
+    add('passcodeBinLightJpeg', 'passcode_bin_light');
+    add('passcodeLcRawJpeg', 'passcode_lc_raw');
   }
   const zipped = zipSync(files, { level: 6 });
   downloadBinaryFile(`ocr_diagnostics_${stamp}.zip`, zipped);
@@ -31192,7 +31809,18 @@ function canvasToJpegDataUrl(canvas, quality = 0.82, maxW = 560) {
  * @returns {string|null}
  */
 function ocrDiagnosticsRawCropDataUrl(video, cropRect, maxW = 480) {
-  if (!video || !cropRect || cropRect.width < 2 || cropRect.height < 2) return null;
+  return ocrDiagnosticsMediaCropDataUrl(video, cropRect, maxW);
+}
+
+/**
+ * JPEG de recorte bruto a partir de vídeo ou canvas retificado (diagnóstico passcode/nome).
+ * @param {HTMLVideoElement|HTMLCanvasElement|null} media
+ * @param {{ x: number, y: number, width: number, height: number }} cropRect
+ * @param {number} [maxW=480]
+ * @returns {string|null}
+ */
+function ocrDiagnosticsMediaCropDataUrl(media, cropRect, maxW = 480) {
+  if (!media || !cropRect || cropRect.width < 2 || cropRect.height < 2) return null;
   const c = document.createElement('canvas');
   const scale = Math.min(1, maxW / cropRect.width);
   const w = Math.max(1, Math.round(cropRect.width * scale));
@@ -31200,8 +31828,9 @@ function ocrDiagnosticsRawCropDataUrl(video, cropRect, maxW = 480) {
   c.width = w;
   c.height = h;
   const ctx = c.getContext('2d');
+  if (!ctx) return null;
   try {
-    ctx.drawImage(video, cropRect.x, cropRect.y, cropRect.width, cropRect.height, 0, 0, w, h);
+    ctx.drawImage(media, cropRect.x, cropRect.y, cropRect.width, cropRect.height, 0, 0, w, h);
     return c.toDataURL('image/jpeg', 0.82);
   } catch (e) {
     return null;
@@ -31224,6 +31853,9 @@ function buildOcrDiagnosticsExportSummary(session) {
   const rarityArtHint = {};
   const mismatches = [];
   const rarityMismatches = [];
+  const passcodeWithRaw = [];
+  const passcodeWithCandidates = [];
+  const passcodeConfidences = [];
   for (const s of samples) {
     const ui = s.lastDetectedCardTypeUi || '(vazio)';
     uiTypes[ui] = (uiTypes[ui] || 0) + 1;
@@ -31256,7 +31888,19 @@ function buildOcrDiagnosticsExportSummary(session) {
     }
     const strip = s.typeProbe && s.typeProbe.classifiedTypeFromNameStripOnly;
     if (strip) nameStripTypes[strip] = (nameStripTypes[strip] || 0) + 1;
+    const pp = s.passcodeProbe;
+    if (pp && pp.sidecar && pp.sidecar.raw) passcodeWithRaw.push(pp.sidecar.raw);
+    if (pp && pp.sidecar && (pp.sidecar.candidates || []).length) {
+      passcodeWithCandidates.push((pp.sidecar.candidates || [])[0]);
+    }
+    if (pp && pp.sidecar && typeof pp.sidecar.confidence === 'number') {
+      passcodeConfidences.push(pp.sidecar.confidence);
+    }
   }
+  const passcodeConfAvg =
+    passcodeConfidences.length > 0
+      ? Math.round((passcodeConfidences.reduce((a, b) => a + b, 0) / passcodeConfidences.length) * 10) / 10
+      : null;
   return {
     sampleCount: samples.length,
     uiTypes,
@@ -31270,6 +31914,11 @@ function buildOcrDiagnosticsExportSummary(session) {
     rarityMismatches: rarityMismatches.slice(0, 40),
     uiVsFrameMismatchCount: mismatches.length,
     uiVsFrameMismatches: mismatches.slice(0, 40),
+    passcodeSamplesWithRaw: passcodeWithRaw.length,
+    passcodeSamplesWithCandidates: passcodeWithCandidates.length,
+    passcodeConfidenceAvg: passcodeConfAvg,
+    passcodeRawExamples: passcodeWithRaw.slice(0, 12),
+    passcodeCandidateExamples: passcodeWithCandidates.slice(0, 12),
   };
 }
 
@@ -31315,6 +31964,16 @@ function formatOcrDiagnosticsSummaryText(summary) {
   for (const m of summary.rarityMismatches || []) {
     lines.push(`  #${m.seq} UI=${m.ui} detetada=${m.detected} nome=${m.nameStrip} arte=${m.art}`);
   }
+  lines.push('', 'Passcode / ID (canal separado):');
+  lines.push(`  Amostras com texto OCR bruto: ${summary.passcodeSamplesWithRaw ?? 0}`);
+  lines.push(`  Amostras com candidatos 8 dígitos: ${summary.passcodeSamplesWithCandidates ?? 0}`);
+  lines.push(`  Confiança média OCR ID: ${summary.passcodeConfidenceAvg ?? '—'}`);
+  for (const ex of summary.passcodeRawExamples || []) {
+    lines.push(`  raw: ${ex}`);
+  }
+  for (const ex of summary.passcodeCandidateExamples || []) {
+    lines.push(`  candidato: ${ex}`);
+  }
   return lines.join('\n');
 }
 
@@ -31356,6 +32015,15 @@ function buildOcrDiagnosticsGalleryHtml(session, summary) {
           ? `arte foil=${rp.artMetrics.foilRatio} colStd=${rp.artMetrics.colLumStd} hue=${rp.artMetrics.hueVar}`
           : '';
       const cleaned = esc(s.outcome && s.outcome.cleaned);
+      const pp = s.passcodeProbe;
+      const idRaw = esc(pp && pp.sidecar && pp.sidecar.raw);
+      const idCands = esc(pp && pp.sidecar && (pp.sidecar.candidates || []).join(', '));
+      const idConf = pp && pp.sidecar && pp.sidecar.confidence != null ? pp.sidecar.confidence : '—';
+      const idVar = esc(pp && pp.bestVariant);
+      const idHint =
+        pp && pp.hint
+          ? `modo=${pp.hint.primary}/${pp.hint.secondary} lum=${pp.hint.meanLum} matte=${pp.hint.matteIdDigits ? 'sim' : 'não'}`
+          : '';
       const fc = s.typeProbe && s.typeProbe.frameColor;
       const rgb = fc ? `R${fc.avgR} G${fc.avgG} B${fc.avgB}` : '';
       const robot = s.images && s.images.robotNameStripJpeg;
@@ -31373,14 +32041,20 @@ function buildOcrDiagnosticsGalleryHtml(session, summary) {
         <h2>#${s.seq} <small>${esc(s.ts)}</small></h2>
         <p><strong>UI</strong> ${ui} · <strong>Tipo (mira azul)</strong> ${frame} · <strong>Faixa nome</strong> ${strip} · <strong>OCR robô</strong> ${ocrType || '—'}</p>
         <p><strong>Raridade UI</strong> ${rUi || '—'} · <strong>Detetada</strong> ${rDet || '—'} · <strong>Nome</strong> ${rName || '—'} · <strong>Arte</strong> ${rArt || '—'}</p>
-        <p class="meta">${esc(rgb)} · ${esc(rMetrics)} · texto: <code>${cleaned || '—'}</code></p>
+        <p><strong>Passcode OCR</strong> raw=<code>${idRaw || '—'}</code> · candidatos=<code>${idCands || '—'}</code> · conf=${idConf} · variante=${idVar || '—'}</p>
+        <p class="meta">${esc(rgb)} · ${esc(rMetrics)} · ID: ${esc(idHint)} · nome OCR: <code>${cleaned || '—'}</code></p>
         <div class="grid">
-          ${img(robot, 'Robô (pré-processado)')}
+          ${img(robot, 'Robô nome (pré-processado)')}
           ${img(raw, 'Recorte OCR (nome)')}
           ${img(rawVisual, 'Mira verde no ecrã')}
           ${img(typeImg, 'Mira azul — cartão')}
           ${img(frameImg, 'Borda moldura')}
           ${img(s.images && s.images.artRegionJpeg, 'Arte (mira azul)')}
+          ${img(s.images && s.images.rawPasscodeJpeg, 'Passcode bruto (câmara)')}
+          ${img(s.images && s.images.robotPasscodeJpeg, 'Robô ID (binário usado)')}
+          ${img(s.images && s.images.passcodeBinDarkJpeg, 'ID bin darkOnLight')}
+          ${img(s.images && s.images.passcodeBinLightJpeg, 'ID bin lightOnDark')}
+          ${img(s.images && s.images.passcodeLcRawJpeg, 'ID contraste local (sem bin)')}
         </div>
       </article>`;
     })
@@ -31404,7 +32078,7 @@ img{max-width:100%;height:auto;background:#000;border:1px solid #444;border-radi
 code{color:#9f9}
 </style></head><body>
 <h1>Diagnóstico OCR — visão do robô por amostra</h1>
-<p>Ordem: faixa pré-processada (Tesseract), recorte da câmara, faixas laterais/superior da moldura.</p>
+<p>Ordem: faixa do nome, recortes da câmara, moldura e <strong>passcode/ID</strong> (bruto + binário + contraste local).</p>
 ${sumBlock}
 ${cards || '<p>Sem amostras.</p>'}
 </body></html>`;
@@ -31433,7 +32107,7 @@ function syncOcrDiagnosticsButtonUi() {
 function toggleOcrDiagnosticsCapture() {
   if (!ocrDiagnosticsCaptureActive) {
     ocrDiagnosticsSession = {
-      schemaVersion: 3,
+      schemaVersion: 4,
       startedAt: new Date().toISOString(),
       samples: [],
       logLines: [],
@@ -31513,6 +32187,77 @@ function ocrDiagnosticsPushLogMirror(msg) {
 }
 
 /**
+ * Imagens e metadados do canal passcode para uma amostra de diagnóstico.
+ * @param {HTMLVideoElement} video
+ * @param {{ x: number, y: number, width: number, height: number }|null} typeCropRect
+ * @returns {null|{ crop: object, hint: object, sidecar: object|null, diagnostics: object|null, images: object }}
+ */
+function buildPasscodeDiagnosticsSnapshot(video, typeCropRect) {
+  if (!video || video.videoWidth < 4) return null;
+  const passcodeVisual = mapVisualBoxToVideoCrop(video, getEl('scanner-passcode-visual'));
+  const ocrWarp = buildScannerWarpOcrContext(video, lastOcrCardTrackPack);
+  const ocrMedia = ocrWarp && ocrWarp.media ? ocrWarp.media : video;
+  const passBase = ocrWarp ? ocrWarp.passcodeCrop : getPasscodeCropForOcr(passcodeVisual, typeCropRect);
+  const passcodeCrop = finalizePasscodeCropForOcr(passBase);
+  if (!passcodeCrop) return null;
+  const hint = derivePasscodeOcrHint(
+    video,
+    typeCropRect,
+    lastDetectedCardType,
+    lastDetectedCardRarity,
+    passBase
+  );
+  const images = {
+    rawPasscodeJpeg: ocrDiagnosticsMediaCropDataUrl(ocrMedia, passcodeCrop, 420),
+    robotPasscodeJpeg: null,
+    passcodeBinDarkJpeg: null,
+    passcodeBinLightJpeg: null,
+    passcodeLcRawJpeg: null,
+  };
+  if (!passcodeOcrCanvasReuse) passcodeOcrCanvasReuse = document.createElement('canvas');
+  const variants = buildPasscodeOcrVariants(ocrMedia, passcodeCrop, passcodeOcrCanvasReuse, hint);
+  if (variants) {
+    const primaryCanvas =
+      variants.primary === 'darkOnLight' ? variants.darkOnLight : variants.lightOnDark;
+    images.robotPasscodeJpeg = canvasToJpegDataUrl(primaryCanvas, 0.8, 440);
+    images.passcodeBinDarkJpeg = canvasToJpegDataUrl(variants.darkOnLight, 0.8, 440);
+    images.passcodeBinLightJpeg = canvasToJpegDataUrl(variants.lightOnDark, 0.8, 440);
+    images.passcodeLcRawJpeg = canvasToJpegDataUrl(variants.lcRaw, 0.8, 440);
+  }
+  const sidecar = lastPasscodeSidecar;
+  const diag = lastPasscodeOcrDiagnostics;
+  return {
+    crop: {
+      x: safeRound(passcodeCrop.x, 1),
+      y: safeRound(passcodeCrop.y, 1),
+      width: safeRound(passcodeCrop.width, 1),
+      height: safeRound(passcodeCrop.height, 1),
+    },
+    warpActive: !!ocrWarp,
+    hint: {
+      primary: hint.primary,
+      secondary: hint.secondary,
+      meanLum: safeRound(hint.meanLum, 1),
+      matteIdDigits: !!hint.matteIdDigits,
+      digitInk: hint.digitInk || null,
+      cardType: hint.cardType,
+      rarity: hint.rarity,
+    },
+    sidecar: sidecar
+      ? {
+          raw: sidecar.raw || '',
+          candidates: sidecar.candidates || [],
+          confidence: safeRound(sidecar.confidence, 1),
+          variantId: sidecar.variantId || null,
+          matchedCardId: sidecar.card && sidecar.card.id != null ? sidecar.card.id : null,
+        }
+      : null,
+    diagnostics: diag || null,
+    images,
+  };
+}
+
+/**
  * Monta e grava uma amostra de diagnóstico (executar fora do hot path do OCR quando possível).
  * @param {HTMLVideoElement} video
  * @param {{ x: number, y: number, width: number, height: number }} nameCropVisual
@@ -31544,6 +32289,7 @@ function recordOcrDiagnosticsSampleNow(video, nameCropVisual, nameCropOcr, typeC
   const includeHeavyImages = seq % 3 === 0;
   const typeProbe = probeCardTypeDiagnostics(video, nameCropVisual, typeCropRect);
   const leftProbe = typeProbe.sampleRects && typeProbe.sampleRects.left;
+  const passcodeProbe = buildPasscodeDiagnosticsSnapshot(video, typeCropRect);
   const sample = {
     seq,
     ts: new Date().toISOString(),
@@ -31608,7 +32354,27 @@ function recordOcrDiagnosticsSampleNow(video, nameCropVisual, nameCropOcr, typeC
           : null,
       frameProbeLeftJpeg:
         includeHeavyImages && leftProbe ? ocrDiagnosticsRawCropDataUrl(video, leftProbe, 160) : null,
+      rawPasscodeJpeg: passcodeProbe && passcodeProbe.images ? passcodeProbe.images.rawPasscodeJpeg : null,
+      robotPasscodeJpeg: passcodeProbe && passcodeProbe.images ? passcodeProbe.images.robotPasscodeJpeg : null,
+      passcodeBinDarkJpeg: passcodeProbe && passcodeProbe.images ? passcodeProbe.images.passcodeBinDarkJpeg : null,
+      passcodeBinLightJpeg: passcodeProbe && passcodeProbe.images ? passcodeProbe.images.passcodeBinLightJpeg : null,
+      passcodeLcRawJpeg: passcodeProbe && passcodeProbe.images ? passcodeProbe.images.passcodeLcRawJpeg : null,
     },
+    passcodeProbe: passcodeProbe
+      ? {
+          crop: passcodeProbe.crop,
+          warpActive: passcodeProbe.warpActive,
+          hint: passcodeProbe.hint,
+          sidecar: passcodeProbe.sidecar,
+          attempts: passcodeProbe.diagnostics && passcodeProbe.diagnostics.attempts
+            ? passcodeProbe.diagnostics.attempts.slice(0, 8)
+            : [],
+          bestVariant:
+            passcodeProbe.diagnostics && passcodeProbe.diagnostics.bestVariant
+              ? passcodeProbe.diagnostics.bestVariant
+              : null,
+        }
+      : null,
     outcome: outcome
       ? {
           cleaned: outcome.cleaned || null,
@@ -31955,6 +32721,8 @@ function showScannerToast(card) {
 
   document.body.appendChild(toast);
   const showMs = useRichToast && imgUrl ? 2800 : 2000;
+  playCardSurfaceChime('deck_add');
+  pulseToastHaptic('pop');
   scannerMatchToastHideTimer = window.setTimeout(() => {
     toast.classList.add('scanner-match-toast--hide');
     scannerMatchToastHideTimer = window.setTimeout(() => {
@@ -31969,6 +32737,7 @@ function showScannerToast(card) {
  * @returns {void}
  */
 function updateScannerResultsUI() {
+  if (__ocrScannerResultsUiDepth > 0) return;
   const container = getEl('results-view');
   if (!container) return;
   if (!document.documentElement.classList.contains('ocr-scanner-active')) return;
@@ -31976,9 +32745,9 @@ function updateScannerResultsUI() {
     paintOcrScannerEmptyResultsView('aim');
     return;
   }
-  __insideOcrResultsRender = true;
   const savedResults = searchResults;
   const savedPage = currentPage;
+  __ocrScannerResultsUiDepth += 1;
   try {
     searchResults = [];
     for (let sci = 0; sci < scannerFoundCards.length; sci++) {
@@ -31998,11 +32767,11 @@ function updateScannerResultsUI() {
       return;
     }
     currentPage = 1;
-    renderResults();
+    renderResults({ ocrScannerRender: true });
   } finally {
     searchResults = savedResults;
     currentPage = savedPage;
-    __insideOcrResultsRender = false;
+    __ocrScannerResultsUiDepth -= 1;
   }
 }
 
@@ -32030,13 +32799,28 @@ const OCR_PREVIEW_PASSCODE_LIVE_H = 44;
  * @param {string} cardType
  * @returns {{ x: number, y: number, width: number, height: number }}
  */
-function getOcrNameStripRect(cardType) {
-  return {
-    x: cardType === 'Magia' ? 100 : OCR_NAME_DST_X,
-    y: OCR_NAME_DST_Y,
-    width: cardType === 'Magia' ? 800 : OCR_NAME_DST_W,
-    height: OCR_NAME_DST_H,
-  };
+function getOcrNameStripRect(cardType, cropRect) {
+  const d = computeOcrNameDestRect(cardType, cropRect);
+  return { x: d.dstX, y: d.dstY, width: d.dstW, height: d.dstH };
+}
+
+/**
+ * Escala vertical do nome no canvas OCR (nomes longos / recorte baixo = letras pequenas).
+ * @param {string} cardType
+ * @param {{ width?: number, height?: number }|null|undefined} cropRect
+ * @returns {{ dstX: number, dstY: number, dstW: number, dstH: number }}
+ */
+function computeOcrNameDestRect(cardType, cropRect) {
+  const dstX = cardType === 'Magia' ? 72 : OCR_NAME_DST_X;
+  const dstW = cardType === 'Magia' ? 888 : OCR_NAME_DST_W;
+  let dstH = OCR_NAME_DST_H;
+  if (cropRect && cropRect.width > 8 && cropRect.height > 3) {
+    const aspect = cropRect.width / cropRect.height;
+    if (cardType === 'Magia' && aspect > 4.2) dstH = Math.min(100, OCR_NAME_DST_H + 14);
+    if (cropRect.height < 32 || aspect > 5) dstH = Math.min(96, OCR_NAME_DST_H + 18);
+    if (aspect > 6.5) dstH = Math.min(104, dstH + 10);
+  }
+  return { dstX, dstY: OCR_NAME_DST_Y, dstW, dstH };
 }
 
 /**
@@ -32046,7 +32830,28 @@ function getOcrNameStripRect(cardType) {
  * @param {string} cardType
  * @returns {void}
  */
-function paintOcrPreviewCanvas(previewEl, ocrCanvas, cardType, outW) {
+/**
+ * Fundo claro no preview «robô» (placa branca / extract prata em Sincro Secreta).
+ * @param {string} cardType
+ * @param {string} [rarity]
+ * @param {object|null|undefined} settings
+ * @returns {boolean}
+ */
+function ocrPreviewUsesLightBackground(cardType, rarity, settings) {
+  if (cardType === 'Magia' || cardType === 'Monstro Ritual') return true;
+  if (settings && (settings.lightCanvas || settings.silverSunExtract)) {
+    return cardType === 'Monstro Sincro' || cardType === 'Magia';
+  }
+  if (
+    cardType === 'Monstro Sincro' &&
+    (!isOcrRarityWithNameFoil(rarity) || rarity === 'Secreta' || getOcrRarityGroup(rarity) === 'secret')
+  ) {
+    return true;
+  }
+  return false;
+}
+
+function paintOcrPreviewCanvas(previewEl, ocrCanvas, cardType, outW, previewOpts) {
   if (!previewEl || !ocrCanvas || !ocrCanvas.width) return;
   const strip = getOcrNameStripRect(cardType);
   const displayW = outW > 0 ? outW : OCR_PREVIEW_DISPLAY_W;
@@ -32057,10 +32862,114 @@ function paintOcrPreviewCanvas(previewEl, ocrCanvas, cardType, outW) {
   }
   const pctx = previewEl.getContext('2d', { alpha: false });
   if (!pctx) return;
-  pctx.fillStyle = cardType === 'Magia' ? '#ffffff' : '#000000';
+  const rarity = previewOpts && previewOpts.rarity;
+  const settings = previewOpts && previewOpts.settings;
+  const lightBg = ocrPreviewUsesLightBackground(cardType, rarity, settings);
+  pctx.fillStyle = lightBg ? '#ffffff' : '#000000';
   pctx.fillRect(0, 0, displayW, outH);
   pctx.imageSmoothingEnabled = false;
   pctx.drawImage(ocrCanvas, strip.x, strip.y, strip.width, strip.height, 0, 0, displayW, outH);
+}
+
+/**
+ * Pré-processamento foil para preview ao vivo (Magia Secreta / Link Ultra).
+ * @param {string} cardType
+ * @param {string} rarity
+ * @returns {object|null}
+ */
+function buildScannerFoilPreviewSettings(cardType, rarity) {
+  const foil = isOcrRarityWithNameFoil(rarity);
+  if (!foil) return null;
+  const secretLike = rarity === 'Secreta' || getOcrRarityGroup(rarity) === 'secret';
+  if (cardType === 'Magia') {
+    return {
+      useColorAdaptive: false,
+      lightCanvas: true,
+      grayscale: true,
+      contrast: secretLike ? 1.82 : 1.65,
+      brightness: 1.02,
+      localContrast: true,
+      invert: false,
+      useBinarization: false,
+      goldSunExtract: !secretLike,
+      silverSunExtract: secretLike,
+      suppressPreview: false,
+      adaptiveThreshold: false,
+    };
+  }
+  if (cardType === 'Monstro Sincro') {
+    return {
+      useColorAdaptive: false,
+      lightCanvas: true,
+      grayscale: true,
+      contrast: secretLike ? 1.88 : 1.68,
+      brightness: 1.02,
+      localContrast: true,
+      invert: false,
+      useBinarization: false,
+      silverSunExtract: secretLike,
+      suppressPreview: false,
+      adaptiveThreshold: false,
+    };
+  }
+  if (cardType === 'Monstro Link' || cardType === 'Monstro Xyz') {
+    const ultraLike = rarity === 'Ultra Rara' || getOcrRarityGroup(rarity) === 'goldName';
+    return {
+      useColorAdaptive: false,
+      useBinarization: false,
+      grayscale: true,
+      contrast: ultraLike ? 1.92 : 2.05,
+      brightness: 0.86,
+      invert: true,
+      localContrast: true,
+      goldSunExtract: ultraLike,
+      silverSunExtract: !ultraLike && secretLike,
+      suppressPreview: false,
+      adaptiveThreshold: false,
+    };
+  }
+  return null;
+}
+
+/**
+ * Passes Paddle com extract foil (quando tipo/raridade já estão corretos na sonda).
+ * @param {string} cardType
+ * @param {string} rarity
+ * @returns {object[]}
+ */
+function buildScannerFoilExtractPaddlePasses(cardType, rarity) {
+  const foil = isOcrRarityWithNameFoil(rarity);
+  if (!foil) return [];
+  const base = {
+    runPaddle: true,
+    paddleRaw: true,
+    localContrast: true,
+    useColorAdaptive: false,
+    useBinarization: false,
+  };
+  const secretLike = rarity === 'Secreta' || getOcrRarityGroup(rarity) === 'secret';
+  if (cardType === 'Magia') {
+    return [
+      { ...PADDLE_RAW_NAME_PASS, lightCanvas: true },
+      { ...PADDLE_RAW_INVERT_PASS, lightCanvas: true },
+      { ...base, lightCanvas: true, silverSunExtract: true, invert: false },
+    ];
+  }
+  if (cardType === 'Monstro Link' || cardType === 'Monstro Xyz') {
+    const ultraLike = rarity === 'Ultra Rara' || getOcrRarityGroup(rarity) === 'goldName';
+    return [
+      { ...PADDLE_RAW_INVERT_PASS, invert: true },
+      PADDLE_RAW_NAME_PASS,
+      { ...base, goldSunExtract: ultraLike, invert: true },
+    ];
+  }
+  if (cardType === 'Monstro Sincro' && secretLike) {
+    return [
+      { ...base, lightCanvas: true, silverSunExtract: true, invert: false },
+      { ...PADDLE_RAW_INVERT_PASS, lightCanvas: true },
+    ];
+  }
+  return [];
 }
 
 /**
@@ -32085,17 +32994,62 @@ function getLiveRobotNamePreviewSettings(cardType, rarity) {
   };
   if (calibrator) {
     const s = calibrator.getCalibration(cardType, rarity);
+    const foilPreset = buildScannerFoilPreviewSettings(cardType, rarity);
+    if (foilPreset) {
+      return {
+        ...foilPreset,
+        contrast: s.contrast != null ? s.contrast : foilPreset.contrast,
+        brightness: s.brightness != null ? s.brightness : foilPreset.brightness,
+        invert: s.invert != null ? !!s.invert : !!foilPreset.invert,
+      };
+    }
     return {
       ...s,
-      ...light,
+      useColorAdaptive: false,
+      suppressPreview: false,
       contrast: s.contrast != null ? s.contrast : light.contrast,
       brightness: s.brightness != null ? s.brightness : light.brightness,
       invert: !!s.invert,
     };
   }
   const foil = isOcrRarityWithNameFoil(rarity);
+  const secretLike = rarity === 'Secreta' || getOcrRarityGroup(rarity) === 'secret';
+  const foilPreset = buildScannerFoilPreviewSettings(cardType, rarity);
+  if (foilPreset) return foilPreset;
   if (cardType === 'Monstro Fusão' && foil) {
     return { ...light, contrast: 1.35, brightness: 0.86 };
+  }
+  if (cardType === 'Monstro Sincro' || cardType === 'Magia') {
+    return {
+      useColorAdaptive: false,
+      lightCanvas: true,
+      grayscale: true,
+      contrast: cardType === 'Magia' ? (secretLike ? 1.78 : 1.65) : secretLike ? 1.88 : 1.68,
+      brightness: cardType === 'Magia' ? 1.02 : 1.02,
+      localContrast: cardType === 'Monstro Sincro' || (cardType === 'Magia' && secretLike),
+      invert: false,
+      useBinarization: false,
+      goldSunExtract: cardType === 'Magia' && foil && !secretLike,
+      silverSunExtract: foil && secretLike,
+      suppressPreview: false,
+      adaptiveThreshold: false,
+    };
+  }
+  if ((cardType === 'Monstro Xyz' || cardType === 'Monstro Link') && foil) {
+    const ultraLike = rarity === 'Ultra Rara' || getOcrRarityGroup(rarity) === 'goldName';
+    return {
+      useColorAdaptive: false,
+      useBinarization: false,
+      grayscale: true,
+      contrast: ultraLike ? 1.92 : 2.05,
+      brightness: 0.86,
+      invert: true,
+      localContrast: true,
+      goldSunExtract: ultraLike,
+      silverSunExtract: !ultraLike && secretLike,
+      suppressPreview: false,
+      adaptiveThreshold: false,
+    };
   }
   return light;
 }
@@ -32119,16 +33073,21 @@ function buildOcrNameProcessingCanvas(media, cropRect, settings, cardType, rarit
   canvas.height = OCR_CANVAS_H;
   ctx.filter = 'none';
   const foilOnPurple = isOcrRarityWithNameFoil(rarity) && PURPLE_PLATE_CARD_TYPES.has(cardType);
+  const syncSecretFoil =
+    cardType === 'Monstro Sincro' &&
+    isOcrRarityWithNameFoil(rarity) &&
+    (rarity === 'Secreta' || getOcrRarityGroup(rarity) === 'secret');
   const useLightCanvas =
     !foilOnPurple &&
     (cardType === 'Magia' ||
       cardType === 'Monstro Ritual' ||
+      syncSecretFoil ||
+      (cardType === 'Monstro Sincro' && isOcrRarityWithNameFoil(rarity)) ||
       (cardType === 'Monstro Sincro' && !isOcrRarityWithNameFoil(rarity)) ||
-      !!(settings && settings.lightCanvas));
+      !!(settings && (settings.lightCanvas || settings.silverSunExtract)));
   ctx.fillStyle = useLightCanvas ? 'white' : 'black';
   ctx.fillRect(0, 0, OCR_CANVAS_W, OCR_CANVAS_H);
-  const dstX = cardType === 'Magia' ? 100 : OCR_NAME_DST_X;
-  const dstW = cardType === 'Magia' ? 800 : OCR_NAME_DST_W;
+  const { dstX, dstY, dstW, dstH } = computeOcrNameDestRect(cardType, cropRect);
   try {
     ctx.drawImage(
       media,
@@ -32137,18 +33096,36 @@ function buildOcrNameProcessingCanvas(media, cropRect, settings, cardType, rarit
       cropRect.width,
       cropRect.height,
       dstX,
-      OCR_NAME_DST_Y,
+      dstY,
       dstW,
-      OCR_NAME_DST_H
+      dstH
     );
   } catch (_) {
     return null;
   }
   const { avgR, avgG, avgB } = sampleNameStripAverages(ctx);
+  if (settings.paddleRaw) {
+    if (settings.glareCompress) {
+      applyHighlightGlareCompress(ctx, dstX, dstY, dstW, dstH);
+    }
+    if (settings.localContrast) {
+      applyLocalContrastNormalize(
+        ctx,
+        dstX,
+        dstY,
+        dstW,
+        dstH,
+        settings.lcCols || 8,
+        settings.lcRows || 2
+      );
+    }
+    if (settings.invert) applyPixelInvert(ctx, canvas);
+    return { canvas, avgR, avgG, avgB, cssFilter: 'none', appliedThreshold: null };
+  }
   if (settings.goldSunExtract) {
-    applyGoldSunLetterExtract(ctx, dstX, OCR_NAME_DST_Y, dstW, OCR_NAME_DST_H);
+    applyGoldSunLetterExtract(ctx, dstX, dstY, dstW, dstH);
   } else if (settings.silverSunExtract) {
-    applySilverSunLetterExtract(ctx, dstX, OCR_NAME_DST_Y, dstW, OCR_NAME_DST_H);
+    applySilverSunLetterExtract(ctx, dstX, dstY, dstW, dstH, { lightPlate: useLightCanvas });
   }
   let cssFilter;
   if (settings.goldSunExtract || settings.silverSunExtract) {
@@ -32198,7 +33175,7 @@ function forcedCssFilterByCardType(cardType) {
   if (cardType === 'Monstro Ritual') return 'grayscale(1) contrast(1.75) brightness(0.9)';
   if (cardType === 'Armadilha') return 'grayscale(1) contrast(1.4) brightness(1.5) saturate(0)';
   if (cardType === 'Monstro Fusão') return 'grayscale(1) contrast(1.4) brightness(1.5) saturate(0)';
-  if (cardType === 'Monstro Sincro') return 'grayscale(1) contrast(1.5) brightness(0.95)';
+  if (cardType === 'Monstro Sincro') return 'grayscale(1) contrast(1.72) brightness(0.92)';
   if (cardType === 'Monstro Link') return 'grayscale(1) contrast(2.2) brightness(1.25)';
   // Efeito e demais monstros laranja/coloridos
   if (String(cardType || '').startsWith('Monstro'))
@@ -32226,12 +33203,17 @@ function forcedCssFilterByCardTypeAndRarity(cardType, rarity) {
     return 'grayscale(1) contrast(1.58) brightness(1.02) saturate(0)';
   }
   if (cardType === 'Monstro Sincro') {
-    if (grp === 'secret' || grp === 'starlight') return 'grayscale(1) contrast(1.78) brightness(0.9)';
-    if (grp === 'goldName' || grp === 'ultimate') return 'grayscale(1) contrast(1.55) brightness(0.9)';
-    if (grp === 'silverName') return 'grayscale(1) contrast(1.5) brightness(0.98)';
-    return 'grayscale(1) contrast(1.5) brightness(0.98)';
+    if (grp === 'secret' || grp === 'starlight') return 'grayscale(1) contrast(1.95) brightness(0.88)';
+    if (grp === 'goldName' || grp === 'ultimate') return 'grayscale(1) contrast(1.68) brightness(0.88)';
+    if (grp === 'silverName') return 'grayscale(1) contrast(1.62) brightness(0.96)';
+    return 'grayscale(1) contrast(1.62) brightness(0.96)';
   }
-  if (cardType === 'Magia' || cardType === 'Monstro Ritual') {
+  if (cardType === 'Magia') {
+    if (grp === 'secret' || rarity === 'Secreta') return 'grayscale(1) contrast(1.78) brightness(0.94)';
+    if (grp === 'goldName' || rarity === 'Ultra Rara') return 'grayscale(1) contrast(1.62) brightness(1.02)';
+    return forcedCssFilterByCardType(cardType);
+  }
+  if (cardType === 'Monstro Ritual') {
     return forcedCssFilterByCardType(cardType);
   }
   if (String(cardType || '').startsWith('Monstro')) {
@@ -32241,7 +33223,7 @@ function forcedCssFilterByCardTypeAndRarity(cardType, rarity) {
 }
 
 /** Tipos que recebem passes OCR extra (monstros castanho/laranja / Xyz com nome foil). */
-const HARD_OCR_CARD_TYPES = new Set(['Monstro Efeito', 'Monstro Xyz']);
+const HARD_OCR_CARD_TYPES = new Set(['Monstro Efeito', 'Monstro Xyz', 'Monstro Link']);
 /** Fusão / Armadilha: faixa roxa com texto claro (pipeline dedicado). */
 const PURPLE_PLATE_CARD_TYPES = new Set(['Monstro Fusão', 'Armadilha']);
 
@@ -32269,6 +33251,12 @@ const OCR_RARITY_META = Object.freeze({
 /** @param {string} rarity @returns {boolean} */
 function isOcrRarityWithNameFoil(rarity) {
   return !!(OCR_RARITY_META[rarity] && OCR_RARITY_META[rarity].foilName);
+}
+
+/** ID TCG: sempre tinta fosca (preto ou branco), nunca foil — Ultra/Secreta só afetam nome/arte. */
+function isMattePrintedPasscodeRarity(rarity) {
+  void rarity;
+  return true;
 }
 
 /** @param {string} rarity @returns {boolean} */
@@ -32362,7 +33350,8 @@ function applyGoldSunLetterExtract(ctx, x, y, w, h) {
  * @param {number} h
  * @returns {void}
  */
-function applySilverSunLetterExtract(ctx, x, y, w, h) {
+function applySilverSunLetterExtract(ctx, x, y, w, h, opts) {
+  const lightPlate = !!(opts && opts.lightPlate);
   const imgData = ctx.getImageData(x, y, w, h);
   const data = imgData.data;
   const scores = new Float32Array(data.length / 4);
@@ -32372,18 +33361,107 @@ function applySilverSunLetterExtract(ctx, x, y, w, h) {
     const b = data[i + 2];
     const lum = (r + g + b) / 3;
     const spread = Math.max(r, g, b) - Math.min(r, g, b);
-    let s = lum - spread * 1.35;
-    if (lum > 158) s -= (lum - 158) * 0.32;
+    let s;
+    if (lightPlate) {
+      s = spread * 2.4 + (lum > 132 && lum < 248 ? 8 : 0);
+      if (lum < 88) s -= 24;
+    } else {
+      s = lum - spread * 1.35;
+      if (lum > 158) s -= (lum - 158) * 0.32;
+    }
     scores[p] = s;
   }
   const sorted = Array.from(scores).sort((a, b) => a - b);
-  const thr = sorted[Math.floor(sorted.length * 0.54)] ?? 118;
+  const pct = lightPlate ? 0.48 : 0.54;
+  const thr = sorted[Math.floor(sorted.length * pct)] ?? (lightPlate ? 12 : 118);
   for (let p = 0, i = 0; i < data.length; i += 4, p++) {
-    const v = scores[p] >= thr ? 242 : 16;
+    const v = scores[p] >= thr ? (lightPlate ? 32 : 242) : lightPlate ? 248 : 16;
     data[i] = data[i + 1] = data[i + 2] = v;
   }
   ctx.putImageData(imgData, x, y);
 }
+
+/**
+ * Normalização local de contraste (CLAHE simplificado) — reduz dependência de inclinar a carta por causa do brilho.
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {number} x
+ * @param {number} y
+ * @param {number} w
+ * @param {number} h
+ * @param {number} [tileCols]
+ * @param {number} [tileRows]
+ * @returns {void}
+ */
+function applyLocalContrastNormalize(ctx, x, y, w, h, tileCols = 6, tileRows = 2) {
+  const imgData = ctx.getImageData(x, y, w, h);
+  const data = imgData.data;
+  const tw = Math.max(6, Math.floor(w / tileCols));
+  const th = Math.max(6, Math.floor(h / tileRows));
+  for (let ty = 0; ty < tileRows; ty++) {
+    for (let tx = 0; tx < tileCols; tx++) {
+      const x0 = tx * tw;
+      const y0 = ty * th;
+      const x1 = tx === tileCols - 1 ? w : Math.min(w, x0 + tw);
+      const y1 = ty === tileRows - 1 ? h : Math.min(h, y0 + th);
+      let minL = 255;
+      let maxL = 0;
+      const cells = [];
+      for (let py = y0; py < y1; py++) {
+        for (let px = x0; px < x1; px++) {
+          const i = (py * w + px) * 4;
+          const L = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+          cells.push({ i, L });
+          if (L < minL) minL = L;
+          if (L > maxL) maxL = L;
+        }
+      }
+      const span = Math.max(22, maxL - minL);
+      for (const cell of cells) {
+        const v = Math.max(0, Math.min(255, ((cell.L - minL) / span) * 255));
+        data[cell.i] = data[cell.i + 1] = data[cell.i + 2] = v;
+      }
+    }
+  }
+  ctx.putImageData(imgData, x, y);
+}
+
+/**
+ * Comprime pixels estourados (sol direto) antes do contraste local / OCR.
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {number} x
+ * @param {number} y
+ * @param {number} w
+ * @param {number} h
+ * @param {number} [clipAt]
+ * @returns {void}
+ */
+function applyHighlightGlareCompress(ctx, x, y, w, h, clipAt = 208) {
+  const imgData = ctx.getImageData(x, y, w, h);
+  const data = imgData.data;
+  for (let i = 0; i < data.length; i += 4) {
+    const L = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+    if (L > clipAt) {
+      const t = Math.min(1, (L - clipAt) / 48);
+      const v = clipAt + t * 38;
+      data[i] = data[i + 1] = data[i + 2] = v;
+    }
+  }
+  ctx.putImageData(imgData, x, y);
+}
+
+/** Pass Paddle com recorte quase bruto + contraste local (melhor com glare/inclinação). */
+const PADDLE_RAW_NAME_PASS = Object.freeze({
+  runPaddle: true,
+  paddleRaw: true,
+  localContrast: true,
+  suppressPreview: false,
+});
+
+/** Variante invertida — nomes foil em placa escura (Link/Xyz) ou secret prateado em fundo claro. */
+const PADDLE_RAW_INVERT_PASS = Object.freeze({
+  ...PADDLE_RAW_NAME_PASS,
+  invert: true,
+});
 
 /**
  * Binarização global ou adaptativa (média de luminância) no canvas atual.
@@ -32466,6 +33544,7 @@ function canRunPaddleOcrNow() {
 function shouldUsePaddleForRecognize(rarity, settings) {
   if (settings && settings.forceTesseract) return false;
   if (!canRunPaddleOcrNow()) return false;
+  if (settings && settings.paddleRaw) return true;
   if (settings && settings.runPaddle) return true;
   if (settings && settings.paddleFallback) return true;
   return false;
@@ -32496,30 +33575,303 @@ async function recognizeCanvasWithPaddle(canvas, timeoutMs) {
 }
 
 /**
- * Atualiza classes visuais da moldura conforme estabilidade do recorte do nome.
+ * Carrega {@link ./ocr-card-track.mjs} uma vez.
+ * @returns {Promise<object>}
+ */
+function getOcrCardTrackModule() {
+  if (ocrCardTrackMod) return Promise.resolve(ocrCardTrackMod);
+  if (!ocrCardTrackModPromise) {
+    ocrCardTrackModPromise = import(/* @vite-ignore */ './ocr-card-track.mjs').then((m) => {
+      ocrCardTrackMod = m;
+      return m;
+    });
+  }
+  return ocrCardTrackModPromise;
+}
+
+/**
+ * Repõe a moldura azul ao CSS fixo (sem tracking).
+ * @returns {void}
+ */
+function clearScannerTrackOverlay() {
+  const typeEl = getEl('scanner-type-visual');
+  if (!typeEl || !ocrCardTrackOverlayActive) return;
+  ocrCardTrackOverlayActive = false;
+  typeEl.style.left = '';
+  typeEl.style.top = '';
+  typeEl.style.width = '';
+  typeEl.style.height = '';
+  typeEl.style.transform = '';
+  typeEl.classList.remove('scanner-card-frame--tracking');
+}
+
+/**
+ * Posiciona `#scanner-type-visual` sobre a carta detetada.
  * @param {HTMLVideoElement} video
+ * @param {{ x: number, y: number, w: number, h: number }} card
+ * @param {object} trackMod
+ * @returns {void}
+ */
+function applyScannerTrackOverlay(video, card, trackMod) {
+  const typeEl = getEl('scanner-type-visual');
+  const pct = trackMod.cardRectVideoToOverlayPercent(video, card);
+  if (!typeEl || !pct) return;
+  ocrCardTrackOverlayActive = true;
+  typeEl.style.left = `${pct.leftPct}%`;
+  typeEl.style.top = `${pct.topPct}%`;
+  typeEl.style.width = `${pct.widthPct}%`;
+  typeEl.style.height = `${pct.heightPct}%`;
+  typeEl.style.transform = pct.rotateDeg ? `rotate(${pct.rotateDeg}deg)` : 'none';
+  typeEl.classList.add('scanner-card-frame--tracking');
+}
+
+/**
+ * Recortes nome / tipo / ID — deteção dinâmica ou miras CSS fixas.
+ * @param {HTMLVideoElement} video
+ * @returns {{ nameCropVisual: object|null, typeCropRect: object|null, passcodeVisual: object|null, track: object|null, source: string }}
+ */
+function resolveScannerCrops(video) {
+  const handFree = ocrScannerIsMobile();
+  const now = performance.now();
+  const detectGap = ocrScannerIsMobile() ? 88 : 52;
+  if (ocrCardTrackMod) {
+    let track = null;
+    if (now - lastScannerCropDetectAt >= detectGap) {
+      track = ocrCardTrackMod.detectCardFromVideo(video, { handFree });
+      lastScannerCropDetectAt = now;
+    } else if (typeof ocrCardTrackMod.getTrackedCardState === 'function') {
+      track = ocrCardTrackMod.getTrackedCardState(video, { handFree });
+    }
+    lastOcrCardTrackPack = track;
+    if (track && track.card && track.card.conf >= 0.3) {
+      applyScannerTrackOverlay(video, track.card, ocrCardTrackMod);
+      lastResolvedScannerCrops = {
+        nameCropVisual: track.regions.name,
+        typeCropRect: track.regions.type,
+        passcodeVisual: track.regions.passcode,
+        track,
+        source: 'track',
+      };
+      return lastResolvedScannerCrops;
+    }
+  }
+  clearScannerTrackOverlay();
+  lastResolvedScannerCrops = {
+    nameCropVisual: mapVisualBoxToVideoCrop(video, getEl('scanner-visual')),
+    typeCropRect: mapVisualBoxToVideoCrop(video, getEl('scanner-type-visual')),
+    passcodeVisual: mapVisualBoxToVideoCrop(video, getEl('scanner-passcode-visual')),
+    track: null,
+    source: 'fixed',
+  };
+  return lastResolvedScannerCrops;
+}
+
+/**
+ * Carta retificada + recortes canónicos para OCR (nome/ID mais estáveis com inclinação).
+ * @param {HTMLVideoElement} video
+ * @param {object|null} track Pacote de {@link resolveScannerCrops}.
+ * @returns {null|{ media: HTMLCanvasElement, nameCrop: object, passcodeCrop: object, typeCrop: object }}
+ */
+function buildScannerWarpOcrContext(video, track) {
+  if (!ocrCardTrackMod || !video || !track || !track.card || track.card.conf < 0.32) {
+    return null;
+  }
+  const c = track.card;
+  const locked = ocrCardTrackMod.isCardTrackLocked && ocrCardTrackMod.isCardTrackLocked();
+  const key = `${Math.round(c.x / 6)}|${Math.round(c.y / 6)}|${Math.round(c.w / 6)}|${Math.round(c.h / 6)}|${locked ? 'L' : ''}`;
+  const now = performance.now();
+  if (
+    !ocrCanonicalCardCanvas ||
+    key !== ocrCanonicalCardKey ||
+    now - ocrCanonicalCardAt > (ocrScannerIsMobile() ? 110 : 75)
+  ) {
+    ocrCanonicalCardCanvas = ocrCardTrackMod.warpCardToCanonicalCanvas(
+      video,
+      c,
+      ocrCardTrackMod.CANONICAL_CARD_W,
+      ocrCardTrackMod.CANONICAL_CARD_H,
+      ocrCanonicalCardCanvas
+    );
+    ocrCanonicalCardKey = key;
+    ocrCanonicalCardAt = now;
+  }
+  if (!ocrCanonicalCardCanvas) return null;
+  const handFree = ocrScannerIsMobile();
+  const regions =
+    typeof ocrCardTrackMod.regionsOnCanonicalCard === 'function'
+      ? ocrCardTrackMod.regionsOnCanonicalCard(handFree)
+      : null;
+  if (!regions) return null;
+  let nameCrop = regions.name;
+  let passcodeCrop = regions.passcode;
+  if (typeof ocrCardTrackMod.refineNameOnCanonical === 'function') {
+    nameCrop = ocrCardTrackMod.refineNameOnCanonical(ocrCanonicalCardCanvas, nameCrop);
+  }
+  if (typeof ocrCardTrackMod.refinePasscodeOnCanonical === 'function') {
+    passcodeCrop = ocrCardTrackMod.refinePasscodeOnCanonical(ocrCanonicalCardCanvas, passcodeCrop);
+  }
+  return {
+    media: ocrCanonicalCardCanvas,
+    nameCrop,
+    passcodeCrop,
+    typeCrop: regions.type,
+    warpRefined: true,
+  };
+}
+
+/**
  * @param {{ x: number, y: number, width: number, height: number }} nameCropVisual
  * @returns {void}
  */
-function updateScannerFramingState(video, nameCropVisual) {
+function pushOcrFramingPositionSample(nameCropVisual) {
+  if (!nameCropVisual) return;
+  ocrFramingPosHistory.push({
+    cx: nameCropVisual.x + nameCropVisual.width / 2,
+    cy: nameCropVisual.y + nameCropVisual.height / 2,
+    at: Date.now(),
+  });
+  if (ocrFramingPosHistory.length > 8) ocrFramingPosHistory.shift();
+}
+
+/**
+ * @returns {number} Desvio máximo do centro (px vídeo).
+ */
+function ocrFramingPositionSpread() {
+  if (ocrFramingPosHistory.length < 3) return 999;
+  const last = ocrFramingPosHistory[ocrFramingPosHistory.length - 1];
+  let maxJ = 0;
+  for (let i = 0; i < ocrFramingPosHistory.length - 1; i++) {
+    const o = ocrFramingPosHistory[i];
+    const dx = last.cx - o.cx;
+    const dy = last.cy - o.cy;
+    const j = Math.sqrt(dx * dx + dy * dy);
+    if (j > maxJ) maxJ = j;
+  }
+  return maxJ;
+}
+
+/**
+ * @param {string} dir
+ * @returns {string}
+ */
+function ocrFramingHintForDirection(dir) {
+  const key = dir && dir !== 'none' ? `ocr.framing.${dir}` : '';
+  if (key && typeof T === 'function') {
+    const t = T(key);
+    if (t && t !== key) return t;
+  }
+  return T('ocr.framing.seeking');
+}
+
+/**
+ * Pronto para OCR pesado: luminância + posição estáveis; carta detetada ou moldura fixa alinhada.
+ * @param {HTMLVideoElement} video
+ * @param {{ x: number, y: number, width: number, height: number }} nameCropVisual
+ * @param {object|null} track
+ * @returns {boolean}
+ */
+function isScannerFramingReady(video, nameCropVisual, track) {
+  if (!video || !nameCropVisual) return false;
+  if (ocrFramingState !== 'aligned') return false;
+  if (track && track.card) {
+    if (track.raw && track.raw.locked) return true;
+    if (track.card.conf < 0.34) return false;
+    const jitter =
+      ocrCardTrackMod && typeof ocrCardTrackMod.getCardTrackPositionJitter === 'function'
+        ? ocrCardTrackMod.getCardTrackPositionJitter()
+        : ocrFramingPositionSpread();
+    const limit = Math.max(10, track.card.w * 0.035);
+    if (jitter > limit) return false;
+  }
+  return true;
+}
+
+/**
+ * @param {string} cleaned
+ * @param {object|null} card
+ * @returns {object|null} Consenso se ≥2 leituras iguais recentes.
+ */
+function ocrReadVoteConsensus(cleaned, card) {
+  const now = Date.now();
+  ocrReadVoteBuffer.push({ cleaned, card, at: now });
+  while (ocrReadVoteBuffer.length > 6) ocrReadVoteBuffer.shift();
+  const recent = ocrReadVoteBuffer.filter((v) => now - v.at < 2200 && v.cleaned);
+  if (recent.length < 2) return null;
+  const counts = new Map();
+  for (const r of recent) {
+    const k = r.cleaned;
+    counts.set(k, (counts.get(k) || 0) + 1);
+  }
+  let bestKey = cleaned;
+  let bestN = 0;
+  for (const [k, n] of counts) {
+    if (n > bestN) {
+      bestN = n;
+      bestKey = k;
+    }
+  }
+  if (bestN < 2) return null;
+  const hit = recent.find((r) => r.cleaned === bestKey && r.card);
+  return hit || recent.find((r) => r.cleaned === bestKey) || null;
+}
+
+/**
+ * Atualiza classes visuais da moldura conforme estabilidade do recorte do nome.
+ * @param {HTMLVideoElement} video
+ * @param {{ x: number, y: number, width: number, height: number }} nameCropVisual
+ * @param {object|null} [track]
+ * @returns {void}
+ */
+function updateScannerFramingState(video, nameCropVisual, track) {
   const typeEl = getEl('scanner-type-visual');
   const nameEl = getEl('scanner-visual');
   if (!video || !nameCropVisual || !typeEl) return;
   const lum = sampleCropMeanLuminance(video, nameCropVisual);
   ocrFramingLumHistory.push(lum);
   if (ocrFramingLumHistory.length > 6) ocrFramingLumHistory.shift();
+  pushOcrFramingPositionSample(nameCropVisual);
+
   let state = 'seeking';
-  if (ocrFramingLumHistory.length >= 3) {
-    let min = lum;
-    let max = lum;
-    for (let i = 0; i < ocrFramingLumHistory.length; i++) {
-      const v = ocrFramingLumHistory[i];
-      if (v < min) min = v;
-      if (v > max) max = v;
+  const lumStable =
+    ocrFramingLumHistory.length >= 3 &&
+    (() => {
+      let min = lum;
+      let max = lum;
+      for (let i = 0; i < ocrFramingLumHistory.length; i++) {
+        const v = ocrFramingLumHistory[i];
+        if (v < min) min = v;
+        if (v > max) max = v;
+      }
+      return max - min < 14 && lum > 35 && lum < 230;
+    })();
+
+  const posSpread = ocrFramingPositionSpread();
+  const posLimit =
+    track && track.card ? Math.max(10, track.card.w * 0.04) : Math.max(14, nameCropVisual.width * 0.12);
+  const posStable = posSpread <= posLimit;
+
+  if (lumStable && posStable) state = 'aligned';
+
+  let hintText = state === 'aligned' ? T('ocr.framing.aligned') : T('ocr.framing.seeking');
+  if (track && track.card && ocrCardTrackMod) {
+    if (track.raw && track.raw.locked) {
+      hintText = T('ocr.framing.locked');
+    } else {
+      const dir = ocrCardTrackMod.getCardTrackDirectionHint(
+        track.card,
+        video.videoWidth,
+        video.videoHeight
+      );
+      if (state !== 'aligned' && dir && dir !== 'none') {
+        hintText = ocrFramingHintForDirection(dir);
+        lastOcrDirectionHintKey = dir;
+      } else if (state !== 'aligned' && !track.card) {
+        hintText = T('ocr.framing.find_card');
+      }
     }
-    if (max - min < 14 && lum > 35 && lum < 230) state = 'aligned';
   }
-  if (state === ocrFramingState) return;
+
+  const stateChanged = state !== ocrFramingState;
   ocrFramingState = state;
   typeEl.classList.toggle('scanner-frame--aligned', state === 'aligned');
   typeEl.classList.toggle('scanner-frame--seeking', state !== 'aligned');
@@ -32529,7 +33881,11 @@ function updateScannerFramingState(video, nameCropVisual) {
   }
   const hint = getEl('ocr-framing-hint');
   if (hint) {
-    hint.textContent = T(state === 'aligned' ? 'ocr.framing.aligned' : 'ocr.framing.seeking');
+    const hintKey = `${state}|${hintText}`;
+    if (stateChanged || hintKey !== lastOcrDirectionHintKey) {
+      hint.textContent = hintText;
+      lastOcrDirectionHintKey = hintKey;
+    }
     hint.classList.toggle('ocr-framing-hint--ok', state === 'aligned');
     hint.classList.toggle('scanner-frame--aligned', state === 'aligned');
     hint.classList.toggle('scanner-frame--seeking', state !== 'aligned');
@@ -32556,7 +33912,22 @@ function ocrEngineLabel(engine) {
 function updateOcrLiveReadDisplay(outcome) {
   const el = getEl('ocr-live-read');
   if (!el) return;
-  if (!outcome || !outcome.cleaned) {
+  const now = Date.now();
+  if (outcome && outcome.cleaned) {
+    lastOcrLiveReadSticky = outcome;
+    lastOcrLiveReadAt = now;
+  }
+  let show = null;
+  if (outcome && outcome.cleaned) {
+    show = outcome;
+  } else if (
+    lastOcrLiveReadSticky &&
+    lastOcrLiveReadSticky.cleaned &&
+    now - lastOcrLiveReadAt < OCR_LIVE_READ_HOLD_MS
+  ) {
+    show = lastOcrLiveReadSticky;
+  }
+  if (!show || !show.cleaned) {
     const t = T('ocr.live.no_text');
     if (lastOcrLiveReadKey !== t) {
       lastOcrLiveReadKey = t;
@@ -32564,16 +33935,18 @@ function updateOcrLiveReadDisplay(outcome) {
     }
     return;
   }
-  const pack = outcome.pack || {};
+  const pack = show.pack || {};
   const engine = ocrEngineLabel(pack.ocrEngine);
   const conf =
     typeof pack.confidence === 'number' && isFinite(pack.confidence)
       ? Math.round(pack.confidence)
       : '—';
-  const status = outcome.card
+  const status = show.card
     ? T('ocr.live.status_match')
-    : T('ocr.live.status_weak');
-  const text = String(outcome.cleaned).slice(0, 48);
+    : typeof pack.confidence === 'number' && pack.confidence >= 68
+      ? T('ocr.live.status_hunt')
+      : T('ocr.live.status_weak');
+  const text = String(show.cleaned).slice(0, 48);
   const line = T('ocr.live.reading', { text, engine, conf: String(conf), status });
   if (line === lastOcrLiveReadKey) return;
   lastOcrLiveReadKey = line;
@@ -32614,7 +33987,9 @@ async function runOcrWithSettings(media, cropRect, settings, cardType, rarity = 
   const { canvas, avgR, avgG, avgB, cssFilter, appliedThreshold } = built;
 
   const preview = getEl('preview-canvas');
-  if (preview && !(settings && settings.suppressPreview)) paintOcrPreviewCanvas(preview, canvas, cardType);
+  if (preview && !(settings && settings.suppressPreview)) {
+    paintOcrPreviewCanvas(preview, canvas, cardType, 0, { rarity, settings });
+  }
 
   const recognizeMs = getOcrRecognizeTimeoutMs(settings);
   if (shouldUsePaddleForRecognize(rarity, settings)) {
@@ -32687,31 +34062,42 @@ async function processImageWithColorFilter(
   cropRect,
   settingsOverride = null,
   cardTypeFixed = null,
-  rarityFixed = null
+  rarityFixed = null,
+  ocrMediaSource = null
 ) {
   let cardType;
   let rarity = 'Comum';
-  const typeRect = mapVisualBoxToVideoCrop(video, getEl('scanner-type-visual')) || cropRect;
+  const media = ocrMediaSource || video;
+  const onCanonical = !!(ocrMediaSource && ocrMediaSource !== video);
+  const typeRect = onCanonical
+    ? {
+        x: 0,
+        y: 0,
+        width: media.width || ocrCardTrackMod?.CANONICAL_CARD_W || 590,
+        height: media.height || ocrCardTrackMod?.CANONICAL_CARD_H || 860,
+      }
+    : mapVisualBoxToVideoCrop(video, getEl('scanner-type-visual')) || cropRect;
   const manualTypeSelect = getEl('manual-card-type');
   const manualRaritySelect = getEl('manual-rarity');
   if (manualTypeSelect && manualRaritySelect) {
     if (manualTypeSelect.value === 'AUTO') {
       cardType =
-        cardTypeFixed != null ? cardTypeFixed : await detectCardTypeFromImage(video, typeRect, cropRect);
+        cardTypeFixed != null
+          ? cardTypeFixed
+          : await detectCardTypeFromImage(media, typeRect, cropRect);
     } else {
       cardType = manualTypeSelect.value;
     }
     if (rarityFixed != null) {
       rarity = rarityFixed;
     } else if (manualRaritySelect.value === 'AUTO') {
-      rarity =
-        lastDetectedCardRarity || (await detectRarityFromImage(video, cropRect, typeRect));
+      rarity = lastDetectedCardRarity || (await detectRarityFromImage(media, cropRect, typeRect));
     } else {
       rarity = manualRaritySelect.value;
     }
   } else {
     cardType =
-      cardTypeFixed != null ? cardTypeFixed : await detectCardTypeFromImage(video, typeRect, cropRect);
+      cardTypeFixed != null ? cardTypeFixed : await detectCardTypeFromImage(media, typeRect, cropRect);
     if (rarityFixed != null) rarity = rarityFixed;
   }
 
@@ -32729,7 +34115,7 @@ async function processImageWithColorFilter(
       };
   const settings = settingsOverride ? { ...baseSettings, ...settingsOverride } : baseSettings;
 
-  const o = await runOcrWithSettings(video, cropRect, settings, cardType, rarity);
+  const o = await runOcrWithSettings(media, cropRect, settings, cardType, rarity);
   if (!o) return null;
   return {
     text: o.text,
@@ -32743,6 +34129,7 @@ async function processImageWithColorFilter(
     cssFilter: o.cssFilter,
     appliedThreshold: o.appliedThreshold,
     ocrEngine: o.ocrEngine || 'tesseract',
+    ocrWarped: onCanonical,
   };
 }
 
@@ -32772,6 +34159,35 @@ function buildOcrFallbackPasses(cardType, rarity, base, plateLum, nameMetrics) {
   const foil = isOcrRarityWithNameFoil(rarity);
   const grp = getOcrRarityGroup(rarity);
   const fusionDual = shouldUseFusionDualFoilOcr(cardType, rarity);
+  const prependPaddleRaw = (arr) => {
+    if (!foil || !arr) return arr;
+    return [PADDLE_RAW_NAME_PASS, PADDLE_RAW_INVERT_PASS, ...arr];
+  };
+  if (nameMetrics && isNameStripSunGlareMetrics(nameMetrics)) {
+    return [
+      PADDLE_RAW_NAME_PASS,
+      { ...PADDLE_RAW_NAME_PASS, glareCompress: true, lcCols: 12, lcRows: 3 },
+      PADDLE_RAW_INVERT_PASS,
+      { ...PADDLE_RAW_INVERT_PASS, glareCompress: true },
+      {
+        useColorAdaptive: false,
+        grayscale: true,
+        contrast: 1.42,
+        brightness: 0.9,
+        invert: false,
+        useBinarization: false,
+      },
+      {
+        useColorAdaptive: false,
+        grayscale: true,
+        contrast: 1.55,
+        brightness: 0.82,
+        invert: true,
+        useBinarization: false,
+      },
+      null,
+    ];
+  }
   const sunFoil =
     foil &&
     plateLum > 140 &&
@@ -32924,8 +34340,42 @@ function buildOcrFallbackPasses(cardType, rarity, base, plateLum, nameMetrics) {
       { useBinarization: false, useColorAdaptive: true, invert: false },
       { useBinarization: true, adaptiveThreshold: true, invert: false },
     ];
+  } else if (cardType === 'Monstro Link' && foil) {
+    passes = [
+      { ...PADDLE_RAW_NAME_PASS, invert: true },
+      { ...PADDLE_RAW_INVERT_PASS, invert: false },
+      { goldSunExtract: true, useColorAdaptive: false, useBinarization: false, invert: false },
+      { silverSunExtract: true, useColorAdaptive: false, useBinarization: false, invert: false },
+      {
+        useBinarization: false,
+        useColorAdaptive: false,
+        grayscale: true,
+        contrast: 2.0,
+        brightness: 0.9,
+        invert: true,
+      },
+      null,
+      {
+        useBinarization: false,
+        useColorAdaptive: false,
+        grayscale: true,
+        contrast: 1.85,
+        brightness: 0.94,
+        invert: true,
+      },
+      {
+        useBinarization: false,
+        useColorAdaptive: false,
+        grayscale: true,
+        contrast: 1.72,
+        brightness: 1.06,
+        invert: false,
+      },
+      { useBinarization: true, adaptiveThreshold: true, invert: false },
+    ];
   } else if (cardType === 'Monstro Xyz' && foil) {
     passes = [
+      { goldSunExtract: true, useColorAdaptive: false, useBinarization: false, invert: false },
       {
         useBinarization: false,
         useColorAdaptive: false,
@@ -32974,18 +34424,37 @@ function buildOcrFallbackPasses(cardType, rarity, base, plateLum, nameMetrics) {
       },
     ];
   } else if (cardType === 'Monstro Sincro' && foil) {
-    // Nome dourado/prateado em moldura branca (ex.: Sincro Ultra).
+    // Secreta = prata em placa branca; Ultra = dourado — contraste em fundo claro antes do extract.
+    const secretLike = rarity === 'Secreta' || getOcrRarityGroup(rarity) === 'secret';
     passes = [
       {
         useBinarization: false,
         useColorAdaptive: false,
         lightCanvas: true,
         grayscale: true,
-        contrast: 1.52,
-        brightness: 0.9,
+        contrast: secretLike ? 1.82 : 1.68,
+        brightness: 0.88,
         invert: false,
+        localContrast: true,
       },
       null,
+      {
+        silverSunExtract: true,
+        lightCanvas: true,
+        useColorAdaptive: false,
+        useBinarization: false,
+        invert: false,
+      },
+      {
+        useBinarization: false,
+        useColorAdaptive: false,
+        lightCanvas: true,
+        grayscale: true,
+        contrast: secretLike ? 1.92 : 1.75,
+        brightness: 0.86,
+        invert: true,
+      },
+      { goldSunExtract: true, lightCanvas: true, useColorAdaptive: false, useBinarization: false, invert: false },
       {
         useBinarization: false,
         useColorAdaptive: false,
@@ -33013,9 +34482,10 @@ function buildOcrFallbackPasses(cardType, rarity, base, plateLum, nameMetrics) {
         useColorAdaptive: false,
         lightCanvas: true,
         grayscale: true,
-        contrast: 1.55,
-        brightness: 0.88,
+        contrast: 1.68,
+        brightness: 0.86,
         invert: false,
+        localContrast: true,
       },
       null,
       {
@@ -33023,8 +34493,8 @@ function buildOcrFallbackPasses(cardType, rarity, base, plateLum, nameMetrics) {
         useColorAdaptive: false,
         lightCanvas: true,
         grayscale: true,
-        contrast: 1.68,
-        brightness: 0.9,
+        contrast: 1.78,
+        brightness: 0.88,
         invert: false,
       },
       {
@@ -33032,9 +34502,41 @@ function buildOcrFallbackPasses(cardType, rarity, base, plateLum, nameMetrics) {
         useColorAdaptive: false,
         lightCanvas: true,
         grayscale: true,
-        contrast: 1.45,
-        brightness: 0.95,
+        contrast: 1.58,
+        brightness: 0.92,
         invert: false,
+        localContrast: true,
+      },
+    ];
+  } else if (cardType === 'Monstro Efeito' && foil) {
+    passes = [
+      { ...PADDLE_RAW_NAME_PASS },
+      { ...PADDLE_RAW_INVERT_PASS },
+      {
+        useBinarization: false,
+        useColorAdaptive: false,
+        grayscale: true,
+        contrast: 1.75,
+        brightness: 1.02,
+        invert: false,
+        localContrast: true,
+      },
+      null,
+      {
+        useBinarization: false,
+        useColorAdaptive: false,
+        grayscale: true,
+        contrast: 1.88,
+        brightness: 0.94,
+        invert: false,
+      },
+      {
+        useBinarization: false,
+        useColorAdaptive: false,
+        grayscale: true,
+        contrast: 1.65,
+        brightness: 1.08,
+        invert: true,
       },
     ];
   } else if (HARD_OCR_CARD_TYPES.has(cardType)) {
@@ -33066,6 +34568,63 @@ function buildOcrFallbackPasses(cardType, rarity, base, plateLum, nameMetrics) {
       });
       passes = passes.slice(0, 7);
     }
+  } else if (cardType === 'Magia' && foil) {
+    const secretLike = rarity === 'Secreta' || getOcrRarityGroup(rarity) === 'secret';
+    passes = [
+      { ...PADDLE_RAW_NAME_PASS, lightCanvas: true },
+      { ...PADDLE_RAW_INVERT_PASS, lightCanvas: true },
+      {
+        silverSunExtract: true,
+        lightCanvas: true,
+        useColorAdaptive: false,
+        useBinarization: false,
+        invert: false,
+      },
+      {
+        useBinarization: false,
+        useColorAdaptive: false,
+        lightCanvas: true,
+        grayscale: true,
+        contrast: secretLike ? 1.68 : 1.58,
+        brightness: 0.92,
+        invert: false,
+      },
+      null,
+      {
+        useBinarization: false,
+        useColorAdaptive: false,
+        lightCanvas: true,
+        grayscale: true,
+        contrast: 1.85,
+        brightness: 0.88,
+        invert: true,
+      },
+      { goldSunExtract: true, lightCanvas: true, useColorAdaptive: false, useBinarization: false, invert: false },
+      {
+        useBinarization: false,
+        useColorAdaptive: false,
+        grayscale: true,
+        contrast: 1.72,
+        brightness: 0.92,
+        invert: false,
+      },
+      {
+        useBinarization: false,
+        useColorAdaptive: false,
+        grayscale: true,
+        contrast: 2.0,
+        brightness: 1.05,
+        invert: false,
+      },
+      {
+        useBinarization: false,
+        useColorAdaptive: false,
+        grayscale: true,
+        contrast: 2.35,
+        brightness: 0.98,
+        invert: false,
+      },
+    ];
   } else if (cardType === 'Magia') {
     // Magia: fundo branco + filtros suaves funcionam melhor à distância (baseado em mobile_camera.html).
     // Binarização destrói o canal teal; useColorAdaptive:false permite contraste/brilho explícitos.
@@ -33345,7 +34904,7 @@ function buildOcrFallbackPasses(cardType, rarity, base, plateLum, nameMetrics) {
       invert: false,
     });
   }
-  return passes.slice(0, fusionDual ? 14 : 10);
+  return prependPaddleRaw(passes.slice(0, fusionDual ? 14 : 10));
 }
 
 /**
@@ -33356,6 +34915,7 @@ function buildOcrFallbackPasses(cardType, rarity, base, plateLum, nameMetrics) {
  * @param {{ x: number, y: number, width: number, height: number }|null} [typeCropRect]
  * @param {{ x: number, y: number, width: number, height: number }|null} [nameCropVisual] Mira verde no vídeo (tipo/cor da placa).
  * @param {{ x: number, y: number, width: number, height: number }|null} [nameCropOcrRefined] Recorte ligeiramente afinado (só diagnóstico).
+ * @param {null|{ media: HTMLCanvasElement, nameCrop: object, passcodeCrop: object, typeCrop: object }} [ocrWarp] Carta retificada.
  * @returns {Promise<null|{ pack: object, cleaned: string, card: object|null, diagnostics?: { cardType: string, rarity: string, passes: object[] } }>}
  */
 async function processFrameWithFallbackPasses(
@@ -33363,8 +34923,11 @@ async function processFrameWithFallbackPasses(
   nameCropRect,
   typeCropRect,
   nameCropVisual,
-  nameCropOcrRefined
+  nameCropOcrRefined,
+  ocrWarp
 ) {
+  const ocrMedia = ocrWarp && ocrWarp.media ? ocrWarp.media : video;
+  const warpSrc = ocrWarp ? ocrWarp.media : null;
   const typeRect = typeCropRect || nameCropRect;
   const nameStripForType = nameCropVisual || nameCropRect;
   let cardType = 'Monstro Efeito';
@@ -33374,7 +34937,9 @@ async function processFrameWithFallbackPasses(
   const typeProbe = probeCardTypeDiagnostics(video, nameStripForType, typeCropRect);
   const nameForRarity =
     nameCropOcrRefined || refineNameCropForOcr(nameCropVisual || nameCropRect);
-  const rarityProbe = probeCardRarityDiagnostics(video, nameForRarity, typeCropRect);
+  const typeHintEarly =
+    typeProbe.classifiedTypeMerged || typeProbe.classifiedType || 'Monstro Efeito';
+  const rarityProbe = probeCardRarityDiagnostics(video, nameForRarity, typeCropRect, typeHintEarly);
   if (manualTypeSelect && manualRaritySelect) {
     if (manualTypeSelect.value === 'AUTO') {
       cardType = typeProbe.classifiedType || (await detectCardTypeFromImage(video, typeRect, nameCropRect));
@@ -33421,7 +34986,7 @@ async function processFrameWithFallbackPasses(
   const base = calibrator
     ? calibrator.getCalibration(cardType, rarity)
     : { useBinarization: false };
-  const plateLum = sampleCropMeanLuminance(video, nameCropRect);
+  const plateLum = sampleCropMeanLuminance(ocrMedia, nameCropRect);
   let passes = buildOcrFallbackPasses(cardType, rarity, base, plateLum, rarityProbe.nameMetrics);
   const foilName = isOcrRarityWithNameFoil(rarity);
   const xyzDarkPlate = cardType === 'Monstro Xyz' && plateLum < 115;
@@ -33431,9 +34996,10 @@ async function processFrameWithFallbackPasses(
   const fusionFoilPlate = fusionPurplePlate && foilName;
   const darkNamePlate =
     plateLum < 120 && (xyzDarkPlate || fusionDarkPlate || HARD_OCR_CARD_TYPES.has(cardType));
-  const usePaddleEarly = foilName || darkNamePlate || fusionFoilPlate;
+  const foilWantsPaddle = foilName || darkNamePlate || fusionFoilPlate;
+  const usePaddleEarly = foilWantsPaddle && paddleOcrReadyFlag;
   const mobileFast = ocrScannerIsMobile();
-  ocrDeferHeavyUntilPaddle = usePaddleEarly && !paddleOcrReadyFlag;
+  ocrDeferHeavyUntilPaddle = foilWantsPaddle && shouldDeferOcrForPaddleWarmup();
   if (ocrDeferHeavyUntilPaddle) {
     logOcrPaddleWarmupWait();
     return null;
@@ -33448,39 +35014,71 @@ async function processFrameWithFallbackPasses(
   const visionCtxEarly = { cardType, rarity };
 
   if (usePaddleEarly && paddleOcrReadyFlag && canRunPaddleOcrNow()) {
-    const paddlePack = await processImageWithColorFilter(
-      video,
-      nameCropRect,
-      { runPaddle: true, suppressPreview: true, useColorAdaptive: true },
-      cardType,
-      rarity
-    );
-    if (paddlePack && paddlePack.text) {
+    let bestPaddleOutcome = null;
+    const sunGlare =
+      (rarityProbe.nameMetrics && isNameStripSunGlareMetrics(rarityProbe.nameMetrics)) ||
+      (plateLum > 165 &&
+        (cardType === 'Monstro Link' || cardType === 'Monstro Sincro'));
+    const earlyPaddlePasses = sunGlare
+      ? [
+          PADDLE_RAW_NAME_PASS,
+          { ...PADDLE_RAW_NAME_PASS, glareCompress: true, lcCols: 12, lcRows: 3 },
+          PADDLE_RAW_INVERT_PASS,
+          { ...PADDLE_RAW_INVERT_PASS, glareCompress: true },
+        ]
+      : [
+          PADDLE_RAW_NAME_PASS,
+          PADDLE_RAW_INVERT_PASS,
+          ...buildScannerFoilExtractPaddlePasses(cardType, rarity),
+        ];
+    for (let ei = 0; ei < earlyPaddlePasses.length; ei++) {
+      if (ei >= 2 && !canRunPaddleOcrNow()) break;
+      const paddleSettings = earlyPaddlePasses[ei];
+      const paddlePack = await processImageWithColorFilter(
+        video,
+        nameCropRect,
+        { ...paddleSettings, suppressPreview: !bestPaddleOutcome },
+        cardType,
+        rarity,
+        warpSrc
+      );
+      if (!paddlePack || !paddlePack.text) continue;
       const cleanedP = smartNormalize(paddlePack.text);
-      if (cleanedP && cleanedP.length >= 4 && !isGarbageText(cleanedP)) {
-        const cardP = await smartSearchScanner(cleanedP, visionCtxEarly, false);
-        if (cardP) {
-          return {
-            pack: paddlePack,
-            cleaned: cleanedP,
-            card: cardP,
-            diagnostics: { cardType, rarity, passes: [] },
-          };
-        }
-        const confP =
-          typeof paddlePack.confidence === 'number' ? Math.round(paddlePack.confidence) : 0;
-        if (confP >= 68) {
-          return {
-            pack: paddlePack,
-            cleaned: cleanedP,
-            card: null,
-            diagnostics: { cardType, rarity, passes: [] },
-          };
-        }
-        best = { pack: paddlePack, cleaned: cleanedP };
-        passes = passes.slice(0, Math.min(passes.length, 2));
-        paddleTriedThisFrame = true;
+      if (!cleanedP || cleanedP.length < 4 || isGarbageText(cleanedP)) continue;
+      const cardP = await smartSearchScanner(cleanedP, visionCtxEarly, false);
+      if (cardP) {
+        return {
+          pack: paddlePack,
+          cleaned: cleanedP,
+          card: cardP,
+          diagnostics: { cardType, rarity, passes: [], ocrWarped: !!warpSrc },
+        };
       }
+      const confP =
+        typeof paddlePack.confidence === 'number' ? Math.round(paddlePack.confidence) : 0;
+      if (
+        !bestPaddleOutcome ||
+        confP > bestPaddleOutcome.conf ||
+        cleanedP.length > bestPaddleOutcome.cleaned.length
+      ) {
+        bestPaddleOutcome = { pack: paddlePack, cleaned: cleanedP, conf: confP };
+      }
+    }
+    if (bestPaddleOutcome) {
+      if (bestPaddleOutcome.conf >= 72) {
+        const cardRetry = await smartSearchScanner(bestPaddleOutcome.cleaned, visionCtxEarly, true);
+        if (cardRetry) {
+          return {
+            pack: bestPaddleOutcome.pack,
+            cleaned: bestPaddleOutcome.cleaned,
+            card: cardRetry,
+            diagnostics: { cardType, rarity, passes: [], ocrWarped: !!warpSrc },
+          };
+        }
+      }
+      best = { pack: bestPaddleOutcome.pack, cleaned: bestPaddleOutcome.cleaned };
+      passes = passes.slice(0, Math.min(passes.length, 2));
+      paddleTriedThisFrame = true;
     }
   }
 
@@ -33492,7 +35090,14 @@ async function processFrameWithFallbackPasses(
       passSettings = { ...(passSettings || {}), runPaddle: true };
       paddleTriedThisFrame = true;
     }
-    const pack = await processImageWithColorFilter(video, nameCropRect, passSettings, cardType, rarity);
+    const pack = await processImageWithColorFilter(
+      video,
+      nameCropRect,
+      passSettings,
+      cardType,
+      rarity,
+      warpSrc
+    );
     if (!pack || !pack.text) {
       failStreak++;
       if (failStreak >= failStreakMax && !best) break;
@@ -33605,9 +35210,10 @@ async function processFrameWithFallbackPasses(
         const verifyPack = await processImageWithColorFilter(
           video,
           nameCropRect,
-          { runPaddle: true, suppressPreview: true, useColorAdaptive: true },
+          { ...PADDLE_RAW_NAME_PASS, suppressPreview: false },
           cardType,
-          rarity
+          rarity,
+          warpSrc
         );
         let paddleOk = false;
         if (verifyPack && verifyPack.text) {
@@ -33687,9 +35293,10 @@ async function processFrameWithFallbackPasses(
     const paddlePack = await processImageWithColorFilter(
       video,
       nameCropRect,
-      { runPaddle: true, suppressPreview: true, useColorAdaptive: true },
+      { ...PADDLE_RAW_NAME_PASS, suppressPreview: false },
       cardType,
-      rarity
+      rarity,
+      warpSrc
     );
     if (paddlePack && paddlePack.text) {
       const cleanedP = smartNormalize(paddlePack.text);
@@ -33819,38 +35426,206 @@ function sampleVideoCropAvgRgb(video, rect, outW = 28, outH = 14) {
 }
 
 /**
- * Chave estável da carta enquadrada (muda ao trocar de carta na mesa).
+ * Chave de posição do recorte (ignora luz — estável com sol a bater).
+ * @param {{ x: number, y: number, width: number, height: number }} nameCropVisual
+ * @returns {string}
+ */
+function getScannerScenePositionKey(nameCropVisual) {
+  if (!nameCropVisual) return '';
+  const cx = nameCropVisual.x + nameCropVisual.width * 0.5;
+  const cy = nameCropVisual.y + nameCropVisual.height * 0.5;
+  return [
+    Math.round(cx / 26),
+    Math.round(cy / 26),
+    Math.round(nameCropVisual.width / 26),
+    Math.round(nameCropVisual.height / 26),
+  ].join('|');
+}
+
+/**
+ * Impressão digital grosseira do conteúdo (troca de carta na mesma posição).
+ * @param {HTMLVideoElement} video
+ * @param {{ x: number, y: number, width: number, height: number }} nameCropVisual
+ * @param {{ x: number, y: number, width: number, height: number }|null} typeCropRect
+ * @returns {string}
+ */
+function getScannerSceneContentFingerprint(video, nameCropVisual, typeCropRect) {
+  if (!typeCropRect) {
+    return String(sampleCropLumFingerprintCoarse(video, nameCropVisual, 4, 2));
+  }
+  const artRect = {
+    x: typeCropRect.x + typeCropRect.width * 0.2,
+    y: typeCropRect.y + typeCropRect.height * 0.36,
+    width: typeCropRect.width * 0.6,
+    height: typeCropRect.height * 0.34,
+  };
+  return String(sampleCropLumFingerprintCoarse(video, artRect, 6, 4));
+}
+
+/**
+ * Chave estável da carta enquadrada (legado / diagnóstico).
  * @param {HTMLVideoElement} video
  * @param {{ x: number, y: number, width: number, height: number }} nameCropVisual
  * @param {{ x: number, y: number, width: number, height: number }|null} typeCropRect
  * @returns {string}
  */
 function getScannerSceneKey(video, nameCropVisual, typeCropRect) {
-  if (!nameCropVisual) return '';
-  const lum = typeCropRect ? Math.round(sampleCropMeanLuminance(video, typeCropRect)) : 0;
-  return [
-    Math.round(nameCropVisual.x / 14),
-    Math.round(nameCropVisual.y / 14),
-    Math.round(nameCropVisual.width / 14),
-    Math.round(nameCropVisual.height / 14),
-    lum,
-  ].join('|');
+  const pos = getScannerScenePositionKey(nameCropVisual);
+  if (!pos) return '';
+  const content = getScannerSceneContentFingerprint(video, nameCropVisual, typeCropRect);
+  return `${pos}|${content}`;
 }
 
 /**
- * Nova carta na mira: liberta cooldown e throttle do passcode para ler de imediato.
- * @returns {boolean}
+ * Impressão digital rápida do recorte (muda ao trocar carta na mira).
+ * @param {HTMLVideoElement} video
+ * @param {{ x: number, y: number, width: number, height: number }} rect
+ * @param {number} cols
+ * @param {number} rows
+ * @returns {number}
  */
-function onScannerSceneMaybeChanged(video, nameCropVisual, typeCropRect) {
-  const key = getScannerSceneKey(video, nameCropVisual, typeCropRect);
-  if (!key || key === lastScannerSceneKey) return false;
-  lastScannerSceneKey = key;
+function sampleCropLumFingerprint(video, rect, cols, rows) {
+  if (!video || !rect || rect.width < 4 || rect.height < 2) return 0;
+  const c = document.createElement('canvas');
+  c.width = cols;
+  c.height = rows;
+  const ctx = c.getContext('2d');
+  if (!ctx) return 0;
+  try {
+    ctx.drawImage(video, rect.x, rect.y, rect.width, rect.height, 0, 0, cols, rows);
+    const d = ctx.getImageData(0, 0, cols, rows).data;
+    let hash = 0;
+    for (let i = 0; i < d.length; i += 4) {
+      const L = Math.round((0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]) / 26);
+      hash = (hash * 10 + L) % 1000003;
+    }
+    return hash;
+  } catch (_) {
+    return 0;
+  }
+}
+
+/**
+ * Impressão digital grosseira (ignora pixels estourados pelo sol).
+ * @param {HTMLVideoElement} video
+ * @param {{ x: number, y: number, width: number, height: number }} rect
+ * @param {number} cols
+ * @param {number} rows
+ * @returns {number}
+ */
+function sampleCropLumFingerprintCoarse(video, rect, cols, rows) {
+  if (!video || !rect || rect.width < 4 || rect.height < 2) return 0;
+  const c = document.createElement('canvas');
+  c.width = cols;
+  c.height = rows;
+  const ctx = c.getContext('2d');
+  if (!ctx) return 0;
+  try {
+    ctx.drawImage(video, rect.x, rect.y, rect.width, rect.height, 0, 0, cols, rows);
+    const d = ctx.getImageData(0, 0, cols, rows).data;
+    let hash = 0;
+    let used = 0;
+    for (let i = 0; i < d.length; i += 4) {
+      const L = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+      if (L > 232) continue;
+      const bucket = Math.round(L / 56);
+      hash = (hash * 17 + bucket) % 1000003;
+      used++;
+    }
+    if (used < 3) {
+      for (let i = 0; i < d.length; i += 4) {
+        const L = Math.round((0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]) / 48);
+        hash = (hash * 13 + L) % 1000003;
+      }
+    }
+    return hash;
+  } catch (_) {
+    return 0;
+  }
+}
+
+/** Reseta throttle/votos ao trocar carta (posição ou conteúdo estável). */
+function resetScannerSceneHardState() {
   processingCooldown = false;
   lastPasscodeOcrAt = 0;
+  resetPasscodeIdVotes();
   lastOcrLogReadKey = '';
   lastOcrPasscodeLogKey = '';
   lastOcrHuntLogKey = '';
-  return true;
+  lastStableDetectedCardType = null;
+  lastStableDetectedCardTypeAt = 0;
+  lastStableDetectedCardRarity = null;
+  lastStableDetectedCardRarityAt = 0;
+  ocrReadVoteBuffer.length = 0;
+}
+
+function resetScannerSceneOnCardChange() {
+  lastOcrLiveReadSticky = null;
+  lastOcrPasscodeLiveSticky = null;
+  lastOcrLiveReadAt = 0;
+  lastOcrPasscodeLiveReadAt = 0;
+  lastPasscodeSidecar = null;
+  lastOcrLiveReadKey = '';
+  lastOcrPasscodeLiveReadKey = '';
+  resetScannerSceneHardState();
+}
+
+/**
+ * Nova carta na mira: liberta cooldown e throttle do passcode (com histerese anti-flicker).
+ * @returns {boolean}
+ */
+function onScannerSceneMaybeChanged(video, nameCropVisual, typeCropRect) {
+  const posKey = getScannerScenePositionKey(nameCropVisual);
+  if (!posKey) return false;
+  const contentFp = getScannerSceneContentFingerprint(video, nameCropVisual, typeCropRect);
+
+  if (posKey !== lastScannerScenePositionKey) {
+    if (posKey !== pendingPosKey) {
+      pendingPosKey = posKey;
+      pendingPosKeyFrames = 1;
+      pendingPosKeySince = performance.now();
+    } else {
+      pendingPosKeyFrames++;
+    }
+    if (pendingPosKeyFrames >= 5 && performance.now() - pendingPosKeySince >= 300) {
+      lastScannerScenePositionKey = posKey;
+      lastScannerSceneKey = posKey;
+      pendingPosKey = '';
+      pendingPosKeyFrames = 0;
+      lastStableContentFp = contentFp;
+      pendingContentFp = '';
+      pendingContentFpFrames = 0;
+      resetScannerSceneOnCardChange();
+      return true;
+    }
+    return false;
+  }
+  pendingPosKey = '';
+  pendingPosKeyFrames = 0;
+
+  if (contentFp !== lastStableContentFp) {
+    if (contentFp !== pendingContentFp) {
+      pendingContentFp = contentFp;
+      pendingContentFpFrames = 1;
+      pendingContentFpSince = performance.now();
+    } else {
+      pendingContentFpFrames++;
+    }
+    if (
+      pendingContentFpFrames >= 14 &&
+      performance.now() - pendingContentFpSince >= 750
+    ) {
+      lastStableContentFp = contentFp;
+      pendingContentFp = '';
+      pendingContentFpFrames = 0;
+      resetScannerSceneOnCardChange();
+      return true;
+    }
+  } else {
+    pendingContentFp = '';
+    pendingContentFpFrames = 0;
+  }
+  return false;
 }
 
 /** @returns {{ cardType: string|null, rarity: string|null }} */
@@ -33862,60 +35637,86 @@ function getScannerPasscodeVisionContext() {
 }
 
 /**
- * Modo de binarização do passcode conforme placa (tipo) e raridade.
- * Ultra/Secreta: dígitos matte preto/branco sobre cor da placa (sem foil no ID).
+ * Modo de binarização do passcode conforme a moldura (não a raridade foil do nome).
+ * ID: tinta fosca preta (moldura clara/colorida) ou branca (moldura escura Xyz/Link).
  * @param {HTMLVideoElement} video
  * @param {{ x: number, y: number, width: number, height: number }|null} typeCropRect
  * @param {string|null} cardType
  * @param {string|null} rarity
  * @returns {{ primary: string, secondary: string, meanLum: number, matteIdDigits: boolean, cardType: string, rarity: string, plateR: number, plateG: number, plateB: number }}
  */
-function derivePasscodeOcrHint(video, typeCropRect, cardType, rarity) {
+function derivePasscodeOcrHint(video, typeCropRect, cardType, rarity, passcodeCrop) {
   const ct = cardType || lastDetectedCardType || 'Monstro Efeito';
   const rv = rarity || lastDetectedCardRarity || 'Comum';
-  const grp = getOcrRarityGroup(rv);
-  const matteIdDigits =
-    isOcrRarityWithNameFoil(rv) &&
-    (rv === 'Ultra Rara' || rv === 'Secreta' || grp === 'goldName' || grp === 'secret');
+  const matteIdDigits = isMattePrintedPasscodeRarity(rv);
   let avgR = 128;
   let avgG = 128;
   let avgB = 128;
   let meanLum = 128;
-  if (typeCropRect && video && video.videoWidth > 0) {
-    const plateZone = {
-      x: typeCropRect.x + typeCropRect.width * 0.02,
-      y: typeCropRect.y + typeCropRect.height * 0.8,
-      width: typeCropRect.width * 0.36,
-      height: typeCropRect.height * 0.18,
-    };
-    const rgb = sampleVideoCropAvgRgb(video, plateZone, 36, 18);
+  const sampleRect =
+    passcodeCrop && passcodeCrop.width >= 4
+      ? passcodeCrop
+      : typeCropRect
+        ? {
+            x: typeCropRect.x + typeCropRect.width * 0.025,
+            y: typeCropRect.y + typeCropRect.height * 0.928,
+            width: typeCropRect.width * 0.19,
+            height: typeCropRect.height * 0.042,
+          }
+        : null;
+  if (sampleRect && video && video.videoWidth > 0) {
+    const rgb = sampleVideoCropAvgRgb(video, sampleRect, 40, 14);
     avgR = rgb.avgR;
     avgG = rgb.avgG;
     avgB = rgb.avgB;
     meanLum = rgb.meanLum;
   }
-  let primary = meanLum >= 118 ? 'darkOnLight' : 'lightOnDark';
+  const darkFrame =
+    meanLum < 92 ||
+    isXyzDarkPlateRgb(avgR, avgG, avgB) ||
+    isLinkFrameRgb(avgR, avgG, avgB) ||
+    ct === 'Monstro Xyz' ||
+    ct === 'Monstro Link';
+  const coloredFrame =
+    isFusionPurpleFrameRgb(avgR, avgG, avgB) ||
+    isSpellGreenFrameRgb(avgR, avgG, avgB) ||
+    isRitualBlueFrameRgb(avgR, avgG, avgB);
+  let primary = darkFrame ? 'lightOnDark' : 'darkOnLight';
   let secondary = primary === 'darkOnLight' ? 'lightOnDark' : 'darkOnLight';
-  if (isFusionPurpleFrameRgb(avgR, avgG, avgB) || isXyzDarkPlateRgb(avgR, avgG, avgB)) {
-    primary = 'lightOnDark';
-    secondary = 'darkOnLight';
-  } else if (ct === 'Magia' || ct === 'Monstro Ritual' || meanLum > 148) {
+  if (coloredFrame && !darkFrame) {
     primary = 'darkOnLight';
     secondary = 'lightOnDark';
-  } else if (ct === 'Monstro Link' || ct === 'Monstro Xyz' || ct === 'Monstro Pêndulo') {
-    if (meanLum < 128) {
-      primary = 'lightOnDark';
-      secondary = 'darkOnLight';
-    }
-  }
-  if (matteIdDigits && primary === 'lightOnDark') {
+  } else if (darkFrame) {
+    primary = 'lightOnDark';
     secondary = 'darkOnLight';
   }
+  const passcodeDarkPlate =
+    isLinkFrameRgb(avgR, avgG, avgB) ||
+    isXyzDarkPlateRgb(avgR, avgG, avgB) ||
+    isXyzFrameRgb(avgR, avgG, avgB);
+  if (passcodeDarkPlate || ct === 'Monstro Link' || ct === 'Monstro Xyz') {
+    primary = 'lightOnDark';
+    secondary = 'darkOnLight';
+  } else if (coloredFrame) {
+    primary = 'darkOnLight';
+    secondary = 'lightOnDark';
+  }
+  if (matteIdDigits && (passcodeDarkPlate || ct === 'Monstro Link' || ct === 'Monstro Xyz')) {
+    primary = 'lightOnDark';
+    secondary = 'darkOnLight';
+  } else if (matteIdDigits) {
+    primary = 'darkOnLight';
+    secondary = 'lightOnDark';
+  }
+  const digitInk = primary === 'lightOnDark' ? 'light' : 'dark';
+  const coloredMatte = !!(matteIdDigits && coloredFrame && !passcodeDarkPlate);
   return {
     primary,
     secondary,
     meanLum,
     matteIdDigits,
+    coloredMatte,
+    digitInk,
     cardType: ct,
     rarity: rv,
     plateR: avgR,
@@ -33925,7 +35726,7 @@ function derivePasscodeOcrHint(video, typeCropRect, cardType, rarity) {
 }
 
 /**
- * Reforço de contraste para dígitos matte (Ultra/Secreta — ID sem brilho).
+ * Reforço de contraste para dígitos foscos (preto ou branco na moldura).
  * @param {CanvasRenderingContext2D} ctx
  * @param {number} w
  * @param {number} h
@@ -33943,11 +35744,47 @@ function applyPasscodeMatteSharpen(ctx, w, h) {
   ctx.putImageData(img, 0, 0);
 }
 
-function refineNameCropForOcr(nameCropRect) {
+/**
+ * Estica luminância para maximizar contraste dos dígitos (antes de Otsu).
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {number} w
+ * @param {number} h
+ * @returns {void}
+ */
+function applyPasscodeGrayscaleStretch(ctx, w, h) {
+  const img = ctx.getImageData(0, 0, w, h);
+  const d = img.data;
+  const n = w * h;
+  let minL = 255;
+  let maxL = 0;
+  const lum = new Float32Array(n);
+  for (let p = 0, i = 0; p < n; p++, i += 4) {
+    const L = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+    lum[p] = L;
+    if (L < minL) minL = L;
+    if (L > maxL) maxL = L;
+  }
+  const span = Math.max(24, maxL - minL);
+  for (let p = 0, i = 0; p < n; p++, i += 4) {
+    const v = Math.max(0, Math.min(255, ((lum[p] - minL) / span) * 255));
+    d[i] = d[i + 1] = d[i + 2] = v;
+    d[i + 3] = 255;
+  }
+  ctx.putImageData(img, 0, 0);
+}
+
+/**
+ * @param {{ x: number, y: number, width: number, height: number }} nameCropRect
+ * @param {boolean} [handFreeTrack] Zona nome mais tolerante (tracking + mobile).
+ * @returns {{ x: number, y: number, width: number, height: number }}
+ */
+function refineNameCropForOcr(nameCropRect, handFreeTrack) {
+  const aspect = nameCropRect.width / Math.max(1, nameCropRect.height);
+  const wideName = aspect > 5;
   const trimL = 0;
-  const trimR = 0;
-  const trimT = 0.02;
-  const trimB = 0.04;
+  const trimR = handFreeTrack ? 0 : 0;
+  const trimT = wideName ? 0.005 : handFreeTrack ? 0.01 : 0.02;
+  const trimB = wideName ? 0.02 : handFreeTrack ? 0.03 : 0.04;
   return {
     x: nameCropRect.x + nameCropRect.width * trimL,
     y: nameCropRect.y + nameCropRect.height * trimT,
@@ -33957,27 +35794,64 @@ function refineNameCropForOcr(nameCropRect) {
 }
 
 /**
- * Candidatos a passcode Yu-Gi-Oh! (7–9 dígitos) extraídos de texto OCR numérico.
+ * Pontua uma janela de 8 dígitos (heurística genérica — sem IDs fixos).
+ * @param {string} eight
+ * @param {number} [digitRunLen=8]
+ * @returns {number}
+ */
+function scoreYuGiOhPasscodeCandidate(eight, digitRunLen = 8) {
+  if (!eight || eight.length !== 8 || !/^\d{8}$/.test(eight)) return -1;
+  if (/^(\d)\1{7}$/.test(eight)) return -1;
+  let score = 40;
+  const unique = new Set(eight.split('')).size;
+  score += unique * 5;
+  if (digitRunLen === 8) score += 18;
+  else if (digitRunLen === 9) score += 8;
+  else if (digitRunLen === 10) score += 4;
+  else if (digitRunLen > 10) score -= 22;
+  if (/1{4,}/.test(eight)) score -= 28;
+  if (eight.startsWith('00') && unique < 4) score -= 8;
+  return score;
+}
+
+/**
+ * Candidatos a passcode Yu-Gi-Oh! (8 dígitos) extraídos de texto OCR numérico.
  * @param {string} raw
  * @returns {string[]}
  */
 function extractYuGiOhPasscodeCandidates(raw) {
   if (!raw) return [];
-  const ordered = [];
+  const ranked = [];
   const seen = new Set();
-  const add = (s) => {
+  const add = (s, digitRunLen = 8, bonus = 0) => {
     if (!s || s.length !== 8) return;
     const xs = coerceYuGiOhNumericIds([s]);
     if (!xs.length || seen.has(xs[0])) return;
     seen.add(xs[0]);
-    ordered.push(xs[0]);
+    const sc = scoreYuGiOhPasscodeCandidate(xs[0], digitRunLen) + bonus;
+    if (sc < 0) return;
+    ranked.push({ id: xs[0], score: sc });
   };
   const digits = String(raw).replace(/\D/g, '');
-  if (digits.length >= 8) add(digits.slice(0, 8));
   const chunks = String(raw).match(/\d{8}/g) || [];
-  for (let i = 0; i < chunks.length; i++) add(chunks[i]);
-  for (let i = 1; i <= digits.length - 8; i++) add(digits.slice(i, i + 8));
-  return ordered.slice(0, 3);
+  for (let i = 0; i < chunks.length; i++) add(chunks[i], 8, 12);
+  if (digits.length === 8) add(digits, 8, 14);
+  if (digits.length > 8 && digits.length <= 11) add(digits.slice(0, 8), digits.length, 0);
+  if (digits.length > 8) {
+    const slideBonus = digits.length > 14 ? -18 : digits.length > 11 ? -10 : 0;
+    for (let i = 0; i <= digits.length - 8; i++) add(digits.slice(i, i + 8), digits.length, slideBonus);
+    if (digits.length === 7) add('0' + digits, 7, 12);
+    if (digits.length === 9 || digits.length === 10) {
+      add(digits.slice(1, 9), digits.length, 6);
+      add('0' + digits.slice(0, 7), digits.length, 8);
+      add(digits.slice(0, 8), digits.length, 2);
+    }
+    if (digits.length === 10) {
+      add(digits.slice(2, 10), digits.length, 4);
+    }
+  }
+  ranked.sort((a, b) => b.score - a.score);
+  return ranked.slice(0, 5).map((r) => r.id);
 }
 
 /**
@@ -33985,11 +35859,10 @@ function extractYuGiOhPasscodeCandidates(raw) {
  * @param {{ x: number, y: number, width: number, height: number }} passcodeVisualRect
  * @returns {{ x: number, y: number, width: number, height: number }}
  */
-function refinePasscodeCropForOcr(passcodeVisualRect) {
-  const trimL = 0;
-  const trimR = 0.36;
-  const trimT = 0.08;
-  const trimB = 0.08;
+function refinePasscodeCropForOcr(passcodeVisualRect, trimR = 0.36) {
+  const trimL = 0.006;
+  const trimT = 0.14;
+  const trimB = 0.14;
   return {
     x: passcodeVisualRect.x + passcodeVisualRect.width * trimL,
     y: passcodeVisualRect.y + passcodeVisualRect.height * trimT,
@@ -33998,12 +35871,32 @@ function refinePasscodeCropForOcr(passcodeVisualRect) {
   };
 }
 
+/**
+ * Variantes de recorte do passcode (excluir «1ª Edição» com margens diferentes).
+ * @param {{ x: number, y: number, width: number, height: number }} passcodeVisualRect
+ * @returns {{ x: number, y: number, width: number, height: number }[]}
+ */
+function buildPasscodeCropVariants(passcodeVisualRect) {
+  if (!passcodeVisualRect || passcodeVisualRect.width < 4) return [];
+  return [0.32, 0.4, 0.48].map((trimR) => refinePasscodeCropForOcr(passcodeVisualRect, trimR));
+}
+
+/**
+ * Recorte final do passcode (sempre exclui «1ª Edição» / código de barras à direita).
+ * @param {{ x: number, y: number, width: number, height: number }|null} rect
+ * @returns {{ x: number, y: number, width: number, height: number }|null}
+ */
+function finalizePasscodeCropForOcr(rect) {
+  if (!rect || rect.width < 4 || rect.height < 2) return null;
+  return refinePasscodeCropForOcr(rect);
+}
+
 /** Largura/altura do preview passcode (faixa horizontal). */
 const PASSCODE_PREVIEW_W = 480;
 const PASSCODE_PREVIEW_H = 64;
 /** Resolução interna enviada ao Tesseract (maior = dígitos mais legíveis). */
-const PASSCODE_OCR_CANVAS_W = 640;
-const PASSCODE_OCR_CANVAS_H = 80;
+const PASSCODE_OCR_CANVAS_W = 1088;
+const PASSCODE_OCR_CANVAS_H = 156;
 
 /**
  * Limiar de Otsu para binarização do passcode.
@@ -34052,7 +35945,7 @@ function otsuThresholdFromLum(lum, n) {
  * @param {'darkOnLight'|'lightOnDark'} mode
  * @returns {void}
  */
-function binarizePasscodeCrop(ctx, w, h, mode) {
+function binarizePasscodeCrop(ctx, w, h, mode, skipDespeckle = false) {
   const img = ctx.getImageData(0, 0, w, h);
   const d = img.data;
   const n = w * h;
@@ -34075,6 +35968,77 @@ function binarizePasscodeCrop(ctx, w, h, mode) {
     const v = L < thresh ? 0 : 255;
     d[i] = d[i + 1] = d[i + 2] = v;
     d[i + 3] = 255;
+  }
+  ctx.putImageData(img, 0, 0);
+  if (!skipDespeckle) despecklePasscodeBinary(ctx, w, h);
+}
+
+/**
+ * Binarização suave para passcode matte (sem despeckle agressivo).
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {number} w
+ * @param {number} h
+ * @returns {void}
+ */
+function binarizePasscodeMatteMild(ctx, w, h, mode = 'darkOnLight') {
+  const img = ctx.getImageData(0, 0, w, h);
+  const d = img.data;
+  const n = w * h;
+  const lum = new Float32Array(n);
+  let sum = 0;
+  for (let p = 0, i = 0; p < n; p++, i += 4) {
+    const L = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+    lum[p] = L;
+    sum += L;
+  }
+  const mean = sum / n;
+  const sorted = Array.from(lum).sort((a, b) => a - b);
+  const pct = (q) => sorted[Math.max(0, Math.min(n - 1, Math.floor(n * q)))];
+  const p35 = pct(0.35);
+  const p65 = pct(0.65);
+  const thresh =
+    mode === 'lightOnDark'
+      ? Math.max(108, Math.min(210, Math.round((255 - p35) * 0.55 + p65 * 0.45)))
+      : Math.max(72, Math.min(168, Math.round(p35 * 0.72 + mean * 0.28 + 4)));
+  for (let p = 0, i = 0; p < n; p++, i += 4) {
+    let L = lum[p];
+    if (mode === 'lightOnDark') L = 255 - L;
+    const v = L < thresh ? 0 : 255;
+    d[i] = d[i + 1] = d[i + 2] = v;
+    d[i + 3] = 255;
+  }
+  ctx.putImageData(img, 0, 0);
+}
+
+/**
+ * Remove pixels isolados após binarização (ruído «sal e pimenta» no ID).
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {number} w
+ * @param {number} h
+ * @returns {void}
+ */
+function despecklePasscodeBinary(ctx, w, h) {
+  const img = ctx.getImageData(0, 0, w, h);
+  const d = img.data;
+  const n = w * h;
+  const out = new Uint8Array(n);
+  for (let y = 1; y < h - 1; y++) {
+    for (let x = 1; x < w - 1; x++) {
+      const p = y * w + x;
+      const dark = d[p * 4] < 128;
+      let neighbors = 0;
+      for (let dy = -1; dy <= 1; dy++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          if (!dx && !dy) continue;
+          if (d[(y + dy) * w + (x + dx) * 4] < 128) neighbors++;
+        }
+      }
+      out[p] = dark ? (neighbors >= 2 ? 0 : 255) : neighbors <= 5 ? 255 : 0;
+    }
+  }
+  for (let p = 0, i = 0; p < n; p++, i += 4) {
+    const v = out[p] === 0 ? 0 : 255;
+    d[i] = d[i + 1] = d[i + 2] = v;
   }
   ctx.putImageData(img, 0, 0);
 }
@@ -34138,8 +36102,50 @@ function drawPasscodeRawCropToCanvas(video, cropRect, targetCanvas, outW, outH) 
  * @param {{ x: number, y: number, width: number, height: number }} cropRect
  * @returns {HTMLCanvasElement|null}
  */
-function buildPasscodeLiveRobotCanvas(video, cropRect, hint) {
-  if (!video || !cropRect || cropRect.width < 4) return null;
+/**
+ * Preview ao vivo do nome: recorte natural + contraste local (sem binarização).
+ * @param {CanvasImageSource} media
+ * @param {{ x: number, y: number, width: number, height: number }} cropRect
+ * @param {string} cardType
+ * @param {HTMLCanvasElement} [reuseCanvas]
+ * @returns {HTMLCanvasElement|null}
+ */
+function buildScannerNaturalLivePreviewCanvas(media, cropRect, cardType, reuseCanvas) {
+  if (!media || !cropRect || cropRect.width < 4) return null;
+  const canvas = reuseCanvas || document.createElement('canvas');
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  if (!ctx) return null;
+  canvas.width = OCR_CANVAS_W;
+  canvas.height = OCR_CANVAS_H;
+  const lightPlate =
+    cardType === 'Magia' ||
+    cardType === 'Monstro Ritual' ||
+    cardType === 'Monstro Sincro';
+  ctx.fillStyle = lightPlate ? '#ececec' : '#161616';
+  ctx.fillRect(0, 0, OCR_CANVAS_W, OCR_CANVAS_H);
+  const { dstX, dstY, dstW, dstH } = computeOcrNameDestRect(cardType, cropRect);
+  try {
+    ctx.drawImage(
+      media,
+      cropRect.x,
+      cropRect.y,
+      cropRect.width,
+      cropRect.height,
+      dstX,
+      dstY,
+      dstW,
+      dstH
+    );
+  } catch (_) {
+    return null;
+  }
+  applyHighlightGlareCompress(ctx, dstX, dstY, dstW, dstH);
+  applyLocalContrastNormalize(ctx, dstX, dstY, dstW, dstH, 10, 3);
+  return canvas;
+}
+
+function buildPasscodeLiveRobotCanvas(media, cropRect, hint) {
+  if (!media || !cropRect || cropRect.width < 4) return null;
   if (!ocrLivePasscodeScratch) ocrLivePasscodeScratch = document.createElement('canvas');
   const c = ocrLivePasscodeScratch;
   const outW = OCR_PREVIEW_PASSCODE_LIVE_W;
@@ -34153,43 +36159,52 @@ function buildPasscodeLiveRobotCanvas(video, cropRect, hint) {
   ctx.fillStyle = '#e8e8e8';
   ctx.fillRect(0, 0, outW, outH);
   try {
-    ctx.drawImage(video, cropRect.x, cropRect.y, cropRect.width, cropRect.height, 0, 0, outW, outH);
+    blitPasscodeCropFitHeight(ctx, media, cropRect, outW, outH);
   } catch (_) {
     return null;
   }
-  if (hint && hint.matteIdDigits) applyPasscodeMatteSharpen(ctx, outW, outH);
-  const mode = (hint && hint.primary) || 'darkOnLight';
-  binarizePasscodeCrop(ctx, outW, outH, mode);
+  applyHighlightGlareCompress(ctx, 0, 0, outW, outH, 215);
+  ctx.filter = 'grayscale(1) contrast(1.28) brightness(1.05)';
+  ctx.drawImage(c, 0, 0);
+  ctx.filter = 'none';
   return c;
 }
 
 function refreshOcrRobotPreviewsFromVideo(video, nameCropVisual, typeCropRect, passcodeVisual) {
   if (!video || video.videoWidth < 4) return;
+  const ocrWarp = buildScannerWarpOcrContext(video, lastOcrCardTrackPack);
+  const previewMedia = ocrWarp ? ocrWarp.media : video;
+  const nameCrop = ocrWarp ? ocrWarp.nameCrop : nameCropVisual;
+  const passCrop = ocrWarp ? ocrWarp.passcodeCrop : passcodeVisual;
   const cardType = lastDetectedCardType || 'Monstro Efeito';
   const rarity = lastDetectedCardRarity || 'Comum';
-  if (nameCropVisual && nameCropVisual.width >= 4) {
+  if (nameCrop && nameCrop.width >= 4) {
     const preview = getEl('preview-canvas');
     if (preview) {
       if (!ocrLiveNameScratch) ocrLiveNameScratch = document.createElement('canvas');
-      const settings = getLiveRobotNamePreviewSettings(cardType, rarity);
-      const nameCropOcr = refineNameCropForOcr(nameCropVisual);
-      const built = buildOcrNameProcessingCanvas(
-        video,
+      const handFree = !!ocrWarp && ocrScannerIsMobile();
+      const nameCropOcr = refineNameCropForOcr(nameCrop, handFree);
+      const naturalCanvas = buildScannerNaturalLivePreviewCanvas(
+        previewMedia,
         nameCropOcr,
-        settings,
         cardType,
-        rarity,
         ocrLiveNameScratch
       );
-      if (built) paintOcrPreviewCanvas(preview, built.canvas, cardType, OCR_PREVIEW_LIVE_W);
+      if (naturalCanvas) {
+        paintOcrPreviewCanvas(preview, naturalCanvas, cardType, OCR_PREVIEW_LIVE_W, {
+          rarity,
+          settings: { lightCanvas: cardType === 'Magia' || cardType === 'Monstro Sincro' },
+        });
+      }
     }
   }
-  const passVis =
-    passcodeVisual || mapVisualBoxToVideoCrop(video, getEl('scanner-passcode-visual'));
-  const passcodeCrop = getPasscodeCropForOcr(passVis, typeCropRect);
+  const passVis = passCrop || passcodeVisual || mapVisualBoxToVideoCrop(video, getEl('scanner-passcode-visual'));
+  const passcodeCrop = finalizePasscodeCropForOcr(
+    ocrWarp ? ocrWarp.passcodeCrop : getPasscodeCropForOcr(passVis, typeCropRect)
+  );
   if (passcodeCrop) {
-    const idHint = derivePasscodeOcrHint(video, typeCropRect, cardType, rarity);
-    const robot = buildPasscodeLiveRobotCanvas(video, passcodeCrop, idHint);
+    const idHint = derivePasscodeOcrHint(video, typeCropRect, cardType, rarity, passcodeCrop);
+    const robot = buildPasscodeLiveRobotCanvas(previewMedia, passcodeCrop, idHint);
     if (robot) paintPasscodePreviewCanvasLive(robot);
   }
 }
@@ -34206,11 +36221,13 @@ function ocrPreviewFrameTick() {
   ocrPreviewLoopRaf = requestAnimationFrame(ocrPreviewFrameTick);
   const video = getEl('ocr-video');
   if (!video || video.videoWidth === 0) return;
-  const nameCropVisual = mapVisualBoxToVideoCrop(video, getEl('scanner-visual'));
+  const crops = resolveScannerCrops(video);
+  const nameCropVisual = crops.nameCropVisual;
   if (!nameCropVisual) return;
-  const typeCropRect = mapVisualBoxToVideoCrop(video, getEl('scanner-type-visual'));
-  const passcodeVisual = mapVisualBoxToVideoCrop(video, getEl('scanner-passcode-visual'));
+  const typeCropRect = crops.typeCropRect;
+  const passcodeVisual = crops.passcodeVisual;
   onScannerSceneMaybeChanged(video, nameCropVisual, typeCropRect);
+  updateScannerFramingState(video, nameCropVisual, crops.track);
   quickVisionProbeAndUpdate(video, nameCropVisual, typeCropRect);
   const now = performance.now();
   if (now - lastOcrPreviewPaintAt >= 48) {
@@ -34244,12 +36261,14 @@ function stopOcrPreviewLoop() {
  */
 function quickVisionProbeAndUpdate(video, nameCropRect, typeCropRect) {
   const now = Date.now();
-  if (now - lastVisionProbeAt < 280) return;
+  if (now - lastVisionProbeAt < 160) return;
   lastVisionProbeAt = now;
   const nameStrip = nameCropRect;
   const nameForRarity = refineNameCropForOcr(nameCropRect);
   const typeProbe = probeCardTypeDiagnostics(video, nameStrip, typeCropRect);
-  const rarityProbe = probeCardRarityDiagnostics(video, nameForRarity, typeCropRect);
+  const typeHintEarly =
+    typeProbe.classifiedTypeMerged || typeProbe.classifiedType || 'Monstro Efeito';
+  const rarityProbe = probeCardRarityDiagnostics(video, nameForRarity, typeCropRect, typeHintEarly);
   let cardType = 'Monstro Efeito';
   let rarity = 'Comum';
   const manualTypeSelect = getEl('manual-card-type');
@@ -34282,7 +36301,23 @@ function quickVisionProbeAndUpdate(video, nameCropRect, typeCropRect) {
   setVisionTypeRarity(nextType, nextRarity, { calibrating: false });
 }
 
-function buildPasscodeOcrVariants(video, cropRect, canvas, hint) {
+function blitPasscodeCropFitHeight(ctx, media, cropRect, outW, outH, bg = '#e8e8e8') {
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, outW, outH);
+  if (!media || !cropRect || cropRect.width < 2 || cropRect.height < 2) return;
+  const scale = outH / cropRect.height;
+  let sw = cropRect.width;
+  let sx = cropRect.x;
+  const dw = sw * scale;
+  if (dw > outW) {
+    sw = outW / scale;
+    sx = cropRect.x + (cropRect.width - sw) * 0.5;
+  }
+  const dx = dw >= outW ? 0 : (outW - dw) / 2;
+  ctx.drawImage(media, sx, cropRect.y, sw, cropRect.height, dx, 0, Math.min(dw, outW), outH);
+}
+
+function buildPasscodeOcrVariants(media, cropRect, canvas, hint) {
   const outW = PASSCODE_OCR_CANVAS_W;
   const outH = PASSCODE_OCR_CANVAS_H;
   canvas.width = outW;
@@ -34292,31 +36327,15 @@ function buildPasscodeOcrVariants(video, cropRect, canvas, hint) {
   ctx.fillStyle = '#e8e8e8';
   ctx.fillRect(0, 0, outW, outH);
   try {
-    ctx.drawImage(
-      video,
-      cropRect.x,
-      cropRect.y,
-      cropRect.width,
-      cropRect.height,
-      0,
-      0,
-      outW,
-      outH
-    );
+    blitPasscodeCropFitHeight(ctx, media, cropRect, outW, outH);
   } catch (_) {
     return null;
   }
-  if (hint && hint.matteIdDigits) applyPasscodeMatteSharpen(ctx, outW, outH);
-  const makeVariant = (mode) => {
-    const c = document.createElement('canvas');
-    c.width = outW;
-    c.height = outH;
-    const cx = c.getContext('2d', { willReadFrequently: true });
-    if (!cx) return c;
-    cx.drawImage(canvas, 0, 0);
-    binarizePasscodeCrop(cx, outW, outH, mode);
-    return c;
-  };
+  const matte = hint && hint.matteIdDigits;
+  if (matte) {
+    applyPasscodeGrayscaleStretch(ctx, outW, outH);
+    applyPasscodeMatteSharpen(ctx, outW, outH);
+  }
   const meanLum = hint && hint.meanLum != null ? hint.meanLum : 128;
   const primary =
     hint && hint.primary ? hint.primary : meanLum >= 105 ? 'darkOnLight' : 'lightOnDark';
@@ -34326,18 +36345,117 @@ function buildPasscodeOcrVariants(video, cropRect, canvas, hint) {
       : primary === 'darkOnLight'
         ? 'lightOnDark'
         : 'darkOnLight';
+  const cloneBase = () => {
+    const c = document.createElement('canvas');
+    c.width = outW;
+    c.height = outH;
+    const cx = c.getContext('2d', { willReadFrequently: true });
+    if (!cx) return null;
+    cx.drawImage(canvas, 0, 0);
+    return { c, cx };
+  };
+  const makeBin = (mode, pre, mild) => {
+    const cloned = cloneBase();
+    if (!cloned) return null;
+    if (pre) pre(cloned.cx, outW, outH);
+    if (mild) binarizePasscodeMatteMild(cloned.cx, outW, outH);
+    else binarizePasscodeCrop(cloned.cx, outW, outH, mode, matte);
+    return cloned.c;
+  };
+  const makeMatteMild = (pre) => {
+    const cloned = cloneBase();
+    if (!cloned) return null;
+    if (pre) pre(cloned.cx, outW, outH);
+    const mildMode = primary === 'lightOnDark' ? 'lightOnDark' : 'darkOnLight';
+    binarizePasscodeMatteMild(cloned.cx, outW, outH, mildMode);
+    return cloned.c;
+  };
+  const makeRaw = (pre) => {
+    const cloned = cloneBase();
+    if (!cloned) return null;
+    if (pre) pre(cloned.cx, outW, outH);
+    return cloned.c;
+  };
+  const darkOnLight = makeBin('darkOnLight', null);
+  const lightOnDark = makeBin('lightOnDark', null);
+  const lcPre = (cx, w, h) => {
+    applyHighlightGlareCompress(cx, 0, 0, w, h);
+    applyLocalContrastNormalize(cx, 0, 0, w, h, 10, 2);
+  };
+  const lcDark = makeBin('darkOnLight', lcPre);
+  const lcLight = makeBin('lightOnDark', lcPre);
+  const stretchDark = makeBin('darkOnLight', applyPasscodeGrayscaleStretch);
+  const stretchLight = makeBin('lightOnDark', applyPasscodeGrayscaleStretch);
+  const stretchRawPre = (cx, w, h) => {
+    applyHighlightGlareCompress(cx, 0, 0, w, h);
+    applyPasscodeGrayscaleStretch(cx, w, h);
+  };
+  const stretchRaw = makeRaw(stretchRawPre);
+  const lcRaw = makeRaw(lcPre);
+  const matteMild = matte ? makeMatteMild(applyPasscodeGrayscaleStretch) : null;
   const rawCanvas = document.createElement('canvas');
   rawCanvas.width = outW;
   rawCanvas.height = outH;
   const rawCtx = rawCanvas.getContext('2d');
   if (rawCtx) rawCtx.drawImage(canvas, 0, 0);
+  const tryOrder = [];
+  const pushTry = (id, canvas, psm, raw) => {
+    if (canvas) tryOrder.push({ id, canvas, psm: psm || '7', raw: !!raw });
+  };
+  if (matte) {
+    if (hint && hint.coloredMatte) {
+      pushTry('matte_mild', matteMild, '7', false);
+    }
+    pushTry('stretch_raw', stretchRaw, '7', true);
+    pushTry('lc_raw', lcRaw, '7', true);
+    if (primary === 'lightOnDark') {
+      pushTry('stretch_lightOnDark', stretchLight, '7', false);
+      pushTry('lc_lightOnDark', lcLight, '7', false);
+      pushTry('lightOnDark', lightOnDark, '7', false);
+      pushTry('matte_mild', matteMild, '7', false);
+      pushTry('darkOnLight', darkOnLight, '7', false);
+      pushTry('lightOnDark_psm8', lightOnDark, '8', false);
+    } else {
+      pushTry('matte_mild', matteMild, '7', false);
+      pushTry('stretch_darkOnLight', stretchDark, '7', false);
+      pushTry('lc_darkOnLight', lcDark, '7', false);
+      pushTry('darkOnLight', darkOnLight, '7', false);
+      pushTry('darkOnLight_psm8', darkOnLight, '8', false);
+      pushTry('lightOnDark', lightOnDark, '7', false);
+    }
+  } else if (primary === 'lightOnDark') {
+    pushTry('stretch_raw', stretchRaw, '7', true);
+    pushTry('lc_raw', lcRaw, '7', true);
+    pushTry('stretch_' + primary, primary === 'darkOnLight' ? stretchDark : stretchLight, '7', false);
+    pushTry('lc_' + primary, primary === 'darkOnLight' ? lcDark : lcLight, '7', false);
+    pushTry(primary, primary === 'darkOnLight' ? darkOnLight : lightOnDark, '7', false);
+    pushTry(secondary, secondary === 'darkOnLight' ? darkOnLight : lightOnDark, '7', false);
+  } else {
+    pushTry('stretch_raw', stretchRaw, '7', true);
+    pushTry('lc_raw', lcRaw, '7', true);
+    pushTry(primary, primary === 'darkOnLight' ? darkOnLight : lightOnDark, '7', false);
+    pushTry('lc_' + primary, primary === 'darkOnLight' ? lcDark : lcLight, '7', false);
+    pushTry('stretch_' + primary, primary === 'darkOnLight' ? stretchDark : stretchLight, '7', false);
+    pushTry('stretch_raw', stretchRaw, '7', true);
+    pushTry('lc_raw', lcRaw, '7', true);
+    pushTry(secondary, secondary === 'darkOnLight' ? darkOnLight : lightOnDark, '7', false);
+  }
+  pushTry(primary + '_psm8', primary === 'darkOnLight' ? darkOnLight : lightOnDark, '8', false);
   return {
-    darkOnLight: makeVariant('darkOnLight'),
-    lightOnDark: makeVariant('lightOnDark'),
+    darkOnLight,
+    lightOnDark,
+    lcDark,
+    lcLight,
+    stretchRaw,
+    lcRaw,
+    stretchDark,
+    stretchLight,
+    matteMild,
     rawCanvas,
     primary,
     secondary,
     meanLum,
+    tryOrder,
   };
 }
 
@@ -34351,15 +36469,15 @@ function getPasscodeCropForOcr(passcodeVisual, typeCropRect) {
   const base = typeCropRect || passcodeVisual;
   if (!base) return null;
   const computed = {
-    x: base.x + base.width * 0.03,
-    y: base.y + base.height * 0.925,
-    width: base.width * 0.24,
-    height: base.height * 0.05,
+    x: base.x + base.width * 0.025,
+    y: base.y + base.height * 0.934,
+    width: base.width * 0.19,
+    height: base.height * 0.034,
   };
   if (!passcodeVisual || passcodeVisual.width < 6) return computed;
   const aspect = passcodeVisual.height / passcodeVisual.width;
   if (aspect > 0.28) return computed;
-  return refinePasscodeCropForOcr(passcodeVisual);
+  return passcodeVisual;
 }
 
 /**
@@ -34430,7 +36548,31 @@ function paintPasscodePreviewCanvas(rawCanvas) {
 function updateOcrPasscodeLiveReadDisplay(sidecar) {
   const el = getEl('ocr-passcode-live-read');
   if (!el) return;
-  if (!sidecar || !sidecar.raw) {
+  const now = Date.now();
+  const hasRead =
+    sidecar &&
+    (sidecar.raw ||
+      (Array.isArray(sidecar.candidates) && sidecar.candidates.length > 0));
+  if (hasRead) {
+    lastOcrPasscodeLiveSticky = sidecar;
+    lastOcrPasscodeLiveReadAt = now;
+  }
+  let show = null;
+  if (hasRead) {
+    show = sidecar;
+  } else if (
+    lastOcrPasscodeLiveSticky &&
+    now - lastOcrPasscodeLiveReadAt < OCR_LIVE_READ_HOLD_MS
+  ) {
+    show = lastOcrPasscodeLiveSticky;
+  }
+  const rawDigits =
+    show &&
+    (String(show.raw || '').replace(/\s+/g, '') ||
+      (Array.isArray(show.candidates) && show.candidates[0]
+        ? String(show.candidates[0]).replace(/\s+/g, '')
+        : ''));
+  if (!rawDigits) {
     const t = T('ocr.live.passcode_no_text');
     if (lastOcrPasscodeLiveReadKey !== t) {
       lastOcrPasscodeLiveReadKey = t;
@@ -34438,13 +36580,13 @@ function updateOcrPasscodeLiveReadDisplay(sidecar) {
     }
     return;
   }
-  const cands = (sidecar.candidates || []).join(', ') || '—';
+  const cands = (show.candidates || []).join(', ') || '—';
   const conf =
-    typeof sidecar.confidence === 'number' && isFinite(sidecar.confidence)
-      ? Math.round(sidecar.confidence)
+    typeof show.confidence === 'number' && isFinite(show.confidence)
+      ? Math.round(show.confidence)
       : '—';
-  const status = sidecar.card ? T('ocr.live.status_match') : T('ocr.live.status_weak');
-  const raw = String(sidecar.raw).replace(/\s+/g, '').slice(0, 16);
+  const status = show.card ? T('ocr.live.status_match') : T('ocr.live.status_weak');
+  const raw = rawDigits.slice(0, 16);
   const line = T('ocr.live.passcode_reading', {
     raw,
     cands,
@@ -34478,11 +36620,12 @@ function logPasscodeOcrAttempt(sidecar) {
   const cands = (sidecar.candidates || []).join(',') || '—';
   const raw = String(sidecar.raw).replace(/\s+/g, '').slice(0, 20);
   if (sidecar.card) return;
-  const readKey = `p|${conf}|${raw}|${cands}`;
+  const readKey = `p|${conf}|${raw}|${cands}|${sidecar.variantId || ''}`;
   if (readKey === lastOcrPasscodeLogKey) return;
   lastOcrPasscodeLogKey = readKey;
+  const varLabel = sidecar.variantId ? ` [${sidecar.variantId}]` : '';
   addOcrLog(
-    T('ocr.log.passcode_reading', { raw, cands, engine: 'ID', conf: String(conf) }),
+    T('ocr.log.passcode_reading', { raw, cands, engine: 'ID', conf: String(conf) }) + varLabel,
     'id'
   );
   if ((sidecar.candidates || []).length) {
@@ -34498,7 +36641,7 @@ function logPasscodeOcrAttempt(sidecar) {
  * @param {{ x: number, y: number, width: number, height: number }|null} typeCropRect
  * @returns {Promise<null|object>|null}
  */
-function ensurePasscodeOcrRunning(video, passcodeVisual, typeCropRect) {
+function ensurePasscodeOcrRunning(video, passcodeVisual, typeCropRect, ocrWarp) {
   if (passcodeOcrInFlight) return passcodeOcrInFlight;
   if (!canRunPasscodeOcrNow()) return null;
   lastPasscodeOcrAt = Date.now();
@@ -34506,14 +36649,154 @@ function ensurePasscodeOcrRunning(video, passcodeVisual, typeCropRect) {
     video,
     passcodeVisual,
     typeCropRect,
-    getScannerPasscodeVisionContext()
+    getScannerPasscodeVisionContext(),
+    ocrWarp
   ).finally(() => {
     passcodeOcrInFlight = null;
   });
   return passcodeOcrInFlight;
 }
 
-async function recognizePasscodeVariantCanvas(variantCanvas) {
+/**
+ * Limites horizontais de ~8 colunas de dígito no canvas binarizado.
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {number} w
+ * @param {number} h
+ * @returns {{ x0: number, x1: number }[]}
+ */
+function computePasscodeDigitColumnBounds(ctx, w, h) {
+  const img = ctx.getImageData(0, 0, w, h);
+  const d = img.data;
+  const colW = w / 8;
+  const bounds = [];
+  const y0 = Math.floor(h * 0.18);
+  const y1 = Math.floor(h * 0.82);
+  for (let i = 0; i < 8; i++) {
+    const xStart = Math.floor(i * colW + colW * 0.06);
+    const xEnd = Math.floor((i + 1) * colW - colW * 0.06);
+    let peakX = xStart;
+    let peakScore = -1;
+    for (let x = xStart; x < xEnd; x++) {
+      let dark = 0;
+      for (let y = y0; y < y1; y++) {
+        if (d[(y * w + x) * 4] < 128) dark++;
+      }
+      if (dark > peakScore) {
+        peakScore = dark;
+        peakX = x;
+      }
+    }
+    const half = Math.max(5, Math.floor(colW * 0.34));
+    bounds.push({
+      x0: Math.max(0, peakX - half),
+      x1: Math.min(w, peakX + half),
+    });
+  }
+  return bounds;
+}
+
+function computePasscodeEqualColumnBounds(w, h) {
+  const colW = w / 8;
+  const bounds = [];
+  for (let i = 0; i < 8; i++) {
+    bounds.push({
+      x0: Math.floor(i * colW + colW * 0.07),
+      x1: Math.floor((i + 1) * colW - colW * 0.07),
+    });
+  }
+  return bounds;
+}
+
+/**
+ * OCR dígito a dígito (fallback quando a linha inteira devolve lixo).
+ * @param {HTMLCanvasElement} variantCanvas
+ * @param {{ binMode?: string, useEqual?: boolean }} [opts]
+ * @returns {Promise<null|{ text: string, confidence: number, score: number, cands: string[] }>}
+ */
+async function recognizePasscodeDigitColumns(variantCanvas, opts) {
+  if (!ocrWorker || !variantCanvas) return null;
+  const w = variantCanvas.width;
+  const h = variantCanvas.height;
+  const work = document.createElement('canvas');
+  work.width = w;
+  work.height = h;
+  const workCtx = work.getContext('2d', { willReadFrequently: true });
+  if (!workCtx || w < 40 || h < 8) return null;
+  workCtx.drawImage(variantCanvas, 0, 0);
+  const binMode = (opts && opts.binMode) || 'darkOnLight';
+  binarizePasscodeMatteMild(workCtx, w, h, binMode);
+  const bounds =
+    opts && opts.useEqual
+      ? computePasscodeEqualColumnBounds(w, h)
+      : computePasscodeDigitColumnBounds(workCtx, w, h);
+  if (!bounds || bounds.length < 8) return null;
+  let digits = '';
+  let confSum = 0;
+  let ok = 0;
+  try {
+    await ocrWorker.setParameters(TESSERACT_PASSCODE_DIGIT_OCR_PARAMS);
+    for (let bi = 0; bi < 8; bi++) {
+      const b = bounds[bi];
+      const cw = Math.max(6, b.x1 - b.x0);
+      const col = document.createElement('canvas');
+      col.width = cw;
+      col.height = h;
+      const cx = col.getContext('2d', { willReadFrequently: true });
+      if (!cx) return null;
+      cx.drawImage(work, b.x0, 0, cw, h, 0, 0, cw, h);
+      const result = await Promise.race([
+        ocrWorker.recognize(col),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('digit timeout')), 900)),
+      ]);
+      const ch = String(result.data.text || '')
+        .replace(/\D/g, '')
+        .slice(0, 1);
+      if (!ch) return null;
+      digits += ch;
+      confSum += typeof result.data.confidence === 'number' ? result.data.confidence : 0;
+      ok++;
+    }
+  } catch (_) {
+    return null;
+  }
+  if (ok !== 8 || digits.length !== 8) return null;
+  const conf = confSum / 8;
+  const cands = extractYuGiOhPasscodeCandidates(digits);
+  return {
+    text: digits,
+    confidence: conf,
+    score: conf + 72 + (cands.length ? 20 : 0),
+    cands: cands.length ? cands : [digits],
+    variantId: 'digit_columns',
+    psm: '10',
+  };
+}
+
+/** Tenta colunas adaptativas e iguais com ambos modos de binarização. */
+async function recognizePasscodeDigitColumnsWithFallback(variantCanvas, hint) {
+  const modes =
+    hint && hint.primary === 'lightOnDark'
+      ? ['lightOnDark', 'darkOnLight']
+      : ['darkOnLight', 'lightOnDark'];
+  let best = null;
+  for (let mi = 0; mi < modes.length; mi++) {
+    const binMode = modes[mi];
+    for (let ei = 0; ei < 2; ei++) {
+      const hit = await recognizePasscodeDigitColumns(variantCanvas, {
+        binMode,
+        useEqual: ei === 1,
+      });
+      if (!hit) continue;
+      if (!best || hit.score > best.score) best = hit;
+      if ((hit.cands || []).some((c) => String(c).length === 8) && hit.confidence >= 38) {
+        return hit;
+      }
+    }
+  }
+  return best;
+}
+
+async function recognizePasscodeVariantCanvas(variantCanvas, meta) {
   try {
     const result = await Promise.race([
       ocrWorker.recognize(variantCanvas),
@@ -34524,38 +36807,132 @@ async function recognizePasscodeVariantCanvas(variantCanvas) {
     const text = result.data.text || '';
     const conf = typeof result.data.confidence === 'number' ? result.data.confidence : 0;
     const cands = extractYuGiOhPasscodeCandidates(text);
-    const score = conf + (cands.length ? 55 : 0) + (cands[0] && cands[0].length === 8 ? 12 : 0);
-    return { text, confidence: conf, score, cands };
+    const digitRun = String(text).replace(/\D/g, '').length;
+    let score = conf + (cands.length ? 55 : 0);
+    if (cands[0] && cands[0].length === 8) score += 14;
+    if (digitRun === 8) score += 10;
+    else if (digitRun > 12) score -= 85;
+    else if (digitRun > 10) score -= 48;
+    else if (digitRun > 8) score -= 22;
+    else if (digitRun < 4) score -= 52;
+    else if (digitRun === 9 || digitRun === 10) score -= 6;
+    return {
+      text,
+      confidence: conf,
+      score,
+      cands,
+      variantId: meta && meta.id ? meta.id : null,
+      psm: meta && meta.psm ? meta.psm : '7',
+      digitRun,
+    };
   } catch (_) {
     return null;
   }
 }
 
-async function recognizePasscodeFromCrop(video, cropRect, hint) {
-  if (!ocrWorker || !video || !cropRect || cropRect.width < 4 || cropRect.height < 2) return null;
+async function recognizePasscodeFromCrop(media, cropRect, hint) {
+  if (!ocrWorker || !media || !cropRect || cropRect.width < 4 || cropRect.height < 2) return null;
   if (!passcodeOcrCanvasReuse) {
     passcodeOcrCanvasReuse = document.createElement('canvas');
   }
-  const variants = buildPasscodeOcrVariants(video, cropRect, passcodeOcrCanvasReuse, hint);
+  const variants = buildPasscodeOcrVariants(media, cropRect, passcodeOcrCanvasReuse, hint);
   if (!variants) return null;
-  await ocrWorker.setParameters(TESSERACT_PASSCODE_OCR_PARAMS);
   let best = null;
-  let bestCanvas = variants[variants.primary];
-  const order = [variants.primary, variants.secondary];
+  let bestMeta = null;
+  const attempts = [];
   try {
-    for (let oi = 0; oi < order.length; oi++) {
-      const mode = order[oi];
-      const vCanvas = variants[mode];
-      const hit = await recognizePasscodeVariantCanvas(vCanvas);
+    const colSources = [
+      variants.stretchRaw,
+      variants.lcRaw,
+      hint && hint.primary === 'lightOnDark' ? variants.lightOnDark : variants.darkOnLight,
+      hint && hint.primary === 'lightOnDark' ? variants.lcLight : variants.lcDark,
+      variants.matteMild,
+      variants.stretchLight,
+      variants.stretchDark,
+    ].filter(Boolean);
+    for (let ci = 0; ci < colSources.length; ci++) {
+      const colEarly = await recognizePasscodeDigitColumnsWithFallback(colSources[ci], hint);
+      if (!colEarly) continue;
+      attempts.push({
+        variant: 'digit_columns_early',
+        psm: '10',
+        raw: colEarly.text,
+        digitRun: 8,
+        confidence: safeRound(colEarly.confidence, 1),
+        candidates: colEarly.cands || [],
+        score: safeRound(colEarly.score, 1),
+      });
+      if (!best || colEarly.score > best.score) {
+        best = colEarly;
+        bestMeta = { id: 'digit_columns', canvas: colSources[ci] };
+      }
+      const hasEightEarly = (colEarly.cands || []).some((c) => String(c).length === 8);
+      if (hasEightEarly && colEarly.confidence >= 34) break;
+    }
+    if (
+      !(best && (best.cands || []).some((c) => String(c).length === 8) && best.confidence >= 44)
+    ) {
+    for (let vi = 0; vi < variants.tryOrder.length; vi++) {
+      const v = variants.tryOrder[vi];
+      await ocrWorker.setParameters({
+        ...TESSERACT_PASSCODE_OCR_PARAMS,
+        tessedit_pageseg_mode: v.psm || '7',
+      });
+      const hit = await recognizePasscodeVariantCanvas(v.canvas, v);
       if (!hit) continue;
+      attempts.push({
+        variant: hit.variantId || v.id,
+        psm: hit.psm,
+        raw: String(hit.text).replace(/\s+/g, '').slice(0, 24),
+        digitRun: hit.digitRun,
+        confidence: safeRound(hit.confidence, 1),
+        candidates: hit.cands || [],
+        score: safeRound(hit.score, 1),
+      });
       if (!best || hit.score > best.score) {
         best = hit;
-        bestCanvas = vCanvas;
+        bestMeta = v;
       }
       const hasEight = (hit.cands || []).some((c) => String(c).length === 8);
-      if (hasEight && hit.confidence >= 35) break;
-      if (oi === 0 && !(hit.cands || []).length && hit.confidence < 18) continue;
-      if (oi === 0 && (hit.cands || []).length) break;
+      if (hasEight && hit.confidence >= 32 && hit.digitRun <= 10) break;
+    }
+    }
+    const needColumns =
+      !best ||
+      !(best.cands || []).some((c) => String(c).length === 8) ||
+      best.confidence < 38 ||
+      (best.digitRun && best.digitRun > 9);
+    const colCanvases = [];
+    const pushCol = (c) => {
+      if (c && !colCanvases.includes(c)) colCanvases.push(c);
+    };
+    pushCol(bestMeta && bestMeta.canvas ? bestMeta.canvas : null);
+    pushCol(variants.stretchRaw);
+    pushCol(variants.lcRaw);
+    pushCol(variants.darkOnLight);
+    pushCol(variants.lcDark);
+    if (needColumns) {
+    for (let cci = 0; cci < colCanvases.length; cci++) {
+      const colCanvas = colCanvases[cci];
+      if (!colCanvas) continue;
+      const colHit = await recognizePasscodeDigitColumnsWithFallback(colCanvas, hint);
+      if (!colHit) continue;
+        attempts.push({
+          variant: 'digit_columns',
+          psm: '10',
+          raw: colHit.text,
+          digitRun: 8,
+          confidence: safeRound(colHit.confidence, 1),
+          candidates: colHit.cands || [],
+          score: safeRound(colHit.score, 1),
+        });
+        if (!best || colHit.score > best.score) {
+          best = colHit;
+          bestMeta = { id: 'digit_columns', canvas: colCanvas };
+        }
+      const hasEightCol = (colHit.cands || []).some((c) => String(c).length === 8);
+      if (hasEightCol && colHit.confidence >= 36) break;
+    }
     }
   } finally {
     try {
@@ -34563,8 +36940,35 @@ async function recognizePasscodeFromCrop(video, cropRect, hint) {
     } catch (_) {}
   }
   if (variants.rawCanvas) paintPasscodePreviewCanvas(variants.rawCanvas);
+  lastPasscodeOcrDiagnostics = {
+    cropRect: {
+      x: safeRound(cropRect.x, 1),
+      y: safeRound(cropRect.y, 1),
+      width: safeRound(cropRect.width, 1),
+      height: safeRound(cropRect.height, 1),
+    },
+    hint: hint
+      ? {
+          primary: hint.primary,
+          secondary: hint.secondary,
+          meanLum: safeRound(hint.meanLum, 1),
+          matteIdDigits: !!hint.matteIdDigits,
+          digitInk: hint.digitInk || null,
+          cardType: hint.cardType,
+          rarity: hint.rarity,
+        }
+      : null,
+    attempts,
+    bestVariant: best && best.variantId ? best.variantId : bestMeta && bestMeta.id ? bestMeta.id : null,
+    bestPsm: best && best.psm ? best.psm : null,
+  };
   if (!best) return null;
-  return { text: best.text, confidence: best.confidence };
+  return {
+    text: best.text,
+    confidence: best.confidence,
+    candidates: best.cands || extractYuGiOhPasscodeCandidates(best.text),
+    variantId: best.variantId || (bestMeta && bestMeta.id) || null,
+  };
 }
 
 /**
@@ -34581,8 +36985,12 @@ async function fetchScannerCardByPasscode(passcodeStr, visionContext) {
     const map = await fetchCardsByIdsBatched([idNum]);
     const card = map.get(idNum);
     if (!card) continue;
-    if (visionContext?.cardType && visionContext.cardType !== 'AUTO') {
-      if (scoreApiCardTypeAgainstUi(card, visionContext.cardType) < 0.22) continue;
+    if (
+      visionContext?.cardType &&
+      visionContext.cardType !== 'AUTO' &&
+      !scannerUiTypeMatchesApiLoose(visionContext.cardType, card)
+    ) {
+      continue;
     }
     return card;
   }
@@ -34596,39 +37004,85 @@ async function fetchScannerCardByPasscode(passcodeStr, visionContext) {
  * @param {{ cardType?: string|null, rarity?: string|null }|null} [visionContext]
  * @returns {Promise<null|{ pack: object, cleaned: string, card: object, matchSource: string }>}
  */
-async function tryScannerPasscodeMatch(video, passcodeVisualCrop, typeCropRect, visionContext) {
-  const passcodeCrop = getPasscodeCropForOcr(passcodeVisualCrop, typeCropRect);
-  if (!passcodeCrop) {
+async function tryScannerPasscodeMatch(video, passcodeVisualCrop, typeCropRect, visionContext, ocrWarp) {
+  const passcodeBase = ocrWarp
+    ? ocrWarp.passcodeCrop
+    : getPasscodeCropForOcr(passcodeVisualCrop, typeCropRect);
+  const cropVariants = passcodeBase ? buildPasscodeCropVariants(passcodeBase) : [];
+  if (!cropVariants.length) {
     lastPasscodeSidecar = null;
+    lastPasscodeOcrDiagnostics = null;
     updateOcrPasscodeLiveReadDisplay(null);
     return null;
   }
+  const ocrMedia = ocrWarp && ocrWarp.media ? ocrWarp.media : video;
   const idHint = derivePasscodeOcrHint(
     video,
     typeCropRect,
     visionContext && visionContext.cardType,
-    visionContext && visionContext.rarity
+    visionContext && visionContext.rarity,
+    passcodeBase
   );
-  const ocr = await recognizePasscodeFromCrop(video, passcodeCrop, idHint);
-  const candidates = ocr && ocr.text ? extractYuGiOhPasscodeCandidates(ocr.text) : [];
+  let ocr = null;
+  for (let ci = 0; ci < cropVariants.length; ci++) {
+    const passcodeCrop = cropVariants[ci];
+    if (!passcodeCrop || passcodeCrop.width < 4) continue;
+    const hit = await recognizePasscodeFromCrop(ocrMedia, passcodeCrop, idHint);
+    if (!hit) continue;
+    notePasscodeIdVotes(hit.candidates, hit.confidence);
+    const hitEight = (hit.candidates || []).some((c) => String(c).length === 8);
+    const bestEight =
+      ocr && (ocr.candidates || []).some((c) => String(c).length === 8);
+    if (
+      !ocr ||
+      (hitEight && !bestEight) ||
+      (hitEight === bestEight && hit.confidence > (ocr.confidence || 0))
+    ) {
+      ocr = hit;
+    }
+    if (hitEight && hit.confidence >= 42) break;
+  }
+  const candidates =
+    ocr && ocr.candidates && ocr.candidates.length
+      ? ocr.candidates
+      : ocr && ocr.text
+        ? extractYuGiOhPasscodeCandidates(ocr.text)
+        : [];
   lastPasscodeSidecar = {
-    raw: ocr && ocr.text ? String(ocr.text).replace(/\s+/g, '') : '',
+    raw:
+      ocr && ocr.text
+        ? (() => {
+            const r = String(ocr.text).replace(/\s+/g, '');
+            const eight = (ocr.candidates || []).find((c) => String(c).length === 8);
+            if (eight) return eight;
+            if (r.replace(/\D/g, '').length >= 8) return r.replace(/\D/g, '').slice(0, 8);
+            return r.replace(/\D/g, '').length >= 4 ? r : '';
+          })()
+        : '',
     candidates,
     confidence: ocr ? ocr.confidence : 0,
+    variantId: ocr && ocr.variantId ? ocr.variantId : null,
     card: null,
   };
   updateOcrPasscodeLiveReadDisplay(lastPasscodeSidecar);
   logPasscodeOcrAttempt(lastPasscodeSidecar);
-  if (!ocr || !ocr.text || !candidates.length) return null;
-  const card = await fetchScannerCardByPasscode(ocr.text, visionContext);
+  let card = null;
+  if (ocr && ocr.text && candidates.length) {
+    card = await fetchScannerCardByPasscode(ocr.text, visionContext);
+  }
+  if (!card) {
+    const votedId = pickPasscodeIdFromVotes(2);
+    if (votedId) card = await fetchScannerCardByPasscode(votedId, visionContext);
+  }
   if (!card) return null;
   const idLabel = candidates[0] || String(card.id);
-  lastPasscodeSidecar = { ...lastPasscodeSidecar, card };
+  const ocrText = ocr && ocr.text ? ocr.text : idLabel;
+  lastPasscodeSidecar = { ...lastPasscodeSidecar, card, raw: lastPasscodeSidecar.raw || idLabel };
   updateOcrPasscodeLiveReadDisplay(lastPasscodeSidecar);
   return {
     pack: {
-      text: ocr.text,
-      confidence: ocr.confidence,
+      text: ocrText,
+      confidence: ocr ? ocr.confidence : 0,
       ocrEngine: 'passcode',
       settings: { passcodeOcr: true },
     },
@@ -34652,7 +37106,8 @@ async function scanNameOrPasscodeParallel(
   nameCropRect,
   typeCropRect,
   nameCropVisual,
-  nameCropOcrRefined
+  nameCropOcrRefined,
+  ocrWarp
 ) {
   const passcodeVisual = mapVisualBoxToVideoCrop(video, getEl('scanner-passcode-visual'));
   const nameP = processFrameWithFallbackPasses(
@@ -34660,9 +37115,11 @@ async function scanNameOrPasscodeParallel(
     nameCropRect,
     typeCropRect,
     nameCropVisual,
-    nameCropOcrRefined
+    nameCropOcrRefined,
+    ocrWarp
   );
-  const idP = ensurePasscodeOcrRunning(video, passcodeVisual, typeCropRect) || Promise.resolve(null);
+  const idP =
+    ensurePasscodeOcrRunning(video, passcodeVisual, typeCropRect, ocrWarp) || Promise.resolve(null);
   const wrapMatch = (promise, source) =>
     promise.then((outcome) => {
       if (outcome && outcome.card) {
@@ -34689,20 +37146,26 @@ async function scanNameOrPasscodeParallel(
 async function processOcrFrame() {
   if (!isOcrActive) return;
   if (!paddleOcrReadyFlag) {
-    ocrDeferHeavyUntilPaddle = scannerSessionLikelyNeedsPaddle();
+    ocrDeferHeavyUntilPaddle = shouldDeferOcrForPaddleWarmup();
+  } else {
+    ocrDeferHeavyUntilPaddle = false;
   }
   const video = getEl('ocr-video');
   if (!video || video.videoWidth === 0) {
     requestAnimationFrame(processOcrFrame);
     return;
   }
-  const nameCropVisual = mapVisualBoxToVideoCrop(video, getEl('scanner-visual'));
-  const typeCropRect = mapVisualBoxToVideoCrop(video, getEl('scanner-type-visual'));
+  const crops = resolveScannerCrops(video);
+  const nameCropVisual = crops.nameCropVisual;
+  const typeCropRect = crops.typeCropRect;
+  const passcodeVisual = crops.passcodeVisual;
+  const track = crops.track;
+  const handFreeTrack = crops.source === 'track' && ocrScannerIsMobile();
   if (nameCropVisual) {
     onScannerSceneMaybeChanged(video, nameCropVisual, typeCropRect);
-    updateScannerFramingState(video, nameCropVisual);
-    const passcodeVisual = mapVisualBoxToVideoCrop(video, getEl('scanner-passcode-visual'));
-    ensurePasscodeOcrRunning(video, passcodeVisual, typeCropRect);
+    updateScannerFramingState(video, nameCropVisual, track);
+    const ocrWarpPreview = buildScannerWarpOcrContext(video, track);
+    ensurePasscodeOcrRunning(video, passcodeVisual, typeCropRect, ocrWarpPreview);
   }
   if (isProcessing) {
     scheduleNextOcrFrame();
@@ -34712,26 +37175,37 @@ async function processOcrFrame() {
     scheduleNextOcrFrame();
     return;
   }
-  if (!paddleOcrReadyFlag && scannerSessionLikelyNeedsPaddle()) {
+  if (!isScannerFramingReady(video, nameCropVisual, track)) {
+    scheduleNextOcrFrame();
+    return;
+  }
+  if (shouldDeferOcrForPaddleWarmup()) {
     ocrDeferHeavyUntilPaddle = true;
     logOcrPaddleWarmupWait();
     scheduleNextOcrFrame();
     return;
   }
+  ocrDeferHeavyUntilPaddle = false;
   isProcessing = true;
   try {
-    const nameCropOcrRefined = refineNameCropForOcr(nameCropVisual);
-    const nameCropRect = nameCropVisual;
+    const ocrWarp = buildScannerWarpOcrContext(video, track);
+    const nameCropForOcr = ocrWarp
+      ? refineNameCropForOcr(ocrWarp.nameCrop, handFreeTrack)
+      : refineNameCropForOcr(nameCropVisual, handFreeTrack);
+    const nameCropOcrRefined = nameCropForOcr;
+    const nameCropRect = nameCropForOcr;
 
     const outcome = await scanNameOrPasscodeParallel(
       video,
       nameCropRect,
       typeCropRect,
       nameCropVisual,
-      nameCropOcrRefined
+      nameCropOcrRefined,
+      ocrWarp
     );
     updateOcrLiveReadDisplay(outcome);
     if (lastPasscodeSidecar) updateOcrPasscodeLiveReadDisplay(lastPasscodeSidecar);
+    else updateOcrPasscodeLiveReadDisplay(null);
     const statusNow = Date.now();
     const statusLogGap = ocrScannerIsMobile() ? 850 : 2200;
     if (statusNow - lastOcrScanStatusLogAt >= statusLogGap) {
@@ -34757,21 +37231,34 @@ async function processOcrFrame() {
       else setTimeout(runDiag, 0);
     }
     if (outcome && outcome.card) {
-      const cardName = displayNameForApiCard(outcome.card);
-      triggerScanHaptic(outcome.card.id);
-      if (!scannerFoundCardIds.has(outcome.card.id)) {
-        scannerFoundCardIds.add(outcome.card.id);
-        scannerFoundCardById.set(String(outcome.card.id), outcome.card);
-        scannerFoundCards.push(outcome.card);
-        lastMatchedText = cardName;
-        lastMatchTime = Date.now();
-        showScannerToast(outcome.card);
-        updateScannerResultsUI();
-        processingCooldown = true;
-        setTimeout(() => {
-          processingCooldown = false;
-        }, OCR_SCANNER_COOLDOWN_MS);
+      const vote = ocrReadVoteConsensus(outcome.cleaned || '', outcome.card);
+      const acceptCard = vote && vote.card ? vote.card : outcome.card;
+      if (vote && vote.card && vote.card.id !== outcome.card.id) {
+        /* consenso com outro id — manter outcome principal */
       }
+      const needVote = ocrScannerIsMobile() || (outcome.pack && outcome.pack.confidence < 72);
+      if (needVote && !vote) {
+        /* aguarda consenso — entradas já em ocrReadVoteBuffer via ocrReadVoteConsensus */
+      } else {
+        const cardName = displayNameForApiCard(acceptCard);
+        triggerScanHaptic(acceptCard.id);
+        if (!scannerFoundCardIds.has(acceptCard.id)) {
+          scannerFoundCardIds.add(acceptCard.id);
+          scannerFoundCardById.set(String(acceptCard.id), acceptCard);
+          scannerFoundCards.push(acceptCard);
+          lastMatchedText = cardName;
+          lastMatchTime = Date.now();
+          ocrReadVoteBuffer.length = 0;
+          showScannerToast(acceptCard);
+          updateScannerResultsUI();
+          processingCooldown = true;
+          setTimeout(() => {
+            processingCooldown = false;
+          }, OCR_SCANNER_COOLDOWN_MS);
+        }
+      }
+    } else if (outcome && outcome.cleaned) {
+      ocrReadVoteConsensus(outcome.cleaned, null);
     }
   } catch (err) {
     console.error('Frame error:', err);
@@ -34954,9 +37441,7 @@ async function startScanner() {
       ? { width: { ideal: 1280 }, height: { ideal: 720 } }
       : { facingMode: 'environment', width: { ideal: 1280 } };
     const stream = await navigator.mediaDevices.getUserMedia({ video: videoConstraints });
-    if (container) {
-      container.style.display = 'flex';
-    }
+    setOcrScannerPanelOpen(true);
     try {
       document.documentElement.classList.add('ocr-scanner-active');
     } catch (_) {}
@@ -34998,6 +37483,7 @@ async function startScanner() {
         addOcrLog(T('ocr.log.zoom', { zoom: String(zoom) }));
       }
     } catch (e) {}
+    void getOcrCardTrackModule().catch(() => {});
     if (video.dataset.ocrFocusBound !== '1') {
       video.dataset.ocrFocusBound = '1';
       video.addEventListener('click', async () => {
@@ -35015,33 +37501,20 @@ async function startScanner() {
             }, 3000);
           }
         } catch (e) {}
+        try {
+          const m = await getOcrCardTrackModule();
+          if (m && lastOcrCardTrackPack && lastOcrCardTrackPack.card) {
+            m.setCardTrackLock(true);
+            addOcrLog(T('ocr.framing.locked'), 'ok');
+          }
+        } catch (_) {}
       });
     }
+    ocrPaddleWaitStartedAt = 0;
+    ocrPaddleWarmupGivenUp = false;
+    void ensurePaddleOcrWarm();
     if (!ocrWorker) {
       addOcrLog(T('ocr.log.tesseract_loading'));
-      addOcrLog(T('ocr.log.paddle_loading'));
-      const warmPaddleOcr = () =>
-        getPaddleOcrModule()
-          .then(async (m) => {
-            const ok = await m.initPaddleOcrRec();
-            if (ok) {
-              paddleOcrReadyFlag = true;
-              addOcrLog(T('ocr.log.paddle_ready'), 'ok');
-            } else {
-              const pe = m.getPaddleOcrInitError();
-              addOcrLog(
-                T('ocr.log.paddle_fail', {
-                  msg: pe && pe.message ? pe.message : 'init failed',
-                })
-              );
-            }
-          })
-          .catch((pe) => {
-            addOcrLog(
-              T('ocr.log.paddle_fail', { msg: pe && pe.message ? pe.message : String(pe) })
-            );
-          });
-      void warmPaddleOcr();
       try {
         ocrWorker = await Tesseract.createWorker(TESSERACT_WORKER_OPTIONS);
         await ocrWorker.loadLanguage('eng');
@@ -35057,7 +37530,10 @@ async function startScanner() {
         } catch (_) {
           showToast(T('toast.ocr_tess_load_fail'), { variant: 'error' });
         }
-        isOcrActive = false;
+        const tkEarly = stream.getVideoTracks();
+        for (let ti = 0; ti < tkEarly.length; ti++) tkEarly[ti].stop();
+        video.srcObject = null;
+        closeScannerUi();
         return;
       }
     }
@@ -35067,13 +37543,12 @@ async function startScanner() {
     requestAnimationFrame(processOcrFrame);
   } catch (err) {
     addOcrLog(T('ocr.log.error', { msg: err && err.message ? err.message : String(err) }));
-    if (container) container.setAttribute('style', 'display: none');
-    unbindOcrResizeForScanner();
     try {
-      document.documentElement.classList.remove('ocr-scanner-active');
+      showToast(T('ocr.log.error', { msg: err && err.message ? err.message : String(err) }), {
+        variant: 'error',
+      });
     } catch (_) {}
-    setScannerToolbarButtonActive(false);
-    stopScanner();
+    closeScannerUi();
   } finally {
     scannerStartInFlight = false;
   }
@@ -35089,12 +37564,27 @@ function stopScanner() {
   paddleOcrReadyFlag = false;
   ocrDeferHeavyUntilPaddle = false;
   lastOcrPaddleWaitLogAt = 0;
+  ocrPaddleWaitStartedAt = 0;
+  ocrPaddleWarmupGivenUp = false;
   if (ocrFrameScheduleTimer) {
     clearTimeout(ocrFrameScheduleTimer);
     ocrFrameScheduleTimer = 0;
   }
   ocrFramingLumHistory.length = 0;
+  ocrFramingPosHistory.length = 0;
+  ocrReadVoteBuffer.length = 0;
   ocrFramingState = 'seeking';
+  lastOcrDirectionHintKey = '';
+  lastOcrCardTrackPack = null;
+  lastResolvedScannerCrops = null;
+  lastScannerCropDetectAt = 0;
+  ocrCanonicalCardCanvas = null;
+  ocrCanonicalCardKey = '';
+  ocrCanonicalCardAt = 0;
+  clearScannerTrackOverlay();
+  if (ocrCardTrackMod && typeof ocrCardTrackMod.resetCardTrackState === 'function') {
+    ocrCardTrackMod.resetCardTrackState();
+  }
   lastOcrLiveReadKey = '';
   lastOcrLogReadKey = '';
   lastOcrHuntLogKey = '';
@@ -35102,6 +37592,7 @@ function stopScanner() {
   lastOcrPasscodeLogKey = '';
   lastPasscodeSidecar = null;
   lastPasscodeOcrAt = 0;
+  resetPasscodeIdVotes();
   passcodeOcrInFlight = null;
   lastVisionProbeAt = 0;
   lastOcrPreviewPaintAt = 0;
@@ -35237,9 +37728,22 @@ function setScannerToolbarButtonActive(on) {
  * @returns {boolean} `true` se `#ocr-container` está visível (display ≠ none).
  */
 function isOcrContainerVisible() {
+  return !!ocrScannerUiOpen;
+}
+
+/**
+ * @param {boolean} open
+ * @returns {void}
+ */
+function setOcrScannerPanelOpen(open) {
+  ocrScannerUiOpen = !!open;
   const c = getEl('ocr-container');
-  const d = c && c.style && c.style.display;
-  return !!(c && d && d !== 'none');
+  if (!c) return;
+  if (open) {
+    c.style.display = 'flex';
+  } else {
+    c.setAttribute('style', 'display: none');
+  }
 }
 
 /**
@@ -35247,38 +37751,45 @@ function isOcrContainerVisible() {
  * @returns {void}
  */
 function closeScannerUi() {
-  dismissScannerMatchToast();
-  unbindOcrResizeForScanner();
+  if (closeScannerUiInFlight) return;
+  closeScannerUiInFlight = true;
   try {
-    document.documentElement.classList.remove('ocr-scanner-active');
-  } catch (_) {}
-  if (ocrDiagnosticsCaptureActive && ocrDiagnosticsSession) {
+    dismissScannerMatchToast();
+    unbindOcrResizeForScanner();
+    setOcrScannerPanelOpen(false);
     try {
-      toggleOcrDiagnosticsCapture();
-    } catch (_) {
-      ocrDiagnosticsCaptureActive = false;
-      ocrDiagnosticsSession = null;
-      syncOcrDiagnosticsButtonUi();
+      document.documentElement.classList.remove('ocr-scanner-active');
+    } catch (_) {}
+    if (ocrDiagnosticsCaptureActive && ocrDiagnosticsSession) {
+      try {
+        toggleOcrDiagnosticsCapture();
+      } catch (_) {
+        ocrDiagnosticsCaptureActive = false;
+        ocrDiagnosticsSession = null;
+        syncOcrDiagnosticsButtonUi();
+      }
     }
-  }
-  stopScanner();
-  const c = getEl('ocr-container');
-  if (c) c.setAttribute('style', 'display: none');
-  setScannerToolbarButtonActive(false);
-  if (scannerFoundCards.length > 0) {
-    clearRandomPickState();
-    searchResults = scannerFoundCards.map((card) => ({
-      ...card,
-      current_image: card.card_images[0],
-      variant_idx: 0,
-      is_variant: card.card_images.length > 1,
-    }));
-    currentPage = 1;
-    if (typeof sortAndRender === 'function') sortAndRender();
-    showToast(T('toast.scanner_cards', { n: scannerFoundCards.length }));
-  } else {
-    const resultsView = getEl('results-view');
-    if (resultsView) paintOcrScannerEmptyResultsView('no-cards');
+    stopScanner();
+    setScannerToolbarButtonActive(false);
+    if (scannerFoundCards.length > 0) {
+      clearRandomPickState();
+      searchResults = scannerFoundCards.map((card) => ({
+        ...card,
+        current_image: card.card_images[0],
+        variant_idx: 0,
+        is_variant: card.card_images.length > 1,
+      }));
+      currentPage = 1;
+      if (typeof sortAndRender === 'function') sortAndRender();
+      showToast(T('toast.scanner_cards', { n: scannerFoundCards.length }));
+    } else if (searchResults.length > 0) {
+      renderResults();
+    } else {
+      const resultsView = getEl('results-view');
+      if (resultsView) paintOcrScannerEmptyResultsView('no-cards');
+    }
+  } finally {
+    closeScannerUiInFlight = false;
   }
 }
 
@@ -35305,11 +37816,13 @@ function setupCalibratorButton() {
 document.addEventListener('click', (e) => {
   if (e.target.id === 'btn-open-scanner' || e.target.closest('#btn-open-scanner')) {
     e.preventDefault();
+    e.stopPropagation();
+    if (scannerStartInFlight) return;
     if (isOcrContainerVisible()) {
       closeScannerUi();
       return;
     }
-    startScanner();
+    void startScanner();
     setTimeout(setupCalibratorButton, 1000);
   }
   if (e.target.id === 'btn-close-ocr' || e.target.closest('#btn-close-ocr')) {
@@ -35747,6 +38260,14 @@ styleScanner.textContent = `
         padding-left: 2px;
     }
     /* Proporção TCG 59×86 mm; altura primeiro no slot da câmara (evita mira “deitada” em viewport larga). */
+    .scanner-card-frame--tracking,
+    #scanner-type-visual.scanner-card-frame--tracking {
+        left: auto !important;
+        top: auto !important;
+        max-width: none !important;
+        max-height: none !important;
+        transition: left 0.08s ease-out, top 0.08s ease-out, width 0.08s ease-out, height 0.08s ease-out !important;
+    }
     .scanner-card-frame,
     #scanner-type-visual {
         position: absolute !important;
@@ -35905,14 +38426,6 @@ styleScanner.textContent = `
         max-width: 100%;
         box-sizing: border-box;
     }
-    #ocr-crosshair-hint {
-        font-size: 10px;
-        line-height: 1.3;
-        text-align: center;
-        padding: 0 6px 6px;
-        color: #aeb8c4;
-        word-break: break-word;
-    }
     #ocr-focus-hint-static {
         font-size: 11px;
     }
@@ -36008,29 +38521,19 @@ styleScanner.textContent = `
         font-size: 11px;
         font-family: system-ui, Segoe UI, sans-serif;
         pointer-events: none;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
+        white-space: normal;
+        overflow: visible;
+        text-overflow: clip;
         max-width: 100%;
+        line-height: 1.35;
+        word-break: break-word;
         box-sizing: border-box;
     }
-    .ocr-crosshair-hint {
-        display: block;
-        margin: 0 auto 6px;
-        padding: 3px 6px;
-        font-size: 11px;
-        font-weight: 600;
-        letter-spacing: 0.01em;
-        color: #dfffea;
-        font-family: system-ui, Segoe UI, sans-serif;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        max-width: 100%;
-        line-height: 1.2;
-        box-sizing: border-box;
-        background: rgba(0, 0, 0, 0.45);
-        border-radius: 6px;
+    #ocr-log .ocr-log-line {
+        white-space: normal;
+        overflow: visible;
+        text-overflow: clip;
+        word-break: break-word;
     }
     html.ocr-scanner-active #col-filters #ocr-preview-wrap {
         position: relative !important;
@@ -36137,6 +38640,21 @@ styleScanner.textContent = `
         min-height: 0;
         overflow-y: auto;
         overscroll-behavior-y: auto;
+    }
+    @media (min-width: 901px) {
+        html.ocr-scanner-active #col-filters > .col-header,
+        html.ocr-scanner-active #col-filters > .sidebar-content {
+            display: none !important;
+        }
+        html.ocr-scanner-active #col-filters #ocr-container {
+            display: flex !important;
+            position: relative !important;
+            inset: auto !important;
+            width: 100% !important;
+            height: 100% !important;
+            max-height: none !important;
+            flex: 1 1 auto !important;
+        }
     }
     @media (max-width: 900px) {
         html.ocr-scanner-active #app-layout > #col-filters {
@@ -36258,7 +38776,7 @@ styleScanner.textContent = `
             padding: 0 2px 2px !important;
         }
         html.ocr-scanner-active #col-filters .ocr-focus-hint,
-        html.ocr-scanner-active #col-filters .ocr-crosshair-hint {
+        html.ocr-scanner-active #col-filters .ocr-framing-hint {
             margin-top: 0 !important;
             margin-bottom: 2px !important;
             font-size: 10px !important;
@@ -36338,6 +38856,23 @@ styleScanner.textContent = `
         html.ocr-scanner-active #col-filters #ocr-manual-panel > div:first-child {
             margin-bottom: 3px !important;
             font-size: 12px !important;
+        }
+    }
+    @media (min-width: 901px) {
+        html.ocr-scanner-active #col-filters #ocr-log .ocr-log-line {
+            white-space: normal !important;
+            overflow: visible !important;
+            text-overflow: clip !important;
+            word-break: break-word !important;
+        }
+        html.ocr-scanner-active #col-filters .ocr-focus-hint,
+        html.ocr-scanner-active #col-filters #ocr-focus-hint-static,
+        html.ocr-scanner-active #col-filters .ocr-framing-hint,
+        html.ocr-scanner-active #col-filters #ocr-framing-hint {
+            white-space: normal !important;
+            overflow: visible !important;
+            text-overflow: clip !important;
+            word-break: break-word !important;
         }
     }
 `;
@@ -37095,12 +39630,58 @@ function sampleCardFrameRgbFromTypeCrop(video, typeRect, vW, vH) {
  * @param {number} avgB
  * @returns {boolean}
  */
-function isBrownNeutralFrameRgb(avgR, avgG, avgB) {
+/**
+ * Núcleo castanho neutro (Monstro Efeito) — sem chamar Ritual/Link/Sincro wrappers (evita ciclo de pilha).
+ * @param {number} avgR
+ * @param {number} avgG
+ * @param {number} avgB
+ * @returns {boolean}
+ */
+function isBrownNeutralFrameRgbCore(avgR, avgG, avgB) {
   const spread = Math.max(avgR, avgG, avgB) - Math.min(avgR, avgG, avgB);
   const lum = (avgR + avgG + avgB) / 3;
-  if (isFusionPurpleFrameRgb(avgR, avgG, avgB) || isTrapRoseFrameRgb(avgR, avgG, avgB)) return false;
-  if (isRitualBlueFrameRgb(avgR, avgG, avgB)) return false;
+  if (lum > 132 && spread < 44 && avgR > 112 && avgG > 112 && avgB > 112) return false;
   return spread < 48 && avgR > 98 && avgG > 82 && avgB > 68 && avgR > avgB && lum > 92 && lum < 145;
+}
+
+function isBrownNeutralFrameRgb(avgR, avgG, avgB) {
+  if (isFusionPurpleFrameRgb(avgR, avgG, avgB) || isTrapRoseFrameRgb(avgR, avgG, avgB)) return false;
+  if (isRitualBlueFrameRgbCore(avgR, avgG, avgB)) return false;
+  return isBrownNeutralFrameRgbCore(avgR, avgG, avgB);
+}
+
+/**
+ * Núcleo laranja/marrom de Monstro Efeito — sem wrappers que chamam Sincro/Ritual.
+ * @param {number} avgR
+ * @param {number} avgG
+ * @param {number} avgB
+ * @returns {boolean}
+ */
+function isEffectOrangeBrownFrameRgbCore(avgR, avgG, avgB) {
+  const lum = (avgR + avgG + avgB) / 3;
+  const spread = Math.max(avgR, avgG, avgB) - Math.min(avgR, avgG, avgB);
+  if (lum < 88 || lum > 168) return false;
+  if (isFusionPurpleFrameRgb(avgR, avgG, avgB) || isLinkFrameRgbCore(avgR, avgG, avgB)) return false;
+  return (
+    avgR > avgG + 10 &&
+    avgR > avgB + 22 &&
+    avgG > avgB + 4 &&
+    avgR > 118 &&
+    spread < 72 &&
+    spread > 18
+  );
+}
+
+/**
+ * Moldura laranja/marrom de Monstro Efeito (Bystial, etc.) — não confundir com Sincro prateado.
+ * @param {number} avgR
+ * @param {number} avgG
+ * @param {number} avgB
+ * @returns {boolean}
+ */
+function isEffectOrangeBrownFrameRgb(avgR, avgG, avgB) {
+  if (isSpellGreenFrameRgb(avgR, avgG, avgB)) return false;
+  return isEffectOrangeBrownFrameRgbCore(avgR, avgG, avgB);
 }
 
 /**
@@ -37183,6 +39764,31 @@ function isXyzDarkPlateRgb(avgR, avgG, avgB) {
 }
 
 /**
+ * Moldura Monstro Xyz (preto puro ou preto-azulado, ex. Hordeum).
+ * Deve ser testada antes de {@link isLinkFrameRgb} — tons semelhantes confundiam Link.
+ * @param {number} avgR
+ * @param {number} avgG
+ * @param {number} avgB
+ * @returns {boolean}
+ */
+function isXyzFrameRgb(avgR, avgG, avgB) {
+  if (isFusionPurpleFrameRgb(avgR, avgG, avgB) || isTrapRoseFrameRgb(avgR, avgG, avgB)) return false;
+  if (isXyzDarkPlateRgb(avgR, avgG, avgB)) return true;
+  const lum = (avgR + avgG + avgB) / 3;
+  const spread = Math.max(avgR, avgG, avgB) - Math.min(avgR, avgG, avgB);
+  return (
+    lum >= 28 &&
+    lum < 118 &&
+    avgR < 100 &&
+    avgG < 108 &&
+    avgB < 130 &&
+    avgB > avgR + 20 &&
+    avgB > avgG + 8 &&
+    spread < 68
+  );
+}
+
+/**
  * Placa escura da faixa do nome em Monstro Xyz (menos estrito que a moldura).
  * @param {number} avgR
  * @param {number} avgG
@@ -37196,6 +39802,290 @@ function isXyzNamePlateRgb(avgR, avgG, avgB) {
 }
 
 /**
+ * Placa escura azulada da faixa do nome em Monstro Link.
+ * @param {number} avgR
+ * @param {number} avgG
+ * @param {number} avgB
+ * @returns {boolean}
+ */
+function isLinkNamePlateRgb(avgR, avgG, avgB) {
+  if (isFusionPurpleFrameRgb(avgR, avgG, avgB) || isXyzDarkPlateRgb(avgR, avgG, avgB)) return false;
+  const lum = (avgR + avgG + avgB) / 3;
+  return lum < 118 && avgB > avgR + 18 && avgB > avgG + 10 && avgB > 52;
+}
+
+/**
+ * Placa escura de Monstro Xyz / Link (faixa do nome).
+ * @param {number} avgR
+ * @param {number} avgG
+ * @param {number} avgB
+ * @returns {boolean}
+ */
+function isDarkMonsterNamePlateRgb(avgR, avgG, avgB) {
+  return (
+    isXyzDarkPlateRgb(avgR, avgG, avgB) ||
+    isXyzNamePlateRgb(avgR, avgG, avgB) ||
+    isLinkNamePlateRgb(avgR, avgG, avgB)
+  );
+}
+
+/**
+ * Verde/teal da moldura de Magia (bordas laterais).
+ * @param {number} avgR
+ * @param {number} avgG
+ * @param {number} avgB
+ * @returns {boolean}
+ */
+function isSpellGreenFrameRgb(avgR, avgG, avgB) {
+  const lum = (avgR + avgG + avgB) / 3;
+  if (lum < 40 || lum > 215) return false;
+  if (isFusionPurpleFrameRgb(avgR, avgG, avgB) || isTrapRoseFrameRgb(avgR, avgG, avgB)) return false;
+  if (isLinkFrameRgbCore(avgR, avgG, avgB)) return false;
+  if (avgB > avgG + 6 && avgB > avgR + 18 && avgB > 70) return false;
+  return (
+    (avgG > avgR + 14 && avgG > avgB + 14 && avgG > 72 && avgR < 150) ||
+    (avgG > 92 && avgG > avgB + 10 && avgG > avgR + 12 && lum > 80 && lum < 195)
+  );
+}
+
+/**
+ * Bordas laterais azuis de Link (prioridade sobre verde de Magia com glare).
+ * @param {{ left?: object, right?: object }|null|undefined} reg
+ * @returns {boolean}
+ */
+function hasLinkFrameSides(reg) {
+  return !!(
+    reg &&
+    reg.left &&
+    reg.right &&
+    isLinkFrameRgb(reg.left.avgR, reg.left.avgG, reg.left.avgB) &&
+    isLinkFrameRgb(reg.right.avgR, reg.right.avgG, reg.right.avgB)
+  );
+}
+
+/**
+ * Bordas laterais verdes de Magia (ambos os lados).
+ * @param {{ left?: object, right?: object }|null|undefined} reg
+ * @returns {boolean}
+ */
+function hasSpellFrameSides(reg) {
+  if (!reg || !reg.left || !reg.right) return false;
+  if (
+    isSynchroSilverFrameRgb(reg.left.avgR, reg.left.avgG, reg.left.avgB) &&
+    isSynchroSilverFrameRgb(reg.right.avgR, reg.right.avgG, reg.right.avgB)
+  ) {
+    return false;
+  }
+  return (
+    isSpellGreenFrameRgb(reg.left.avgR, reg.left.avgG, reg.left.avgB) &&
+    isSpellGreenFrameRgb(reg.right.avgR, reg.right.avgG, reg.right.avgB)
+  );
+}
+
+/**
+ * Placa escura Xyz/Link (nome ou moldura na amostra).
+ * @param {number} avgR
+ * @param {number} avgG
+ * @param {number} avgB
+ * @returns {boolean}
+ */
+function isExtraDeckDarkPlateRgb(avgR, avgG, avgB) {
+  return (
+    isDarkMonsterNamePlateRgb(avgR, avgG, avgB) ||
+    isXyzFrameRgb(avgR, avgG, avgB) ||
+    isLinkNamePlateRgb(avgR, avgG, avgB) ||
+    isLinkFrameRgb(avgR, avgG, avgB)
+  );
+}
+
+/**
+ * Ultra/Secret em Xyz/Link usando métricas do nome + cor da moldura (não só placa da faixa).
+ * @param {ReturnType<typeof sampleNameStripRarityMetrics>} m
+ * @param {{ avgR?: number, avgG?: number, avgB?: number, regions?: object }|null} frameColor
+ * @param {string|null|undefined} cardType
+ * @returns {string|null}
+ */
+function classifyExtraDeckRarityFromContext(m, frameColor, cardType) {
+  if (!m || m.samples < 8) return null;
+  const fr = frameColor && frameColor.avgR != null ? frameColor.avgR : null;
+  const fg = frameColor && frameColor.avgG != null ? frameColor.avgG : null;
+  const fb = frameColor && frameColor.avgB != null ? frameColor.avgB : null;
+  const reg = frameColor && frameColor.regions;
+  const sideXyz =
+    reg &&
+    reg.left &&
+    reg.right &&
+    (isXyzFrameRgb(reg.left.avgR, reg.left.avgG, reg.left.avgB) ||
+      isXyzDarkPlateRgb(reg.left.avgR, reg.left.avgG, reg.left.avgB)) &&
+    (isXyzFrameRgb(reg.right.avgR, reg.right.avgG, reg.right.avgB) ||
+      isXyzDarkPlateRgb(reg.right.avgR, reg.right.avgG, reg.right.avgB));
+  const sideLink =
+    reg &&
+    reg.left &&
+    reg.right &&
+    isLinkFrameRgb(reg.left.avgR, reg.left.avgG, reg.left.avgB) &&
+    isLinkFrameRgb(reg.right.avgR, reg.right.avgG, reg.right.avgB);
+  const isXyz =
+    cardType === 'Monstro Xyz' ||
+    sideXyz ||
+    (fr != null && isXyzFrameRgb(fr, fg, fb));
+  const isLink =
+    cardType === 'Monstro Link' ||
+    sideLink ||
+    (fr != null && isLinkFrameRgb(fr, fg, fb));
+  if (!isXyz && !isLink) return null;
+  if (
+    m.silverRatio > 0.2 &&
+    m.hueVar > 0.1 &&
+    m.foilRatio > 0.05 &&
+    m.foilRatio < 0.4 &&
+    m.goldRatio < 0.07 &&
+    m.warmFoilRatio < 0.1
+  ) {
+    return 'Secreta';
+  }
+  if (
+    m.foilRatio > 0.01 ||
+    m.warmFoilRatio > 0.008 ||
+    m.goldRatio > 0.004 ||
+    m.brightLum > 108
+  ) {
+    return 'Ultra Rara';
+  }
+  return null;
+}
+
+function isDarkPlatePremiumGoldNameStrip(m, frameColor, cardType) {
+  if (!m || m.samples < 8) return false;
+  const ctx = classifyExtraDeckRarityFromContext(m, frameColor, cardType);
+  if (ctx === 'Ultra Rara') return true;
+  const plateDark = isExtraDeckDarkPlateRgb(m.plateR, m.plateG, m.plateB);
+  const fr = frameColor && frameColor.avgR != null ? frameColor.avgR : null;
+  const frameDark =
+    fr != null &&
+    (isXyzFrameRgb(fr, frameColor.avgG, frameColor.avgB) ||
+      isLinkFrameRgb(fr, frameColor.avgG, frameColor.avgB));
+  const typeDark = cardType === 'Monstro Xyz' || cardType === 'Monstro Link';
+  if (!plateDark && !frameDark && !typeDark) return false;
+  if (isSecretNameStripMetrics(m) && m.silverRatio > 0.18 && m.hueVar > 0.08) return false;
+  if (isUltraGoldNameStripMetrics(m)) return true;
+  return (
+    (m.foilRatio > 0.035 || m.brightLum > 125) &&
+    m.hueVar < 0.18 &&
+    m.silverRatio < 0.28 &&
+    (m.goldRatio > 0.015 || m.warmFoilRatio > 0.028 || m.brightLum > 132)
+  );
+}
+
+/**
+ * Faixa do nome clara (Sincro branco, Magia com placa branca).
+ * @param {number} avgR
+ * @param {number} avgG
+ * @param {number} avgB
+ * @returns {boolean}
+ */
+function isLightNamePlateRgb(avgR, avgG, avgB) {
+  const lum = (avgR + avgG + avgB) / 3;
+  if (lum > 142 && avgR > 125 && avgG > 120 && avgB > 115) return true;
+  // Magia: faixa verde/teal clara (ex.: Livro da Lua Secreta — foil arco-íris, placa verde).
+  if (
+    isSpellGreenFrameRgb(avgR, avgG, avgB) &&
+    lum > 92 &&
+    lum < 178 &&
+    avgG > avgR + 4 &&
+    avgG > avgB - 6
+  ) {
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Nome prateado/arco-íris (Secreta) em placa clara — distinto do dourado (Ultra).
+ * @param {ReturnType<typeof sampleNameStripRarityMetrics>} m
+ * @returns {boolean}
+ */
+function isSecretSilverOnLightPlateMetrics(m) {
+  if (!m || m.samples < 8) return false;
+  if (!isLightNamePlateRgb(m.plateR, m.plateG, m.plateB)) return false;
+  if (isFusionPurpleFrameRgb(m.plateR, m.plateG, m.plateB)) return false;
+  if (isDarkMonsterNamePlateRgb(m.plateR, m.plateG, m.plateB)) return false;
+  if (
+    m.warmFoilRatio > 0.14 &&
+    m.goldRatio > 0.1 &&
+    m.hueVar < 0.11 &&
+    m.silverRatio < 0.14 &&
+    m.warmFoilRatio > m.silverRatio * 1.15
+  ) {
+    return false;
+  }
+  return (
+    (m.silverRatio > 0.08 && m.silverRatio >= m.goldRatio * 0.45 && m.foilRatio > 0.15) ||
+    (m.foilRatio > 0.2 && m.hueVar > 0.05 && m.goldRatio < 0.14 && m.warmFoilRatio < 0.16) ||
+    (m.foilRatio > 0.28 && m.colLumStd > 4 && m.hueVar > 0.055 && m.brightLum > 148)
+  );
+}
+
+/**
+ * Núcleo da deteção Link (sem chamar {@link isSynchroSilverFrameRgb} — evita ciclo com ela).
+ * @param {number} avgR
+ * @param {number} avgG
+ * @param {number} avgB
+ * @returns {boolean}
+ */
+function isLinkFrameRgbCore(avgR, avgG, avgB) {
+  const lum = (avgR + avgG + avgB) / 3;
+  if (lum < 28 || lum > 165) return false;
+  if (avgB <= avgR + 6 || avgB <= avgG + 5) return false;
+  if (lum > 95 && avgB > 135 && avgG > 115 && avgR < 95 && avgB > avgR + 45) return true;
+  if (lum > 100 && avgB > 145 && avgG > 88 && avgB > avgR + 38) return true;
+  return avgB > 58 && lum < 152;
+}
+
+/**
+ * Moldura azul-escura de Monstro Link (antes de Ritual — evita confundir Zeroboros).
+ * @param {number} avgR
+ * @param {number} avgG
+ * @param {number} avgB
+ * @returns {boolean}
+ */
+function isLinkFrameRgb(avgR, avgG, avgB) {
+  if (
+    isFusionPurpleFrameRgb(avgR, avgG, avgB) ||
+    isXyzDarkPlateRgb(avgR, avgG, avgB) ||
+    isXyzFrameRgb(avgR, avgG, avgB)
+  ) {
+    return false;
+  }
+  if (isSynchroSilverFrameRgbCore(avgR, avgG, avgB)) return false;
+  return isLinkFrameRgbCore(avgR, avgG, avgB);
+}
+
+/**
+ * Núcleo azul de Monstro Ritual — só usa *Core* de Link/Sincro (sem recursão de pilha).
+ * @param {number} avgR
+ * @param {number} avgG
+ * @param {number} avgB
+ * @returns {boolean}
+ */
+function isRitualBlueFrameRgbCore(avgR, avgG, avgB) {
+  if (isFusionPurpleFrameRgb(avgR, avgG, avgB) || isXyzDarkPlateRgb(avgR, avgG, avgB)) return false;
+  if (isLinkFrameRgbCore(avgR, avgG, avgB)) return false;
+  const lum = (avgR + avgG + avgB) / 3;
+  if (avgG > 125 && avgB > 155 && avgR < 95) return false;
+  return (
+    avgB > avgR + 38 &&
+    avgB > avgG + 38 &&
+    avgB > 145 &&
+    avgG > 88 &&
+    avgG < avgB - 28 &&
+    lum > 95 &&
+    lum < 210 &&
+    !isSynchroSilverFrameRgbCore(avgR, avgG, avgB)
+  );
+}
+
+/**
  * Azul de Monstro Ritual (faixa do nome / moldura).
  * @param {number} avgR
  * @param {number} avgG
@@ -37203,17 +40093,35 @@ function isXyzNamePlateRgb(avgR, avgG, avgB) {
  * @returns {boolean}
  */
 function isRitualBlueFrameRgb(avgR, avgG, avgB) {
-  if (isFusionPurpleFrameRgb(avgR, avgG, avgB) || isXyzDarkPlateRgb(avgR, avgG, avgB)) return false;
+  if (isSpellGreenFrameRgb(avgR, avgG, avgB)) return false;
+  return isRitualBlueFrameRgbCore(avgR, avgG, avgB);
+}
+
+/**
+ * Núcleo da deteção Sincro prateada (sem chamar {@link isLinkFrameRgb} — evita ciclo com ela).
+ * @param {number} avgR
+ * @param {number} avgG
+ * @param {number} avgB
+ * @returns {boolean}
+ */
+function isSynchroSilverFrameRgbCore(avgR, avgG, avgB) {
+  if (isFusionPurpleFrameRgb(avgR, avgG, avgB)) return false;
   const lum = (avgR + avgG + avgB) / 3;
+  const spread = Math.max(avgR, avgG, avgB) - Math.min(avgR, avgG, avgB);
+  if (isEffectOrangeBrownFrameRgbCore(avgR, avgG, avgB) || isBrownNeutralFrameRgbCore(avgR, avgG, avgB)) {
+    return false;
+  }
+  if (avgG > avgR + 5 && avgG > avgB - 4 && lum > 130) return false;
+  if (avgR > avgB + 28 && avgR > avgG + 12 && lum < 155) return false;
   return (
-    avgB > avgR + 38 &&
-    avgB > avgG + 38 &&
-    avgB > 145 &&
-    avgG > 88 &&
-    avgG < avgB - 28 &&
-    lum > 75 &&
-    lum < 210 &&
-    !isSynchroSilverFrameRgb(avgR, avgG, avgB)
+    lum > 108 &&
+    spread < 62 &&
+    avgR > 98 &&
+    avgG > 98 &&
+    avgB > 98 &&
+    Math.abs(avgR - avgG) < 44 &&
+    Math.abs(avgG - avgB) < 40 &&
+    avgB - avgR < 58
   );
 }
 
@@ -37225,17 +40133,9 @@ function isRitualBlueFrameRgb(avgR, avgG, avgB) {
  * @returns {boolean}
  */
 function isSynchroSilverFrameRgb(avgR, avgG, avgB) {
-  const lum = (avgR + avgG + avgB) / 3;
-  const spread = Math.max(avgR, avgG, avgB) - Math.min(avgR, avgG, avgB);
-  return (
-    lum > 118 &&
-    spread < 52 &&
-    avgR > 108 &&
-    avgG > 108 &&
-    avgB > 108 &&
-    Math.abs(avgR - avgG) < 32 &&
-    Math.abs(avgG - avgB) < 32
-  );
+  if (isFusionPurpleFrameRgb(avgR, avgG, avgB)) return false;
+  if (isLinkFrameRgbCore(avgR, avgG, avgB) || isXyzFrameRgb(avgR, avgG, avgB)) return false;
+  return isSynchroSilverFrameRgbCore(avgR, avgG, avgB);
 }
 
 /**
@@ -37246,17 +40146,30 @@ function isSynchroSilverFrameRgb(avgR, avgG, avgB) {
  * @returns {string|null}
  */
 function classifyCardTypeFromNameStripRgb(avgR, avgG, avgB) {
-  if (isXyzDarkPlateRgb(avgR, avgG, avgB)) return 'Monstro Xyz';
+  if (isXyzDarkPlateRgb(avgR, avgG, avgB) || isXyzFrameRgb(avgR, avgG, avgB)) return 'Monstro Xyz';
   if (isFusionPurpleFrameRgb(avgR, avgG, avgB)) return 'Monstro Fusão';
+  if (isLinkNamePlateRgb(avgR, avgG, avgB) || isLinkFrameRgb(avgR, avgG, avgB)) return 'Monstro Link';
   if (isRitualBlueFrameRgb(avgR, avgG, avgB)) return 'Monstro Ritual';
+  if (isSpellGreenFrameRgb(avgR, avgG, avgB) && avgG > avgR + 8 && avgG > avgB + 6) return 'Magia';
   if (isSynchroSilverFrameRgb(avgR, avgG, avgB)) return 'Monstro Sincro';
+  const lum = (avgR + avgG + avgB) / 3;
+  const spread = Math.max(avgR, avgG, avgB) - Math.min(avgR, avgG, avgB);
+  if (lum > 128 && spread < 44 && avgR > 108 && avgG > 108 && avgB > 108) return 'Monstro Sincro';
+  if (isSpellGreenFrameRgb(avgR, avgG, avgB) && avgG > avgR + 16 && avgG > avgB + 12) return 'Magia';
+  if (isEffectOrangeBrownFrameRgb(avgR, avgG, avgB) || isBrownNeutralFrameRgb(avgR, avgG, avgB)) {
+    return 'Monstro Efeito';
+  }
   const isTeal =
     (avgG > avgR + 20 || avgB > avgR + 20) &&
     avgR < 130 &&
     avgG + avgB > avgR * 2.2 &&
     !isFusionPurpleFrameRgb(avgR, avgG, avgB) &&
     !isXyzDarkPlateRgb(avgR, avgG, avgB);
-  if ((avgG > avgR + 30 && avgG > avgB + 30 && avgG > 100) || isTeal) return 'Magia';
+  if ((avgG > avgR + 30 && avgG > avgB + 30 && avgG > 100) || isTeal) {
+    if (!(lum > 125 && spread < 48 && avgR > 100 && avgG > 100 && avgB > 100)) {
+      return 'Magia';
+    }
+  }
   if (isTrapRoseFrameRgb(avgR, avgG, avgB)) return 'Armadilha';
   return null;
 }
@@ -37300,6 +40213,7 @@ function stabilizeDetectedCardType(detected) {
     'Monstro Ritual',
     'Monstro Xyz',
     'Monstro Sincro',
+    'Monstro Link',
   ]);
   if (prev === 'Monstro Ritual' && detected === 'Monstro Sincro') {
     lastStableDetectedCardType = detected;
@@ -37316,13 +40230,69 @@ function stabilizeDetectedCardType(detected) {
     lastStableDetectedCardTypeAt = now;
     return detected;
   }
+  if (
+    prev === 'Monstro Fusão' &&
+    (detected === 'Monstro Link' || detected === 'Monstro Xyz' || detected === 'Magia')
+  ) {
+    lastStableDetectedCardType = detected;
+    lastStableDetectedCardTypeAt = now;
+    return detected;
+  }
+  if (prev === 'Monstro Sincro' && detected === 'Magia') {
+    lastStableDetectedCardType = detected;
+    lastStableDetectedCardTypeAt = now;
+    return detected;
+  }
   if (prev === 'Monstro Sincro' && detected === 'Monstro Fusão') {
     lastStableDetectedCardType = detected;
     lastStableDetectedCardTypeAt = now;
     return detected;
   }
-  if (prev === 'Monstro Fusão' && detected === 'Monstro Sincro' && now - lastStableDetectedCardTypeAt < 1400) {
+  if (prev === 'Monstro Fusão' && detected === 'Monstro Sincro' && now - lastStableDetectedCardTypeAt < 1600) {
     return prev;
+  }
+  if (prev === 'Monstro Fusão' && detected === 'Monstro Sincro') {
+    lastStableDetectedCardType = detected;
+    lastStableDetectedCardTypeAt = now;
+    return detected;
+  }
+  if (prev === 'Monstro Link' && detected === 'Monstro Ritual') {
+    return prev;
+  }
+  if (prev === 'Monstro Xyz' && detected === 'Monstro Link') {
+    return prev;
+  }
+  if (prev === 'Monstro Link' && detected === 'Monstro Ritual') {
+    return prev;
+  }
+  if (prev === 'Monstro Link' && detected === 'Magia' && now - lastStableDetectedCardTypeAt < 2200) {
+    return prev;
+  }
+  if (prev === 'Magia' && detected === 'Monstro Link') {
+    lastStableDetectedCardType = detected;
+    lastStableDetectedCardTypeAt = now;
+    return detected;
+  }
+  if (prev === 'Monstro Efeito' && detected === 'Monstro Sincro') {
+    lastStableDetectedCardType = detected;
+    lastStableDetectedCardTypeAt = now;
+    return detected;
+  }
+  if (prev === 'Monstro Sincro' && detected === 'Monstro Efeito' && now - lastStableDetectedCardTypeAt < 2200) {
+    return prev;
+  }
+  if (prev === 'Monstro Sincro' && detected === 'Monstro Efeito') {
+    lastStableDetectedCardType = detected;
+    lastStableDetectedCardTypeAt = now;
+    return detected;
+  }
+  if (prev === 'Magia' && detected === 'Monstro Ritual' && now - lastStableDetectedCardTypeAt < 2400) {
+    return prev;
+  }
+  if (detected === 'Monstro Link' || detected === 'Monstro Ritual') {
+    lastStableDetectedCardType = detected;
+    lastStableDetectedCardTypeAt = now;
+    return detected;
   }
   if (prev === 'Monstro Fusão' && detected === 'Monstro Xyz') {
     return prev;
@@ -37376,6 +40346,20 @@ function mergeCardTypeDetection(frameType, stripType, frameColor, opts) {
   if (frameColor && frameColor.samples >= 4) {
     const regEarly = frameColor.regions;
     if (regEarly) {
+      if (hasLinkFrameSides(regEarly)) return 'Monstro Link';
+      const leftLinkEarly =
+        regEarly.left && isLinkFrameRgb(regEarly.left.avgR, regEarly.left.avgG, regEarly.left.avgB);
+      const rightLinkEarly =
+        regEarly.right && isLinkFrameRgb(regEarly.right.avgR, regEarly.right.avgG, regEarly.right.avgB);
+      if ((leftLinkEarly || rightLinkEarly) && isLinkFrameRgb(r, g, b)) return 'Monstro Link';
+      if (hasSpellFrameSides(regEarly) && !isSynchroSilverFrameRgb(r, g, b)) return 'Magia';
+      const leftSynEarly =
+        regEarly.left &&
+        isSynchroSilverFrameRgb(regEarly.left.avgR, regEarly.left.avgG, regEarly.left.avgB);
+      const rightSynEarly =
+        regEarly.right &&
+        isSynchroSilverFrameRgb(regEarly.right.avgR, regEarly.right.avgG, regEarly.right.avgB);
+      if ((leftSynEarly && rightSynEarly) || isSynchroSilverFrameRgb(r, g, b)) return 'Monstro Sincro';
       const leftXyzEarly =
         regEarly.left && isXyzDarkPlateRgb(regEarly.left.avgR, regEarly.left.avgG, regEarly.left.avgB);
       const rightXyzEarly =
@@ -37385,6 +40369,34 @@ function mergeCardTypeDetection(frameType, stripType, frameColor, opts) {
   }
   if (stripType === 'Monstro Xyz') return 'Monstro Xyz';
   if (stripType === 'Monstro Fusão') return 'Monstro Fusão';
+  if (stripType === 'Monstro Sincro') return 'Monstro Sincro';
+  if (stripType === 'Monstro Link') return 'Monstro Link';
+  if (stripType === 'Monstro Ritual') return 'Monstro Ritual';
+  if (stripType === 'Magia') {
+    if (
+      frameColor &&
+      frameColor.samples >= 4 &&
+      (isSynchroSilverFrameRgb(r, g, b) ||
+        frameType === 'Monstro Sincro' ||
+        (frameColor.regions &&
+          frameColor.regions.left &&
+          frameColor.regions.right &&
+          isSynchroSilverFrameRgb(
+            frameColor.regions.left.avgR,
+            frameColor.regions.left.avgG,
+            frameColor.regions.left.avgB
+          ) &&
+          isSynchroSilverFrameRgb(
+            frameColor.regions.right.avgR,
+            frameColor.regions.right.avgG,
+            frameColor.regions.right.avgB
+          )))
+    ) {
+      return 'Monstro Sincro';
+    }
+    return 'Magia';
+  }
+  if (stripType === 'Armadilha') return 'Armadilha';
   if (frameColor && frameColor.samples >= 4) {
     if (isFusionPurpleFrameRgb(r, g, b)) return 'Monstro Fusão';
     const reg = frameColor.regions;
@@ -37401,11 +40413,29 @@ function mergeCardTypeDetection(frameType, stripType, frameColor, opts) {
         isXyzDarkPlateRgb(reg.right.avgR, reg.right.avgG, reg.right.avgB);
       if (leftXyz && rightXyz) return 'Monstro Xyz';
       if ((leftXyz || rightXyz) && isXyzDarkPlateRgb(r, g, b)) return 'Monstro Xyz';
+      if (hasLinkFrameSides(reg)) return 'Monstro Link';
+      if (hasSpellFrameSides(reg)) return 'Magia';
+      const leftSpell =
+        reg.left && isSpellGreenFrameRgb(reg.left.avgR, reg.left.avgG, reg.left.avgB);
+      const rightSpell =
+        reg.right && isSpellGreenFrameRgb(reg.right.avgR, reg.right.avgG, reg.right.avgB);
+      const leftLinkSide =
+        reg.left && isLinkFrameRgb(reg.left.avgR, reg.left.avgG, reg.left.avgB);
+      const rightLinkSide =
+        reg.right && isLinkFrameRgb(reg.right.avgR, reg.right.avgG, reg.right.avgB);
+      if (leftLinkSide && rightLinkSide) return 'Monstro Link';
+      if (leftSpell && rightSpell && !leftLinkSide && !rightLinkSide) return 'Magia';
     }
     if (isFusionPurpleFrameRgb(r, g, b)) return 'Monstro Fusão';
+    if (isXyzFrameRgb(r, g, b)) return 'Monstro Xyz';
+    if (isLinkFrameRgb(r, g, b)) return 'Monstro Link';
+    if (isSpellGreenFrameRgb(r, g, b)) return 'Magia';
     if (isRitualBlueFrameRgb(r, g, b)) return 'Monstro Ritual';
     if (isTrapRoseFrameRgb(r, g, b)) return 'Armadilha';
     if (isSynchroSilverFrameRgb(r, g, b)) return 'Monstro Sincro';
+  }
+  if (frameType === 'Monstro Link' || frameType === 'Monstro Sincro' || frameType === 'Monstro Ritual') {
+    return frameType;
   }
   if (useTypeMira) {
     if (stripType === 'Monstro Fusão') return 'Monstro Fusão';
@@ -37459,6 +40489,7 @@ function mergeCardTypeDetection(frameType, stripType, frameColor, opts) {
     'Monstro Ritual',
     'Monstro Xyz',
     'Monstro Sincro',
+    'Monstro Link',
   ]);
   const frameWeak =
     frameType === 'Monstro Efeito' ||
@@ -37489,10 +40520,18 @@ function classifyCardTypeFromFrameRgb(avgR, avgG, avgB) {
   if (isFusionPurpleFrameRgb(avgR, avgG, avgB)) {
     return 'Monstro Fusão';
   }
+  if (isXyzFrameRgb(avgR, avgG, avgB)) {
+    return 'Monstro Xyz';
+  }
+  if (isLinkFrameRgb(avgR, avgG, avgB)) {
+    return 'Monstro Link';
+  }
+  if (isSpellGreenFrameRgb(avgR, avgG, avgB)) {
+    return 'Magia';
+  }
   if (isRitualBlueFrameRgb(avgR, avgG, avgB)) {
     return 'Monstro Ritual';
   }
-
   const isTeal =
     (avgG > avgR + 20 || avgB > avgR + 20) &&
     avgR < 130 &&
@@ -37500,7 +40539,9 @@ function classifyCardTypeFromFrameRgb(avgR, avgG, avgB) {
     !isFusionPurpleFrameRgb(avgR, avgG, avgB) &&
     !isXyzDarkPlateRgb(avgR, avgG, avgB);
   if ((avgG > avgR + 30 && avgG > avgB + 30 && avgG > 100) || isTeal) {
-    return 'Magia';
+    if (!(lum > 132 && spread < 46 && minRgb > 102)) {
+      return 'Magia';
+    }
   }
 
   // Xyz (preto): antes de Sincro — a faixa do nome sozinha parecia prata/cinza.
@@ -37516,23 +40557,37 @@ function classifyCardTypeFromFrameRgb(avgR, avgG, avgB) {
   if (isSynchroSilverFrameRgb(avgR, avgG, avgB)) {
     return 'Monstro Sincro';
   }
-  if (avgR > 180 && avgG > 180 && avgB > 180) {
+  if (avgR > 180 && avgG > 180 && avgB > 180 && spread < 38) {
     return 'Monstro Sincro';
   }
-  if (lum > 128 && spread < 42 && minRgb > 102 && avgR < 215 && avgG < 215) {
+  if (
+    lum > 128 &&
+    spread < 38 &&
+    minRgb > 102 &&
+    avgR < 215 &&
+    avgG < 215 &&
+    Math.abs(avgR - avgG) < 32 &&
+    avgR < avgG + 18
+  ) {
     return 'Monstro Sincro';
   }
 
-  if (avgR > avgG + 22 && avgR > avgB + 25 && avgR > 162 && avgG > 112 && avgG < avgR - 15) {
-    return 'Monstro Normal';
-  }
-  if (isBrownNeutralFrameRgb(avgR, avgG, avgB)) {
+  if (isEffectOrangeBrownFrameRgb(avgR, avgG, avgB) || isBrownNeutralFrameRgb(avgR, avgG, avgB)) {
     return 'Monstro Efeito';
   }
 
-  if (isFusionPurpleFrameRgb(avgR, avgG, avgB)) {
-    return 'Monstro Fusão';
+  if (
+    avgR > avgG + 22 &&
+    avgR > avgB + 25 &&
+    avgR > 162 &&
+    avgG > 112 &&
+    avgG < avgR - 15 &&
+    lum < 172 &&
+    !(lum > 138 && spread < 54 && minRgb > 90)
+  ) {
+    return 'Monstro Normal';
   }
+
   if (isTrapRoseFrameRgb(avgR, avgG, avgB)) {
     return 'Armadilha';
   }
@@ -37660,6 +40715,8 @@ function probeCardTypeDiagnostics(video, nameCropRect, typeCropRect) {
       : null,
     classifiedTypeFromFrameOnly: frameType,
     classifiedType,
+    classifiedTypeMerged: classifiedType,
+    classifiedTypeFromNameStripOnly: nameStripFallbackType,
     nameStripFallbackType,
     namePlateType,
   };
@@ -37861,7 +40918,30 @@ function isFusionCommonPlateGlareNameStrip(m) {
 }
 
 function isSecretNameStripMetrics(m) {
-  if (!m || m.foilRatio < 0.42) return false;
+  if (!m) return false;
+  if (isSecretSilverOnLightPlateMetrics(m)) return true;
+  if (
+    isSpellGreenFrameRgb(m.plateR, m.plateG, m.plateB) &&
+    m.foilRatio > 0.1 &&
+    m.hueVar > 0.035 &&
+    m.goldRatio < 0.15 &&
+    m.warmFoilRatio < 0.17 &&
+    (m.silverRatio > 0.04 || m.foilRatio > 0.16 || m.colLumStd > 2)
+  ) {
+    return true;
+  }
+  if (m.foilRatio < 0.42) {
+    if (
+      isLightNamePlateRgb(m.plateR, m.plateG, m.plateB) &&
+      m.foilRatio > 0.16 &&
+      m.silverRatio > 0.07 &&
+      m.goldRatio < 0.12 &&
+      m.warmFoilRatio < 0.14
+    ) {
+      return true;
+    }
+    return false;
+  }
   if (isFusionCommonPlateGlareNameStrip(m)) return false;
   if (
     (m.goldRatio > 0.14 && m.warmFoilRatio > 0.11 && m.hueVar < 0.1) ||
@@ -37876,6 +40956,7 @@ function isSecretNameStripMetrics(m) {
   ) {
     return false;
   }
+  if (m.goldRatio > 0.88 && m.hueVar > 0.09 && m.foilRatio > 0.5) return true;
   if (m.silverRatio > 0.42) return true;
   if (m.silverRatio > 0.1 && m.silverRatio > m.goldRatio * 0.65 && m.foilRatio > 0.48) return true;
   if (m.silverRatio > 0.18 && m.hueVar > 0.085 && m.foilRatio > 0.55) return true;
@@ -37922,7 +41003,22 @@ function isSecretNameStripMetrics(m) {
  * @returns {boolean}
  */
 function isUltraGoldNameStripMetrics(m) {
-  if (!m || m.foilRatio < 0.42) return false;
+  if (!m) return false;
+  if (isExtraDeckDarkPlateRgb(m.plateR, m.plateG, m.plateB)) {
+    if (
+      m.foilRatio > 0.05 &&
+      m.hueVar < 0.16 &&
+      m.silverRatio < 0.24 &&
+      (m.goldRatio > 0.018 || m.warmFoilRatio > 0.03)
+    ) {
+      return true;
+    }
+    if (m.foilRatio < 0.06) return false;
+  }
+  if (isSecretSilverOnLightPlateMetrics(m)) return false;
+  if (m.foilRatio < 0.42) return false;
+  if (m.goldRatio > 0.82 && m.hueVar < 0.11 && m.silverRatio < 0.1) return false;
+  if (m.goldRatio > 0.9 && m.hueVar < 0.07 && m.silverRatio < 0.06) return false;
   if (m.hueVar > 0.12 && m.silverRatio > 0.14) return false;
   if (m.foilRatio > 0.65 && m.goldRatio < 0.07 && m.warmFoilRatio < 0.1) return false;
   if (
@@ -37954,6 +41050,11 @@ function isUltraGoldNameStripMetrics(m) {
 function isCommonBlackNameStripMetrics(m) {
   if (!m) return false;
   if (isUltraGoldNameStripMetrics(m)) return false;
+  if (isSecretSilverOnLightPlateMetrics(m)) return false;
+  if (isDarkPlatePremiumGoldNameStrip(m)) return false;
+  if (isExtraDeckDarkPlateRgb(m.plateR, m.plateG, m.plateB)) {
+    if (m.foilRatio > 0.04 || m.warmFoilRatio > 0.025 || m.goldRatio > 0.012) return false;
+  }
   if (
     isFusionPurpleFrameRgb(m.plateR, m.plateG, m.plateB) &&
     m.foilRatio > 0.42 &&
@@ -38047,7 +41148,8 @@ function isNameStripSunGlareMetrics(m) {
   if (!m) return false;
   return (
     (m.goldRatio > 0.45 && m.foilRatio < 0.32) ||
-    (m.warmFoilRatio > 0.55 && m.foilRatio < 0.28 && m.silverRatio < 0.14)
+    (m.warmFoilRatio > 0.55 && m.foilRatio < 0.28 && m.silverRatio < 0.14) ||
+    (m.brightLum > 196 && m.darkLetterRatio < 0.09 && m.foilRatio < 0.24)
   );
 }
 
@@ -38119,14 +41221,30 @@ function classifyRarityFromStripMetrics(m) {
   const pb = m.plateB;
   const purplePlate = isFusionPurpleFrameRgb(pr, pg, pb);
   const xyzPlate = isXyzDarkPlateRgb(pr, pg, pb);
+  const linkPlate = isLinkNamePlateRgb(pr, pg, pb);
+  const darkPlate = xyzPlate || linkPlate || isXyzNamePlateRgb(pr, pg, pb);
+  const lightPlate = isLightNamePlateRgb(pr, pg, pb);
 
+  if (darkPlate && isDarkPlatePremiumGoldNameStrip(m)) return 'Ultra Rara';
+  if (isExtraDeckDarkPlateRgb(pr, pg, pb) && foilRatio > 0.04 && (goldRatio > 0.012 || warmFoilRatio > 0.025)) {
+    if (silverRatio > 0.2 && hueVar > 0.1 && foilRatio < 0.42) return 'Secreta';
+    return 'Ultra Rara';
+  }
+  if (lightPlate && isSecretSilverOnLightPlateMetrics(m)) return 'Secreta';
   if (xyzPlate && silverRatio > 0.22 && foilRatio > 0.03 && foilRatio < 0.45) return 'Secreta';
   if (silverRatio > 0.45 && foilRatio > 0.32) return 'Secreta';
+  if (hueVar > 0.13 && foilRatio > 0.48) return 'Secreta';
   if (isNameStripSunGlareMetrics(m)) return 'Comum';
+  if (isSecretNameStripMetrics(m)) return 'Secreta';
   if (isUltraGoldNameStripMetrics(m)) return 'Ultra Rara';
+  if (isSpellGreenFrameRgb(pr, pg, pb) || lightPlate) {
+    if (isSecretSilverOnLightPlateMetrics(m) || isSecretNameStripMetrics(m)) return 'Secreta';
+    if (foilRatio > 0.2 && (goldRatio > 0.05 || warmFoilRatio > 0.08) && warmFoilRatio > silverRatio * 0.9) {
+      return 'Ultra Rara';
+    }
+  }
   if (isFusionCommonPlateGlareNameStrip(m)) return 'Comum';
   if (isCommonBlackNameStripMetrics(m)) return 'Comum';
-  if (isSecretNameStripMetrics(m)) return 'Secreta';
   if (purplePlate) {
     const fusionFoil = classifyFusionPlateFoilRarity(m, null);
     if (fusionFoil) return fusionFoil;
@@ -38140,7 +41258,7 @@ function classifyRarityFromStripMetrics(m) {
   ) {
     return 'Secreta';
   }
-  if (darkLetterRatio > 0.08 && foilRatio < 0.28 && !xyzPlate) return 'Comum';
+  if (darkLetterRatio > 0.08 && foilRatio < 0.28 && !darkPlate) return 'Comum';
   if (
     purplePlate &&
     foilRatio > 0.5 &&
@@ -38468,9 +41586,15 @@ function classifyRarityFromArtMetrics(art, border) {
  * @param {ReturnType<typeof sampleRegionImageMetrics>} artMetrics
  * @returns {string}
  */
-function mergeRarityClassification(nameRarity, artRarity, nameMetrics, artMetrics) {
+function mergeRarityClassification(nameRarity, artRarity, nameMetrics, artMetrics, frameColor, cardType) {
   const art = artRarity || null;
+  const ctxRarity =
+    nameMetrics && classifyExtraDeckRarityFromContext(nameMetrics, frameColor || null, cardType || null);
+  if (ctxRarity) return ctxRarity;
   if (nameMetrics && isUltraGoldNameStripMetrics(nameMetrics)) {
+    return 'Ultra Rara';
+  }
+  if (nameMetrics && isDarkPlatePremiumGoldNameStrip(nameMetrics, frameColor, cardType)) {
     return 'Ultra Rara';
   }
   if (nameMetrics && isFusionCommonPlateGlareNameStrip(nameMetrics)) {
@@ -38510,7 +41634,10 @@ function mergeRarityClassification(nameRarity, artRarity, nameMetrics, artMetric
     if (artMetrics && isArtMatteCommonMetrics(artMetrics) && nameMetrics && nameMetrics.foilRatio < 0.35) {
       return 'Comum';
     }
-    if (nameMetrics && isCommonBlackNameStripMetrics(nameMetrics)) return 'Comum';
+    if (nameMetrics && isCommonBlackNameStripMetrics(nameMetrics)) {
+      if (isDarkPlatePremiumGoldNameStrip(nameMetrics, frameColor, cardType)) return 'Ultra Rara';
+      return 'Comum';
+    }
     if (nameMetrics && isNameStripPlateGlareNotHolo(nameMetrics)) return 'Comum';
     if (nameMetrics && nameMetrics.darkLetterRatio > 0.28 && nameMetrics.foilRatio < 0.28) return 'Comum';
     if (
@@ -38618,14 +41745,25 @@ function mergeRarityClassification(nameRarity, artRarity, nameMetrics, artMetric
  * @param {{ x: number, y: number, width: number, height: number }|null} typeCropRect
  * @returns {object}
  */
-function probeCardRarityDiagnostics(video, nameCropRect, typeCropRect) {
+function probeCardRarityDiagnostics(video, nameCropRect, typeCropRect, cardTypeHint) {
   const nameMetrics = sampleNameStripRarityMetrics(video, nameCropRect);
-  const nameFromStrip = classifyRarityFromStripMetrics(nameMetrics);
   const vW = video.videoWidth || 0;
   const vH = video.videoHeight || 0;
   const frameColor = typeCropRect
     ? sampleCardFrameRgbFromTypeCrop(video, typeCropRect, vW, vH)
     : null;
+  const frameTypeGuess =
+    cardTypeHint ||
+    (frameColor
+      ? classifyCardTypeFromFrameRgb(frameColor.avgR, frameColor.avgG, frameColor.avgB)
+      : null);
+  let nameFromStrip = classifyRarityFromStripMetrics(nameMetrics);
+  const ctxStrip = classifyExtraDeckRarityFromContext(
+    nameMetrics,
+    frameColor,
+    frameTypeGuess
+  );
+  if (ctxStrip) nameFromStrip = ctxStrip;
   const artRect = typeCropRect ? getCardArtSampleRect(typeCropRect, nameCropRect) : null;
   const artMetrics = artRect ? sampleRegionImageMetrics(video, artRect, 72, 52) : sampleRegionImageMetrics(video, nameCropRect, 48, 20);
   let borderMetrics = artMetrics;
@@ -38650,7 +41788,14 @@ function probeCardRarityDiagnostics(video, nameCropRect, typeCropRect) {
     }
   }
   const artHint = classifyRarityFromArtMetrics(artMetrics, borderMetrics);
-  const classifiedRarity = mergeRarityClassification(nameFromStrip, artHint, nameMetrics, artMetrics);
+  const classifiedRarity = mergeRarityClassification(
+    nameFromStrip,
+    artHint,
+    nameMetrics,
+    artMetrics,
+    frameColor,
+    frameTypeGuess
+  );
   const roundMetrics = (m) => ({
     meanLum: safeRound(m.meanLum, 1),
     lumStd: safeRound(m.lumStd, 2),
@@ -38683,6 +41828,7 @@ function probeCardRarityDiagnostics(video, nameCropRect, typeCropRect) {
           avgB: safeRound(frameColor.avgB, 1),
           lum: safeRound(frameColor.lum, 1),
           spread: safeRound(frameColor.spread, 1),
+          regions: frameColor.regions || null,
         }
       : null,
     plateColor: {
@@ -38725,32 +41871,102 @@ function resolveVisionTypeAndRarityFromProbes(typeProbe, rarityProbe, detectedTy
   const plateT = rarityProbe?.plateType || typeProbe?.namePlateType;
   const mergedT = typeProbe?.classifiedTypeMerged || typeProbe?.classifiedType;
   const nm = rarityProbe?.nameMetrics;
+  const frameColor = rarityProbe?.frameColor;
   const artHint = rarityProbe?.artHint;
   const stripType = typeProbe?.nameStripFallbackType || typeProbe?.classifiedTypeFromNameStripOnly;
+  const frameForCtx = typeProbe?.frameColor || frameColor;
+  const regFrame = frameForCtx && frameForCtx.regions;
+  const forcedLink = !!(
+    regFrame &&
+    (hasLinkFrameSides(regFrame) ||
+      (regFrame.left &&
+        regFrame.right &&
+        isLinkFrameRgb(regFrame.left.avgR, regFrame.left.avgG, regFrame.left.avgB) &&
+        isLinkFrameRgb(regFrame.right.avgR, regFrame.right.avgG, regFrame.right.avgB)))
+  );
+  const frameIsEffectOrange =
+    frameForCtx &&
+    frameForCtx.avgR != null &&
+    !isSynchroSilverFrameRgb(frameForCtx.avgR, frameForCtx.avgG, frameForCtx.avgB) &&
+    (isEffectOrangeBrownFrameRgb(frameForCtx.avgR, frameForCtx.avgG, frameForCtx.avgB) ||
+      isBrownNeutralFrameRgb(frameForCtx.avgR, frameForCtx.avgG, frameForCtx.avgB));
+  const forcedSynchro = !!(
+    frameForCtx &&
+    frameForCtx.avgR != null &&
+    (isSynchroSilverFrameRgb(frameForCtx.avgR, frameForCtx.avgG, frameForCtx.avgB) ||
+      (regFrame &&
+        regFrame.left &&
+        regFrame.right &&
+        isSynchroSilverFrameRgb(regFrame.left.avgR, regFrame.left.avgG, regFrame.left.avgB) &&
+        isSynchroSilverFrameRgb(regFrame.right.avgR, regFrame.right.avgG, regFrame.right.avgB)))
+  );
+  const typeGuess = mergedT || stripType || cardType;
+  const extraDeckCtx = nm && classifyExtraDeckRarityFromContext(nm, frameForCtx, typeGuess);
+  if (extraDeckCtx === 'Ultra Rara' && !(nm && (isSecretSilverOnLightPlateMetrics(nm) || isSecretNameStripMetrics(nm)))) {
+    rarity = 'Ultra Rara';
+    lastStableDetectedCardRarity = rarity;
+    lastStableDetectedCardRarityAt = Date.now();
+  }
   const fusionFoil = nm
     ? classifyFusionPlateFoilRarity(nm, rarityProbe?.artMetrics ? { ...rarityProbe.artMetrics, samples: 64 } : null)
     : null;
   const premium = new Set(['Ultra Rara', 'Secreta', 'Ultimate Rara', 'Starlight Rare']);
 
-  if (nm && isUltraGoldNameStripMetrics(nm)) {
-    rarity = 'Ultra Rara';
-    lastStableDetectedCardRarity = rarity;
-    lastStableDetectedCardRarityAt = Date.now();
-  } else if (nm && (isFusionCommonPlateGlareNameStrip(nm) || isCommonBlackNameStripMetrics(nm))) {
-    rarity = 'Comum';
-    lastStableDetectedCardRarity = rarity;
-    lastStableDetectedCardRarityAt = Date.now();
-  } else if (nm && isSecretNameStripMetrics(nm)) {
+  if (nm && (isSecretSilverOnLightPlateMetrics(nm) || isSecretNameStripMetrics(nm))) {
     const fusionCtx =
       stripType === 'Monstro Fusão' ||
       plateT === 'Monstro Fusão' ||
       mergedT === 'Monstro Fusão' ||
       cardType === 'Monstro Fusão';
-    if (fusionCtx && isUltraGoldNameStripMetrics(nm)) {
+    const spellSecretCtx =
+      stripType === 'Magia' ||
+      mergedT === 'Magia' ||
+      plateT === 'Magia' ||
+      cardType === 'Magia' ||
+      (frameForCtx && frameForCtx.avgR != null && isSpellGreenFrameRgb(
+        frameForCtx.avgR,
+        frameForCtx.avgG,
+        frameForCtx.avgB
+      ));
+    const silverSecret = isSecretSilverOnLightPlateMetrics(nm);
+    const ultraDominant =
+      isUltraGoldNameStripMetrics(nm) &&
+      !silverSecret &&
+      nm.silverRatio < 0.14 &&
+      nm.warmFoilRatio > nm.silverRatio * 1.1;
+    const goldEffectUltra =
+      frameIsEffectOrange &&
+      isUltraGoldNameStripMetrics(nm) &&
+      nm.warmFoilRatio > 0.07 &&
+      nm.silverRatio < 0.24;
+    if (goldEffectUltra || (fusionCtx && ultraDominant)) {
+      rarity = 'Ultra Rara';
+    } else if (!silverSecret && ultraDominant && isExtraDeckDarkPlateRgb(nm.plateR, nm.plateG, nm.plateB)) {
       rarity = 'Ultra Rara';
     } else {
       rarity = 'Secreta';
     }
+    if (spellSecretCtx && (stripType === 'Magia' || mergedT === 'Magia' || plateT === 'Magia')) {
+      cardType = 'Magia';
+      lastStableDetectedCardType = cardType;
+      lastStableDetectedCardTypeAt = Date.now();
+    }
+    lastStableDetectedCardRarity = rarity;
+    lastStableDetectedCardRarityAt = Date.now();
+  } else if (nm && isUltraGoldNameStripMetrics(nm)) {
+    rarity = 'Ultra Rara';
+    lastStableDetectedCardRarity = rarity;
+    lastStableDetectedCardRarityAt = Date.now();
+  } else if (nm && isDarkPlatePremiumGoldNameStrip(nm, frameForCtx, typeGuess)) {
+    rarity = 'Ultra Rara';
+    lastStableDetectedCardRarity = rarity;
+    lastStableDetectedCardRarityAt = Date.now();
+  } else if (
+    nm &&
+    (isFusionCommonPlateGlareNameStrip(nm) || isCommonBlackNameStripMetrics(nm)) &&
+    !isDarkPlatePremiumGoldNameStrip(nm, frameForCtx, typeGuess)
+  ) {
+    rarity = 'Comum';
     lastStableDetectedCardRarity = rarity;
     lastStableDetectedCardRarityAt = Date.now();
   } else if (fusionFoil && fusionFoil !== 'Comum') {
@@ -38773,7 +41989,77 @@ function resolveVisionTypeAndRarityFromProbes(typeProbe, rarityProbe, detectedTy
     rarity = stabilizeDetectedCardRarity(classR || stripR || rarity);
   }
 
-  if (stripType === 'Monstro Fusão' || plateT === 'Monstro Fusão' || mergedT === 'Monstro Fusão') {
+  const framePurpleFusion =
+    frameForCtx &&
+    frameForCtx.avgR != null &&
+    isFusionPurpleFrameRgb(frameForCtx.avgR, frameForCtx.avgG, frameForCtx.avgB);
+  const sidePurpleFusion =
+    regFrame &&
+    ((regFrame.left &&
+      isFusionPurpleFrameRgb(regFrame.left.avgR, regFrame.left.avgG, regFrame.left.avgB)) ||
+      (regFrame.right &&
+        isFusionPurpleFrameRgb(regFrame.right.avgR, regFrame.right.avgG, regFrame.right.avgB)));
+
+  const linkSignals =
+    forcedLink ||
+    stripType === 'Monstro Link' ||
+    mergedT === 'Monstro Link' ||
+    plateT === 'Monstro Link';
+
+  if (linkSignals) {
+    cardType = 'Monstro Link';
+    lastStableDetectedCardType = cardType;
+    lastStableDetectedCardTypeAt = Date.now();
+  } else if (framePurpleFusion || sidePurpleFusion) {
+    cardType = 'Monstro Fusão';
+    lastStableDetectedCardType = cardType;
+    lastStableDetectedCardTypeAt = Date.now();
+  } else if (forcedSynchro) {
+    cardType = 'Monstro Sincro';
+    lastStableDetectedCardType = cardType;
+    lastStableDetectedCardTypeAt = Date.now();
+  } else if (
+    mergedT === 'Monstro Link' ||
+    mergedT === 'Monstro Sincro' ||
+    mergedT === 'Monstro Xyz' ||
+    mergedT === 'Monstro Ritual' ||
+    mergedT === 'Magia' ||
+    stripType === 'Monstro Link' ||
+    stripType === 'Monstro Sincro' ||
+    stripType === 'Monstro Xyz' ||
+    stripType === 'Monstro Ritual' ||
+    stripType === 'Magia'
+  ) {
+    if (stripType === 'Monstro Link' || mergedT === 'Monstro Link') {
+      cardType = 'Monstro Link';
+    } else if (stripType === 'Monstro Xyz' || mergedT === 'Monstro Xyz') {
+      cardType = 'Monstro Xyz';
+    } else if (
+      (stripType === 'Monstro Sincro' || mergedT === 'Monstro Sincro') &&
+      frameIsEffectOrange &&
+      !forcedSynchro
+    ) {
+      cardType = 'Monstro Efeito';
+    } else if (stripType === 'Monstro Sincro' || mergedT === 'Monstro Sincro') {
+      cardType = 'Monstro Sincro';
+    } else if (stripType === 'Monstro Ritual' || mergedT === 'Monstro Ritual') {
+      cardType = 'Monstro Ritual';
+    } else if (
+      stripType === 'Magia' ||
+      mergedT === 'Magia' ||
+      (plateT === 'Magia' && regFrame && hasSpellFrameSides(regFrame))
+    ) {
+      if (forcedSynchro) {
+        cardType = 'Monstro Sincro';
+      } else {
+        cardType = 'Magia';
+      }
+    } else {
+      cardType = mergedT || stripType || cardType;
+    }
+    lastStableDetectedCardType = cardType;
+    lastStableDetectedCardTypeAt = Date.now();
+  } else if (stripType === 'Monstro Fusão' || plateT === 'Monstro Fusão' || mergedT === 'Monstro Fusão') {
     cardType = 'Monstro Fusão';
     lastStableDetectedCardType = cardType;
     lastStableDetectedCardTypeAt = Date.now();
@@ -38785,6 +42071,16 @@ function resolveVisionTypeAndRarityFromProbes(typeProbe, rarityProbe, detectedTy
     cardType = stabilizeDetectedCardType(mergedT);
   } else {
     cardType = stabilizeDetectedCardType(cardType);
+  }
+
+  if (
+    nm &&
+    (cardType === 'Monstro Xyz' || cardType === 'Monstro Link') &&
+    isDarkPlatePremiumGoldNameStrip(nm, frameForCtx, cardType)
+  ) {
+    rarity = 'Ultra Rara';
+    lastStableDetectedCardRarity = rarity;
+    lastStableDetectedCardRarityAt = Date.now();
   }
 
   return { cardType, rarity };
@@ -38826,6 +42122,15 @@ function stabilizeDetectedCardRarity(detected) {
   }
   if (prev && premiumSet.has(prev) && detected === 'Comum' && now - lastStableDetectedCardRarityAt < 220) {
     return prev;
+  }
+  if (
+    detected === 'Ultra Rara' &&
+    prev === 'Secreta' &&
+    now - lastStableDetectedCardRarityAt < 900
+  ) {
+    lastStableDetectedCardRarity = detected;
+    lastStableDetectedCardRarityAt = now;
+    return detected;
   }
   if (prev === 'Starlight Rare' && detected !== 'Starlight Rare' && now - lastStableDetectedCardRarityAt < 1100) {
     return prev;
@@ -38872,10 +42177,49 @@ function stabilizeDetectedCardRarity(detected) {
  * @returns {string}
  */
 function reconcileCardTypeWithRarity(cardType, rarity, plateColor, frameColor, plateType) {
+  if (plateType === 'Magia') return 'Magia';
+  if (plateType === 'Monstro Link') return 'Monstro Link';
+  if (plateType === 'Monstro Xyz') return 'Monstro Xyz';
+  if (plateType === 'Monstro Fusão') return 'Monstro Fusão';
+  if (
+    plateColor &&
+    plateColor.avgR != null &&
+    isSpellGreenFrameRgb(plateColor.avgR, plateColor.avgG, plateColor.avgB)
+  ) {
+    return 'Magia';
+  }
   const fr = frameColor && frameColor.avgR != null ? frameColor.avgR : null;
   const fg = frameColor && frameColor.avgG != null ? frameColor.avgG : null;
   const fb = frameColor && frameColor.avgB != null ? frameColor.avgB : null;
   const frameFusion = fr != null && isFusionPurpleFrameRgb(fr, fg, fb);
+  const regSpell = frameColor && frameColor.regions;
+  if (regSpell) {
+    if (hasLinkFrameSides(regSpell)) return 'Monstro Link';
+    if (hasSpellFrameSides(regSpell)) return 'Magia';
+    const leftLink =
+      regSpell.left && isLinkFrameRgb(regSpell.left.avgR, regSpell.left.avgG, regSpell.left.avgB);
+    const rightLink =
+      regSpell.right && isLinkFrameRgb(regSpell.right.avgR, regSpell.right.avgG, regSpell.right.avgB);
+    if ((leftLink || rightLink) && fr != null && isLinkFrameRgb(fr, fg, fb)) return 'Monstro Link';
+    const leftSpell =
+      regSpell.left && isSpellGreenFrameRgb(regSpell.left.avgR, regSpell.left.avgG, regSpell.left.avgB);
+    const rightSpell =
+      regSpell.right && isSpellGreenFrameRgb(regSpell.right.avgR, regSpell.right.avgG, regSpell.right.avgB);
+    if (leftSpell && rightSpell && !leftLink && !rightLink) return 'Magia';
+  }
+  if (fr != null && isLinkFrameRgb(fr, fg, fb)) return 'Monstro Link';
+  if (cardType === 'Monstro Link') return 'Monstro Link';
+  if (fr != null && isSpellGreenFrameRgb(fr, fg, fb)) return 'Magia';
+  if (cardType === 'Magia') return 'Magia';
+  if (fr != null && isXyzFrameRgb(fr, fg, fb)) return 'Monstro Xyz';
+  if (fr != null && isSynchroSilverFrameRgb(fr, fg, fb)) return 'Monstro Sincro';
+  if (
+    cardType === 'Monstro Link' ||
+    cardType === 'Monstro Sincro' ||
+    cardType === 'Monstro Xyz'
+  ) {
+    return cardType;
+  }
   if (plateType === 'Monstro Fusão' || frameFusion) return 'Monstro Fusão';
   if (
     plateColor &&
@@ -38896,11 +42240,21 @@ function reconcileCardTypeWithRarity(cardType, rarity, plateColor, frameColor, p
   const reg = frameColor && frameColor.regions;
   if (reg && !frameFusion) {
     const leftXyz =
-      reg.left && isXyzDarkPlateRgb(reg.left.avgR, reg.left.avgG, reg.left.avgB);
+      reg.left &&
+      (isXyzDarkPlateRgb(reg.left.avgR, reg.left.avgG, reg.left.avgB) ||
+        isXyzFrameRgb(reg.left.avgR, reg.left.avgG, reg.left.avgB));
     const rightXyz =
-      reg.right && isXyzDarkPlateRgb(reg.right.avgR, reg.right.avgG, reg.right.avgB);
+      reg.right &&
+      (isXyzDarkPlateRgb(reg.right.avgR, reg.right.avgG, reg.right.avgB) ||
+        isXyzFrameRgb(reg.right.avgR, reg.right.avgG, reg.right.avgB));
     if (leftXyz && rightXyz) return 'Monstro Xyz';
-    if ((leftXyz || rightXyz) && fr != null && isXyzDarkPlateRgb(fr, fg, fb)) return 'Monstro Xyz';
+    if (
+      (leftXyz || rightXyz) &&
+      fr != null &&
+      (isXyzDarkPlateRgb(fr, fg, fb) || isXyzFrameRgb(fr, fg, fb))
+    ) {
+      return 'Monstro Xyz';
+    }
   }
   if (cardType === 'Monstro Fusão' && plateColor && isXyzDarkPlateRgb(plateColor.avgR, plateColor.avgG, plateColor.avgB)) {
     return 'Monstro Xyz';
@@ -38936,7 +42290,9 @@ function reconcileCardTypeWithRarity(cardType, rarity, plateColor, frameColor, p
     plateColor &&
     plateColor.avgB > 82 &&
     plateColor.avgR > 95 &&
-    plateColor.avgG < 135
+    plateColor.avgG < 135 &&
+    fr != null &&
+    isFusionPurpleFrameRgb(fr, fg, fb)
   ) {
     return 'Monstro Fusão';
   }
@@ -39035,8 +42391,13 @@ async function autoCalibrate() {
   cardType = stabilizeDetectedCardType(cardType);
   if (rarity === 'AUTO' && cropRect) {
     try {
-      const rarityProbe = probeCardRarityDiagnostics(video, cropRect, typeCropRect);
       const typeProbeCalib = probeCardTypeDiagnostics(video, nameCropVisual, typeCropRect);
+      const rarityProbe = probeCardRarityDiagnostics(
+        video,
+        cropRect,
+        typeCropRect,
+        typeProbeCalib.classifiedTypeMerged || typeProbeCalib.classifiedType
+      );
       const resolvedCalib = resolveVisionTypeAndRarityFromProbes(
         typeProbeCalib,
         rarityProbe,
