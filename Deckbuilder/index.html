@@ -2075,6 +2075,18 @@
     <div id="ocr-container" style="display: none">
       <div class="ocr-layout-column">
         <div class="ocr-camera-slot">
+          <div
+            id="ocr-startup-overlay"
+            class="ocr-startup-overlay"
+            aria-hidden="true"
+            aria-live="polite"
+            role="status"
+          >
+            <div class="ocr-startup-overlay__card">
+              <div id="ocr-startup-status-text" class="ocr-startup-overlay__text"></div>
+              <div class="ocr-startup-overlay__spinner" aria-hidden="true"></div>
+            </div>
+          </div>
           <video
             id="ocr-video"
             style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.8"
@@ -2087,6 +2099,21 @@
             aria-hidden="true"
           >
             <div id="scanner-visual" class="scanner-name-frame" aria-hidden="true"></div>
+            <div
+              id="scanner-attribute-visual"
+              class="scanner-attribute-frame"
+              aria-hidden="true"
+            ></div>
+            <div
+              id="scanner-level-visual"
+              class="scanner-level-frame"
+              aria-hidden="true"
+            ></div>
+            <div
+              id="scanner-art-visual"
+              class="scanner-art-frame"
+              aria-hidden="true"
+            ></div>
             <div
               id="scanner-passcode-visual"
               class="scanner-passcode-frame"
@@ -2105,6 +2132,24 @@
             aria-live="polite"
           >
             📐 Alinhe a carta à moldura azul
+          </div>
+          <div id="ocr-diag-status-panel" class="ocr-diag-status-panel" hidden>
+            <div
+              id="ocr-diag-card-complete-banner"
+              role="status"
+              aria-live="polite"
+              hidden
+            ></div>
+            <div id="ocr-diag-collect-progress" hidden>
+              <div class="ocr-diag-progress-label" id="ocr-diag-progress-label"></div>
+              <div class="ocr-diag-progress-track">
+                <div class="ocr-diag-progress-bar" id="ocr-diag-progress-bar"></div>
+              </div>
+              <div class="ocr-diag-progress-label ocr-diag-card-label" id="ocr-diag-card-label"></div>
+              <div class="ocr-diag-progress-track ocr-diag-card-track">
+                <div class="ocr-diag-progress-bar ocr-diag-card-bar" id="ocr-diag-card-bar"></div>
+              </div>
+            </div>
           </div>
         </div>
         <div

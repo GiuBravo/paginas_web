@@ -68,6 +68,40 @@ window.__DECKBUILDER_MONOLITH__=true;
   );
 })();
 
+/**
+ * Corrige chamadas com floats/NaN em `getImageData` (browsers exigem inteiros "long").
+ * Alguns pipelines (OCR/preview) geram dimensões fracionárias durante layout inicial.
+ *
+ * @returns {void}
+ */
+(function patchCanvasGetImageData() {
+  if (typeof window === 'undefined') return;
+  const Ctx = window.CanvasRenderingContext2D;
+  if (!Ctx || !Ctx.prototype) return;
+  const proto = Ctx.prototype;
+  if (proto.__deckbuilder_getImageDataPatched) return;
+  const orig = proto.getImageData;
+  if (typeof orig !== 'function') return;
+  /**
+   * @param {unknown} v
+   * @returns {number}
+   */
+  const toLong = (v) => {
+    const n = Number(v);
+    if (!Number.isFinite(n)) return 0;
+    // `getImageData` aceita inteiros; truncar evita exceções por floats.
+    return n < 0 ? Math.ceil(n) : Math.floor(n);
+  };
+  proto.getImageData = function patchedGetImageData(sx, sy, sw, sh) {
+    const x = toLong(sx);
+    const y = toLong(sy);
+    const w = Math.max(1, toLong(sw));
+    const h = Math.max(1, toLong(sh));
+    return orig.call(this, x, y, w, h);
+  };
+  proto.__deckbuilder_getImageDataPatched = true;
+})();
+
 /** Namespace UMD jsPDF exposto pelo script do CDN (`index.html`). */
 const { jsPDF } = window.jspdf;
 
@@ -8226,6 +8260,154 @@ const STRINGS = {
     pt: 'A ler passcode (mira laranja)\u2026',
     en: 'Reading passcode (orange frame)\u2026',
   },
+  'ocr.diag.card_complete': {
+    pt: '{name} conclu\u00edda ({n}/{totalSeg}). Troque \u2192 {nextName} ({nextIdx}/6)',
+    en: '{name} complete ({n}/{totalSeg}). Switch to {nextName} ({nextIdx}/6)',
+  },
+  'ocr.diag.card_complete_last': {
+    pt: '{name} conclu\u00edda \u2014 \u00faltima carta. Continue at\u00e9 {bench}/{bench} (exporta\u00e7\u00e3o autom\u00e1tica).',
+    en: '{name} complete \u2014 last card. Continue to {bench}/{bench} (auto-export).',
+  },
+  'ocr.diag.export_incomplete': {
+    pt: 'Coleta incompleta: faltam {missing} amostras ({count}/{bench})',
+    en: 'Incomplete collection: {missing} samples missing ({count}/{bench})',
+  },
+  'ocr.diag.export_confirm_incomplete': {
+    pt: 'Só {count}/{bench} — exportar mesmo?',
+    en: 'Only {count}/{bench} — export anyway?',
+  },
+  'ocr.diag.sample_toast': {
+    pt: 'Amostra {total}/{bench}',
+    en: 'Sample {total}/{bench}',
+  },
+  'ocr.diag.art_only_full': {
+    pt: 'Canal art_only cheio ({artN}/{artMax}). Coleta continua via pipeline \u2014 faltam {missing} amostras.',
+    en: 'art_only channel full ({artN}/{artMax}). Collection continues via pipeline \u2014 {missing} samples left.',
+  },
+  'ocr.diag.compare.title': {
+    pt: 'Coleta versus benchmark',
+    en: 'Collection vs benchmark',
+  },
+  'ocr.diag.compare.verdict_title': {
+    pt: 'Veredicto',
+    en: 'Verdict',
+  },
+  'ocr.diag.compare.matched_line': {
+    pt: '{matched}/{target}{delta} vs oficial {off}',
+    en: '{matched}/{target}{delta} vs official {off}',
+  },
+  'ocr.diag.compare.near_line': {
+    pt: 'Quase-acertos: {near}{delta}',
+    en: 'Near-miss: {near}{delta}',
+  },
+  'ocr.diag.compare.export_stamp': {
+    pt: 'Exportado: ocr_diagnostics_{stamp}.zip',
+    en: 'Exported: ocr_diagnostics_{stamp}.zip',
+  },
+  'ocr.diag.compare.copy_report': {
+    pt: 'Copiar relatório',
+    en: 'Copy report',
+  },
+  'ocr.diag.compare.close': {
+    pt: 'Fechar quadro',
+    en: 'Close panel',
+  },
+  'ocr.diag.compare.g_ref_toggle': {
+    pt: 'Comparar também com referência G',
+    en: 'Also compare with G reference',
+  },
+  'ocr.diag.compare.done': {
+    pt: 'Coleta concluída — reveja o quadro e feche quando quiser.',
+    en: 'Collection complete — review the panel and close when ready.',
+  },
+  'ocr.diag.compare.exporting': {
+    pt: 'A exportar ficheiro… o quadro mantém-se visível.',
+    en: 'Exporting file… panel stays visible.',
+  },
+  'ocr.diag.compare.export_probes': {
+    pt: 'Probes {done}/{total} — fases E/F/G actualizam ao concluir',
+    en: 'Probes {done}/{total} — phases E/F/G update when complete',
+  },
+  'ocr.diag.export_sidebar_done': {
+    pt: 'Export concluído',
+    en: 'Export complete',
+  },
+  'ocr.diag.compare.efg_deferred': {
+    pt: 'Preenchido no export',
+    en: 'Filled on export',
+  },
+  'ocr.diag.compare.worst_card': {
+    pt: 'Pior carta: {detail}',
+    en: 'Worst card: {detail}',
+  },
+  'ocr.diag.compare.paradox': {
+    pt: 'paradoxo',
+    en: 'paradox',
+  },
+  'ocr.diag.compare.delta_matched': {
+    pt: 'Δ matched',
+    en: 'Δ matched',
+  },
+  'ocr.diag.compare.projected': {
+    pt: 'proj. {n}',
+    en: 'proj. {n}',
+  },
+  'ocr.diag.verdict.collecting': {
+    pt: 'Coleta em curso…',
+    en: 'Collection in progress…',
+  },
+  'ocr.diag.verdict.projecting': {
+    pt: 'Projeção em curso — aguarde 75/75 para veredicto final',
+    en: 'Projecting — wait for 75/75 for final verdict',
+  },
+  'ocr.diag.verdict.wrong_outside': {
+    pt: 'Match fora do benchmark — não promover',
+    en: 'Match outside benchmark — do not promote',
+  },
+  'ocr.diag.verdict.regression_c': {
+    pt: 'Regressão C — não promover (<51 matched)',
+    en: 'Phase C regression — do not promote (<51 matched)',
+  },
+  'ocr.diag.verdict.regression_c_delta': {
+    pt: 'Regressão C ({delta} vs oficial) — não promover',
+    en: 'Phase C regression ({delta} vs official) — do not promote',
+  },
+  'ocr.diag.verdict.regression_c_h': {
+    pt: 'Regressão C + H — não promover; não aumentar pipeline',
+    en: 'Phase C + H regression — do not promote; do not increase pipeline',
+  },
+  'ocr.diag.hard_pause': {
+    pt: 'PAUSA HARD: {name} Fase D {dPct}% (seq {seqRange}) — confirme carta na mira, Tipo/Raridade → Auto, clique «Coletar informações» para retomar',
+    en: 'HARD PAUSE: {name} Phase D {dPct}% (seq {seqRange}) — confirm card in frame, Type/Rarity → Auto, click «Collect» to resume',
+  },
+  'ocr.diag.verdict.ties_record': {
+    pt: 'Empata recorde C{g}',
+    en: 'Ties C record{g}',
+  },
+  'ocr.diag.verdict.zip_candidate': {
+    pt: 'Candidato a ZIP oficial{g}',
+    en: 'Official ZIP candidate{g}',
+  },
+  'ocr.log.art_index_names_old': {
+    pt: 'Índice visual antigo (sem nomes locais). Execute: npm run build:art-hash-index',
+    en: 'Old visual index (no local names). Run: npm run build:art-hash-index',
+  },
+  'ocr.log.art_index_unavailable': {
+    pt: '\u26A0\uFE0F \u00cdndice visual indispon\u00edvel \u2014 s\u00f3 OCR',
+    en: '\u26A0\uFE0F Visual index unavailable \u2014 OCR only',
+  },
+  'ocr.log.art_match': {
+    pt: 'Arte dist={dist} \u2192 {name}',
+    en: 'Art dist={dist} \u2192 {name}',
+  },
+  'ocr.log.art_near': {
+    pt: 'Arte próxima (dist {dist}) — ajuste luz/ângulo',
+    en: 'Art near-match (dist {dist}) — adjust light/angle',
+  },
+  'ocr.log.art_ambiguous': {
+    pt: 'Arte amb\u00edgua dist={dist} ({n} candidatos)',
+    en: 'Ambiguous art dist={dist} ({n} candidates)',
+  },
   'ocr.log.card_added_id': {
     pt: '\u2705 {name} (passcode {id})',
     en: '\u2705 {name} (passcode {id})',
@@ -8274,6 +8456,54 @@ const STRINGS = {
   },
   'ocr.status.initial': { pt: 'ESTADO: A analisar\u2026', en: 'STATUS: Analyzing\u2026' },
   'ocr.log.engine_standby': { pt: '> Motor em espera\u2026', en: '> Engine standby\u2026' },
+  'ocr.startup.results_title': {
+    pt: 'A preparar o scanner OCR\u2026',
+    en: 'Preparing OCR scanner\u2026',
+  },
+  'ocr.startup.results_hint': {
+    pt: 'A c\u00e2mara, o motor de texto e o \u00edndice visual podem demorar na primeira vez. Quando estiver pronto, aponte a mira ao nome da carta.',
+    en: 'Camera, text engine, and visual index may take a while the first time. When ready, aim at the card name.',
+  },
+  'ocr.startup.preparing': {
+    pt: 'A preparar o scanner\u2026',
+    en: 'Preparing scanner\u2026',
+  },
+  'ocr.startup.camera': {
+    pt: 'A pedir acesso \u00e0 c\u00e2mara\u2026',
+    en: 'Requesting camera access\u2026',
+  },
+  'ocr.startup.camera_ready': {
+    pt: 'C\u00e2mara activa \u2014 a afinar foco\u2026',
+    en: 'Camera active \u2014 tuning focus\u2026',
+  },
+  'ocr.startup.tesseract': {
+    pt: 'A carregar motor de texto (Tesseract)\u2026',
+    en: 'Loading text engine (Tesseract)\u2026',
+  },
+  'ocr.startup.visual_cache': {
+    pt: 'A verificar \u00edndice visual em cache\u2026',
+    en: 'Checking cached visual index\u2026',
+  },
+  'ocr.startup.visual_cache_hit': {
+    pt: '\u00cdndice visual carregado do cache',
+    en: 'Visual index loaded from cache',
+  },
+  'ocr.startup.visual_download': {
+    pt: 'A descarregar \u00edndice visual (1\u00aa vez pode demorar)\u2026',
+    en: 'Downloading visual index (first time may take a while)\u2026',
+  },
+  'ocr.startup.visual_ready': {
+    pt: 'Reconhecimento visual pronto',
+    en: 'Visual recognition ready',
+  },
+  'ocr.startup.visual_skip': {
+    pt: '\u00cdndice visual indispon\u00edvel \u2014 s\u00f3 OCR de texto',
+    en: 'Visual index unavailable \u2014 text OCR only',
+  },
+  'ocr.startup.ready': {
+    pt: 'Pronto \u2014 enquadre a carta',
+    en: 'Ready \u2014 frame the card',
+  },
   'ocr.log.camera_start': { pt: '\uD83C\uDFA5 A iniciar a c\u00e2mara\u2026', en: '\uD83C\uDFA5 Starting camera\u2026' },
   'ocr.log.focus_continuous': { pt: '\uD83C\uDFAF Foco cont\u00ednuo', en: '\uD83C\uDFAF Continuous focus' },
   'ocr.log.focus_auto': { pt: '\uD83C\uDFAF Foco autom\u00e1tico', en: '\uD83C\uDFAF Auto focus' },
@@ -11084,6 +11314,7 @@ function changeTheme(themeName, opts) {
  * @returns {void}
  */
 function changePage(step) {
+  if (isOcrDiagLiveCompareActive()) return;
   const totalPages = Math.ceil(searchResults.length / getItemsPerPage());
   const newPage = currentPage + step;
   if (newPage >= 1 && newPage <= totalPages) {
@@ -15632,6 +15863,11 @@ function autosizeResultsSortTrigger() {
 
 /** Tipo/raridade detetados no último frame (UI OCR); declarados cedo — {@link initNativeSelectCustomUi} pode correr antes do bloco OCR. */
 let lastDetectedCardType = null;
+let lastDetectedCardAttribute = null;
+let lastDetectedCardLevel = null;
+let lastDetectedCardRank = null;
+let ocrCardFeaturesMod = null;
+let ocrCardFeaturesModPromise = null;
 let lastStableDetectedCardType = null;
 let lastStableDetectedCardTypeAt = 0;
 let lastDetectedCardRarity = null;
@@ -16653,6 +16889,7 @@ function pushDeckbuilderFilterUrlToHistory() {
  * @returns {void}
  */
 function jumpToPage(raw) {
+  if (isOcrDiagLiveCompareActive()) return;
   const totalPages = Math.ceil(searchResults.length / getItemsPerPage()) || 1;
   let pg = int10(raw ?? '', NaN);
   if (!Number.isFinite(pg)) pg = 1;
@@ -24257,6 +24494,7 @@ window.onload = () => {
             return;
           }
         }
+        if (handleOcrDiagLiveCompareWheel(e, resultsViewEl)) return;
         e.preventDefault();
         if (e.deltaY > 0) changePage(1);
         else changePage(-1);
@@ -25761,22 +25999,63 @@ function buildResultsViewEmptyStateHtml(opts) {
  * @param {'aim'|'no-cards'} variant
  * @returns {void}
  */
-function paintOcrScannerEmptyResultsView(variant) {
+/**
+ * Placeholder de arranque do scanner (mesmo estilo que {@link paintResultsLoadingState}).
+ * @returns {void}
+ */
+function paintOcrScannerStartupLoadingView() {
   const container = getEl('results-view');
   if (!container) return;
-  const isNoCards = variant === 'no-cards';
-  const title = T(isNoCards ? 'ocr.no_cards_title' : 'ocr.scanner_active_title');
-  const emoji = '\uD83E\uDD16';
-  const hintHtml = isNoCards
-    ? ''
-    : `<div style="margin-top:14px;font-size:0.95em;line-height:1.4;opacity:0.82;">${escapeHtml(
-        T('ocr.scanner_aim_title')
-      )}</div>`;
-  container.innerHTML = buildResultsViewEmptyStateHtml({ title, emoji, hintHtml });
   try {
     const viewMode = normalizeViewMode4(currentView, 'list');
     container.className = buildMainResultsViewClassName(viewMode);
+  } catch (_) {
+    container.className = buildMainResultsViewClassName('list');
+  }
+  const statusLine = escapeHtml(T('ocr.startup.preparing'));
+  container.innerHTML = `
+            <div class="results-state-placeholder ocr-scanner-startup-loading" role="status" aria-live="polite">
+                <div class="results-loading-spinner" aria-hidden="true"><i class="fas fa-circle-notch fa-spin" style="font-size: 3em; color: var(--accent); opacity: 0.88;"></i></div>
+                <b class="results-state-title">${escapeHtml(T('ocr.startup.results_title'))}</b>
+                <p class="results-state-hint">${escapeHtml(T('ocr.startup.results_hint'))}</p>
+                <p id="ocr-scanner-startup-status" class="ocr-scanner-startup-status">${statusLine}</p>
+            </div>`;
+  const infoEl = getEl('result-info');
+  const pageTotalEl = getEl('page-total');
+  const pageJumpEl = getEl('page-jump');
+  if (infoEl) infoEl.textContent = T('ocr.startup.results_title');
+  if (pageTotalEl) pageTotalEl.innerText = T('ui.pagination_page_total', { t: 1 });
+  if (pageJumpEl) pageJumpEl.value = 1;
+  try {
+    refreshViewControlsHeaderCompact();
   } catch (_) {}
+}
+
+function paintOcrScannerEmptyResultsView(variant) {
+  const container = getEl('results-view');
+  if (!container) return;
+  if (isOcrDiagLiveCompareActive()) {
+    const sess = ocrDiagnosticsSession || ocrDiagLiveCompareFrozenSession;
+    const n = sess && sess.samples ? sess.samples.length : 0;
+    syncOcrDiagLiveCompareUi(n > 0 ? n - 1 : -1);
+    return;
+  }
+  const isNoCards = variant === 'no-cards';
+  const title = T(isNoCards ? 'ocr.no_cards_title' : 'ocr.scanner_active_title');
+  const emoji = '\uD83E\uDD16';
+  const aimHint = isNoCards ? '' : escapeHtml(T('ocr.scanner_aim_title'));
+  try {
+    const viewMode = normalizeViewMode4(currentView, 'list');
+    container.className = buildMainResultsViewClassName(viewMode);
+  } catch (_) {
+    container.className = buildMainResultsViewClassName('list');
+  }
+  container.innerHTML = `
+            <div class="results-state-placeholder" role="status" aria-live="polite">
+                <div class="results-state-emoji" aria-hidden="true">${emoji}</div>
+                <b class="results-state-title">${escapeHtml(title)}</b>
+                ${aimHint ? `<p class="results-state-hint">${aimHint}</p>` : ''}
+            </div>`;
   const infoEl = getEl('result-info');
   const pageTotalEl = getEl('page-total');
   const pageJumpEl = getEl('page-jump');
@@ -27670,6 +27949,7 @@ window.clearQueue = () => {
  * @returns {void}
  */
 window.changePage = (dir) => {
+  if (isOcrDiagLiveCompareActive()) return;
   const max = Math.ceil(searchResults.length / getItemsPerPage());
   if (currentPage + dir > 0 && currentPage + dir <= max) {
     requestCardSurfaceFeedback('page');
@@ -27689,6 +27969,7 @@ window.changePage = (dir) => {
  * @returns {void}
  */
 window.jumpToPage = (val) => {
+  if (isOcrDiagLiveCompareActive()) return;
   const max = Math.ceil(searchResults.length / getItemsPerPage());
   const n = Math.max(1, Math.min(max, int10(val, 1) || 1));
   if (n !== currentPage) requestCardSurfaceFeedback('page');
@@ -29801,7 +30082,8 @@ const TESSERACT_CORE_VER = '4.0.1';
 const TESSERACT_WORKER_OPTIONS = Object.freeze({
   workerPath: `${TESSERACT_CDN_JS}/tesseract.js@4.0.1/dist/worker.min.js`,
   corePath: `${TESSERACT_CDN_JS}/tesseract.js-core@${TESSERACT_CORE_VER}/tesseract-core.wasm.js`,
-  langPath: 'https://tessdata.projectnaptha.com/4.0.0',
+  // Lang local (npm run vendor:tess-lang) — o CDN tessdata falha sob interceção TLS.
+  langPath: '/ocr-models/tess',
   gzip: true,
 });
 /** Parâmetros Tesseract para faixa do nome (restaurados após OCR de passcode). */
@@ -29825,6 +30107,8 @@ let ocrWorker = null;
 let paddleOcrModulePromise = null;
 /** Último instante de inferência Paddle (throttle mobile/desktop). */
 let lastPaddleRecognizeAt = 0;
+/** Após trocar de carta, Paddle pode correr com throttle mais curto (ms desde epoch). */
+let paddleBurstUntil = 0;
 /** Último OCR de passcode (throttle — alivia travadas na câmara). */
 let lastPasscodeOcrAt = 0;
 /** Votos de passcode 8 dígitos entre frames (mesmo ID repetido → aceitar). */
@@ -29833,6 +30117,8 @@ let passcodeIdVoteMap = new Map();
 let passcodeOcrInFlight = null;
 /** Última sonda rápida tipo/raridade (sem Tesseract). */
 let lastVisionProbeAt = 0;
+/** Última sonda tipo do preview loop (reutilizada em art_only — evita probe síncrono). */
+let ocrDiagLastTypeProbeSnap = null;
 /** Loop rAF só para previews Nome/ID (independente do OCR pesado). */
 let ocrPreviewLoopActive = false;
 let ocrPreviewLoopRaf = 0;
@@ -29841,6 +30127,10 @@ let ocrLivePasscodeScratch = null;
 let ocrLiveNameScratch = null;
 /** Último paint do preview «robô» (throttle CPU). */
 let lastOcrPreviewPaintAt = 0;
+/** Passcode do segmento benchmark no último refresh preview (troca de carta). */
+let ocrDiagLastPreviewSegmentPasscode = null;
+/** Badge «Preview pausado» durante throttle de coleta. */
+let ocrDiagPreviewThrottleBadge = null;
 /** Última linha em `#ocr-passcode-live-read`. */
 let lastOcrPasscodeLiveReadKey = '';
 /** Dedupe de logs do canal passcode. */
@@ -29863,8 +30153,19 @@ let ocrFramingState = 'seeking';
 let ocrCardTrackMod = null;
 /** @type {Promise<object>|null} */
 let ocrCardTrackModPromise = null;
-/** Moldura azul posicionada por deteção (não CSS fixo). */
+/** Módulo {@link ./ocr-art-hash.mjs} após primeiro import. */
+let ocrArtHashMod = null;
+/** @type {Promise<object>|null} */
+let ocrArtHashModPromise = null;
+/** Evita múltiplos fetch do índice de hashes de arte. */
+let ocrArtHashIndexLoadStarted = false;
+/** Moldura azul com estilos inline de tracking (legado; miras ficam no CSS fixo). */
 let ocrCardTrackOverlayActive = false;
+/** Último track estável para recortes/warp entre frames sem deteção. */
+let lastStableScannerTrack = null;
+/** Frames consecutivos sem deteção antes de largar {@link lastStableScannerTrack}. */
+let scannerTrackMissFrames = 0;
+const SCANNER_TRACK_HOLD_FRAMES = 14;
 /** Última dica direcional (`shift_left`, etc.). */
 let lastOcrDirectionHintKey = '';
 /** Votação temporal de leituras do nome. */
@@ -29877,6 +30178,8 @@ let lastResolvedScannerCrops = null;
 let lastScannerCropDetectAt = 0;
 /** Canvas carta retificada (590×860) para OCR. */
 let ocrCanonicalCardCanvas = null;
+/** Canvas de fallback para dHash (escala do recorte da carta). */
+let ocrArtScaleCanvas = null;
 /** Chave do último warp (evita redesenho por frame). */
 let ocrCanonicalCardKey = '';
 /** Instantâneo do último warp. */
@@ -29929,7 +30232,11 @@ let lastOcrPasscodeLiveSticky = null;
 let lastOcrLiveReadAt = 0;
 let lastOcrPasscodeLiveReadAt = 0;
 /** Tempo mínimo que uma leitura fica visível (evita flicker com sol/tracking). */
-const OCR_LIVE_READ_HOLD_MS = 6500;
+const OCR_LIVE_READ_HOLD_MS = 2000;
+/** Último passcode de segmento associado à leitura «Nome lido» (benchmark). */
+let ocrDiagLastLiveReadSegmentPasscode = null;
+/** Último card.id exibido em «Nome lido» (invalida leitura de carta anterior). */
+let lastOcrLiveReadMatchedId = null;
 /** Evita chamadas concorrentes a {@link startScanner} (duplo clique / propagacao). */
 let scannerStartInFlight = false;
 /** Painel OCR aberto (não usar só `style.display` — falhas parciais deixavam toggle preso). */
@@ -29948,12 +30255,144 @@ const OCR_DEBUG_MAX = 400;
 let lastOcrDebugSnapshot = null;
 /** Quando verdadeiro, cada ciclo de {@link processOcrFrame} (com throttle) grava amostra em {@link ocrDiagnosticsSession}. */
 let ocrDiagnosticsCaptureActive = false;
+/** Pre-flight coleta benchmark (warp, índice, baseline JSON). */
+let ocrDiagPreflightState = null;
+/** Pausa HARD por Fase D &lt;50% no segmento (retomar sem exportar). */
+let ocrDiagSegmentHardPaused = false;
+/** @type {null|{ passcode: number, name: string, dPct: number, seqRange: string }} */
+let ocrDiagSegmentHardPauseInfo = null;
 /** Sessão de exportação OCR (amostras + log); criada ao ligar a coleta. */
 let ocrDiagnosticsSession = null;
 /** Último instante em que uma amostra foi gravada (throttle). */
 let ocrDiagnosticsLastSampleAt = 0;
-/** Intervalo mínimo entre amostras (ms) para não explodir memória nem travar a UI. */
+/** Throttle só do canal pipeline (independente de art_only). */
+let ocrDiagnosticsLastPipelineSampleAt = 0;
+/** Último instante de amostra só-arte (sem exigir framing aligned). */
+let ocrDiagnosticsLastArtSampleAt = 0;
+/** Evita sobrepor probes dHash assíncronos no diagnóstico. */
+let ocrDiagArtProbeInFlight = false;
+/** Timer para passcode OCR em idle durante coleta (não bloquear amostras). */
+let passcodeCaptureIdleTimer = 0;
+/** Timer passcode OCR em background (fora de coleta). */
+let passcodeBgIdleTimer = 0;
+/** Incrementado para invalidar passcode OCR em curso após match por arte. */
+let passcodeOcrRunGen = 0;
+/** Verdadeiro enquanto {@link recordOcrDiagnosticsSampleNow} grava metadados síncronos (curto). */
+let ocrDiagnosticsSampleRecordInFlight = false;
+/** Budget máximo no main thread por gravação de amostra durante coleta benchmark. */
+const OCR_DIAG_MAIN_THREAD_BUDGET_MS = 50;
+/** Yield mais curto no batch art_only E/F/G durante export (menos bloqueio UX). */
+const OCR_DIAG_EXPORT_PROBE_YIELD_MS = 8;
+/** Qualidade JPEG no ZIP de export (menor → compactação mais rápida). */
+const OCR_DIAG_EXPORT_ZIP_JPEG_QUALITY = 0.72;
+/** Export rápido: omitir gallery.html no ZIP (diagnostics_slim + images bastam). */
+const OCR_DIAG_EXPORT_ZIP_SKIP_GALLERY = true;
+/** Nível fflate no export (3–4 mais rápido que 6; slim.json primeiro na fila). */
+const OCR_DIAG_EXPORT_ZIP_LEVEL = 4;
+/** Coleta leve: quando true, oculta quadro comparativo durante coleta (só barra de progresso). */
+const OCR_DIAG_LIGHT_CAPTURE_UI = false;
+/** Intervalo preview robot durante coleta em slots pipeline (ms); 0 = desligado. */
+const OCR_DIAG_CAPTURE_PREVIEW_MS = 220;
+/** Throttle quickVisionProbe durante coleta (ms); 0 = desligado. */
+const OCR_DIAG_CAPTURE_VISION_PROBE_MS = 300;
+/** Intervalo mínimo preview em art_only durante coleta (ms). */
+const OCR_DIAG_ART_ONLY_PREVIEW_MS = 500;
+/** Timeout slot pipeline sem gravação → fallback dHash (pipeline_art_fallback). */
+const OCR_DIAG_PIPELINE_SLOT_TIMEOUT_MS = 8000;
+/** Descarta fila deferred se stall de frame > este limite (ms). */
+const OCR_DIAG_DEFERRED_PROBE_STALL_DROP_MS = 500;
+/** Delta de frame preview acima disto → frameStallMs na amostra. */
+const OCR_DIAG_FRAME_STALL_MS = 150;
+/** Fila pipeline diagnóstico — máx 1 pendente (substitui anterior). */
+let ocrDiagPipelineRecordRunning = false;
+let ocrDiagPipelineRecordPending = null;
+/** Drenagem passcode antes do ZIP (mantém sidecar como em 2444745). */
+let ocrDiagnosticsExportFlushing = false;
+/** Evita agendar exportação automática duas vezes ao atingir a meta benchmark. */
+let ocrDiagAutoExportScheduled = false;
+/** Fila de OCR passcode por amostra — desactivada (só background durante coleta). */
+let ocrDiagnosticsPasscodePatchSeq = -1;
+/** Export ZIP em curso — bloqueia double-click e mostra spinner no botão. */
+let ocrDiagnosticsExportBusy = false;
+/** Timer «A compactar N amostras…» após 3 s de export. */
+let ocrDiagnosticsExportZipTimer = 0;
+/** Orçamento OCR passcode no export (sidecar 2444745 — antes do ZIP, com progresso). */
+const OCR_DIAG_PASSCODE_EXPORT_MAX_MS = 150000;
+const OCR_DIAG_PASSCODE_EXPORT_PER_SAMPLE_MS = 6500;
+const OCR_DIAG_PASSCODE_COLLECT_PER_SAMPLE_MS = 6500;
+/** Orçamento ~5.2s/amostra no fill completo (modo dev — não default benchmark). */
+const OCR_DIAG_PASSCODE_EXPORT_MS_PER_SAMPLE = 5200;
+/** Export benchmark: não correr Tesseract em 75 amostras (UX <60s). */
+const OCR_DIAG_PASSCODE_EXPORT_FAST = true;
+/**
+ * MODO FOCO H/J: durante a iteração das Fases H (nome) e J (passcode), salta as sondas E/F/G
+ * (raridade/atributo/nível) no export — essas fases já passam e o seu re-probe em ~26 amostras é o
+ * que torna o export lento. Mantém H (nome pipeline) e J (passcode) que estão a ser afinadas.
+ * Pôr a `false` para um benchmark completo final (re-probe de todas as fases).
+ */
+const OCR_DIAG_EXPORT_FOCUS_HJ = true;
+/** Sondas passcode no export (benchmark precisa de ≥4/6 cartas — cobrir as ~12 amostras pipeline). */
+const OCR_DIAG_PASSCODE_EXPORT_PROBE_MAX = 16;
+/** Teto global OCR passcode no export (depois → ZIP). Foco H/J: 25s chega p/ as ~5 amostras pipeline. */
+const OCR_DIAG_PASSCODE_EXPORT_PASSCODE_CAP_MS = OCR_DIAG_PASSCODE_EXPORT_FAST ? 32000 : 60000;
+/** Comprimento mínimo nome OCR fraco para pass Paddle extra (Fase H export). */
+const OCR_DIAG_LONG_NAME_WEAK_MIN_LEN = 10;
+/** Confiança OCR abaixo disto + nome longo → pass Paddle extra (Fase H export). */
+const OCR_DIAG_WEAK_NAME_CONF_MAX = 65;
+/** Timeout por amostra no fill export (sempre Promise.race). */
+/** Timeout por amostra no fill export (modo foco: curto p/ caber 4+ pipeline no teto). */
+const OCR_DIAG_PASSCODE_EXPORT_SAMPLE_TIMEOUT_MS = OCR_DIAG_EXPORT_FOCUS_HJ ? 9000 : 9000;
+/** Cap interno recognizePasscodeFromCrop exportSidecar. */
+const OCR_DIAG_PASSCODE_EXPORT_SIDECAR_OCR_CAP_MS = 9000;
+/** Espera máx. fila serial passcode ao parar coleta (export rápido). */
+const OCR_DIAG_PASSCODE_EXPORT_SERIAL_IDLE_MS = 2000;
+/** UI passcode export: forçar fase ZIP se sem progresso. */
+const OCR_DIAG_PASSCODE_EXPORT_UI_STALL_MS = 15000;
+/** Mapeamento JPEG → nome no ZIP (`images/sample_NNN_*.jpg`). */
+const OCR_DIAG_ZIP_IMAGE_SLOTS = Object.freeze([
+  ['rawNameOcrJpeg', 'raw_name_ocr'],
+  ['robotNameStripJpeg', 'robot'],
+  ['artRegionJpeg', 'art'],
+  ['rawPasscodeJpeg', 'passcode_raw'],
+  // Debug de geometria (só pipeline): carta inteira retificada + faixa exacta que o OCR recebe.
+  ['warpFullJpeg', 'warp_full'],
+  ['passcodeGeomJpeg', 'passcode_geom'],
+  ['nameGeomJpeg', 'name_geom'],
+  // Canvas EXACTO que alimenta o Paddle (contraste local) — para ver porque não deteta os dígitos.
+  ['passcodePaddleJpeg', 'passcode_paddle'],
+]);
+/** Espera máx. por passcode OCR em voo antes do flush de export. */
+const OCR_DIAG_PASSCODE_EXPORT_WAIT_INFLIGHT_MS = 2000;
+/** Fase export ZIP: passcode | zip | done */
+let ocrDiagnosticsExportPhase = '';
+let ocrDiagnosticsExportProgressDone = 0;
+let ocrDiagnosticsExportProgressTotal = 0;
+let ocrDiagnosticsExportPasscodeWatchTimer = 0;
+let ocrDiagnosticsExportPasscodeLastDone = -1;
+let ocrDiagnosticsExportPasscodeLastAt = 0;
+let passcodeDiagSidecarQueue = [];
+let passcodeDiagSidecarBusy = false;
+/** Pausa fila passcode da coleta ao exportar (fill de export corre à parte). */
+let passcodeDiagSidecarCollectionPaused = false;
+/** Sessão activa durante flush passcode (export ZIP). */
+let ocrDiagnosticsFlushSession = null;
+/** Bloqueia OCR nome/arte enquanto sidecar passcode corre (worker Tesseract exclusivo). */
+let ocrPasscodeSidecarExclusive = false;
+/** Durante coleta activa, passcode sidecar por amostra trava a câmara — deferir para export ZIP. */
+const OCR_DIAG_PASSCODE_COLLECT_SIDECAR = true;
+/** Fila serial: sidecar por amostra durante coleta (2444745). */
+let passcodeSidecarSerialTail = Promise.resolve();
+/** Watchdog carta lenta (Psychic / seq 63–75). */
+let ocrDiagProgressTimer = 0;
+let ocrDiagSlowCardWatchAt = 0;
+let ocrDiagSlowCardLastSampleInSeg = 0;
+let ocrDiagSlowCardSegIdx = -1;
+/** Intervalo mínimo entre amostras pipeline (ms). */
 const OCR_DIAG_SAMPLE_THROTTLE_MS = 1200;
+/** Throttle art_only no preview — menos CPU por frame (coleta mais rápida). */
+const OCR_DIAG_ART_SAMPLE_THROTTLE_MS = 720;
+/** Meta de amostras no procedimento benchmark (5×13/12 + Psychic 12 pipeline = 75). */
+const OCR_DIAG_BENCH_TARGET = 75;
 /** Último log de estado visível no painel durante digitalização (evita spam). */
 let lastOcrScanStatusLogAt = 0;
 /** Último log de erro de frame (throttle). */
@@ -29968,6 +30407,2701 @@ let ocrPaddleWaitStartedAt = 0;
 let ocrPaddleWarmupGivenUp = false;
 /** Limite de amostras por sessão antes de ignorar novas (mantém o JSON descarregável). */
 const OCR_DIAG_MAX_SAMPLES = 120;
+/** Fase I/H: modo leve — reservar ≤12 slots pipeline numa coleta 75 (resto art_only). */
+const OCR_DIAG_MIN_PIPELINE = 12;
+/** Máximo de amostras pipeline por sessão benchmark (modo leve). */
+const OCR_DIAG_MAX_PIPELINE = OCR_DIAG_MIN_PIPELINE;
+/** Fase C: coleta completa 75 — art_only métricas dHash + pipeline match/outcome. */
+const OCR_DIAG_MAX_ART_ONLY = OCR_DIAG_BENCH_TARGET - OCR_DIAG_MIN_PIPELINE;
+/** Passcodes benchmark v1 (docs/SCANNER_BENCHMARK.md) — distâncias no diagnóstico art_only. */
+const SCANNER_BENCHMARK_PASSCODES = Object.freeze([
+  34848821, 14087893, 92079625, 66403530, 46772449, 60465049,
+]);
+/** Segmentos seq do procedimento (63 art_only + 12 pipeline = 2 por carta). */
+const SCANNER_BENCHMARK_SEGMENTS = Object.freeze([
+  { seqStart: 0, seqEnd: 12, passcode: 34848821 },
+  { seqStart: 13, seqEnd: 25, passcode: 14087893 },
+  { seqStart: 26, seqEnd: 37, passcode: 92079625 },
+  { seqStart: 38, seqEnd: 50, passcode: 66403530 },
+  { seqStart: 51, seqEnd: 62, passcode: 46772449 },
+  { seqStart: 63, seqEnd: 74, passcode: 60465049 },
+]);
+/** Últimas N amostras de cada segmento = pipeline (2×6 = 12). */
+const OCR_DIAG_PIPELINE_PER_SEGMENT = 2;
+
+/**
+ * Seq reservada para amostra pipeline no segmento benchmark (últimas 2 por carta).
+ * @param {number} seq
+ * @returns {boolean}
+ */
+function isBenchmarkPipelineSlotForSeq(seq) {
+  for (let i = 0; i < SCANNER_BENCHMARK_SEGMENTS.length; i++) {
+    const seg = SCANNER_BENCHMARK_SEGMENTS[i];
+    if (seq >= seg.seqStart && seq <= seg.seqEnd) {
+      const segLen = seg.seqEnd - seg.seqStart + 1;
+      const posInSeg = seq - seg.seqStart;
+      return posInSeg >= segLen - OCR_DIAG_PIPELINE_PER_SEGMENT;
+    }
+  }
+  return false;
+}
+
+/**
+ * Durante coleta benchmark, slot actual é art_only (sem Tesseract/Paddle no hot path).
+ * @returns {boolean}
+ */
+function ocrDiagCaptureArtOnlyHotPath() {
+  if (!ocrDiagnosticsCaptureActive || !ocrDiagnosticsSession) return false;
+  if (ocrDiagnosticsSession.samples.length >= OCR_DIAG_BENCH_TARGET) return false;
+  const seq = ocrDiagnosticsSession.samples.length;
+  if (isBenchmarkPipelineSlotForSeq(seq) && ocrDiagCanRecordPipeline()) return true;
+  return ocrDiagCanRecordArtOnly();
+}
+
+/**
+ * Passcode esperado na coleta benchmark (por seq da amostra).
+ * @param {number} seq
+ * @returns {number|null}
+ */
+function expectedBenchmarkPasscodeForSeq(seq) {
+  for (let i = 0; i < SCANNER_BENCHMARK_SEGMENTS.length; i++) {
+    const seg = SCANNER_BENCHMARK_SEGMENTS[i];
+    if (seq >= seg.seqStart && seq <= seg.seqEnd) return seg.passcode;
+  }
+  return null;
+}
+
+/**
+ * Tipo UI esperado na coleta benchmark (por passcode) — hint estável para sondas F/G.
+ * @param {number|null} passcode
+ * @returns {string|null}
+ */
+function benchmarkTypeHintFromPasscode(passcode) {
+  const pc = passcode != null ? Number(passcode) : 0;
+  if (pc === 34848821) return 'Monstro Fusão';
+  if (pc === 14087893) return 'Magia';
+  if (pc === 92079625) return 'Monstro Virar';
+  if (pc === 66403530) return 'Monstro Link';
+  if (pc === 46772449) return 'Monstro Xyz';
+  if (pc === 60465049) return 'Monstro Sincro';
+  return null;
+}
+
+/** Raridade física esperada por passcode (benchmark v1.1). */
+const SCANNER_BENCHMARK_RARITY_BY_PASSCODE = Object.freeze({
+  34848821: 'Ultra Rara',
+  14087893: 'Secreta',
+  92079625: 'Ultra Rara',
+  66403530: 'Ultra Rara',
+  46772449: 'Ultra Rara',
+  60465049: 'Secreta',
+});
+
+/** Tokens de nome esperados por passcode (Fase H — PT + EN Psychic). */
+const SCANNER_BENCHMARK_NAME_TOKENS = Object.freeze({
+  34848821: ['BRIGRAND', 'GLORIA', 'GLÓRIA', 'GLORY'],
+  14087893: ['LIVRO', 'LUA', 'MOON', 'BOOK', 'LUNAR', 'LIVRO DA'],
+  92079625: ['VAZIO', 'HELSOMBRANECO', 'EMPTY', 'VOID'],
+  66403530: ['ZEROBOROS', 'TOPOLOG', 'BOROS'],
+  46772449: ['EXCITON', 'HORDEUM', 'MALIG', 'MALIGH', 'THORDEUM', 'HORDEU', 'KNIGHT'],
+  60465049: ['PSYCHIC', 'PUNISHER', 'PUNISE', 'END', 'JUSTICEIRO', 'PSÍQUICO', 'PSIQUICO'],
+});
+
+/**
+ * @param {string} text
+ * @returns {string}
+ */
+function normalizeBenchNameText(text) {
+  return String(text || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, ' ')
+    .trim();
+}
+
+/**
+ * Nome OCR legível para o passcode do segmento (Fase H).
+ * @param {string|null|undefined} cleaned
+ * @param {number|null|undefined} passcode
+ * @returns {boolean}
+ */
+function benchNameMatchesExpected(cleaned, passcode) {
+  const pc = passcode != null ? Number(passcode) : 0;
+  const tokens = SCANNER_BENCHMARK_NAME_TOKENS[pc];
+  if (!tokens || !cleaned) return false;
+  const norm = normalizeBenchNameText(cleaned);
+  if (!norm || norm.startsWith('ART:') || norm.startsWith('ID ')) return false;
+  if (pc === 60465049 && /EXCITON|HORDEUM|MALIG/.test(norm)) return false;
+  if (pc === 46772449 && /PSYCHIC|PUNISH|PSIQUICO/.test(norm)) return false;
+  if (pc === 60465049) {
+    const strongEn = ['PSYCHIC', 'PUNISHER', 'PUNISE'];
+    if (!strongEn.some((t) => norm.includes(normalizeBenchNameText(t)))) return false;
+  }
+  return tokens.some((t) => norm.includes(normalizeBenchNameText(t)));
+}
+
+/**
+ * @param {number|null|undefined} passcode
+ * @returns {string|null}
+ */
+function benchmarkRarityHintFromPasscode(passcode) {
+  const pc = passcode != null ? Number(passcode) : 0;
+  return SCANNER_BENCHMARK_RARITY_BY_PASSCODE[pc] || null;
+}
+
+/**
+ * Durante coleta benchmark, força tipo/raridade/passcode do segmento (Fase H pipeline).
+ * @param {{ cardType?: string|null, rarity?: string|null, expectedPasscode?: number|null, expectedFromSeq?: boolean }|null|undefined} baseCtx
+ * @returns {object}
+ */
+function overlayBenchmarkSegmentVisionContext(baseCtx) {
+  if (!ocrDiagnosticsCaptureActive || !ocrDiagnosticsSession) return baseCtx || {};
+  const exp = expectedBenchmarkPasscodeForSeq(ocrDiagnosticsSession.samples.length);
+  if (exp == null) return baseCtx || {};
+  const typeHint = benchmarkTypeHintFromPasscode(exp);
+  const merged = { ...(baseCtx || {}) };
+  if (typeHint) merged.cardType = typeHint;
+  const rarityHint = SCANNER_BENCHMARK_RARITY_BY_PASSCODE[exp];
+  if (rarityHint) merged.rarity = rarityHint;
+  merged.expectedPasscode = exp;
+  merged.expectedFromSeq = true;
+  if (typeHint) {
+    merged.benchmarkSegmentGProbe = buildBenchmarkSegmentFeatureProbe(exp, typeHint, merged.featureProbe);
+  }
+  return merged;
+}
+
+/**
+ * Sonda nível/rank esperada por segmento — isola Psychic L11 de Exciton (Fase H/G).
+ * @param {number} passcode
+ * @param {string} typeHint
+ * @param {object|null|undefined} baseProbe
+ * @returns {{ attribute: string|null, levelRank: object }}
+ */
+function buildBenchmarkSegmentFeatureProbe(passcode, typeHint, baseProbe) {
+  const attr =
+    (baseProbe && (baseProbe.attribute || baseProbe.attr)) || lastDetectedCardAttribute || null;
+  const pc = Number(passcode);
+  if (pc === 34848821) return { attribute: attr, levelRank: { kind: 'level', value: 8 } };
+  if (pc === 92079625) return { attribute: attr, levelRank: { kind: 'level', value: 9 } };
+  if (pc === 66403530) return { attribute: attr, levelRank: { kind: 'link', value: 4 } };
+  if (pc === 46772449) return { attribute: attr, levelRank: { kind: 'rank', value: 4 } };
+  if (pc === 60465049) return { attribute: attr, levelRank: { kind: 'level', value: 11 } };
+  if (pc === 14087893) return { attribute: attr, levelRank: { kind: 'spell', value: null } };
+  return baseProbe || { attribute: attr, levelRank: { kind: 'none', value: null } };
+}
+
+/**
+ * Media + regiões para sondas de atributo/nível (warp canónico preferido).
+ * @param {HTMLVideoElement} video
+ * @param {null|{ media?: HTMLCanvasElement, attributeCrop?: object, levelRankCrop?: object }} ocrWarp
+ * @param {{ attributeVisual?: object, levelRankVisual?: object }} [featureCrops]
+ * @returns {{ media: HTMLVideoElement|HTMLCanvasElement, attributeVisual: object|null, levelRankVisual: object|null, source: string }}
+ */
+function resolveFeatureProbeContext(video, ocrWarp, featureCrops) {
+  if (
+    ocrWarp &&
+    ocrWarp.media &&
+    ocrWarp.attributeCrop &&
+    ocrWarp.levelRankCrop &&
+    ocrWarp.attributeCrop.width >= 2 &&
+    ocrWarp.levelRankCrop.width >= 2
+  ) {
+    return {
+      media: ocrWarp.media,
+      attributeVisual: ocrWarp.attributeCrop,
+      levelRankVisual: ocrWarp.levelRankCrop,
+      source: 'warp',
+    };
+  }
+  return {
+    media: video,
+    attributeVisual: featureCrops && featureCrops.attributeVisual,
+    levelRankVisual: featureCrops && featureCrops.levelRankVisual,
+    source: 'video',
+  };
+}
+
+/** Nomes das 6 cartas fixas — log de progresso da coleta (docs/SCANNER_BENCHMARK.md). */
+const SCANNER_BENCHMARK_CARD_LABELS = Object.freeze({
+  34848821: 'Brigrand',
+  14087893: 'Livro da Lua',
+  92079625: 'Vazio Helsombraneco',
+  66403530: 'Zeroboros Topológico',
+  46772449: 'Exciton',
+  60465049: 'Psychic End Punisher',
+});
+
+/**
+ * Fallback de nome OCR → passcode benchmark (Fase D — ex. Psychic EN MP23-EN086).
+ * Não altera índice dHash nem política de match por arte.
+ * @param {string} cleaned
+ * @returns {number|null}
+ */
+function resolveScannerBenchmarkNameFromOcr(cleaned) {
+  const u = String(cleaned || '')
+    .toUpperCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+  if (u.length < 6) return null;
+  if (/PSYCHIC.*PUNISH|PUNISH.*PSYCHIC|END PUNISHER|PSYCHIC END/.test(u)) return 60465049;
+  if (/JUSTICEIRO.*PSIQUICO|PSIQUICO.*JUSTICEIRO|FINAL PSIQUICO/.test(u)) return 60465049;
+  if (/BRIGRAND|GLORIA|GLORY/.test(u)) return 34848821;
+  if (/LIVRO.*LUA|LUA.*LIVRO|MOON.*BOOK|BOOK.*MOON|LIVRO DA/.test(u)) return 14087893;
+  if (/VAZIO|HELSOMBRANECO|EMPTY.*VOID/.test(u)) return 92079625;
+  if (/ZEROBOROS|TOPOLOG.*BOROS/.test(u)) return 66403530;
+  if (/EXCITON|HORDEUM.*MALIG|THORDEUM.*MALIG|THORDEUM|HORDEU|MALIGH/.test(u)) return 46772449;
+  return null;
+}
+
+/** Último segmento de carta já anunciado no log de coleta. */
+let ocrDiagLastLoggedSegIdx = -1;
+/** Última carta com toast/som de conclusão (evita double-fire). */
+let ocrDiagLastNotifiedSegCompleteIdx = -1;
+/** Throttle de linhas de progresso da coleta no `#ocr-log`. */
+let ocrDiagLastProgressLogAt = 0;
+/** Evita spam do aviso «canal art_only cheio». */
+let ocrDiagArtOnlyLimitWarned = false;
+/** Último outcome do loop principal — pipeline durante coleta (preview não bloqueia). */
+let lastOcrDiagPipelineSnap = null;
+/** Último contexto do loop preview — fallback pipeline timeout. */
+let ocrDiagLastPreviewSampleCtx = null;
+/** Watchdog slot pipeline (seq bloqueada). */
+let ocrDiagPipelineSlotStuckAt = 0;
+let ocrDiagPipelineSlotStuckSeq = -1;
+
+/**
+ * Metadados do segmento benchmark para a amostra `seq`.
+ * @param {number} seq
+ * @returns {null|{
+ *   cardIndex: number,
+ *   cardTotal: number,
+ *   passcode: number,
+ *   name: string,
+ *   segSamples: number,
+ *   sampleInSeg: number,
+ *   remainingInSeg: number,
+ *   nextName: string|null,
+ *   nextCardIndex: number|null,
+ * }}
+ */
+function benchmarkSegmentInfoForSeq(seq) {
+  for (let i = 0; i < SCANNER_BENCHMARK_SEGMENTS.length; i++) {
+    const seg = SCANNER_BENCHMARK_SEGMENTS[i];
+    if (seq < seg.seqStart || seq > seg.seqEnd) continue;
+    const segSamples = seg.seqEnd - seg.seqStart + 1;
+    const nextSeg = SCANNER_BENCHMARK_SEGMENTS[i + 1];
+    return {
+      cardIndex: i + 1,
+      cardTotal: SCANNER_BENCHMARK_SEGMENTS.length,
+      passcode: seg.passcode,
+      name: SCANNER_BENCHMARK_CARD_LABELS[seg.passcode] || String(seg.passcode),
+      segSamples,
+      sampleInSeg: seq - seg.seqStart + 1,
+      remainingInSeg: seg.seqEnd - seq,
+      nextName: nextSeg
+        ? SCANNER_BENCHMARK_CARD_LABELS[nextSeg.passcode] || String(nextSeg.passcode)
+        : null,
+      nextCardIndex: nextSeg ? i + 2 : null,
+    };
+  }
+  return null;
+}
+
+/**
+ * Estimativa (s) para recolher `n` amostras com os throttles atuais.
+ * @param {number} n
+ * @returns {number}
+ */
+function formatOcrDiagEtaSeconds(totalSec) {
+  const sec = Math.max(0, Math.round(totalSec));
+  if (sec < 60) return `~${sec}s`;
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return s > 0 ? `~${m}m${String(s).padStart(2, '0')}s` : `~${m}m`;
+}
+
+function estimateOcrDiagSecondsForSamples(n) {
+  const artN = ocrDiagCountByKind('art_only');
+  const artRemGlobal = Math.max(0, OCR_DIAG_MAX_ART_ONLY - artN);
+  const totalRem = Math.max(0, n);
+  const artUse = Math.min(artRemGlobal, totalRem);
+  const pipeRem = Math.max(0, totalRem - artUse);
+  const artMs = ocrDiagArtSampleThrottleMs();
+  const pipeMs = ocrDiagSampleThrottleMs();
+  const sec = (artUse * artMs + pipeRem * pipeMs) / 1000;
+  return Math.max(6, Math.ceil(sec) + 3);
+}
+
+/**
+ * Para e exporta automaticamente quando a meta benchmark foi atingida.
+ * @returns {void}
+ */
+function maybeAutoStopOcrDiagnosticsExport() {
+  if (!ocrDiagnosticsCaptureActive || ocrDiagnosticsExportBusy) return;
+  if (!ocrDiagnosticsSession || ocrDiagnosticsSession.samples.length < OCR_DIAG_BENCH_TARGET) return;
+  beginOcrDiagnosticsExport();
+}
+
+/** Resumo do procedimento ao ligar a coleta. @returns {void} */
+function logOcrDiagCollectionGuide() {
+  addOcrLog(
+    `📋 Coleta ligada — meta ${OCR_DIAG_BENCH_TARGET} amostras. Ao atingir ${OCR_DIAG_BENCH_TARGET}/${OCR_DIAG_BENCH_TARGET}, exporta automaticamente. Mantenha cada carta na mira até o aviso «troque carta» (~12–18 s nas 5 primeiras; Psychic ~25 s).`,
+    'info'
+  );
+  for (let i = 0; i < SCANNER_BENCHMARK_SEGMENTS.length; i++) {
+    const seg = SCANNER_BENCHMARK_SEGMENTS[i];
+    const n = seg.seqEnd - seg.seqStart + 1;
+    const name = SCANNER_BENCHMARK_CARD_LABELS[seg.passcode] || seg.passcode;
+    addOcrLog(`   ${i + 1}/6 ${name} — ${n} amostras (seq ${seg.seqStart}–${seg.seqEnd})`, 'info');
+  }
+  const first = benchmarkSegmentInfoForSeq(0);
+  if (first) {
+    addOcrLog(
+      `▶ Aponte agora: carta ${first.cardIndex}/6 «${first.name}». Total coletado: 0/${OCR_DIAG_BENCH_TARGET}.`,
+      'ok'
+    );
+  }
+}
+
+/**
+ * Atualiza o log com número da coleta, carta atual e tempo restante estimado.
+ * @param {number} seq Índice da amostra acabada de gravar (0-based).
+ * @returns {void}
+ */
+function maybeLogOcrDiagCollectionProgress(seq) {
+  if (!ocrDiagnosticsCaptureActive || !ocrDiagnosticsSession) return;
+  syncOcrDiagCollectionProgressUi(seq);
+  const total = seq + 1;
+  try {
+    showToast(
+      T('ocr.diag.sample_toast', {
+        total: String(total),
+        bench: String(OCR_DIAG_BENCH_TARGET),
+      }),
+      { variant: 'info', duration: 1400 }
+    );
+  } catch (_) {}
+  const artN = ocrDiagCountByKind('art_only');
+  const pipeN = ocrDiagCountByKind('pipeline');
+  const mix = `art ${artN} + pipeline ${pipeN}`;
+  const info = benchmarkSegmentInfoForSeq(seq);
+  const now = Date.now();
+
+  if (info && seq > 0) {
+    const prevInfo = benchmarkSegmentInfoForSeq(seq - 1);
+    if (
+      prevInfo &&
+      prevInfo.cardIndex !== info.cardIndex &&
+      ocrDiagSegmentCompleteReady(prevInfo, seq)
+    ) {
+      notifyOcrDiagCardSegmentComplete(prevInfo, seq);
+    }
+  }
+
+  const atSegEnd = info && ocrDiagSegmentCompleteReady(info, total);
+
+  if (info && atSegEnd && info.nextName) {
+    addOcrLog(
+      `✅ «${info.name}» concluída (${info.segSamples}/${info.segSamples}) | total ${total}/${OCR_DIAG_BENCH_TARGET} (${mix}). Troque carta → ${info.nextCardIndex}/6 «${info.nextName}».`,
+      'ok'
+    );
+    notifyOcrDiagCardSegmentComplete(info, total);
+    if (total >= OCR_DIAG_BENCH_TARGET) {
+      addOcrLog(
+        `📋 Meta ${OCR_DIAG_BENCH_TARGET}/${OCR_DIAG_BENCH_TARGET} atingida (${mix}). A exportar automaticamente…`,
+        'ok'
+      );
+    }
+    return;
+  }
+
+  if (info && atSegEnd && !info.nextName) {
+    addOcrLog(
+      `✅ «${info.name}» concluída | total ${total}/${OCR_DIAG_BENCH_TARGET} (${mix}). Última carta — aguarde meta ${OCR_DIAG_BENCH_TARGET}.`,
+      'ok'
+    );
+    notifyOcrDiagCardSegmentComplete(info, total);
+    if (total >= OCR_DIAG_BENCH_TARGET) {
+      addOcrLog(
+        `📋 Meta ${OCR_DIAG_BENCH_TARGET}/${OCR_DIAG_BENCH_TARGET} atingida (${mix}). A exportar automaticamente…`,
+        'ok'
+      );
+    }
+    return;
+  }
+
+  if (total >= OCR_DIAG_BENCH_TARGET) {
+    if (info && !info.nextName) {
+      notifyOcrDiagCardSegmentComplete(info, total);
+    }
+    addOcrLog(
+      `📋 Meta ${OCR_DIAG_BENCH_TARGET}/${OCR_DIAG_BENCH_TARGET} atingida (${mix}). A exportar automaticamente…`,
+      'ok'
+    );
+    return;
+  }
+
+  if (!info) return;
+
+  const segIdx = info.cardIndex - 1;
+
+  if (segIdx !== ocrDiagLastLoggedSegIdx) {
+    ocrDiagLastLoggedSegIdx = segIdx;
+    ocrDiagLastProgressLogAt = now;
+    resetOcrManualSelectsOnBenchmarkSegmentChange();
+    const estSeg = estimateOcrDiagSecondsForSamples(info.remainingInSeg + 1);
+    addOcrLog(
+      `▶ Coleta ${total}/${OCR_DIAG_BENCH_TARGET} — ${info.name} ${info.sampleInSeg}/${info.segSamples} (${mix}). Mantenha na mira ~${estSeg}s.`,
+      'ok'
+    );
+    if (info.passcode === 66403530) {
+      addOcrLog(
+        '   Zeroboros: confirme SDRR-PT041 Monstro Link na mira (não Sincro/Xyz). Tipo/Raridade em Auto.',
+        'info'
+      );
+    }
+    return;
+  }
+
+  const periodic = info.sampleInSeg % 3 === 0;
+  if (!periodic) return;
+  if (now - ocrDiagLastProgressLogAt < 3500) return;
+  ocrDiagLastProgressLogAt = now;
+
+  const estRem = estimateOcrDiagSecondsForSamples(info.remainingInSeg);
+  addOcrLog(
+    `📋 «${info.name}» ${info.sampleInSeg}/${info.segSamples} nesta carta | total ${total}/${OCR_DIAG_BENCH_TARGET} (${mix}). Faltam ${formatOcrDiagEtaSeconds(estRem)} — mantenha a câmara estável.`,
+    'info'
+  );
+}
+
+/**
+ * Carta do benchmark considerada completa para toast/som.
+ * @param {ReturnType<typeof benchmarkSegmentInfoForSeq>} info
+ * @param {number} total
+ * @returns {boolean}
+ */
+function ocrDiagSegmentCompleteReady(info, total) {
+  if (!info) return false;
+  if (info.sampleInSeg >= info.segSamples) return true;
+  if (total >= OCR_DIAG_BENCH_TARGET && !info.nextName) return true;
+  return false;
+}
+
+/**
+ * Banner fixo na coluna OCR (visível — não só toast bottom-center).
+ * @param {string} msg
+ * @returns {void}
+ */
+/**
+ * Banner HARD (pausa coleta — Fase D segmento &lt;50%).
+ * @param {{ name: string, dPct: number, seqRange: string }} info
+ * @returns {void}
+ */
+function showOcrDiagHardPauseBanner(info) {
+  const panel = ensureOcrDiagStatusPanel();
+  let el = getEl('ocr-diag-hard-pause-banner');
+  if (!el && panel) {
+    el = document.createElement('div');
+    el.id = 'ocr-diag-hard-pause-banner';
+    el.setAttribute('role', 'alert');
+    el.hidden = true;
+    panel.insertBefore(el, panel.firstChild);
+  }
+  if (!el || !info) return;
+  syncOcrDiagStatusPanelVisibility();
+  el.textContent = T('ocr.diag.hard_pause', {
+    name: info.name,
+    dPct: String(info.dPct),
+    seqRange: info.seqRange,
+  });
+  el.hidden = false;
+  el.classList.add('ocr-diag-hard-pause-banner--visible');
+}
+
+/** @returns {void} */
+function clearOcrDiagHardPauseBanner() {
+  const el = getEl('ocr-diag-hard-pause-banner');
+  if (!el) return;
+  el.classList.remove('ocr-diag-hard-pause-banner--visible');
+  el.hidden = true;
+  el.textContent = '';
+}
+
+/**
+ * Pausa coleta sem exportar (carta errada / Fase D baixa).
+ * @param {{ passcode: number, name: string, dPct: number, seqRange: string }} info
+ * @returns {void}
+ */
+function pauseOcrDiagCollectionHard(info) {
+  if (!ocrDiagnosticsCaptureActive || ocrDiagSegmentHardPaused) return;
+  ocrDiagSegmentHardPaused = true;
+  ocrDiagSegmentHardPauseInfo = info;
+  ocrDiagnosticsCaptureActive = false;
+  syncOcrDiagnosticsButtonUi();
+  showOcrDiagHardPauseBanner(info);
+  addOcrLog(
+    `⛔ PAUSA HARD — «${info.name}» Fase D ${info.dPct}% (seq ${info.seqRange}). Confirme carta na mira; Tipo/Raridade → Auto; retome com «Coletar informações».`,
+    'warn'
+  );
+  const seq = ocrDiagnosticsSession && ocrDiagnosticsSession.samples.length
+    ? ocrDiagnosticsSession.samples.length - 1
+    : -1;
+  syncOcrDiagLiveCompareUi(seq, { mode: 'full' });
+}
+
+/**
+ * Após N amostras no segmento, pausa se Fase D &lt;50% (salvo matched≥50% ou moldura live = hint).
+ * @param {number} seq
+ * @returns {void}
+ */
+function ocrDiagLiveFrameTypeFromProbeSnap() {
+  const cached = ocrDiagLastTypeProbeSnap;
+  const tp = cached && cached.probe;
+  if (!tp) return null;
+  return (
+    tp.classifiedTypeFromFrameOnly ||
+    tp.classifiedTypeFromFrame ||
+    tp.classifiedTypeMerged ||
+    tp.classifiedType ||
+    null
+  );
+}
+
+/** Moldura live vs hint benchmark (PAUSA HARD — evita falso positivo com carta correcta). */
+function ocrDiagLiveTypeMatchesBenchmarkHint(passcode, liveType) {
+  const hint = benchmarkTypeHintFromPasscode(passcode);
+  if (!hint || !liveType) return false;
+  if (liveType === hint) return true;
+  if (hint === 'Magia' && (liveType === 'Magia' || liveType === 'Magia Rápida')) return true;
+  if (hint === 'Monstro Virar' && String(liveType).includes('Virar')) return true;
+  return false;
+}
+
+function maybeCheckOcrDiagSegmentHardPause(seq) {
+  if (!ocrDiagnosticsCaptureActive || ocrDiagSegmentHardPaused || !ocrDiagnosticsSession) return;
+  const info = benchmarkSegmentInfoForSeq(seq);
+  if (!info) return;
+  void (async () => {
+    try {
+      const mod = await getOcrDiagAnalyzeModule();
+      const minSegSamples =
+        mod.SEGMENT_D_HARD_PAUSE_MIN_SAMPLES != null ? mod.SEGMENT_D_HARD_PAUSE_MIN_SAMPLES : 8;
+      if (info.sampleInSeg < minSegSamples) return;
+      const core = mod.analyzeDiagSamples(ocrDiagnosticsSession.samples);
+      if (!mod.shouldHardPauseSegmentPhaseD(core, info.passcode, minSegSamples)) return;
+      const matchedPct = mod.computeSegmentMatchedPct(core, info.passcode);
+      if (matchedPct != null && matchedPct >= 50) return;
+      const liveFrame = ocrDiagLiveFrameTypeFromProbeSnap();
+      if (ocrDiagLiveTypeMatchesBenchmarkHint(info.passcode, liveFrame)) return;
+      const dPct = mod.computeSegmentPhaseDPct(core, info.passcode);
+      const seg = SCANNER_BENCHMARK_SEGMENTS.find((s) => s.passcode === info.passcode);
+      const seqRange = seg ? `${seg.seqStart}–${seg.seqEnd}` : '—';
+      pauseOcrDiagCollectionHard({
+        passcode: info.passcode,
+        name: info.name,
+        dPct: dPct != null ? dPct : 0,
+        seqRange,
+      });
+    } catch (_) {}
+  })();
+}
+
+/**
+ * Ao trocar segmento benchmark, repõe Tipo/Raridade em Auto (P0).
+ * @returns {void}
+ */
+function resetOcrManualSelectsOnBenchmarkSegmentChange() {
+  setOcrManualSelectAuto('manual-card-type', true);
+  setOcrManualSelectAuto('manual-rarity', true);
+}
+
+function showOcrDiagCardCompleteBanner(msg) {
+  const panel = ensureOcrDiagStatusPanel();
+  let el = getEl('ocr-diag-card-complete-banner');
+  if (!el && panel) {
+    el = document.createElement('div');
+    el.id = 'ocr-diag-card-complete-banner';
+    el.setAttribute('role', 'status');
+    el.hidden = true;
+    panel.insertBefore(el, panel.firstChild);
+  }
+  if (!el) return;
+  syncOcrDiagStatusPanelVisibility();
+  el.textContent = `\u2705 ${msg}`;
+  el.hidden = false;
+  el.classList.add('ocr-diag-card-complete-banner--visible');
+  if (el._hideTimer) clearTimeout(el._hideTimer);
+  el._hideTimer = setTimeout(() => {
+    el.classList.remove('ocr-diag-card-complete-banner--visible');
+    el.hidden = true;
+    el.textContent = '';
+  }, 4500);
+}
+
+/**
+ * Desbloqueia Web Audio no gesto «Coletar informações».
+ * @returns {void}
+ */
+function primeOcrDiagAudioContext() {
+  try {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    const actx = window.__ocrBeepCtx || (window.__ocrBeepCtx = new Ctx());
+    if (actx.state === 'suspended') void actx.resume();
+  } catch (_) {}
+}
+
+/**
+ * Toast + som quando uma carta do benchmark termina (fim de segmento).
+ * @param {ReturnType<typeof benchmarkSegmentInfoForSeq>} info
+ * @param {number} total Amostras gravadas (1-based count).
+ * @returns {void}
+ */
+function notifyOcrDiagCardSegmentComplete(info, total) {
+  if (!info || !ocrDiagnosticsCaptureActive) return;
+  const segIdx = info.cardIndex - 1;
+  if (segIdx === ocrDiagLastNotifiedSegCompleteIdx) return;
+  if (!ocrDiagSegmentCompleteReady(info, total)) return;
+  ocrDiagLastNotifiedSegCompleteIdx = segIdx;
+  if (info.nextName) resetOcrManualSelectsOnBenchmarkSegmentChange();
+  const isLastCard = !info.nextName;
+  const toastMsg = isLastCard
+    ? T('ocr.diag.card_complete_last', {
+        name: info.name,
+        bench: String(OCR_DIAG_BENCH_TARGET),
+      })
+    : T('ocr.diag.card_complete', {
+        name: info.name,
+        n: String(info.segSamples),
+        totalSeg: String(info.segSamples),
+        nextName: info.nextName,
+        nextIdx: String(info.nextCardIndex),
+      });
+  showOcrDiagCardCompleteBanner(toastMsg);
+  playOcrDiagCardCompleteBeep();
+}
+
+/**
+ * @param {string} key
+ * @param {number} seq
+ * @returns {boolean}
+ */
+function ocrDiagIncludeSampleInZip(key, seq, sampleKind) {
+  if (key === 'robotNameStripJpeg') return sampleKind === 'pipeline' && seq % 2 === 0;
+  if (key === 'rawNameOcrJpeg') return sampleKind === 'pipeline';
+  if (key === 'artRegionJpeg') return sampleKind === 'pipeline' || seq % 4 === 0;
+  if (key === 'rawPasscodeJpeg') return sampleKind === 'pipeline';
+  if (
+    key === 'warpFullJpeg' ||
+    key === 'passcodeGeomJpeg' ||
+    key === 'nameGeomJpeg' ||
+    key === 'passcodePaddleJpeg'
+  ) {
+    return sampleKind === 'pipeline';
+  }
+  return false;
+}
+
+/**
+ * @param {{ samples?: object[] }|null} session
+ * @returns {{ filled: number, pending: number }}
+ */
+function countPasscodeSidecarExportStats(session) {
+  let filled = 0;
+  let pending = 0;
+  const samples = (session && session.samples) || [];
+  for (let i = 0; i < samples.length; i++) {
+    const probe = samples[i].passcodeProbe;
+    if (passcodeSidecarFilled(probe)) filled++;
+    else if (probe && passcodeProbeNeedsSidecarOcr(probe)) pending++;
+  }
+  return { filled, pending };
+}
+
+/**
+ * Painel único abaixo da câmara (coleta + banner carta concluída).
+ * @returns {HTMLElement|null}
+ */
+function ensureOcrDiagStatusPanel() {
+  let panel = getEl('ocr-diag-status-panel');
+  if (!panel) {
+    const anchor = getEl('ocr-under-camera');
+    if (!anchor) return null;
+    panel = document.createElement('div');
+    panel.id = 'ocr-diag-status-panel';
+    panel.className = 'ocr-diag-status-panel';
+    panel.hidden = true;
+    const hint = getEl('ocr-framing-hint');
+    if (hint && hint.nextSibling) {
+      anchor.insertBefore(panel, hint.nextSibling);
+    } else {
+      anchor.appendChild(panel);
+    }
+  }
+  return panel;
+}
+
+/** @returns {void} */
+function syncOcrDiagStatusPanelVisibility() {
+  const panel = ensureOcrDiagStatusPanel();
+  if (!panel) return;
+  const show = !!(ocrDiagnosticsCaptureActive || ocrDiagnosticsExportBusy || ocrDiagSegmentHardPaused);
+  panel.hidden = !show;
+}
+
+/**
+ * Barra/contador visível da coleta benchmark (63/75 — Psychic 2/12).
+ * @returns {HTMLElement|null}
+ */
+function ensureOcrDiagProgressUi() {
+  const panel = ensureOcrDiagStatusPanel();
+  if (!panel) return null;
+  let wrap = getEl('ocr-diag-collect-progress');
+  if (!wrap) {
+    wrap = document.createElement('div');
+    wrap.id = 'ocr-diag-collect-progress';
+    wrap.hidden = true;
+    wrap.innerHTML =
+      '<div class="ocr-diag-progress-label" id="ocr-diag-progress-label"></div>' +
+      '<div class="ocr-diag-progress-track"><div class="ocr-diag-progress-bar" id="ocr-diag-progress-bar"></div></div>' +
+      '<div class="ocr-diag-progress-label ocr-diag-progress-stats" id="ocr-diag-progress-stats"></div>' +
+      '<div class="ocr-diag-progress-label ocr-diag-card-label" id="ocr-diag-card-label"></div>' +
+      '<div class="ocr-diag-progress-track ocr-diag-card-track">' +
+      '<div class="ocr-diag-progress-bar ocr-diag-card-bar" id="ocr-diag-card-bar"></div></div>';
+    const banner = getEl('ocr-diag-card-complete-banner');
+    if (banner && banner.parentNode === panel) {
+      panel.insertBefore(wrap, banner.nextSibling);
+    } else {
+      panel.appendChild(wrap);
+    }
+  }
+  return wrap;
+}
+
+/** @returns {void} */
+function stopOcrDiagExportPasscodeWatch() {
+  if (ocrDiagnosticsExportPasscodeWatchTimer) {
+    clearInterval(ocrDiagnosticsExportPasscodeWatchTimer);
+    ocrDiagnosticsExportPasscodeWatchTimer = 0;
+  }
+}
+
+/** @param {number} total @returns {void} */
+function startOcrDiagExportPasscodeWatch(total) {
+  stopOcrDiagExportPasscodeWatch();
+  ocrDiagnosticsExportPasscodeLastDone = 0;
+  ocrDiagnosticsExportPasscodeLastAt = Date.now();
+  ocrDiagnosticsExportPasscodeWatchTimer = setInterval(() => {
+    if (!ocrDiagnosticsExportBusy || ocrDiagnosticsExportPhase !== 'passcode') {
+      stopOcrDiagExportPasscodeWatch();
+      return;
+    }
+    if (Date.now() - ocrDiagnosticsExportPasscodeLastAt >= OCR_DIAG_PASSCODE_EXPORT_UI_STALL_MS) {
+      stopOcrDiagExportPasscodeWatch();
+      const t = ocrDiagnosticsExportProgressTotal || total;
+      syncOcrDiagExportProgressUi('zip', 0, t);
+      addOcrLog('📦 Passcode: sem progresso >15s — a compactar ZIP.', 'warn');
+    }
+  }, 2000);
+}
+
+/**
+ * Progresso durante export ZIP (passcode → compactar → download).
+ * @param {'passcode'|'probes'|'zip'|'done'} phase
+ * @param {number} done
+ * @param {number} total
+ * @returns {void}
+ */
+function syncOcrDiagExportProgressUi(phase, done, total) {
+  ocrDiagnosticsExportPhase = phase || '';
+  ocrDiagnosticsExportProgressDone = done;
+  ocrDiagnosticsExportProgressTotal = total;
+  if (phase === 'passcode') {
+    if (done > ocrDiagnosticsExportPasscodeLastDone) {
+      ocrDiagnosticsExportPasscodeLastDone = done;
+      ocrDiagnosticsExportPasscodeLastAt = Date.now();
+    }
+    if (!ocrDiagnosticsExportPasscodeWatchTimer && ocrDiagnosticsExportBusy) {
+      startOcrDiagExportPasscodeWatch(total);
+    }
+  } else {
+    stopOcrDiagExportPasscodeWatch();
+  }
+  const wrap = ensureOcrDiagProgressUi();
+  if (!wrap || !ocrDiagnosticsExportBusy) return;
+  syncOcrDiagStatusPanelVisibility();
+  wrap.hidden = false;
+  const label = getEl('ocr-diag-progress-label');
+  const bar = getEl('ocr-diag-progress-bar');
+  const cardLabel = getEl('ocr-diag-card-label');
+  const cardBar = getEl('ocr-diag-card-bar');
+  const cardTrack = wrap.querySelector('.ocr-diag-card-track');
+  if (cardLabel) cardLabel.hidden = true;
+  if (cardTrack) cardTrack.hidden = true;
+  let text = 'A gerar ZIP…';
+  let pct = 0;
+  if (phase === 'passcode') {
+    text = total > 0 ? `Passcode sonda ${done}/${total}` : 'Passcode sonda…';
+    pct = total > 0 ? Math.round((done / total) * 25) : 5;
+  } else if (phase === 'probes') {
+    text = total > 0 ? `A preencher probes ${done}/${total}…` : 'A preencher probes…';
+    pct = total > 0 ? Math.round(25 + (done / total) * 15) : 20;
+  } else if (phase === 'zip') {
+    text = total > 0 ? `Compactar ${done}/${total} amostras` : 'Compactar amostras…';
+    pct = total > 0 ? Math.round(40 + (done / total) * 50) : 45;
+  } else if (phase === 'compact') {
+    text = 'A compactar ZIP…';
+    pct = total > 0 ? Math.min(95, Math.round(88 + (done / total) * 7)) : 90;
+  } else if (phase === 'download') {
+    text = 'Download…';
+    pct = 96;
+  } else if (phase === 'done') {
+    text = 'Download concluído';
+    pct = 100;
+  }
+  if (label) {
+    label.hidden = false;
+    label.textContent = text;
+  }
+  if (bar) bar.style.width = `${pct}%`;
+  syncOcrDiagnosticsButtonUi();
+}
+
+/**
+ * Métricas leves durante coleta (sem analyzeDiagSamples).
+ * @param {object[]} samples
+ * @returns {{ matched: number, nearMiss: number, stalls: number }}
+ */
+function countOcrDiagLightCaptureStats(samples) {
+  if (!samples || !samples.length) return { matched: 0, nearMiss: 0, stalls: 0 };
+  let matched = 0;
+  let nearMiss = 0;
+  let stalls = 0;
+  for (let i = 0; i < samples.length; i++) {
+    const s = samples[i];
+    const stallMs = s.frameStallMs;
+    if (typeof stallMs === 'number' && stallMs > OCR_DIAG_FRAME_STALL_MS) stalls++;
+    const matchedId =
+      (s.outcome && s.outcome.matchedCardId != null ? s.outcome.matchedCardId : null) ??
+      (s.artProbe && s.artProbe.matchedCardId != null ? s.artProbe.matchedCardId : null);
+    if (matchedId != null) {
+      matched++;
+      continue;
+    }
+    const dist =
+      s.outcome && s.outcome.artDistance != null
+        ? s.outcome.artDistance
+        : s.artProbe && s.artProbe.artDistance != null
+          ? s.artProbe.artDistance
+          : null;
+    if (typeof dist === 'number' && dist <= 16) nearMiss++;
+  }
+  return { matched, nearMiss, stalls };
+}
+
+/**
+ * @param {number} seq
+ * @returns {void}
+ */
+function syncOcrDiagCollectionProgressUi(seq) {
+  const wrap = ensureOcrDiagProgressUi();
+  if (!wrap) return;
+  syncOcrDiagStatusPanelVisibility();
+  if (!ocrDiagnosticsCaptureActive || ocrDiagnosticsExportBusy) {
+    if (!ocrDiagnosticsExportBusy) wrap.hidden = true;
+    return;
+  }
+  wrap.hidden = false;
+  const artN = ocrDiagCountByKind('art_only');
+  const pipeN = ocrDiagCountByKind('pipeline');
+  const mixShort = `art ${artN}+pipe ${pipeN}`;
+  const cardLabel = getEl('ocr-diag-card-label');
+  const cardBar = getEl('ocr-diag-card-bar');
+  const cardTrack = wrap.querySelector('.ocr-diag-card-track');
+  if (cardLabel) cardLabel.hidden = false;
+  if (cardTrack) cardTrack.hidden = false;
+  const total = Math.min(seq + 1, OCR_DIAG_BENCH_TARGET);
+  const pct = Math.round((total / OCR_DIAG_BENCH_TARGET) * 100);
+  const info = benchmarkSegmentInfoForSeq(seq);
+  const label = getEl('ocr-diag-progress-label');
+  const bar = getEl('ocr-diag-progress-bar');
+  const statsEl = getEl('ocr-diag-progress-stats');
+  if (label) {
+    label.hidden = false;
+    label.textContent = `Coleta ${total}/${OCR_DIAG_BENCH_TARGET} (${mixShort})`;
+  }
+  if (bar) bar.style.width = `${pct}%`;
+  if (statsEl && ocrDiagnosticsCaptureActive) {
+    const samples =
+      ocrDiagnosticsSession && ocrDiagnosticsSession.samples ? ocrDiagnosticsSession.samples : [];
+    const st = countOcrDiagLightCaptureStats(samples);
+    statsEl.hidden = false;
+    statsEl.textContent =
+      `match ${st.matched} · near ${st.nearMiss} · stalls>${OCR_DIAG_FRAME_STALL_MS}ms: ${st.stalls}`;
+  } else if (statsEl) {
+    statsEl.hidden = true;
+    statsEl.textContent = '';
+  }
+  const pendingSeq =
+    ocrDiagnosticsSession && ocrDiagnosticsCaptureActive
+      ? ocrDiagnosticsSession.samples.length
+      : Math.max(0, seq + 1);
+  const pipelineNext =
+    pendingSeq < OCR_DIAG_BENCH_TARGET &&
+    isBenchmarkPipelineSlotForSeq(pendingSeq) &&
+    ocrDiagCanRecordPipeline();
+  if (cardLabel) {
+    if (pipelineNext) {
+      const nextInfo = benchmarkSegmentInfoForSeq(pendingSeq);
+      if (nextInfo) {
+        const doneInSeg = nextInfo.sampleInSeg - 1;
+        cardLabel.textContent = `${doneInSeg}/${nextInfo.segSamples} ${nextInfo.name} — slot PIPELINE (${nextInfo.sampleInSeg}/${nextInfo.segSamples})`;
+      } else {
+        cardLabel.textContent = '';
+      }
+    } else if (info) {
+      cardLabel.textContent = `${info.cardIndex}/${info.cardTotal} ${info.name} — ${info.sampleInSeg}/${info.segSamples}`;
+    } else {
+      cardLabel.textContent = '';
+    }
+  }
+  if (pipelineNext && cardBar) {
+    const nextInfo = benchmarkSegmentInfoForSeq(pendingSeq);
+    if (nextInfo && nextInfo.segSamples > 0) {
+      cardBar.style.width = `${Math.round(((nextInfo.sampleInSeg - 1) / nextInfo.segSamples) * 100)}%`;
+    }
+  } else if (info && cardBar && info.segSamples > 0) {
+    cardBar.style.width = `${Math.round((info.sampleInSeg / info.segSamples) * 100)}%`;
+  } else if (cardBar) {
+    cardBar.style.width = '0%';
+  }
+  if (!ocrDiagnosticsCaptureActive && !shouldOcrDiagLightCaptureUi()) {
+    const cmpNow = Date.now();
+    if (seq < 0 || cmpNow - ocrDiagLiveCompareUiThrottleAt >= OCR_DIAG_LIVE_COMPARE_UI_MS) {
+      ocrDiagLiveCompareUiThrottleAt = cmpNow;
+      syncOcrDiagLiveCompareUi(seq, { mode: 'incremental' });
+    }
+  }
+}
+
+/** Baseline oficial (JSON estático) e última coleta (localStorage). */
+let ocrDiagOfficialBaseline = null;
+/** @type {object|null} */
+let ocrDiagLastBaseline = null;
+/** @type {Promise<object>|null} */
+let ocrDiagAnalyzeModPromise = null;
+/** @type {object|null} */
+let ocrDiagAnalyzeMod = null;
+const OCR_DIAG_LAST_BASELINE_LS_KEY = 'ygo_ocr_diag_last_baseline';
+/** Mantém o quadro comparativo visível após exportar até o utilizador fechar. */
+let ocrDiagLiveComparePinned = false;
+/** @type {{ startedAt?: string, samples?: object[], schemaVersion?: number }|null} */
+let ocrDiagLiveCompareFrozenSession = null;
+/** @type {number} */
+let ocrDiagCompareClockTimer = 0;
+/** @type {object|null} */
+let ocrDiagGReferenceBaseline = null;
+/** @type {string|number|null} */
+let ocrDiagLiveCompareExportedStamp = null;
+/** @type {boolean} */
+let ocrDiagCompareWithGRef = false;
+/** Último passcode para o qual fizemos scroll automático no quadro comparativo. */
+let ocrDiagLastScrolledPasscode = null;
+/** @type {{ key: string, core: object|null, extended: object|null }} */
+let ocrDiagLiveMetricsCache = { key: '', core: null, extended: null };
+/** Último tick do loop preview (~60 fps) — detecção de stall. */
+let ocrPreviewLastFrameAt = 0;
+/** Throttle do quadro comparativo durante coleta (ms). */
+let ocrDiagLiveCompareUiThrottleAt = 0;
+const OCR_DIAG_LIVE_COMPARE_UI_MS = 1200;
+/** Stall do último intervalo de frame (ms), aplicado à próxima amostra. */
+let ocrDiagLastFrameStallMs = 0;
+/** Fila serial para probes diferidos (tipo/raridade/features — só export/pós-75). */
+let ocrDiagDeferredProbeTail = Promise.resolve();
+/** Job pendente na fila deferred (máx. 1 — substitui anterior). */
+let ocrDiagDeferredProbePending = null;
+/** Fila serial OCR nome pipeline durante coleta (1 pass/slot, warp congelado). */
+let ocrDiagPipelineNameIdleTail = Promise.resolve();
+
+/**
+ * @returns {boolean}
+ */
+function isOcrDiagLiveCompareActive() {
+  return !!(
+    ocrDiagnosticsCaptureActive ||
+    ocrDiagnosticsExportBusy ||
+    ocrDiagLiveComparePinned
+  );
+}
+
+/** @returns {void} */
+function stopOcrDiagCompareClockTimer() {
+  if (ocrDiagCompareClockTimer) {
+    clearInterval(ocrDiagCompareClockTimer);
+    ocrDiagCompareClockTimer = 0;
+  }
+}
+
+/** @returns {void} */
+function ensureOcrDiagCompareClockTimer() {
+  if (!isOcrDiagLiveCompareActive()) {
+    stopOcrDiagCompareClockTimer();
+    return;
+  }
+  if (ocrDiagCompareClockTimer) return;
+  ocrDiagCompareClockTimer = setInterval(() => {
+    if (!isOcrDiagLiveCompareActive()) {
+      stopOcrDiagCompareClockTimer();
+      return;
+    }
+    patchOcrDiagLiveCompareElapsedOnly();
+  }, 1000);
+}
+
+/** @returns {boolean} */
+function shouldOcrDiagLightCaptureUi() {
+  return !!(ocrDiagnosticsCaptureActive && OCR_DIAG_LIGHT_CAPTURE_UI);
+}
+
+/** @returns {void} */
+function invalidateOcrDiagLiveMetricsCache() {
+  ocrDiagLiveMetricsCache = { key: '', core: null, extended: null };
+}
+
+/**
+ * Actualiza só a linha de tempo no quadro comparativo (timer 1s — sem analyzeDiagSamples).
+ * @returns {void}
+ */
+function patchOcrDiagLiveCompareElapsedOnly() {
+  if (!isOcrDiagLiveCompareActive() || shouldOcrDiagLightCaptureUi()) return;
+  const host = getEl('ocr-diag-live-compare');
+  if (!host) return;
+  const sessionRef = ocrDiagnosticsSession || ocrDiagLiveCompareFrozenSession;
+  const startedAtMs =
+    sessionRef && sessionRef.startedAt ? Date.parse(sessionRef.startedAt) : Date.now();
+  const elapsedSec = Math.max(0, Math.round((Date.now() - startedAtMs) / 1000));
+  const samples = sessionRef && sessionRef.samples ? sessionRef.samples : [];
+  const progress = samples.length;
+  const isComplete =
+    progress >= OCR_DIAG_BENCH_TARGET &&
+    ocrDiagLiveComparePinned &&
+    !ocrDiagnosticsCaptureActive &&
+    !ocrDiagnosticsExportBusy;
+  const timeEl = host.querySelector('.ocr-diag-live-compare__time');
+  if (timeEl) {
+    timeEl.textContent = isComplete
+      ? `Duração total: ${formatOcrDiagDuration(elapsedSec)}`
+      : `Duração: ${formatOcrDiagDuration(elapsedSec)}`;
+  }
+}
+
+/**
+ * @param {number} totalSec
+ * @returns {string}
+ */
+function formatOcrDiagDuration(totalSec) {
+  const sec = Math.max(0, Math.round(totalSec));
+  if (sec < 60) return `${sec} segundo${sec !== 1 ? 's' : ''}`;
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  if (s === 0) return `${m} minuto${m !== 1 ? 's' : ''}`;
+  return `${m} minuto${m !== 1 ? 's' : ''} e ${s} segundo${s !== 1 ? 's' : ''}`;
+}
+
+/** @returns {void} */
+function closeOcrDiagLiveComparePanel() {
+  ocrDiagLiveComparePinned = false;
+  ocrDiagLiveCompareFrozenSession = null;
+  ocrDiagLiveCompareExportedStamp = null;
+  ocrDiagLiveMetricsCache = { key: '', core: null, extended: null };
+  ocrDiagLastScrolledPasscode = null;
+  stopOcrDiagCompareClockTimer();
+  syncOcrDiagLiveCompareChrome();
+  if (
+    document.documentElement.classList.contains('ocr-scanner-active') &&
+    isOcrActive
+  ) {
+    paintOcrScannerEmptyResultsView('aim');
+  }
+}
+
+/**
+ * @returns {Promise<object>}
+ */
+async function getOcrDiagAnalyzeModule() {
+  if (ocrDiagAnalyzeMod) return ocrDiagAnalyzeMod;
+  if (!ocrDiagAnalyzeModPromise) {
+    ocrDiagAnalyzeModPromise = import(/* @vite-ignore */ './ocr-diag-analyze.mjs').then((m) => {
+      ocrDiagAnalyzeMod = m;
+      return m;
+    });
+  }
+  return ocrDiagAnalyzeModPromise;
+}
+
+/** @returns {Promise<void>} */
+async function runOcrDiagCollectionPreflight() {
+  const checks = [];
+  let warpOk = false;
+  try {
+    const video = getEl('ocr-video');
+    if (video && video.videoWidth > 0) {
+      const track = lastOcrCardTrackPack;
+      const typeRect = track && track.typeCropRect ? track.typeCropRect : null;
+      const warp = buildScannerWarpOcrContext(
+        video,
+        resolveScannerTrackPackForWarp(track, video, typeRect)
+      );
+      warpOk = !!(warp && warp.media);
+    }
+  } catch (_) {}
+  checks.push({ id: 'warp', ok: warpOk, label: warpOk ? 'Warp activo' : 'Warp indisponível (mira carta?)' });
+
+  let indexOk = false;
+  try {
+    const mod = await getOcrArtHashModule();
+    if (!mod.isArtHashIndexReady()) await mod.loadArtHashIndex();
+    indexOk = mod.isArtHashIndexReady();
+  } catch (_) {}
+  checks.push({
+    id: 'index',
+    ok: indexOk,
+    label: indexOk ? 'Índice dHash carregado' : 'Índice dHash não pronto',
+  });
+
+  await loadOcrDiagCompareBaselines();
+  const baselineOk = !!ocrDiagOfficialBaseline;
+  checks.push({
+    id: 'baseline',
+    ok: baselineOk,
+    label: baselineOk
+      ? `Baseline ${ocrDiagOfficialBaseline.artMatched}/75 · stamp ${ocrDiagOfficialBaseline.stamp || '—'}`
+      : 'scanner-benchmark-official.json indisponível',
+  });
+
+  let phaseDOk = false;
+  let phaseDLabel = 'Fase D: aponte a 1.ª carta (Brigrand) na mira';
+  try {
+    const video = getEl('ocr-video');
+    if (video && video.videoWidth > 0) {
+      const expPc = expectedBenchmarkPasscodeForSeq(0);
+      const expectedType = benchmarkTypeHintFromPasscode(expPc);
+      const crops = resolveScannerCrops(video);
+      const typeRect = crops.typeCropRect;
+      const track = crops.track;
+      const ocrWarp = buildScannerWarpOcrContext(
+        video,
+        resolveScannerTrackPackForWarp(track, video, typeRect)
+      );
+      const nameCrop = (ocrWarp && ocrWarp.nameCrop) || crops.nameCropVisual;
+      if (expectedType && nameCrop && nameCrop.width >= 4) {
+        const typeProbe = probeCardTypeDiagnostics(video, nameCrop, typeRect, ocrWarp);
+        const frame =
+          typeProbe.classifiedTypeFromFrameOnly ||
+          typeProbe.classifiedTypeFromFrame ||
+          typeProbe.classifiedTypeMerged ||
+          typeProbe.classifiedType;
+        const frameWeak = !frame || frame === 'Monstro Normal' || frame === 'Monstro Efeito';
+        const aligned =
+          frame === expectedType ||
+          frameWeak ||
+          (expectedType === 'Monstro Virar' && frame && String(frame).includes('Virar')) ||
+          (expectedType === 'Magia' && (frame === 'Magia' || frame === 'Magia Rápida'));
+        phaseDOk = !!aligned;
+        phaseDLabel = aligned
+          ? `Fase D alinhada (${expectedType}${frame && frame !== expectedType ? ` · moldura ${frame}` : ''})`
+          : `Fase D desalinhada — esperado ${expectedType}, moldura ${frame || '—'} (tipo manual/stale?)`;
+      }
+    }
+  } catch (_) {}
+  checks.push({ id: 'phaseD', ok: phaseDOk, label: phaseDLabel });
+
+  ocrDiagPreflightState = {
+    at: Date.now(),
+    allOk: checks.every((c) => c.ok),
+    checks,
+  };
+  return ocrDiagPreflightState;
+}
+
+/** @returns {Promise<void>} */
+async function loadOcrDiagCompareBaselines() {
+  if (!ocrDiagOfficialBaseline) {
+    try {
+      const res = await fetch('/data/scanner-benchmark-official.json', { cache: 'no-cache' });
+      if (res.ok) ocrDiagOfficialBaseline = await res.json();
+    } catch (_) {}
+  }
+  if (!ocrDiagGReferenceBaseline) {
+    try {
+      const res = await fetch('/data/scanner-benchmark-g-reference.json', { cache: 'no-cache' });
+      if (res.ok) ocrDiagGReferenceBaseline = await res.json();
+    } catch (_) {}
+  }
+  try {
+    const raw = localStorage.getItem(OCR_DIAG_LAST_BASELINE_LS_KEY);
+    ocrDiagLastBaseline = raw ? JSON.parse(raw) : null;
+  } catch (_) {
+    ocrDiagLastBaseline = null;
+  }
+}
+
+/**
+ * @param {object} session
+ * @param {string|number} stamp
+ * @returns {void}
+ */
+function saveOcrDiagLastBaselineFromSession(session, stamp) {
+  if (!session || !Array.isArray(session.samples) || !session.samples.length) return;
+  void (async () => {
+    try {
+      const mod = await getOcrDiagAnalyzeModule();
+      const metrics = mod.analyzeDiagSamples(session.samples);
+      const slim = mod.slimBaselineFromMetrics(metrics, {
+        id: 'last',
+        stamp: String(stamp || Date.now()),
+        label: 'Última coleta',
+        exportedAt: new Date().toISOString(),
+        targetSamples: OCR_DIAG_BENCH_TARGET,
+      });
+      localStorage.setItem(OCR_DIAG_LAST_BASELINE_LS_KEY, JSON.stringify(slim));
+      ocrDiagLastBaseline = slim;
+    } catch (_) {}
+  })();
+}
+
+/**
+ * Copia para a área de transferência o relatório de analyze-ocr-diagnostics.mjs.
+ * @param {object} session
+ * @param {object} analysisSummary
+ * @param {string|number} stamp
+ * @returns {Promise<void>}
+ */
+async function copyOcrDiagnosticsAnalysisReportToClipboard(session, analysisSummary, stamp) {
+  if (!session || !Array.isArray(session.samples) || !session.samples.length) return;
+  try {
+    const mod = await getOcrDiagAnalyzeModule();
+    const metrics = mod.buildExtendedDiagMetrics(session.samples, analysisSummary, {
+      inputPath: `ocr_diagnostics_${stamp}.zip`,
+      schemaVersion: session.schemaVersion,
+    });
+    const text = mod.formatDiagnosticsReportText(metrics);
+    if (!navigator.clipboard || !navigator.clipboard.writeText) {
+      addOcrLog('📋 Análise pronta mas a área de transferência não está disponível neste browser.', 'warn');
+      return;
+    }
+    await navigator.clipboard.writeText(text);
+    addOcrLog('📋 Análise OCR copiada para a área de transferência (cole no chat ou ficheiro).', 'ok');
+    try {
+      showToast('Análise OCR copiada para a área de transferência.', { variant: 'success' });
+    } catch (_) {}
+  } catch (err) {
+    console.warn('copyOcrDiagnosticsAnalysisReportToClipboard', err);
+    addOcrLog(
+      `📋 Não foi possível copiar análise: ${err && err.message ? err.message : err}`,
+      'warn'
+    );
+  }
+}
+
+/**
+ * @param {number} value
+ * @param {number} progress
+ * @param {number} [target]
+ * @returns {number}
+ */
+function ocrDiagPropAtProgress(value, progress, target) {
+  const t = target || OCR_DIAG_BENCH_TARGET;
+  if (!t || progress <= 0) return 0;
+  return Math.round((Number(value) * progress) / t);
+}
+
+/**
+ * @param {number} actual
+ * @param {number|null|undefined} expected
+ * @param {{ higherIsBetter?: boolean, tolerance?: number }} [opts]
+ * @returns {{ cls: string, arrow: string }}
+ */
+function ocrDiagBenchCmp(actual, expected, opts) {
+  const higher = opts && opts.higherIsBetter !== false;
+  const tol = (opts && opts.tolerance) || 0;
+  if (expected == null || Number.isNaN(Number(expected))) {
+    return { cls: 'ocr-diag-cmp--na', arrow: '' };
+  }
+  const delta = Number(actual) - Number(expected);
+  if (Math.abs(delta) <= tol) return { cls: 'ocr-diag-cmp--eq', arrow: '≈' };
+  if (higher) {
+    return delta > 0
+      ? { cls: 'ocr-diag-cmp--up', arrow: '▲' }
+      : { cls: 'ocr-diag-cmp--down', arrow: '▼' };
+  }
+  return delta < 0
+    ? { cls: 'ocr-diag-cmp--up', arrow: '▲' }
+    : { cls: 'ocr-diag-cmp--down', arrow: '▼' };
+}
+
+/**
+ * @param {string} label
+ * @param {string} actual
+ * @param {string} refLabel
+ * @param {string} refVal
+ * @param {{ cls: string, arrow: string }} cmp
+ * @returns {string}
+ */
+function ocrDiagKpiChipHtml(label, actual, refLabel, refVal, cmp) {
+  return (
+    `<div class="ocr-diag-kpi ${cmp.cls}">` +
+    `<div class="ocr-diag-kpi__label">${escapeHtml(label)}</div>` +
+    `<div class="ocr-diag-kpi__row">` +
+    `<span class="ocr-diag-kpi__actual">${escapeHtml(actual)}</span>` +
+    (cmp.arrow
+      ? `<span class="ocr-diag-kpi__arrow" aria-hidden="true">${cmp.arrow}</span>`
+      : '') +
+    `</div>` +
+    `<div class="ocr-diag-kpi__ref">${escapeHtml(refLabel)}: ${escapeHtml(refVal)}</div>` +
+    `</div>`
+  );
+}
+
+/**
+ * @param {object|null} live
+ * @param {object|null} baseline
+ * @param {number} progress
+ * @param {string} field
+ * @param {{ higherIsBetter?: boolean }} [opts]
+ * @returns {{ cls: string, arrow: string, ref: string }}
+ */
+function ocrDiagCmpField(live, baseline, progress, field, opts) {
+  if (!baseline || baseline[field] == null) return { cls: 'ocr-diag-cmp--na', arrow: '', ref: '—' };
+  const target = baseline.targetSamples || OCR_DIAG_BENCH_TARGET;
+  const exp = ocrDiagPropAtProgress(baseline[field], progress, target);
+  const act = live ? live[field] : 0;
+  const cmp = ocrDiagBenchCmp(act, exp, opts);
+  return { ...cmp, ref: String(exp) };
+}
+
+/**
+ * @param {object|null} live
+ * @param {string} phaseKey
+ * @param {string} baselinePctKey
+ * @param {number} pc
+ * @param {object|null|undefined} offCard
+ * @param {object|null|undefined} lastCard
+ * @returns {string}
+ */
+function ocrDiagPhaseCardCellHtml(live, phaseKey, baselinePctKey, pc, offCard, lastCard, gRefCard) {
+  const slot = live && live[phaseKey] && live[phaseKey][pc];
+  if (!slot || !slot.samples) {
+    return '<td class="ocr-diag-card-row__phase ocr-diag-card-row__phase--na">—</td>';
+  }
+  const pct = Math.round((slot.correct / slot.samples) * 100);
+  const ok = pct >= 50;
+  const offPct = offCard && offCard[baselinePctKey] != null ? offCard[baselinePctKey] : null;
+  const lastPct = lastCard && lastCard[baselinePctKey] != null ? lastCard[baselinePctKey] : null;
+  const gPct = gRefCard && gRefCard[baselinePctKey] != null ? gRefCard[baselinePctKey] : null;
+  const cmp =
+    offPct != null
+      ? ocrDiagBenchCmp(pct, offPct, { higherIsBetter: true, tolerance: 8 })
+      : { cls: 'ocr-diag-cmp--na', arrow: '' };
+  const gRefLine =
+    gPct != null ? `<span class="ocr-diag-card-row__phase-ref">ref.G ${gPct}%</span>` : '';
+  return (
+    `<td class="ocr-diag-card-row__phase ${ok ? 'ocr-diag-card-row__phase--ok' : 'ocr-diag-card-row__phase--bad'} ${cmp.cls}">` +
+    `<span class="ocr-diag-card-row__phase-pct">${pct}%</span>` +
+    (cmp.arrow ? `<span class="ocr-diag-card-row__phase-a">${cmp.arrow}</span>` : '') +
+    `<span class="ocr-diag-card-row__phase-ref">oficial ${offPct != null ? `${offPct}%` : '—'} · última ${lastPct != null ? `${lastPct}%` : '—'}</span>` +
+    gRefLine +
+    `</td>`
+  );
+}
+
+/**
+ * @param {{ startedAt?: string, samples?: object[] }|null} sessionRef
+ * @returns {string}
+ */
+function ocrDiagLiveMetricsCacheKey(sessionRef) {
+  if (!sessionRef || !sessionRef.samples) return '0';
+  const s = sessionRef.samples;
+  const n = s.length;
+  const tail = n > 0 ? s[n - 1].seq : -1;
+  return `${sessionRef.startedAt || ''}:${n}:${tail}`;
+}
+
+/**
+ * Métricas live com cache (analyzeDiagSamples + buildExtendedDiagMetrics).
+ * @param {object[]} samples
+ * @param {{ startedAt?: string, samples?: object[] }|null} sessionRef
+ * @returns {{ core: object|null, extended: object|null }}
+ */
+function getOcrDiagLiveMetricsCached(samples, sessionRef) {
+  const mod = ocrDiagAnalyzeMod;
+  if (!mod || !samples.length) return { core: null, extended: null };
+  const key = ocrDiagLiveMetricsCacheKey(sessionRef);
+  if (ocrDiagLiveMetricsCache.key === key && ocrDiagLiveMetricsCache.core) {
+    return { core: ocrDiagLiveMetricsCache.core, extended: ocrDiagLiveMetricsCache.extended };
+  }
+  const core = mod.analyzeDiagSamples(samples);
+  const extended = mod.buildExtendedDiagMetrics(samples, null, {});
+  ocrDiagLiveMetricsCache = { key, core, extended };
+  return { core, extended };
+}
+
+/**
+ * @param {boolean|null} pass
+ * @returns {string}
+ */
+function ocrDiagPhasePassMark(pass) {
+  if (pass === true) return '✓';
+  if (pass === false) return '✗';
+  return '~';
+}
+
+/**
+ * E/F/G probes só correm no export — durante coleta activa mostrar pendente (~).
+ * @param {{ samples?: object[] }|null|undefined} sessionRef
+ * @returns {boolean}
+ */
+function ocrDiagEfgDeferredDuringCollect(sessionRef) {
+  if (!ocrDiagnosticsCaptureActive) return false;
+  return countOcrDiagDeferredProbesPending(sessionRef) > 0;
+}
+
+/**
+ * @param {{ closeMeta?: string, deferredPending?: boolean }} ph
+ * @returns {string}
+ */
+function ocrDiagPhaseChipTitle(ph) {
+  return ph.deferredPending ? ph.closeMeta || T('ocr.diag.compare.efg_deferred') : ph.closeMeta || '';
+}
+
+/**
+ * @param {{ pass?: boolean|null, deferredPending?: boolean }} ph
+ * @returns {string}
+ */
+function ocrDiagPhaseChipMarkCls(ph) {
+  if (ph.pass === true) return 'ocr-diag-phase-chip--pass';
+  if (ph.pass === false) return 'ocr-diag-phase-chip--fail';
+  return 'ocr-diag-phase-chip--pending';
+}
+
+/**
+ * @param {string} verdictKey
+ * @param {object} verdict
+ * @returns {string}
+ */
+function ocrDiagVerdictText(verdictKey, verdict) {
+  const gSuffix =
+    verdict.phases && verdict.phases.find((p) => p.id === 'G')
+      ? `, G ${verdict.phases.find((p) => p.id === 'G').detail}`
+      : '';
+  if (verdictKey === 'regression_c_delta' && verdict.matchedDelta != null) {
+    const sign = verdict.matchedDelta > 0 ? '+' : '';
+    return T('ocr.diag.verdict.regression_c_delta', { delta: `${sign}${verdict.matchedDelta}` });
+  }
+  if (verdictKey === 'ties_record') return T('ocr.diag.verdict.ties_record', { g: gSuffix });
+  if (verdictKey === 'zip_candidate') return T('ocr.diag.verdict.zip_candidate', { g: gSuffix });
+  const key = `ocr.diag.verdict.${verdictKey}`;
+  const t = T(key);
+  return t !== key ? t : verdictKey;
+}
+
+/**
+ * Oculta paginação / toggle de vista normais enquanto o quadro comparativo está activo.
+ * @returns {void}
+ */
+function syncOcrDiagLiveCompareChrome() {
+  try {
+    document.documentElement.classList.toggle(
+      'ocr-diag-live-compare-active',
+      isOcrDiagLiveCompareActive()
+    );
+  } catch (_) {}
+}
+
+/**
+ * @param {Element|null|undefined} el
+ * @param {Element|null|undefined} scrollRoot
+ * @returns {boolean}
+ */
+function isOcrDiagRowVisibleInScrollRoot(el, scrollRoot) {
+  if (!el || !scrollRoot) return true;
+  const er = el.getBoundingClientRect();
+  const cr = scrollRoot.getBoundingClientRect();
+  const pad = 2;
+  return er.top >= cr.top - pad && er.bottom <= cr.bottom + pad;
+}
+
+/**
+ * Scroll manual da tabela comparativa (wheel do rato durante benchmark).
+ * @param {WheelEvent} e
+ * @param {Element|null|undefined} host
+ * @returns {boolean} true se o evento foi consumido
+ */
+function handleOcrDiagLiveCompareWheel(e, host) {
+  if (!isOcrDiagLiveCompareActive() || !host) return false;
+  e.preventDefault();
+  const tableWrap = host.querySelector('.ocr-diag-live-compare__table-wrap');
+  if (tableWrap) tableWrap.scrollTop += e.deltaY;
+  return true;
+}
+
+/**
+ * Scroll automático para a linha activa no quadro comparativo (apenas .ocr-diag-live-compare__table-wrap).
+ * @param {number|null|undefined} activePasscode
+ * @returns {void}
+ */
+function scrollOcrDiagLiveCompareActiveRow(activePasscode) {
+  const host = getEl('results-view');
+  if (!host || !host.classList.contains('ocr-diag-live-compare-host')) return;
+  const pc = activePasscode != null ? Number(activePasscode) : null;
+  if (pc == null || isNaN(pc)) return;
+  const passcodeChanged = pc !== ocrDiagLastScrolledPasscode;
+  const scrollRoot = host.querySelector('.ocr-diag-live-compare__table-wrap');
+  if (!scrollRoot) return;
+  requestAnimationFrame(() => {
+    let row = host.querySelector('tr.ocr-diag-card-row--active');
+    if (!row) {
+      row = host.querySelector(`tr.ocr-diag-card-row[data-passcode="${pc}"]`);
+    }
+    if (!row) return;
+    const visible = isOcrDiagRowVisibleInScrollRoot(row, scrollRoot);
+    if (!passcodeChanged && visible) return;
+    try {
+      const rowRect = row.getBoundingClientRect();
+      const rootRect = scrollRoot.getBoundingClientRect();
+      const rowTop = rowRect.top - rootRect.top + scrollRoot.scrollTop;
+      const rowH = rowRect.height;
+      const headH =
+        scrollRoot.querySelector('.ocr-diag-live-compare__table thead')?.offsetHeight || 0;
+      const viewH = scrollRoot.clientHeight;
+      let targetScroll = scrollRoot.scrollTop;
+      if (rowTop < scrollRoot.scrollTop + headH) {
+        targetScroll = Math.max(0, rowTop - headH);
+      } else if (rowTop + rowH > scrollRoot.scrollTop + viewH) {
+        targetScroll = rowTop + rowH - viewH;
+      } else {
+        if (passcodeChanged) ocrDiagLastScrolledPasscode = pc;
+        return;
+      }
+      if (passcodeChanged && typeof scrollRoot.scrollTo === 'function') {
+        scrollRoot.scrollTo({ top: targetScroll, behavior: 'smooth' });
+      } else {
+        scrollRoot.scrollTop = targetScroll;
+      }
+    } catch (_) {}
+    if (passcodeChanged) ocrDiagLastScrolledPasscode = pc;
+  });
+}
+
+/**
+ * @param {object[]} samples
+ * @returns {number}
+ */
+function countOcrDiagFrameStallSamples(samples) {
+  if (!samples || !samples.length) return 0;
+  let n = 0;
+  for (let i = 0; i < samples.length; i++) {
+    const ms = samples[i].frameStallMs;
+    if (typeof ms === 'number' && ms > OCR_DIAG_FRAME_STALL_MS) n++;
+  }
+  return n;
+}
+
+/**
+ * Patch leve durante export: só chips de fase E/F/G/H (sem innerHTML completo).
+ * @param {number} seq
+ * @param {Element} container
+ * @returns {void}
+ */
+function patchOcrDiagLiveComparePhasesOnly(seq, container) {
+  const host = container.querySelector('#ocr-diag-live-compare');
+  if (!host) return;
+  const sessionRef = ocrDiagnosticsSession || ocrDiagLiveCompareFrozenSession;
+  const samples = sessionRef && sessionRef.samples ? sessionRef.samples : [];
+  const progress = samples.length;
+  invalidateOcrDiagLiveMetricsCache();
+  const { core: live, extended } = getOcrDiagLiveMetricsCached(samples, sessionRef);
+  const mod = ocrDiagAnalyzeMod;
+  const official = ocrDiagOfficialBaseline;
+  const lang = getUiLang() === 'en' ? 'en' : 'pt';
+  const gRefH =
+    ocrDiagGReferenceBaseline && ocrDiagGReferenceBaseline.phaseH != null
+      ? ocrDiagGReferenceBaseline.phaseH
+      : null;
+  const isComplete =
+    progress >= OCR_DIAG_BENCH_TARGET &&
+    ocrDiagLiveComparePinned &&
+    !ocrDiagnosticsCaptureActive &&
+    !ocrDiagnosticsExportBusy;
+  const verdict =
+    live && mod
+      ? mod.computeLiveCompareVerdict(live, extended, official, {
+          targetSamples: OCR_DIAG_BENCH_TARGET,
+          lang,
+          gRefH,
+          efgDeferredCollect: ocrDiagEfgDeferredDuringCollect(sessionRef),
+          efgDeferredTooltip: T('ocr.diag.compare.efg_deferred'),
+        })
+      : null;
+  const phasesEl = host.querySelector('.ocr-diag-live-compare__phases');
+  if (phasesEl && verdict) {
+    phasesEl.innerHTML = (verdict.phases || [])
+      .map((ph) => {
+        const mark = ocrDiagPhasePassMark(ph.pass);
+        const markCls = ocrDiagPhaseChipMarkCls(ph);
+        return (
+          `<div class="ocr-diag-phase-chip ${markCls}" title="${escapeHtml(ocrDiagPhaseChipTitle(ph))}">` +
+          `<span class="ocr-diag-phase-chip__id">${ph.id}</span>` +
+          `<span class="ocr-diag-phase-chip__mark">${mark}</span>` +
+          `<span class="ocr-diag-phase-chip__v">${escapeHtml(ph.detail)}</span>` +
+          `</div>`
+        );
+      })
+      .join('');
+  }
+  const subEl = host.querySelector('.ocr-diag-live-compare__sub');
+  if (subEl) {
+    let artN = 0;
+    let pipeN = 0;
+    for (let si = 0; si < samples.length; si++) {
+      if (samples[si].sampleKind === 'art_only') artN++;
+      else if (samples[si].sampleKind === 'pipeline') pipeN++;
+    }
+    const stallN = countOcrDiagFrameStallSamples(samples);
+    const segInfo =
+      !isComplete && progress > 0 ? benchmarkSegmentInfoForSeq(Math.min(seq, progress - 1)) : null;
+    subEl.textContent =
+      (isComplete ? 'Coleta concluída · ' : '') +
+      `${progress}/${OCR_DIAG_BENCH_TARGET} amostras · arte ${artN} + pipeline ${pipeN}` +
+      (segInfo
+        ? ` · Carta actual: ${segInfo.name} ${segInfo.sampleInSeg}/${segInfo.segSamples}`
+        : '') +
+      (stallN > 0 ? ` · stalls>${OCR_DIAG_FRAME_STALL_MS}ms: ${stallN}` : '');
+  }
+  let bannerEl = host.querySelector('.ocr-diag-live-compare__done');
+  if (ocrDiagnosticsExportBusy) {
+    const bannerText =
+      ocrDiagnosticsExportPhase === 'probes' && ocrDiagnosticsExportProgressTotal > 0
+        ? T('ocr.diag.compare.export_probes', {
+            done: String(ocrDiagnosticsExportProgressDone),
+            total: String(ocrDiagnosticsExportProgressTotal),
+          })
+        : T('ocr.diag.compare.exporting');
+    if (bannerEl) {
+      bannerEl.textContent = bannerText;
+    } else {
+      const head = host.querySelector('.ocr-diag-live-compare__head');
+      if (head && head.nextElementSibling) {
+        bannerEl = document.createElement('div');
+        bannerEl.className = 'ocr-diag-live-compare__done ocr-diag-live-compare__done--export';
+        bannerEl.textContent = bannerText;
+        head.parentNode.insertBefore(bannerEl, head.nextElementSibling);
+      }
+    }
+  }
+  patchOcrDiagLiveCompareElapsedOnly();
+}
+
+/**
+ * Actualização incremental do quadro comparativo (sem container.innerHTML completo).
+ * @param {number} seq
+ * @param {Element} container
+ * @returns {void}
+ */
+function patchOcrDiagLiveCompareUi(seq, container) {
+  const host = container.querySelector('#ocr-diag-live-compare');
+  if (!host) {
+    syncOcrDiagLiveCompareUi(seq, { mode: 'full' });
+    return;
+  }
+  const sessionRef = ocrDiagnosticsSession || ocrDiagLiveCompareFrozenSession;
+  const samples = sessionRef && sessionRef.samples ? sessionRef.samples : [];
+  const progress = samples.length;
+  invalidateOcrDiagLiveMetricsCache();
+  const { core: live, extended } = getOcrDiagLiveMetricsCached(samples, sessionRef);
+  const mod = ocrDiagAnalyzeMod;
+  const official = ocrDiagOfficialBaseline;
+  const last = ocrDiagLastBaseline;
+  const gRef = ocrDiagCompareWithGRef ? ocrDiagGReferenceBaseline : null;
+  const segInfo = progress > 0 ? benchmarkSegmentInfoForSeq(Math.min(seq, progress - 1)) : null;
+  let artN = 0;
+  let pipeN = 0;
+  for (let si = 0; si < samples.length; si++) {
+    if (samples[si].sampleKind === 'art_only') artN++;
+    else if (samples[si].sampleKind === 'pipeline') pipeN++;
+  }
+  const stallN = countOcrDiagFrameStallSamples(samples);
+  const startedAtMs =
+    sessionRef && sessionRef.startedAt ? Date.parse(sessionRef.startedAt) : Date.now();
+  const elapsedSec = Math.max(0, Math.round((Date.now() - startedAtMs) / 1000));
+  const isCompletePatch =
+    progress >= OCR_DIAG_BENCH_TARGET &&
+    ocrDiagLiveComparePinned &&
+    !ocrDiagnosticsCaptureActive &&
+    !ocrDiagnosticsExportBusy;
+  const subEl = host.querySelector('.ocr-diag-live-compare__sub');
+  if (subEl) {
+    subEl.textContent =
+      (isCompletePatch ? 'Coleta concluída · ' : '') +
+      `${progress}/${OCR_DIAG_BENCH_TARGET} amostras · arte ${artN} + pipeline ${pipeN}` +
+      (!isCompletePatch && segInfo
+        ? ` · Carta actual: ${segInfo.name} ${segInfo.sampleInSeg}/${segInfo.segSamples}`
+        : '') +
+      (stallN > 0 ? ` · stalls>${OCR_DIAG_FRAME_STALL_MS}ms: ${stallN}` : '');
+  }
+  patchOcrDiagLiveCompareElapsedOnly();
+  const kpiMatched = ocrDiagCmpField(live, official, progress, 'artMatched', { higherIsBetter: true });
+  const kpiNear = ocrDiagCmpField(live, official, progress, 'nearMiss', { higherIsBetter: false, tolerance: 0 });
+  const kpiWarp = live
+    ? ocrDiagBenchCmp(live.warpActive, progress > 0 ? progress : null, { higherIsBetter: true, tolerance: 0 })
+    : { cls: 'ocr-diag-cmp--na', arrow: '' };
+  const kpiTop0 = ocrDiagCmpField(live, official, progress, 'top0DistLe9', { higherIsBetter: true });
+  const artEngines = extended && extended.artEngines ? extended.artEngines : {};
+  const artEngineParts = Object.entries(artEngines)
+    .map(([k, v]) => `${k} ${v}`)
+    .join(' · ');
+  const rarityMismatchN = extended && extended.rarityMismatchCount != null ? extended.rarityMismatchCount : 0;
+  const phaseJCards =
+    extended && mod ? mod.countPhaseJCardsPass(extended.passcodeBenchmark) : null;
+  const passcodeCorrectN =
+    extended && extended.passcodeBenchmark
+      ? Object.values(extended.passcodeBenchmark).reduce((s, c) => s + (c.correctCands || 0), 0)
+      : 0;
+  const offLabel = official ? official.label || 'Referência oficial' : 'Referência oficial';
+  const kpisEl = host.querySelector('.ocr-diag-live-compare__kpis');
+  if (kpisEl) {
+    kpisEl.innerHTML =
+      ocrDiagKpiChipHtml(
+        'Correspondências por arte',
+        live ? String(live.artMatched) : '0',
+        offLabel,
+        kpiMatched.ref,
+        kpiMatched
+      ) +
+      ocrDiagKpiChipHtml(
+        'Quase-acertos (distância ≤16)',
+        live ? String(live.nearMiss) : '0',
+        offLabel,
+        kpiNear.ref,
+        kpiNear
+      ) +
+      ocrDiagKpiChipHtml(
+        'Alinhamento warp',
+        live ? `${live.warpActive}/${progress || 0}` : '0/0',
+        'Objetivo proporcional',
+        progress > 0 ? String(progress) : '—',
+        kpiWarp
+      ) +
+      ocrDiagKpiChipHtml(
+        'Top 0 com distância ≤9',
+        live ? String(live.top0DistLe9) : '0',
+        offLabel,
+        kpiTop0.ref,
+        kpiTop0
+      ) +
+      ocrDiagKpiChipHtml(
+        'Pipeline / art_only',
+        `${pipeN}/${artN}`,
+        'Meta',
+        `12/63`,
+        { cls: 'ocr-diag-cmp--na', arrow: '' }
+      ) +
+      ocrDiagKpiChipHtml(
+        'Frame stalls',
+        String(stallN),
+        `>${OCR_DIAG_FRAME_STALL_MS}ms`,
+        progress > 0 ? String(progress) : '—',
+        {
+          cls: stallN > 0 ? 'ocr-diag-cmp--down' : 'ocr-diag-cmp--eq',
+          arrow: stallN > 0 ? '▼' : '',
+        }
+      ) +
+      ocrDiagKpiChipHtml(
+        'matchSource (arte)',
+        artEngineParts || '—',
+        'art/name',
+        extended && extended.artEngines && extended.artEngines.name ? String(extended.artEngines.name) : '—',
+        { cls: 'ocr-diag-cmp--na', arrow: '' }
+      ) +
+      ocrDiagKpiChipHtml(
+        'Raridade UI≠det.',
+        String(rarityMismatchN),
+        'Divergências',
+        '—',
+        { cls: rarityMismatchN > 0 ? 'ocr-diag-cmp--down' : 'ocr-diag-cmp--eq', arrow: rarityMismatchN > 0 ? '▼' : '' }
+      ) +
+      ocrDiagKpiChipHtml(
+        'Passcode (Fase J)',
+        phaseJCards != null ? `${phaseJCards}/6` : '—',
+        'Certos',
+        String(passcodeCorrectN),
+        { cls: 'ocr-diag-cmp--na', arrow: '' }
+      );
+  }
+  const lang = getUiLang() === 'en' ? 'en' : 'pt';
+  const gRefH =
+    gRef && gRef.phaseH != null
+      ? gRef.phaseH
+      : ocrDiagGReferenceBaseline && ocrDiagGReferenceBaseline.phaseH != null
+        ? ocrDiagGReferenceBaseline.phaseH
+        : null;
+  const verdict =
+    live && mod
+      ? mod.computeLiveCompareVerdict(live, extended, official, {
+          targetSamples: OCR_DIAG_BENCH_TARGET,
+          lang,
+          gRefH,
+          efgDeferredCollect: ocrDiagEfgDeferredDuringCollect(sessionRef),
+          efgDeferredTooltip: T('ocr.diag.compare.efg_deferred'),
+        })
+      : null;
+  const phasesEl = host.querySelector('.ocr-diag-live-compare__phases');
+  if (phasesEl && verdict) {
+    phasesEl.innerHTML = (verdict.phases || [])
+      .map((ph) => {
+        const mark = ocrDiagPhasePassMark(ph.pass);
+        const markCls = ocrDiagPhaseChipMarkCls(ph);
+        return (
+          `<div class="ocr-diag-phase-chip ${markCls}" title="${escapeHtml(ocrDiagPhaseChipTitle(ph))}">` +
+          `<span class="ocr-diag-phase-chip__id">${ph.id}</span>` +
+          `<span class="ocr-diag-phase-chip__mark">${mark}</span>` +
+          `<span class="ocr-diag-phase-chip__v">${escapeHtml(ph.detail)}</span>` +
+          `</div>`
+        );
+      })
+      .join('');
+  }
+  const patchPc =
+    segInfo && segInfo.passcode != null
+      ? Number(segInfo.passcode)
+      : progress > 0
+        ? expectedBenchmarkPasscodeForSeq(seq >= 0 ? seq : progress - 1)
+        : null;
+  if (patchPc != null && live) {
+    const rows = host.querySelectorAll('tr.ocr-diag-card-row');
+    for (let ri = 0; ri < rows.length; ri++) {
+      const row = rows[ri];
+      const pc = Number(row.getAttribute('data-passcode'));
+      row.classList.toggle('ocr-diag-card-row--active', pc === patchPc);
+    }
+    const row = host.querySelector(`tr.ocr-diag-card-row[data-passcode="${patchPc}"]`);
+    if (row) {
+      const ci = SCANNER_BENCHMARK_PASSCODES.indexOf(patchPc);
+      if (ci >= 0) {
+        const pc = patchPc;
+        const name = SCANNER_BENCHMARK_CARD_LABELS[pc] || String(pc);
+        const liveCard = live.benchmark && live.benchmark.perCard ? live.benchmark.perCard[pc] : null;
+        const liveSamples =
+          live.phaseD && live.phaseD[pc] ? live.phaseD[pc].samples : liveCard ? 0 : 0;
+        const segTotal = liveCard && liveCard.segSamples ? liveCard.segSamples : 0;
+        const matched = liveCard ? liveCard.matched : 0;
+        const top9 = liveCard ? liveCard.top0Le9 : 0;
+        const minD = liveCard && liveCard.minDist !== 99 ? liveCard.minDist : null;
+        const offCard = official && official.perCard ? official.perCard[String(pc)] || official.perCard[pc] : null;
+        const lastCard = last && last.perCard ? last.perCard[String(pc)] || last.perCard[pc] : null;
+        const gRefCard = gRef && gRef.perCard ? gRef.perCard[String(pc)] || gRef.perCard[pc] : null;
+        const offMatchedExp =
+          offCard && liveSamples > 0 && offCard.matched != null
+            ? Math.round((offCard.matched * liveSamples) / (offCard.segSamples || segTotal || 1))
+            : null;
+        const mCmp = ocrDiagBenchCmp(matched, offMatchedExp, { higherIsBetter: true, tolerance: 0 });
+        const offMatchedDelta =
+          offCard && offCard.matched != null && liveSamples >= segTotal && segTotal > 0
+            ? matched - offCard.matched
+            : null;
+        const lastMatchedDelta =
+          lastCard && lastCard.matched != null && liveSamples >= segTotal && segTotal > 0
+            ? matched - lastCard.matched
+            : null;
+        const offTop9 = offCard && offCard.top0Le9 != null ? offCard.top0Le9 : null;
+        const top9Cmp =
+          offTop9 != null && liveSamples >= segTotal && segTotal > 0
+            ? ocrDiagBenchCmp(top9, offTop9, { higherIsBetter: true, tolerance: 0 })
+            : { cls: 'ocr-diag-cmp--na', arrow: '' };
+        const isActive = segInfo && segInfo.passcode === pc;
+        const pending = liveSamples === 0;
+        const paradox = mod && mod.isPhaseGParadox(live, pc);
+        const segMatchedLow =
+          offCard &&
+          offCard.matched != null &&
+          liveSamples >= segTotal &&
+          segTotal > 0 &&
+          matched < Math.round(offCard.matched * 0.5);
+        const minStr = minD != null ? String(minD) : '—';
+        const offMin = offCard && offCard.minDist != null ? String(offCard.minDist) : '—';
+        const lastMin = lastCard && lastCard.minDist != null ? String(lastCard.minDist) : '—';
+        const levelExp = mod ? mod.formatBenchLevelExpected(pc) : '—';
+        const gSlot = live.phaseG && live.phaseG[pc];
+        const gPct =
+          gSlot && gSlot.samples ? Math.round((gSlot.correct / gSlot.samples) * 100) : null;
+        const deltaOffStr =
+          offMatchedDelta != null
+            ? `<span class="ocr-diag-card-row__delta ${offMatchedDelta < 0 ? 'ocr-diag-card-row__delta--down' : offMatchedDelta > 0 ? 'ocr-diag-card-row__delta--up' : ''}">${offMatchedDelta > 0 ? '+' : ''}${offMatchedDelta}</span>`
+            : '—';
+        const deltaLastStr =
+          lastMatchedDelta != null
+            ? `<span class="ocr-diag-card-row__delta">${lastMatchedDelta > 0 ? '+' : ''}${lastMatchedDelta}</span>`
+            : '—';
+        row.className = `ocr-diag-card-row${isActive ? ' ocr-diag-card-row--active' : ''}${pending ? ' ocr-diag-card-row--pending' : ''}${segMatchedLow ? ' ocr-diag-card-row--regressed' : ''}`;
+        row.innerHTML =
+          `<td class="ocr-diag-card-row__name">${escapeHtml(name)}</td>` +
+          `<td class="ocr-diag-card-row__n">${liveSamples}/${segTotal || '—'}</td>` +
+          `<td class="ocr-diag-card-row__m ${mCmp.cls}">${matched}${mCmp.arrow ? ` ${mCmp.arrow}` : ''}</td>` +
+          `<td class="ocr-diag-card-row__delta-cell">${deltaOffStr}</td>` +
+          `<td class="ocr-diag-card-row__delta-cell">${deltaLastStr}</td>` +
+          `<td class="ocr-diag-card-row__ref">${offCard && offCard.matched != null ? offCard.matched : '—'}</td>` +
+          `<td class="ocr-diag-card-row__ref">${lastCard && lastCard.matched != null ? lastCard.matched : '—'}</td>` +
+          `<td class="ocr-diag-card-row__t ${top9Cmp.cls}">${top9}${top9Cmp.arrow ? ` ${top9Cmp.arrow}` : ''}</td>` +
+          `<td class="ocr-diag-card-row__d">${minStr}<span class="ocr-diag-card-row__hint">oficial ${offMin} · última ${lastMin}</span></td>` +
+          ocrDiagPhaseCardCellHtml(live, 'phaseD', 'phaseD', pc, offCard, lastCard, gRefCard) +
+          ocrDiagPhaseCardCellHtml(live, 'phaseE', 'phaseE', pc, offCard, lastCard, gRefCard) +
+          ocrDiagPhaseCardCellHtml(live, 'phaseF', 'phaseF', pc, offCard, lastCard, gRefCard) +
+          `<td class="ocr-diag-card-row__phase ${gPct != null && gPct >= 50 ? 'ocr-diag-card-row__phase--ok' : gPct != null ? 'ocr-diag-card-row__phase--bad' : 'ocr-diag-card-row__phase--na'}">` +
+          (gPct != null ? `<span class="ocr-diag-card-row__phase-pct">${gPct}%</span>` : '—') +
+          `<span class="ocr-diag-card-row__phase-ref">${escapeHtml(levelExp)}</span>` +
+          (paradox
+            ? `<span class="ocr-diag-card-row__paradox" title="${escapeHtml(T('ocr.diag.compare.paradox'))}">⚠</span>`
+            : '') +
+          (gRefCard && gRefCard.phaseG != null
+            ? `<span class="ocr-diag-card-row__phase-ref">ref.G ${gRefCard.phaseG}%</span>`
+            : '') +
+          `</td>`;
+      }
+    }
+  }
+  const infoEl = getEl('result-info');
+  const title = `Coleta ${progress}/${OCR_DIAG_BENCH_TARGET}`;
+  if (infoEl) infoEl.textContent = title;
+  const activePc = segInfo && segInfo.passcode != null ? Number(segInfo.passcode) : null;
+  scrollOcrDiagLiveCompareActiveRow(activePc);
+}
+
+/**
+ * Painel comparativo na coluna de sugestões durante coleta benchmark.
+ * @param {number} seq
+ * @param {{ mode?: 'full'|'incremental'|'time-only', phasesOnly?: boolean, complete?: boolean }} [opts]
+ * @returns {void}
+ */
+function syncOcrDiagLiveCompareUi(seq, opts) {
+  if (!isOcrDiagLiveCompareActive()) return;
+  syncOcrDiagLiveCompareChrome();
+  if (shouldOcrDiagLightCaptureUi()) return;
+  const container = getEl('results-view');
+  if (!container) return;
+  const mode =
+    (opts && opts.mode) ||
+    (ocrDiagnosticsCaptureActive && container.querySelector('#ocr-diag-live-compare')
+      ? 'incremental'
+      : 'full');
+  if (mode === 'time-only') {
+    patchOcrDiagLiveCompareElapsedOnly();
+    return;
+  }
+  if (mode === 'incremental' && opts && opts.phasesOnly && container.querySelector('#ocr-diag-live-compare')) {
+    patchOcrDiagLiveComparePhasesOnly(seq, container);
+    return;
+  }
+  if (mode === 'incremental' && container.querySelector('#ocr-diag-live-compare')) {
+    patchOcrDiagLiveCompareUi(seq, container);
+    return;
+  }
+  const sessionRef = ocrDiagnosticsSession || ocrDiagLiveCompareFrozenSession;
+  const samples = sessionRef && sessionRef.samples ? sessionRef.samples : [];
+  const progress = samples.length;
+  const { core: live, extended } = getOcrDiagLiveMetricsCached(samples, sessionRef);
+  const mod = ocrDiagAnalyzeMod;
+  const official = ocrDiagOfficialBaseline;
+  const last = ocrDiagLastBaseline;
+  const gRef = ocrDiagCompareWithGRef ? ocrDiagGReferenceBaseline : null;
+  const segInfo =
+    progress > 0 && !(opts && opts.complete)
+      ? benchmarkSegmentInfoForSeq(Math.min(seq >= 0 ? seq : progress - 1, progress - 1))
+      : null;
+  let artN = 0;
+  let pipeN = 0;
+  for (let si = 0; si < samples.length; si++) {
+    if (samples[si].sampleKind === 'art_only') artN++;
+    else if (samples[si].sampleKind === 'pipeline') pipeN++;
+  }
+  const isComplete =
+    (opts && opts.complete === true) ||
+    (progress >= OCR_DIAG_BENCH_TARGET &&
+      ocrDiagLiveComparePinned &&
+      !ocrDiagnosticsCaptureActive &&
+      !ocrDiagnosticsExportBusy);
+  const isExporting = ocrDiagnosticsExportBusy;
+  const startedAtMs =
+    sessionRef && sessionRef.startedAt ? Date.parse(sessionRef.startedAt) : Date.now();
+  const elapsedSec = Math.max(0, Math.round((Date.now() - startedAtMs) / 1000));
+  const lang = getUiLang() === 'en' ? 'en' : 'pt';
+  const gRefH =
+    gRef && gRef.phaseH != null ? gRef.phaseH : ocrDiagGReferenceBaseline && ocrDiagGReferenceBaseline.phaseH != null
+      ? ocrDiagGReferenceBaseline.phaseH
+      : null;
+  const verdict =
+    live && mod
+      ? mod.computeLiveCompareVerdict(live, extended, official, {
+          targetSamples: OCR_DIAG_BENCH_TARGET,
+          lang,
+          gRefH,
+          efgDeferredCollect: ocrDiagEfgDeferredDuringCollect(sessionRef),
+          efgDeferredTooltip: T('ocr.diag.compare.efg_deferred'),
+        })
+      : null;
+
+  try {
+    const viewMode = normalizeViewMode4(currentView, 'list');
+    container.className = `${buildMainResultsViewClassName(viewMode)} ocr-diag-live-compare-host`;
+  } catch (_) {
+    container.className = 'results-view list-mode ocr-diag-live-compare-host';
+  }
+
+  const offLabel = official ? official.label || 'Referência oficial' : 'Referência oficial';
+  const lastLabel = last ? last.label || 'Última coleta' : 'Última coleta';
+  const lastStamp = last && last.stamp ? ` (${last.stamp})` : '';
+
+  const kpiMatched = ocrDiagCmpField(live, official, progress, 'artMatched', { higherIsBetter: true });
+  const kpiNear = ocrDiagCmpField(live, official, progress, 'nearMiss', { higherIsBetter: false, tolerance: 0 });
+  const kpiWarp = live
+    ? ocrDiagBenchCmp(live.warpActive, progress > 0 ? progress : null, { higherIsBetter: true, tolerance: 0 })
+    : { cls: 'ocr-diag-cmp--na', arrow: '' };
+  const kpiTop0 = ocrDiagCmpField(live, official, progress, 'top0DistLe9', { higherIsBetter: true });
+
+  const artEngines = extended && extended.artEngines ? extended.artEngines : {};
+  const artEngineParts = Object.entries(artEngines)
+    .map(([k, v]) => `${k} ${v}`)
+    .join(' · ');
+  const rarityMismatchN = extended && extended.rarityMismatchCount != null ? extended.rarityMismatchCount : 0;
+  const phaseJCards =
+    extended && mod ? mod.countPhaseJCardsPass(extended.passcodeBenchmark) : null;
+  const passcodeCorrectN =
+    extended && extended.passcodeBenchmark
+      ? Object.values(extended.passcodeBenchmark).reduce((s, c) => s + (c.correctCands || 0), 0)
+      : 0;
+  const stallN = countOcrDiagFrameStallSamples(samples);
+
+  const phaseRows = (verdict ? verdict.phases : []).map((ph) => {
+    const mark = ocrDiagPhasePassMark(ph.pass);
+    const markCls = ocrDiagPhaseChipMarkCls(ph);
+    return (
+      `<div class="ocr-diag-phase-chip ${markCls}" title="${escapeHtml(ocrDiagPhaseChipTitle(ph))}">` +
+      `<span class="ocr-diag-phase-chip__id">${ph.id}</span>` +
+      `<span class="ocr-diag-phase-chip__mark">${mark}</span>` +
+      `<span class="ocr-diag-phase-chip__v">${escapeHtml(ph.detail)}</span>` +
+      `</div>`
+    );
+  });
+
+  let matchedDeltaStr = '';
+  if (verdict && verdict.isComplete && verdict.matchedDelta != null) {
+    const sign = verdict.matchedDelta > 0 ? '+' : '';
+    matchedDeltaStr = ` (${sign}${verdict.matchedDelta} vs oficial ${verdict.offMatched})`;
+  } else if (verdict && !verdict.isComplete && verdict.projectedMatched != null) {
+    matchedDeltaStr = ` · ${T('ocr.diag.compare.projected', { n: String(verdict.projectedMatched) })}`;
+  }
+  let nearDeltaStr = '';
+  if (verdict && verdict.isComplete && verdict.nearDelta != null) {
+    const sign = verdict.nearDelta > 0 ? '+' : '';
+    nearDeltaStr = ` (${sign}${verdict.nearDelta})`;
+  }
+
+  const verdictHtml = verdict
+    ? `<div class="ocr-diag-live-compare__verdict ${verdict.verdictCls}">` +
+      `<div class="ocr-diag-live-compare__verdict-title">${T('ocr.diag.compare.verdict_title')}</div>` +
+      `<div class="ocr-diag-live-compare__verdict-main">${escapeHtml(ocrDiagVerdictText(verdict.verdictKey, verdict))}</div>` +
+      `<div class="ocr-diag-live-compare__verdict-kpis">` +
+      `<span>${escapeHtml(
+        T('ocr.diag.compare.matched_line', {
+          matched: String(verdict.matched),
+          target: String(OCR_DIAG_BENCH_TARGET),
+          delta: matchedDeltaStr,
+          off: verdict.offMatched != null ? String(verdict.offMatched) : '—',
+        })
+      )}</span>` +
+      `<span>${escapeHtml(
+        T('ocr.diag.compare.near_line', {
+          near: live ? String(live.nearMiss) : '0',
+          delta: nearDeltaStr,
+        })
+      )}</span>` +
+      `</div>` +
+      (verdict.worstCard
+        ? `<div class="ocr-diag-live-compare__verdict-worst">${escapeHtml(
+            T('ocr.diag.compare.worst_card', {
+              detail: `${verdict.worstCard.name} ${verdict.worstCard.matched}/${verdict.worstCard.segSamples} vs ${verdict.worstCard.offMatched}/${verdict.worstCard.offSegSamples || verdict.worstCard.segSamples}`,
+            })
+          )}</div>`
+        : '') +
+      `</div>`
+    : '';
+
+  const cardRows = [];
+  for (let ci = 0; ci < SCANNER_BENCHMARK_PASSCODES.length; ci++) {
+    const pc = SCANNER_BENCHMARK_PASSCODES[ci];
+    const name = SCANNER_BENCHMARK_CARD_LABELS[pc] || String(pc);
+    const liveCard = live && live.benchmark && live.benchmark.perCard ? live.benchmark.perCard[pc] : null;
+    const liveSamples =
+      live && live.phaseD && live.phaseD[pc] ? live.phaseD[pc].samples : liveCard ? 0 : 0;
+    const segTotal = liveCard && liveCard.segSamples ? liveCard.segSamples : 0;
+    const matched = liveCard ? liveCard.matched : 0;
+    const top9 = liveCard ? liveCard.top0Le9 : 0;
+    const minD = liveCard && liveCard.minDist !== 99 ? liveCard.minDist : null;
+    const offCard = official && official.perCard ? official.perCard[String(pc)] || official.perCard[pc] : null;
+    const lastCard = last && last.perCard ? last.perCard[String(pc)] || last.perCard[pc] : null;
+    const gRefCard = gRef && gRef.perCard ? gRef.perCard[String(pc)] || gRef.perCard[pc] : null;
+    const offMatchedExp =
+      offCard && liveSamples > 0 && offCard.matched != null
+        ? Math.round((offCard.matched * liveSamples) / (offCard.segSamples || segTotal || 1))
+        : null;
+    const mCmp = ocrDiagBenchCmp(matched, offMatchedExp, { higherIsBetter: true, tolerance: 0 });
+    const offMatchedDelta =
+      offCard && offCard.matched != null && liveSamples >= segTotal && segTotal > 0
+        ? matched - offCard.matched
+        : null;
+    const lastMatchedDelta =
+      lastCard && lastCard.matched != null && liveSamples >= segTotal && segTotal > 0
+        ? matched - lastCard.matched
+        : null;
+    const offTop9 = offCard && offCard.top0Le9 != null ? offCard.top0Le9 : null;
+    const top9Cmp =
+      offTop9 != null && liveSamples >= segTotal && segTotal > 0
+        ? ocrDiagBenchCmp(top9, offTop9, { higherIsBetter: true, tolerance: 0 })
+        : { cls: 'ocr-diag-cmp--na', arrow: '' };
+    const isActive = segInfo && segInfo.passcode === pc;
+    const pending = liveSamples === 0;
+    const paradox = live && mod && mod.isPhaseGParadox(live, pc);
+    const segMatchedLow =
+      offCard &&
+      offCard.matched != null &&
+      liveSamples >= segTotal &&
+      segTotal > 0 &&
+      matched < Math.round(offCard.matched * 0.5);
+    const minStr = minD != null ? String(minD) : '—';
+    const offMin = offCard && offCard.minDist != null ? String(offCard.minDist) : '—';
+    const lastMin = lastCard && lastCard.minDist != null ? String(lastCard.minDist) : '—';
+    const levelExp = mod ? mod.formatBenchLevelExpected(pc) : '—';
+    const gSlot = live && live.phaseG && live.phaseG[pc];
+    const gPct =
+      gSlot && gSlot.samples ? Math.round((gSlot.correct / gSlot.samples) * 100) : null;
+    const deltaOffStr =
+      offMatchedDelta != null
+        ? `<span class="ocr-diag-card-row__delta ${offMatchedDelta < 0 ? 'ocr-diag-card-row__delta--down' : offMatchedDelta > 0 ? 'ocr-diag-card-row__delta--up' : ''}">${offMatchedDelta > 0 ? '+' : ''}${offMatchedDelta}</span>`
+        : '—';
+    const deltaLastStr =
+      lastMatchedDelta != null
+        ? `<span class="ocr-diag-card-row__delta">${lastMatchedDelta > 0 ? '+' : ''}${lastMatchedDelta}</span>`
+        : '—';
+    cardRows.push(
+      `<tr class="ocr-diag-card-row${isActive ? ' ocr-diag-card-row--active' : ''}${pending ? ' ocr-diag-card-row--pending' : ''}${segMatchedLow ? ' ocr-diag-card-row--regressed' : ''}" data-passcode="${pc}">` +
+      `<td class="ocr-diag-card-row__name">${escapeHtml(name)}</td>` +
+      `<td class="ocr-diag-card-row__n">${liveSamples}/${segTotal || '—'}</td>` +
+      `<td class="ocr-diag-card-row__m ${mCmp.cls}">${matched}${mCmp.arrow ? ` ${mCmp.arrow}` : ''}</td>` +
+      `<td class="ocr-diag-card-row__delta-cell">${deltaOffStr}</td>` +
+      `<td class="ocr-diag-card-row__delta-cell">${deltaLastStr}</td>` +
+      `<td class="ocr-diag-card-row__ref">${offCard && offCard.matched != null ? offCard.matched : '—'}</td>` +
+      `<td class="ocr-diag-card-row__ref">${lastCard && lastCard.matched != null ? lastCard.matched : '—'}</td>` +
+      `<td class="ocr-diag-card-row__t ${top9Cmp.cls}">${top9}${top9Cmp.arrow ? ` ${top9Cmp.arrow}` : ''}</td>` +
+      `<td class="ocr-diag-card-row__d">${minStr}<span class="ocr-diag-card-row__hint">oficial ${offMin} · última ${lastMin}</span></td>` +
+      ocrDiagPhaseCardCellHtml(live, 'phaseD', 'phaseD', pc, offCard, lastCard, gRefCard) +
+      ocrDiagPhaseCardCellHtml(live, 'phaseE', 'phaseE', pc, offCard, lastCard, gRefCard) +
+      ocrDiagPhaseCardCellHtml(live, 'phaseF', 'phaseF', pc, offCard, lastCard, gRefCard) +
+      `<td class="ocr-diag-card-row__phase ${gPct != null && gPct >= 50 ? 'ocr-diag-card-row__phase--ok' : gPct != null ? 'ocr-diag-card-row__phase--bad' : 'ocr-diag-card-row__phase--na'}">` +
+      (gPct != null ? `<span class="ocr-diag-card-row__phase-pct">${gPct}%</span>` : '—') +
+      `<span class="ocr-diag-card-row__phase-ref">${escapeHtml(levelExp)}</span>` +
+      (paradox
+        ? `<span class="ocr-diag-card-row__paradox" title="${escapeHtml(T('ocr.diag.compare.paradox'))}">⚠</span>`
+        : '') +
+      (gRefCard && gRefCard.phaseG != null
+        ? `<span class="ocr-diag-card-row__phase-ref">ref.G ${gRefCard.phaseG}%</span>`
+        : '') +
+      `</td>` +
+      `</tr>`
+    );
+  }
+
+  const wrongWarn =
+    live && live.matchedWrong > 0
+      ? `<div class="ocr-diag-live-compare__warn">⚠ ${live.matchedWrong} correspondência${live.matchedWrong !== 1 ? 's' : ''} fora do benchmark</div>`
+      : '';
+
+  const segAnomalies =
+    live && mod && official ? mod.buildSegmentAnomalyWarnings(live, official) : [];
+  const segWarnHtml = segAnomalies
+    .map((w) => {
+      const isHard = w.kind === 'phaseD' && w.pct < 50;
+      const detail =
+        w.kind === 'phaseDHighMatched'
+          ? `D ${w.pct}% mas matched >80% oficial (seq ${w.seqRange}) — tipo/chroma`
+          : w.kind === 'phaseD'
+            ? `D ${w.pct}% (seq ${w.seqRange}) — verifique carta na mira (warp/tipo)`
+            : `matched ${w.pct}% do oficial (seq ${w.seqRange})`;
+      const cls = isHard
+        ? 'ocr-diag-live-compare__warn ocr-diag-live-compare__warn--hard'
+        : 'ocr-diag-live-compare__warn ocr-diag-live-compare__warn--seg';
+      const prefix = isHard ? '⛔ HARD' : '⚠';
+      return `<div class="${cls}">${prefix} ${escapeHtml(w.name)}: ${escapeHtml(detail)}</div>`;
+    })
+    .join('');
+
+  const hardPauseHtml =
+    ocrDiagSegmentHardPaused && ocrDiagSegmentHardPauseInfo
+      ? `<div class="ocr-diag-live-compare__warn ocr-diag-live-compare__warn--hard">⛔ ${escapeHtml(
+          T('ocr.diag.hard_pause', {
+            name: ocrDiagSegmentHardPauseInfo.name,
+            dPct: String(ocrDiagSegmentHardPauseInfo.dPct),
+            seqRange: ocrDiagSegmentHardPauseInfo.seqRange,
+          })
+        )}</div>`
+      : '';
+
+  const preflightHtml =
+    ocrDiagPreflightState && ocrDiagnosticsCaptureActive && progress === 0
+      ? `<div class="ocr-diag-live-compare__preflight${ocrDiagPreflightState.allOk ? ' ocr-diag-live-compare__preflight--ok' : ' ocr-diag-live-compare__preflight--bad'}">` +
+        `<div class="ocr-diag-live-compare__preflight-title">Pre-flight</div>` +
+        ocrDiagPreflightState.checks
+          .map(
+            (c) =>
+              `<div class="ocr-diag-live-compare__preflight-row${c.ok ? ' ocr-diag-live-compare__preflight-row--ok' : ' ocr-diag-live-compare__preflight-row--bad'}">${c.ok ? '✓' : '✗'} ${escapeHtml(c.label)}</div>`
+          )
+          .join('') +
+        `</div>`
+      : '';
+
+  const timeLine = isComplete
+    ? `Duração total: ${formatOcrDiagDuration(elapsedSec)}`
+    : `Duração: ${formatOcrDiagDuration(elapsedSec)}`;
+
+  const statusBanner = isComplete
+    ? `<div class="ocr-diag-live-compare__done">${T('ocr.diag.compare.done')}</div>`
+    : isExporting
+      ? `<div class="ocr-diag-live-compare__done ocr-diag-live-compare__done--export">${
+          ocrDiagnosticsExportPhase === 'probes' && ocrDiagnosticsExportProgressTotal > 0
+            ? escapeHtml(
+                T('ocr.diag.compare.export_probes', {
+                  done: String(ocrDiagnosticsExportProgressDone),
+                  total: String(ocrDiagnosticsExportProgressTotal),
+                })
+              )
+            : T('ocr.diag.compare.exporting')
+        }</div>`
+      : '';
+
+  const exportStampLine =
+    ocrDiagLiveCompareExportedStamp && (isComplete || isExporting)
+      ? `<div class="ocr-diag-live-compare__stamp">${escapeHtml(
+          T('ocr.diag.compare.export_stamp', { stamp: String(ocrDiagLiveCompareExportedStamp) })
+        )}</div>`
+      : '';
+
+  const gRefToggle =
+    ocrDiagGReferenceBaseline
+      ? `<label class="ocr-diag-live-compare__gref" title="${escapeHtml(T('ocr.diag.compare.g_ref_toggle'))}">` +
+        `<input type="checkbox" id="ocr-diag-compare-g-ref" ${ocrDiagCompareWithGRef ? 'checked' : ''} />` +
+        `<span class="ocr-diag-live-compare__gref-label">G-ref</span>` +
+        `</label>`
+      : '';
+
+  const showPostActions =
+    (ocrDiagLiveComparePinned || isComplete || isExporting) && !ocrDiagnosticsCaptureActive;
+  const actionBtns = showPostActions
+      ? `<div class="ocr-diag-live-compare__actions">` +
+        `<button type="button" class="ocr-diag-live-compare__copy" id="btn-ocr-diag-compare-copy">${T('ocr.diag.compare.copy_report')}</button>` +
+        `<button type="button" class="ocr-diag-live-compare__close" id="btn-ocr-diag-compare-close">${T('ocr.diag.compare.close')}</button>` +
+        `</div>`
+      : '';
+
+  container.innerHTML =
+    `<div class="ocr-diag-live-compare" id="ocr-diag-live-compare" role="region" aria-label="${escapeHtml(T('ocr.diag.compare.title'))}">` +
+    `<div class="ocr-diag-live-compare__head">` +
+    `<div class="ocr-diag-live-compare__title">📊 ${T('ocr.diag.compare.title')}</div>` +
+    `<div class="ocr-diag-live-compare__sub">` +
+    `${isComplete ? 'Coleta concluída · ' : ''}${progress}/${OCR_DIAG_BENCH_TARGET} amostras · arte ${artN} + pipeline ${pipeN}` +
+    (!isComplete && segInfo
+      ? ` · Carta atual: ${escapeHtml(segInfo.name)} ${segInfo.sampleInSeg}/${segInfo.segSamples}`
+      : '') +
+    (stallN > 0 ? ` · stalls>${OCR_DIAG_FRAME_STALL_MS}ms: ${stallN}` : '') +
+    `</div>` +
+    `<div class="ocr-diag-live-compare__time">${escapeHtml(timeLine)}</div>` +
+    exportStampLine +
+    `</div>` +
+    statusBanner +
+    preflightHtml +
+    verdictHtml +
+    `<div class="ocr-diag-live-compare__phases">${phaseRows.join('')}</div>` +
+    `<div class="ocr-diag-live-compare__kpis">` +
+    ocrDiagKpiChipHtml(
+      'Correspondências por arte',
+      live ? String(live.artMatched) : '0',
+      offLabel,
+      kpiMatched.ref,
+      kpiMatched
+    ) +
+    ocrDiagKpiChipHtml(
+      'Quase-acertos (distância ≤16)',
+      live ? String(live.nearMiss) : '0',
+      offLabel,
+      kpiNear.ref,
+      kpiNear
+    ) +
+    ocrDiagKpiChipHtml(
+      'Alinhamento warp',
+      live ? `${live.warpActive}/${progress || 0}` : '0/0',
+      'Objetivo proporcional',
+      progress > 0 ? String(progress) : '—',
+      kpiWarp
+    ) +
+    ocrDiagKpiChipHtml(
+      'Top 0 com distância ≤9',
+      live ? String(live.top0DistLe9) : '0',
+      offLabel,
+      kpiTop0.ref,
+      kpiTop0
+    ) +
+    ocrDiagKpiChipHtml(
+      'Pipeline / art_only',
+      `${pipeN}/${artN}`,
+      'Meta',
+      `12/63`,
+      { cls: 'ocr-diag-cmp--na', arrow: '' }
+    ) +
+    ocrDiagKpiChipHtml(
+      'Frame stalls',
+      String(stallN),
+      `>${OCR_DIAG_FRAME_STALL_MS}ms`,
+      progress > 0 ? String(progress) : '—',
+      {
+        cls: stallN > 0 ? 'ocr-diag-cmp--down' : 'ocr-diag-cmp--eq',
+        arrow: stallN > 0 ? '▼' : '',
+      }
+    ) +
+    ocrDiagKpiChipHtml(
+      'matchSource (arte)',
+      artEngineParts || '—',
+      'art/name',
+      extended && extended.artEngines && extended.artEngines.name ? String(extended.artEngines.name) : '—',
+      { cls: 'ocr-diag-cmp--na', arrow: '' }
+    ) +
+    ocrDiagKpiChipHtml(
+      'Raridade UI≠det.',
+      String(rarityMismatchN),
+      'Divergências',
+      '—',
+      { cls: rarityMismatchN > 0 ? 'ocr-diag-cmp--down' : 'ocr-diag-cmp--eq', arrow: rarityMismatchN > 0 ? '▼' : '' }
+    ) +
+    ocrDiagKpiChipHtml(
+      'Passcode (Fase J)',
+      phaseJCards != null ? `${phaseJCards}/6` : '—',
+      'Certos',
+      String(passcodeCorrectN),
+      { cls: 'ocr-diag-cmp--na', arrow: '' }
+    ) +
+    `</div>` +
+    wrongWarn +
+    hardPauseHtml +
+    segWarnHtml +
+    `<div class="ocr-diag-live-compare__table-wrap">` +
+    `<table class="ocr-diag-live-compare__table">` +
+    `<thead><tr>` +
+    `<th>Carta</th><th>Amostras</th><th>Matched</th>` +
+    `<th>${escapeHtml(T('ocr.diag.compare.delta_matched'))} off.</th>` +
+    `<th>${escapeHtml(T('ocr.diag.compare.delta_matched'))} últ.</th>` +
+    `<th>${escapeHtml(offLabel)}</th>` +
+    `<th>${escapeHtml(lastLabel + lastStamp)}</th>` +
+    `<th>Top 0 ≤9</th><th>Dist. mín.</th>` +
+    `<th>D</th><th>E</th><th>F</th><th>G</th>` +
+    `</tr></thead><tbody>${cardRows.join('')}</tbody></table></div>` +
+    `<div class="ocr-diag-live-compare__legend">` +
+    (gRefToggle ? gRefToggle + `<span class="ocr-diag-live-compare__legend-sep" aria-hidden="true">·</span>` : '') +
+    `▲ melhor · ▼ pior · ≈ par · A–J meta MD` +
+    `</div>` +
+    actionBtns +
+    `</div>`;
+
+  const infoEl = getEl('result-info');
+  const title = isComplete
+    ? `Coleta concluída ${progress}/${OCR_DIAG_BENCH_TARGET}`
+    : `Coleta ${progress}/${OCR_DIAG_BENCH_TARGET}`;
+  if (infoEl) infoEl.textContent = title;
+  try {
+    refreshViewControlsHeaderCompact();
+  } catch (_) {}
+  ensureOcrDiagCompareClockTimer();
+  const activePc = segInfo && segInfo.passcode != null ? Number(segInfo.passcode) : null;
+  scrollOcrDiagLiveCompareActiveRow(activePc);
+}
+
+/** @returns {void} */
+function stopOcrDiagProgressWatch() {
+  if (ocrDiagProgressTimer) {
+    clearInterval(ocrDiagProgressTimer);
+    ocrDiagProgressTimer = 0;
+  }
+  const wrap = getEl('ocr-diag-collect-progress');
+  if (wrap) wrap.hidden = true;
+  syncOcrDiagStatusPanelVisibility();
+}
+
+/** @returns {void} */
+function startOcrDiagProgressWatch() {
+  stopOcrDiagProgressWatch();
+  ocrDiagSlowCardWatchAt = Date.now();
+  ocrDiagSlowCardLastSampleInSeg = 0;
+  ocrDiagSlowCardSegIdx = -1;
+  ocrDiagProgressTimer = setInterval(tickOcrDiagSlowCardWatch, 5000);
+}
+
+/** @returns {void} */
+function tickOcrDiagSlowCardWatch() {
+  if (!ocrDiagnosticsCaptureActive || !ocrDiagnosticsSession) return;
+  const n = ocrDiagnosticsSession.samples.length;
+  if (!n) return;
+  const seq = n - 1;
+  syncOcrDiagCollectionProgressUi(seq);
+  const info = benchmarkSegmentInfoForSeq(seq);
+  if (!info) return;
+  const segIdx = info.cardIndex - 1;
+  if (segIdx !== ocrDiagSlowCardSegIdx || info.sampleInSeg !== ocrDiagSlowCardLastSampleInSeg) {
+    ocrDiagSlowCardSegIdx = segIdx;
+    ocrDiagSlowCardLastSampleInSeg = info.sampleInSeg;
+    ocrDiagSlowCardWatchAt = Date.now();
+    return;
+  }
+  if (Date.now() - ocrDiagSlowCardWatchAt < 15000) return;
+  ocrDiagSlowCardWatchAt = Date.now();
+  const nextSeq = ocrDiagnosticsSession.samples.length;
+  const pipelineSlot = isBenchmarkPipelineSlotForSeq(nextSeq) && ocrDiagCanRecordPipeline();
+  tickOcrDiagPipelineSlotTimeoutWatch();
+  if (pipelineSlot && !ocrDiagPipelineSnapFresh()) {
+    addOcrLog(
+      `⏳ Slot pipeline (${info.sampleInSeg}/${info.segSamples} «${info.name}») — a aguardar OCR ou fallback dHash…`,
+      'warn'
+    );
+    return;
+  }
+  maybeWarnOcrDiagArtOnlyFull();
+  addOcrLog(
+    `⏳ Carta difícil (${info.cardIndex}/${info.cardTotal} «${info.name}» ${info.sampleInSeg}/${info.segSamples}) — mantenha estável ~20s.`,
+    'warn'
+  );
+}
+
+/**
+ * @param {'art_only'|'pipeline'} kind
+ * @returns {number}
+ */
+function ocrDiagCountByKind(kind) {
+  if (!ocrDiagnosticsSession || !ocrDiagnosticsSession.samples) return 0;
+  let n = 0;
+  for (let i = 0; i < ocrDiagnosticsSession.samples.length; i++) {
+    if (ocrDiagnosticsSession.samples[i].sampleKind === kind) n++;
+  }
+  return n;
+}
+
+/**
+ * @returns {number}
+ */
+function ocrDiagSampleThrottleMs() {
+  if (!ocrDiagnosticsCaptureActive) return OCR_DIAG_SAMPLE_THROTTLE_MS;
+  if (ocrDiagArtOnlyBlockReason() === 'art_only_cap') return 380;
+  return 820;
+}
+
+/**
+ * @returns {number}
+ */
+function ocrDiagArtSampleThrottleMs() {
+  return OCR_DIAG_ART_SAMPLE_THROTTLE_MS;
+}
+
+/** @returns {boolean} */
+function ocrDiagCanRecordArtOnly() {
+  if (!ocrDiagnosticsSession) return false;
+  if (ocrDiagnosticsSession.samples.length >= OCR_DIAG_BENCH_TARGET) return false;
+  if (ocrDiagnosticsSession.samples.length >= OCR_DIAG_MAX_SAMPLES) return false;
+  return ocrDiagCountByKind('art_only') < OCR_DIAG_MAX_ART_ONLY;
+}
+
+/** @returns {boolean} */
+function ocrDiagCanRecordPipeline() {
+  if (!ocrDiagnosticsSession) return false;
+  if (ocrDiagnosticsSession.samples.length >= OCR_DIAG_BENCH_TARGET) return false;
+  if (ocrDiagnosticsSession.samples.length >= OCR_DIAG_MAX_SAMPLES) return false;
+  return ocrDiagCountByKind('pipeline') < OCR_DIAG_MAX_PIPELINE;
+}
+
+/**
+ * Motivo pelo qual art_only deixou de gravar (null = OK gravar).
+ * @returns {null|'no_session'|'bench_target'|'max_samples'|'art_only_cap'}
+ */
+function ocrDiagArtOnlyBlockReason() {
+  if (!ocrDiagnosticsSession) return 'no_session';
+  if (ocrDiagnosticsSession.samples.length >= OCR_DIAG_BENCH_TARGET) return 'bench_target';
+  if (ocrDiagnosticsSession.samples.length >= OCR_DIAG_MAX_SAMPLES) return 'max_samples';
+  if (ocrDiagCountByKind('art_only') >= OCR_DIAG_MAX_ART_ONLY) return 'art_only_cap';
+  return null;
+}
+
+/** @returns {void} */
+function maybeWarnOcrDiagArtOnlyFull() {
+  if (!ocrDiagnosticsCaptureActive || !ocrDiagnosticsSession || ocrDiagArtOnlyLimitWarned) return;
+  const reason = ocrDiagArtOnlyBlockReason();
+  if (reason !== 'art_only_cap') return;
+  ocrDiagArtOnlyLimitWarned = true;
+  const total = ocrDiagnosticsSession.samples.length;
+  const artN = ocrDiagCountByKind('art_only');
+  const pipeN = ocrDiagCountByKind('pipeline');
+  const missing = Math.max(0, OCR_DIAG_BENCH_TARGET - total);
+  addOcrLog(
+    T('ocr.diag.art_only_full', {
+      artN: String(artN),
+      artMax: String(OCR_DIAG_MAX_ART_ONLY),
+      missing: String(missing),
+    }),
+    'warn'
+  );
+  addOcrLog(
+    `   Total ${total}/${OCR_DIAG_BENCH_TARGET} (art ${artN} + pipeline ${pipeN}). Não pare a coleta — mantenha a carta na mira.`,
+    'warn'
+  );
+}
+
+/**
+ * Snap pipeline recente o suficiente para {@link maybeRecordOcrDiagPipelineFromCache}.
+ * @param {number} [maxAgeMs=12000]
+ * @returns {boolean}
+ */
+function ocrDiagPipelineSnapFresh(maxAgeMs = 12000) {
+  const snap = lastOcrDiagPipelineSnap;
+  return !!(snap && Date.now() - snap.at <= maxAgeMs);
+}
+
+/**
+ * Mantém snap pipeline vivo durante art_only — evita bloqueio nos slots pipeline do segmento.
+ * @param {HTMLVideoElement} video
+ * @param {{ x: number, y: number, width: number, height: number }} nameCropVisual
+ * @param {{ x: number, y: number, width: number, height: number }} nameCropOcr
+ * @param {{ x: number, y: number, width: number, height: number }|null} typeCropRect
+ * @param {object|null|undefined} outcome
+ * @param {{ cropSource?: string|null, track?: object|null }} [opts]
+ * @returns {void}
+ */
+function touchOcrDiagPipelineSnapFromSample(
+  video,
+  nameCropVisual,
+  nameCropOcr,
+  typeCropRect,
+  outcome,
+  opts
+) {
+  if (!ocrDiagnosticsCaptureActive) return;
+  lastOcrDiagPipelineSnap = {
+    at: Date.now(),
+    video,
+    nameCropVisual,
+    nameCropOcr,
+    typeCropRect,
+    outcome: outcome
+      ? {
+          cleaned: outcome.cleaned || null,
+          card: outcome.card || null,
+          pack: outcome.pack || null,
+          diagnostics: outcome.diagnostics || null,
+          artDistance: outcome.artDistance != null ? outcome.artDistance : null,
+          artworkKey: outcome.artworkKey || null,
+          artDiagnostics: outcome.artDiagnostics || null,
+          matchSource: outcome.matchSource || null,
+          artCandidateCardIds: outcome.artCandidateCardIds || null,
+        }
+      : null,
+    cropSource: opts && opts.cropSource ? opts.cropSource : null,
+    track: opts && opts.track ? opts.track : null,
+  };
+}
+
+/**
+ * Grava amostra pipeline a partir do último outcome do loop principal (coleta activa).
+ * @returns {void}
+ */
+function maybeRecordOcrDiagPipelineFromCache() {
+  if (!ocrDiagnosticsCaptureActive || !ocrDiagnosticsSession) return false;
+  if (!ocrDiagCanRecordPipeline()) return false;
+  const snap = lastOcrDiagPipelineSnap;
+  if (!snap || !ocrDiagPipelineSnapFresh()) return false;
+  const artOnlyFull = ocrDiagArtOnlyBlockReason() === 'art_only_cap';
+  if (!artOnlyFull && Date.now() - ocrDiagnosticsLastPipelineSampleAt < ocrDiagSampleThrottleMs()) return false;
+  if (artOnlyFull && Date.now() - ocrDiagnosticsLastPipelineSampleAt < 900) return false;
+  maybeRecordOcrDiagnosticsSample(
+    snap.video,
+    snap.nameCropVisual,
+    snap.nameCropOcr,
+    snap.typeCropRect,
+    snap.outcome,
+    { cropSource: snap.cropSource, track: snap.track }
+  );
+  return true;
+}
+
+/**
+ * Tenta cache pipeline; devolve true se a amostra foi gravada de imediato.
+ * @returns {boolean}
+ */
+function tryOcrDiagPipelineSlotFromCache() {
+  if (!ocrDiagnosticsCaptureActive || !ocrDiagnosticsSession) return false;
+  const nextSeq = ocrDiagnosticsSession.samples.length;
+  if (!isBenchmarkPipelineSlotForSeq(nextSeq) || !ocrDiagCanRecordPipeline()) return false;
+  if (!ocrDiagPipelineSnapFresh()) return false;
+  if (maybeRecordOcrDiagPipelineFromCache()) {
+    ocrDiagPipelineSlotStuckSeq = -1;
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Watchdog 8s: força pipeline_art_fallback se slot pipeline não grava.
+ * @returns {void}
+ */
+function tickOcrDiagPipelineSlotTimeoutWatch() {
+  if (!ocrDiagnosticsCaptureActive || !ocrDiagnosticsSession) return;
+  const nextSeq = ocrDiagnosticsSession.samples.length;
+  if (nextSeq >= OCR_DIAG_BENCH_TARGET) {
+    ocrDiagPipelineSlotStuckSeq = -1;
+    return;
+  }
+  const pipelineSlot = isBenchmarkPipelineSlotForSeq(nextSeq) && ocrDiagCanRecordPipeline();
+  if (!pipelineSlot) {
+    ocrDiagPipelineSlotStuckSeq = -1;
+    return;
+  }
+  if (nextSeq !== ocrDiagPipelineSlotStuckSeq) {
+    ocrDiagPipelineSlotStuckSeq = nextSeq;
+    ocrDiagPipelineSlotStuckAt = Date.now();
+    return;
+  }
+  if (Date.now() - ocrDiagPipelineSlotStuckAt < OCR_DIAG_PIPELINE_SLOT_TIMEOUT_MS) return;
+  ocrDiagPipelineSlotStuckAt = Date.now();
+  const info = benchmarkSegmentInfoForSeq(nextSeq);
+  addOcrLog(
+    `⚠ Slot pipeline «${info ? info.name : nextSeq}» (${info ? `${info.sampleInSeg}/${info.segSamples}` : nextSeq}) — timeout ${OCR_DIAG_PIPELINE_SLOT_TIMEOUT_MS / 1000}s; fallback dHash (pipeline_art_fallback)…`,
+    'warn'
+  );
+  const ctx = ocrDiagLastPreviewSampleCtx;
+  if (ctx && !ocrDiagArtProbeInFlight) {
+    void maybeRecordOcrDiagnosticsArtOnly(
+      ctx.video,
+      ctx.nameCropVisual,
+      ctx.typeCropRect,
+      ctx.track,
+      ctx.cropSource,
+      { forcePipeline: true }
+    );
+  }
+}
+
 let lastScanHapticKey = '';
 let lastScanHapticTime = 0;
 
@@ -29983,6 +33117,38 @@ function pulseScanMatchVisual() {
   setTimeout(() => {
     el.style.boxShadow = '';
   }, 280);
+}
+
+/**
+ * Bip de conclusão de carta na coleta benchmark (660 Hz — distinto do match 880 Hz).
+ * @returns {void}
+ */
+function playOcrDiagCardCompleteBeep() {
+  let played = false;
+  try {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (Ctx) {
+      const actx = window.__ocrBeepCtx || (window.__ocrBeepCtx = new Ctx());
+      if (actx.state === 'suspended') void actx.resume();
+      const o = actx.createOscillator();
+      const g = actx.createGain();
+      o.type = 'sine';
+      o.frequency.value = 660;
+      o.connect(g);
+      g.connect(actx.destination);
+      g.gain.setValueAtTime(0.0001, actx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.32, actx.currentTime + 0.04);
+      g.gain.exponentialRampToValueAtTime(0.0001, actx.currentTime + 0.4);
+      o.start(actx.currentTime);
+      o.stop(actx.currentTime + 0.41);
+      played = true;
+    }
+  } catch (_) {}
+  if (!played) {
+    try {
+      playCardSurfaceChime('deck_add');
+    } catch (_) {}
+  }
 }
 
 /**
@@ -30015,6 +33181,7 @@ function playOcrMatchBeep() {
  * @returns {void}
  */
 function triggerScanHaptic(cardId) {
+  if (ocrDiagnosticsCaptureActive) return;
   const now = Date.now();
   const key = String(cardId);
   if (key === lastScanHapticKey && now - lastScanHapticTime < 1400) return;
@@ -30106,6 +33273,22 @@ function smartNormalize(text) {
   }
   if (out.length === 0) return '';
   return out.join(' ').replace(/\s+/g, ' ').trim();
+}
+
+/**
+ * Título legível para Fase H (pipeline) — ex. «PSYCHIC END PUNISHER» → «Psychic End Punisher».
+ * @param {string} text
+ * @returns {string}
+ */
+function formatOcrNameTitleCase(text) {
+  const raw = String(text || '').trim();
+  if (!raw || raw.startsWith('art:') || raw.startsWith('ID ')) return raw;
+  return raw
+    .toLowerCase()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ');
 }
 
 /**
@@ -31139,6 +34322,17 @@ function isScannerPlausibleMatch(ocrCleaned, card, visionContext) {
  */
 function acceptScannerCardMatch(ocrCleaned, card, visionContext) {
   if (!card) return false;
+  const expPc =
+    visionContext && visionContext.expectedPasscode != null
+      ? Number(visionContext.expectedPasscode)
+      : null;
+  if (expPc === 60465049 && Number(card.id) === 46772449) return false;
+  if (expPc === 46772449 && Number(card.id) === 60465049) return false;
+  const artIds = visionContext?.artCandidateCardIds;
+  if (artIds && artIds.length) {
+    const allowed = new Set(artIds.map((id) => Number(id)));
+    if (!allowed.has(Number(card.id))) return false;
+  }
   const uiType = visionContext?.cardType;
   if (uiType && uiType !== 'AUTO' && !scannerUiTypeMatchesApiLoose(uiType, card)) {
     return false;
@@ -31182,8 +34376,176 @@ function acceptScannerCardMatch(ocrCleaned, card, visionContext) {
  * @param {boolean} [bypassThrottle]
  * @returns {Promise<object|null>}
  */
+/**
+ * Resolve carta por id: stub local (nomes EN/PT no índice dHash) e enriquecimento API em background.
+ * @param {number} cardId
+ * @returns {Promise<object|null>}
+ */
+async function resolveScannerCardFromArtIndex(cardId) {
+  const id = Number(cardId);
+  if (!id) return null;
+  const mod = await getOcrArtHashModule();
+  let card =
+    mod && typeof mod.cardStubFromArtIndex === 'function' ? mod.cardStubFromArtIndex(id) : null;
+  if (card) {
+    cardCache[String(id)] = cardCache[String(id)] || card;
+    fetchCardsByIdsBatched([id])
+      .then((map) => {
+        const full = map.get(id);
+        if (!full) return;
+        cardCache[String(id)] = full;
+        const sid = String(id);
+        if (scannerFoundCardById.has(sid)) {
+          scannerFoundCardById.set(sid, full);
+          for (let i = 0; i < scannerFoundCards.length; i++) {
+            if (String(scannerFoundCards[i].id) === sid) {
+              scannerFoundCards[i] = full;
+              break;
+            }
+          }
+          updateScannerResultsUI();
+        }
+      })
+      .catch(() => {});
+    return card;
+  }
+  const map = await fetchCardsByIdsBatched([id]);
+  card = map.get(id) || null;
+  if (card) cardCache[String(id)] = card;
+  return card;
+}
+
+/**
+ * API YGOProDeck: tenta PT e EN (e cadeia padrão) — cartas físicas podem vir em qualquer idioma.
+ * @param {string} name
+ * @param {{ cardType?: string, rarity?: string, artCandidateCardIds?: number[] }} visionContext
+ * @returns {Promise<object|null>}
+ */
+async function fetchScannerCardByNameBilingual(name, visionContext) {
+  const langs = ['pt', 'en', null];
+  for (let li = 0; li < langs.length; li++) {
+    const card = await fetchCardByName(name, langs[li], visionContext);
+    if (card && acceptScannerCardMatch(name, card, visionContext)) return card;
+  }
+  return null;
+}
+
+/**
+ * Busca por nome no índice local (sem API) antes de smartSearch — nomes PT e EN no índice.
+ * @param {string} cleaned
+ * @param {{ cardType?: string, rarity?: string, artCandidateCardIds?: number[] }} visionContext
+ * @returns {Promise<object|null>}
+ */
+async function smartSearchScannerLocalIndex(cleaned, visionContext) {
+  const mod = await getOcrArtHashModule();
+  if (!mod || !mod.isArtHashIndexReady()) {
+    return null;
+  }
+  const hits =
+    typeof mod.searchCardIdsByLocalNameFromOcr === 'function'
+      ? mod.searchCardIdsByLocalNameFromOcr(cleaned, { minScore: 0.58, limit: 8 })
+      : typeof mod.searchCardIdsByLocalName === 'function'
+        ? mod.searchCardIdsByLocalName(cleaned, { minScore: 0.6, limit: 6 })
+        : [];
+  if (!hits.length) return null;
+  const artIds = visionContext?.artCandidateCardIds;
+  const allowed =
+    artIds && artIds.length ? new Set(artIds.map((x) => Number(x))) : null;
+  let candidates = hits;
+  if (allowed) {
+    const filtered = hits.filter((h) => allowed.has(h.cardId));
+    if (filtered.length) candidates = filtered;
+    else if (hits[0].score < 0.9) return null;
+  }
+  const topScore = candidates[0].score;
+  for (let hi = 0; hi < Math.min(8, candidates.length); hi++) {
+    const h = candidates[hi];
+    if (h.score < topScore - 0.1) break;
+    const card = await resolveScannerCardFromArtIndex(h.cardId);
+    if (!card) continue;
+    if (acceptScannerCardMatch(cleaned, card, visionContext)) return card;
+    if (scannerNameMatchStrongEnough(cleaned, card)) return card;
+  }
+  if (
+    candidates.length > 1 &&
+    candidates[0].score < 0.82 &&
+    candidates[1].score >= candidates[0].score - 0.04
+  ) {
+    return null;
+  }
+  const pick = candidates[0];
+  const card = await resolveScannerCardFromArtIndex(pick.cardId);
+  if (!card) return null;
+  if (!acceptScannerCardMatch(cleaned, card, visionContext)) return null;
+  return card;
+}
+
 async function smartSearchScanner(cleaned, visionContext, bypassThrottle = false) {
-  let card = await smartSearch(cleaned, bypassThrottle, null, visionContext);
+  visionContext = overlayBenchmarkSegmentVisionContext(visionContext);
+  const expPc =
+    visionContext && visionContext.expectedPasscode != null
+      ? Number(visionContext.expectedPasscode)
+      : null;
+  if (expPc === 60465049) {
+    const u = String(cleaned || '')
+      .toUpperCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+    if (/HORDEUM|EXCITON|MALIG/i.test(u) && !/PSYCHIC|PUNISH/i.test(u)) {
+      const psychicCard = await resolveScannerCardFromArtIndex(60465049);
+      if (psychicCard) return psychicCard;
+    }
+  }
+  const benchId = resolveScannerBenchmarkNameFromOcr(cleaned);
+  if (benchId) {
+    const benchCard = await resolveScannerCardFromArtIndex(benchId);
+    if (benchCard && acceptScannerCardMatch(cleaned, benchCard, visionContext)) return benchCard;
+    if (benchCard && scannerNameMatchStrongEnough(cleaned, benchCard)) return benchCard;
+  }
+  let card = await smartSearchScannerLocalIndex(cleaned, visionContext);
+  if (card) return card;
+  const stripMagia =
+    visionContext &&
+    (visionContext.nameStripType === 'Magia' || visionContext.plateType === 'Magia');
+  if (
+    !card &&
+    visionContext &&
+    visionContext.cardType === 'Monstro Fusão' &&
+    (visionContext.nameStripType === 'Monstro Sincro' || visionContext.plateType === 'Monstro Sincro')
+  ) {
+    const synCtx = { ...visionContext, cardType: 'Monstro Sincro' };
+    card = await smartSearchScannerLocalIndex(cleaned, synCtx);
+    if (card) return card;
+    card = await fetchScannerCardByNameBilingual(cleaned, synCtx);
+    if (card) return card;
+  }
+  if (
+    !card &&
+    visionContext &&
+    visionContext.cardType === 'Monstro Link' &&
+    stripMagia
+  ) {
+    const spellCtx = { ...visionContext, cardType: 'Magia' };
+    card = await smartSearchScannerLocalIndex(cleaned, spellCtx);
+    if (card) return card;
+    card = await fetchScannerCardByNameBilingual(cleaned, spellCtx);
+    if (card) return card;
+  }
+  const looseType =
+    visionContext &&
+    (visionContext.cardType === 'Magia' ||
+      visionContext.cardType === 'Armadilha' ||
+      stripMagia);
+  if (looseType) {
+    const looseCtx = { ...visionContext, cardType: 'AUTO' };
+    card = await smartSearchScannerLocalIndex(cleaned, looseCtx);
+    if (card) return card;
+    card = await fetchScannerCardByNameBilingual(cleaned, looseCtx);
+    if (card) return card;
+  }
+  card = await fetchScannerCardByNameBilingual(cleaned, visionContext);
+  if (card) return card;
+  card = await smartSearch(cleaned, bypassThrottle, null, visionContext);
   if (card && acceptScannerCardMatch(cleaned, card, visionContext)) return card;
   if (!bypassThrottle) {
     card = await smartSearch(cleaned, true, null, visionContext);
@@ -31203,7 +34565,9 @@ async function smartSearchScanner(cleaned, visionContext, bypassThrottle = false
     .sort((a, b) => b.length - a.length);
   for (let ti = 0; ti < Math.min(2, tokens.length); ti++) {
     const tok = tokens[ti];
-    const cardTok = await smartSearch(tok, true, null, visionContext);
+    let cardTok = await smartSearchScannerLocalIndex(tok, visionContext);
+    if (!cardTok) cardTok = await fetchScannerCardByNameBilingual(tok, visionContext);
+    if (!cardTok) cardTok = await smartSearch(tok, true, null, visionContext);
     if (cardTok && scannerNameMatchStrongEnough(cleaned, cardTok)) return cardTok;
     if (cardTok && acceptScannerCardMatch(cleaned, cardTok, visionContext)) return cardTok;
   }
@@ -31372,6 +34736,17 @@ function addOcrLog(msg, kind = 'info') {
 function logOcrFrameOutcome(outcome) {
   const typeShort = ocrCardTypeShort(lastDetectedCardType);
   if (!outcome || !outcome.cleaned) {
+    if (outcome && outcome.artDiagnostics && outcome.artDiagnostics.kind === 'weak') {
+      const dist = outcome.artDistance != null ? outcome.artDistance : outcome.artDiagnostics.distance;
+      if (typeof dist === 'number' && dist <= 16) {
+        const nearKey = `artnear|${dist}|${outcome.artSource || ''}`;
+        if (nearKey !== lastOcrLogReadKey) {
+          lastOcrLogReadKey = nearKey;
+          addOcrLog(T('ocr.log.art_near', { dist: String(dist) }), 'weak');
+        }
+        return;
+      }
+    }
     const huntKey = `hunt|${typeShort}`;
     if (huntKey === lastOcrHuntLogKey) return;
     lastOcrHuntLogKey = huntKey;
@@ -31392,6 +34767,14 @@ function logOcrFrameOutcome(outcome) {
           T('ocr.log.card_added_id', {
             name: displayNameForApiCard(outcome.card),
             id: String(outcome.card.id),
+          }),
+          'ok'
+        );
+      } else if (outcome.matchSource === 'art') {
+        addOcrLog(
+          T('ocr.log.art_match', {
+            dist: String(outcome.artDistance != null ? outcome.artDistance : '?'),
+            name: displayNameForApiCard(outcome.card),
           }),
           'ok'
         );
@@ -31437,7 +34820,6 @@ function scannerSessionLikelyNeedsPaddle() {
   const manualR = getEl('manual-rarity');
   if (manualR && manualR.value !== 'AUTO' && isOcrRarityWithNameFoil(manualR.value)) return true;
   if (lastDetectedCardRarity && isOcrRarityWithNameFoil(lastDetectedCardRarity)) return true;
-  if (lastDetectedCardType === 'Monstro Fusão') return true;
   return false;
 }
 
@@ -31446,7 +34828,7 @@ function scannerSessionLikelyNeedsPaddle() {
  * @returns {number}
  */
 function getOcrFrameGapMs() {
-  if (ocrDiagnosticsCaptureActive) return 1000;
+  if (ocrDiagnosticsCaptureActive) return 480;
   if (ocrDeferHeavyUntilPaddle) return ocrScannerIsMobile() ? 200 : 300;
   return ocrScannerIsMobile() ? 480 : 520;
 }
@@ -31468,7 +34850,7 @@ function logOcrPaddleWarmupWait() {
  * @returns {number}
  */
 function paddleWarmupMaxWaitMs() {
-  return ocrScannerIsMobile() ? 6000 : 4500;
+  return ocrScannerIsMobile() ? 3500 : 2200;
 }
 
 /**
@@ -31532,7 +34914,8 @@ function ensurePaddleOcrWarm() {
  * @returns {number}
  */
 function passcodeOcrThrottleMs() {
-  return ocrScannerIsMobile() ? 360 : 300;
+  if (ocrDiagnosticsCaptureActive) return 820;
+  return ocrScannerIsMobile() ? 480 : 880;
 }
 
 function resetPasscodeIdVotes() {
@@ -31717,58 +35100,82 @@ function downloadBinaryFile(filename, bytes) {
  * @returns {Promise<void>}
  */
 async function exportOcrDiagnosticsAsZip(stamp, payload, session, summaryText, galleryHtml) {
-  const { zipSync, strToU8 } = await import('fflate');
+  const { zip, strToU8 } = await import('fflate');
   const files = {};
-  files['diagnostics.json'] = strToU8(JSON.stringify(payload, null, 2));
+  const slimSamples = (session.samples || []).map((s) => {
+    const im = s.images;
+    return {
+      ...s,
+      images: im
+        ? {
+            hasRobot: !!im.robotNameStripJpeg,
+            hasRawName: !!im.rawNameOcrJpeg,
+            hasArt: !!im.artRegionJpeg,
+            hasPasscodeRaw: !!im.rawPasscodeJpeg,
+          }
+        : null,
+    };
+  });
+  const slimPayload = { ...payload, session: { ...session, samples: slimSamples } };
+  files['diagnostics_slim.json'] = strToU8(JSON.stringify(slimPayload, null, 2));
+  files['README.txt'] = strToU8(
+    'OCR diagnóstico Yu-Gi-Oh!\n- diagnostics_slim.json: JSON sem base64 (leitura rápida)\n- diagnostics.json: dados completos (schema v5: featureMiraProbe, passcodeProbe)\n- images/: JPEGs por amostra (nome + passcode)\n' +
+      (galleryHtml ? '- gallery.html: abrir no browser (imagens em images/ — extrair ZIP antes)\n' : '')
+  );
+  if (galleryHtml) files['gallery.html'] = strToU8(galleryHtml);
   files['summary.txt'] = strToU8(summaryText);
-  files['gallery.html'] = strToU8(galleryHtml);
-  const slimPayload = {
+  const jsonPayload = {
     ...payload,
     session: {
       ...session,
       samples: (session.samples || []).map((s) => {
         const im = s.images;
-        return {
-          ...s,
-          images: im
-            ? {
-                hasRobot: !!im.robotNameStripJpeg,
-                hasRawName: !!(im.rawNameOcrJpeg || im.rawNameRegionJpeg),
-                hasRawNameVisual: !!im.rawNameVisualJpeg,
-                hasTypeMira: !!im.typeMiraJpeg,
-                hasFrameLeft: !!im.frameProbeLeftJpeg,
-                hasPasscodeRaw: !!im.rawPasscodeJpeg,
-                hasPasscodeRobot: !!im.robotPasscodeJpeg,
-              }
-            : null,
-        };
+        const slimImages = im
+          ? {
+              hasRobot: !!im.robotNameStripJpeg,
+              hasRawName: !!im.rawNameOcrJpeg,
+              hasArt: !!im.artRegionJpeg,
+              hasPasscodeRaw: !!im.rawPasscodeJpeg,
+            }
+          : null;
+        return { ...s, images: slimImages };
       }),
     },
   };
-  files['diagnostics_slim.json'] = strToU8(JSON.stringify(slimPayload, null, 2));
-  files['README.txt'] = strToU8(
-    'OCR diagnóstico Yu-Gi-Oh!\n- gallery.html: abrir no browser (robô nome + passcode/ID)\n- diagnostics.json: dados completos (schema v4 inclui passcodeProbe)\n- images/: JPEGs por amostra (nome + passcode)\n- diagnostics_slim.json: JSON sem base64 (leitura rápida)\n'
-  );
-  for (const s of session.samples || []) {
-    const pad = String(s.seq).padStart(3, '0');
-    const im = s.images || {};
-    const add = (key, name) => {
-      const u8 = dataUrlToUint8Array(im[key]);
-      if (u8) files[`images/sample_${pad}_${name}.jpg`] = u8;
-    };
-    add('robotNameStripJpeg', 'robot');
-    add('rawNameOcrJpeg', 'raw_name_ocr');
-    add('rawNameVisualJpeg', 'raw_name_visual');
-    add('rawNameRegionJpeg', 'raw_name');
-    add('typeMiraJpeg', 'type_mira');
-    add('frameProbeLeftJpeg', 'frame_border');
-    add('rawPasscodeJpeg', 'passcode_raw');
-    add('robotPasscodeJpeg', 'passcode_robot');
-    add('passcodeBinDarkJpeg', 'passcode_bin_dark');
-    add('passcodeBinLightJpeg', 'passcode_bin_light');
-    add('passcodeLcRawJpeg', 'passcode_lc_raw');
+  files['diagnostics.json'] = strToU8(JSON.stringify(jsonPayload, null, 2));
+  const sampleTotal = (session.samples || []).length;
+  const zipBatch = 4;
+  for (let si = 0; si < sampleTotal; si += zipBatch) {
+    const end = Math.min(si + zipBatch, sampleTotal);
+    for (let sj = si; sj < end; sj++) {
+      const s = session.samples[sj];
+      const pad = String(s.seq).padStart(3, '0');
+      const im = s.images || {};
+      for (const [key, name] of OCR_DIAG_ZIP_IMAGE_SLOTS) {
+        if (!ocrDiagIncludeSampleInZip(key, s.seq, s.sampleKind || 'pipeline')) continue;
+        const u8 = dataUrlToUint8Array(im[key]);
+        if (u8) files[`images/sample_${pad}_${name}.jpg`] = u8;
+      }
+    }
+    if (ocrDiagnosticsExportBusy) {
+      syncOcrDiagExportProgressUi('zip', end, sampleTotal);
+      await yieldOcrDiagMainThread();
+    }
   }
-  const zipped = zipSync(files, { level: 6 });
+  syncOcrDiagExportProgressUi('compact', 0, 1);
+  await yieldOcrDiagMainThread();
+  const zipped = await new Promise((resolve, reject) => {
+    zip(files, { level: OCR_DIAG_EXPORT_ZIP_LEVEL }, (err, data) => {
+      if (err) reject(err);
+      else resolve(data);
+    });
+  });
+  if (!zipped || !zipped.length) {
+    throw new Error('ZIP vazio — verifique espaço em disco (Downloads/C:)');
+  }
+  syncOcrDiagExportProgressUi('compact', 1, 1);
+  syncOcrDiagExportProgressUi('download', sampleTotal, sampleTotal);
+  await new Promise((resolve) => setTimeout(resolve, 0));
   downloadBinaryFile(`ocr_diagnostics_${stamp}.zip`, zipped);
 }
 
@@ -31819,10 +35226,14 @@ function ocrDiagnosticsRawCropDataUrl(video, cropRect, maxW = 480) {
  * @param {number} [maxW=480]
  * @returns {string|null}
  */
-function ocrDiagnosticsMediaCropDataUrl(media, cropRect, maxW = 480) {
+function ocrDiagnosticsMediaCropDataUrl(media, cropRect, maxW = 480, minH = 0, quality) {
   if (!media || !cropRect || cropRect.width < 2 || cropRect.height < 2) return null;
+  const jpegQ =
+    typeof quality === 'number' ? quality : OCR_DIAG_EXPORT_ZIP_JPEG_QUALITY;
   const c = document.createElement('canvas');
-  const scale = Math.min(1, maxW / cropRect.width);
+  const scaleW = maxW / cropRect.width;
+  const scaleH = minH > 0 ? minH / cropRect.height : scaleW;
+  const scale = Math.min(Math.max(scaleW, scaleH, 1), 8);
   const w = Math.max(1, Math.round(cropRect.width * scale));
   const h = Math.max(1, Math.round(cropRect.height * scale));
   c.width = w;
@@ -31830,8 +35241,9 @@ function ocrDiagnosticsMediaCropDataUrl(media, cropRect, maxW = 480) {
   const ctx = c.getContext('2d');
   if (!ctx) return null;
   try {
+    ctx.imageSmoothingEnabled = false;
     ctx.drawImage(media, cropRect.x, cropRect.y, cropRect.width, cropRect.height, 0, 0, w, h);
-    return c.toDataURL('image/jpeg', 0.82);
+    return c.toDataURL('image/jpeg', jpegQ);
   } catch (e) {
     return null;
   }
@@ -31856,6 +35268,17 @@ function buildOcrDiagnosticsExportSummary(session) {
   const passcodeWithRaw = [];
   const passcodeWithCandidates = [];
   const passcodeConfidences = [];
+  let artOnlyCount = 0;
+  let pipelineCount = 0;
+  let artWarpActiveCount = 0;
+  let artIndexReadyCount = 0;
+  let artRelaxedReadyCount = 0;
+  const artDistanceList = [];
+  const artSources = {};
+  let featureMiraWithProbe = 0;
+  let featureMiraAttrCounts = {};
+  let featureMiraLevelCounts = {};
+  let featureMiraErrors = {};
   for (const s of samples) {
     const ui = s.lastDetectedCardTypeUi || '(vazio)';
     uiTypes[ui] = (uiTypes[ui] || 0) + 1;
@@ -31896,6 +35319,33 @@ function buildOcrDiagnosticsExportSummary(session) {
     if (pp && pp.sidecar && typeof pp.sidecar.confidence === 'number') {
       passcodeConfidences.push(pp.sidecar.confidence);
     }
+    const ap = s.artProbe;
+    if (s.sampleKind === 'art_only') artOnlyCount++;
+    else if (s.sampleKind === 'pipeline') pipelineCount++;
+    if (ap?.warpActive) artWarpActiveCount++;
+    if (ap?.indexReady) artIndexReadyCount++;
+    if (ap?.artRelaxedReady) artRelaxedReadyCount++;
+    if (typeof ap?.artDistance === 'number') {
+      artDistanceList.push({ seq: s.seq, dist: ap.artDistance, id: ap.matchedCardId || s.outcome?.matchedCardId });
+    }
+    if (ap?.artSource) {
+      artSources[ap.artSource] = (artSources[ap.artSource] || 0) + 1;
+    }
+    const fmp = s.featureMiraProbe;
+    if (fmp) {
+      const lp = fmp.liveProbe;
+      if (lp && !lp.error) {
+        featureMiraWithProbe++;
+        const attr = lp.attribute || '(null)';
+        featureMiraAttrCounts[attr] = (featureMiraAttrCounts[attr] || 0) + 1;
+        const lr = lp.levelRank;
+        const lrKey =
+          lr && lr.kind && lr.value != null ? `${lr.kind}:${lr.value}` : lr && lr.kind ? lr.kind : 'none';
+        featureMiraLevelCounts[lrKey] = (featureMiraLevelCounts[lrKey] || 0) + 1;
+      } else if (lp && lp.error) {
+        featureMiraErrors[lp.error] = (featureMiraErrors[lp.error] || 0) + 1;
+      }
+    }
   }
   const passcodeConfAvg =
     passcodeConfidences.length > 0
@@ -31919,6 +35369,17 @@ function buildOcrDiagnosticsExportSummary(session) {
     passcodeConfidenceAvg: passcodeConfAvg,
     passcodeRawExamples: passcodeWithRaw.slice(0, 12),
     passcodeCandidateExamples: passcodeWithCandidates.slice(0, 12),
+    artOnlySampleCount: artOnlyCount,
+    pipelineSampleCount: pipelineCount,
+    artWarpActiveCount,
+    artIndexReadyCount,
+    artRelaxedReadyCount,
+    artDistanceExamples: artDistanceList.slice(0, 20),
+    artSources,
+    featureMiraSamplesWithLiveProbe: featureMiraWithProbe,
+    featureMiraAttributeCounts: featureMiraAttrCounts,
+    featureMiraLevelRankCounts: featureMiraLevelCounts,
+    featureMiraProbeErrors: featureMiraErrors,
   };
 }
 
@@ -31974,7 +35435,62 @@ function formatOcrDiagnosticsSummaryText(summary) {
   for (const ex of summary.passcodeCandidateExamples || []) {
     lines.push(`  candidato: ${ex}`);
   }
+  lines.push('', 'Arte dHash (inclui amostras art_only sem mira verde):');
+  lines.push(`  Amostras pipeline: ${summary.pipelineSampleCount ?? 0}`);
+  lines.push(`  Amostras só arte: ${summary.artOnlySampleCount ?? 0}`);
+  lines.push(`  Com warpActive: ${summary.artWarpActiveCount ?? 0}`);
+  lines.push(`  Com índice visual pronto: ${summary.artIndexReadyCount ?? 0}`);
+  lines.push(`  Com artRelaxedReady: ${summary.artRelaxedReadyCount ?? 0}`);
+  for (const [k, v] of Object.entries(summary.artSources || {}).sort((a, b) => b[1] - a[1])) {
+    lines.push(`  artSource ${k}: ${v}`);
+  }
+  for (const d of summary.artDistanceExamples || []) {
+    lines.push(`  #${d.seq} dist=${d.dist} id=${d.id ?? '-'}`);
+  }
+  lines.push('', 'Miras atributo / nível-rank (featureMiraProbe):');
+  lines.push(`  Amostras com sonda liveProbe OK: ${summary.featureMiraSamplesWithLiveProbe ?? 0}`);
+  for (const [k, v] of Object.entries(summary.featureMiraAttributeCounts || {}).sort(
+    (a, b) => b[1] - a[1]
+  )) {
+    lines.push(`  atributo ${k}: ${v}`);
+  }
+  for (const [k, v] of Object.entries(summary.featureMiraLevelRankCounts || {}).sort(
+    (a, b) => b[1] - a[1]
+  )) {
+    lines.push(`  nível/rank ${k}: ${v}`);
+  }
+  for (const [k, v] of Object.entries(summary.featureMiraProbeErrors || {}).sort(
+    (a, b) => b[1] - a[1]
+  )) {
+    lines.push(`  erro sonda ${k}: ${v}`);
+  }
   return lines.join('\n');
+}
+
+/**
+ * Caminho relativo no ZIP para JPEG de diagnóstico (gallery.html referencia `images/`, não base64).
+ * @param {number} seq
+ * @param {string} zipName
+ * @returns {string}
+ */
+function ocrDiagZipImageRelPath(seq, zipName) {
+  const pad = String(seq).padStart(3, '0');
+  return `images/sample_${pad}_${zipName}.jpg`;
+}
+
+/**
+ * @param {number} seq
+ * @param {object|null|undefined} im
+ * @param {string} key
+ * @param {string} zipName
+ * @param {string} label
+ * @param {(s: string) => string} esc
+ * @returns {string}
+ */
+function ocrDiagGalleryFigureHtml(seq, im, key, zipName, label, esc) {
+  if (!im || !im[key]) return '';
+  const src = ocrDiagZipImageRelPath(seq, zipName);
+  return `<figure><figcaption>${esc(label)}</figcaption><img src="${src}" alt="${esc(label)}" loading="lazy"/></figure>`;
 }
 
 /**
@@ -31985,12 +35501,16 @@ function formatOcrDiagnosticsSummaryText(summary) {
  */
 function buildOcrDiagnosticsGalleryHtml(session, summary) {
   const samples = session && Array.isArray(session.samples) ? session.samples : [];
+  const zipNameByKey = {};
+  for (const [key, name] of OCR_DIAG_ZIP_IMAGE_SLOTS) zipNameByKey[key] = name;
   const esc = (s) =>
     String(s ?? '')
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;');
+  const fig = (seq, im, key, label) =>
+    ocrDiagGalleryFigureHtml(seq, im, key, zipNameByKey[key] || key, label, esc);
   const cards = samples
     .map((s) => {
       const ui = esc(s.lastDetectedCardTypeUi);
@@ -32026,35 +35546,46 @@ function buildOcrDiagnosticsGalleryHtml(session, summary) {
           : '';
       const fc = s.typeProbe && s.typeProbe.frameColor;
       const rgb = fc ? `R${fc.avgR} G${fc.avgG} B${fc.avgB}` : '';
-      const robot = s.images && s.images.robotNameStripJpeg;
-      const raw = (s.images && s.images.rawNameOcrJpeg) || (s.images && s.images.rawNameRegionJpeg);
-      const rawVisual = s.images && s.images.rawNameVisualJpeg;
-      const typeImg = s.images && s.images.typeMiraJpeg;
-      const frameImg =
-        (s.images && s.images.frameProbeLeftJpeg) ||
-        (s.images && s.images.frameProbeRegionJpeg);
-      const img = (src, label) =>
-        src
-          ? `<figure><figcaption>${esc(label)}</figcaption><img src="${src}" alt="${esc(label)}" loading="lazy"/></figure>`
-          : '';
+      const fmp = s.featureMiraProbe;
+      const fmpLive = fmp && fmp.liveProbe;
+      const fmpAttr =
+        fmpLive && !fmpLive.error
+          ? `${fmpLive.attribute || '—'} RGB ${
+              fmpLive.attrRgb
+                ? `${fmpLive.attrRgb.avgR}/${fmpLive.attrRgb.avgG}/${fmpLive.attrRgb.avgB}`
+                : '—'
+            }`
+          : esc(fmpLive && fmpLive.error ? fmpLive.error : '—');
+      const fmpLvl =
+        fmpLive && fmpLive.levelRank && !fmpLive.error
+          ? `${fmpLive.levelRank.kind}${fmpLive.levelRank.value != null ? '=' + fmpLive.levelRank.value : ''}`
+          : '—';
+      const artCands = esc(
+        (s.outcome && s.outcome.artCandidateCardIds && s.outcome.artCandidateCardIds.join(',')) ||
+          (s.artProbe && s.artProbe.artCandidateCardIds && s.artProbe.artCandidateCardIds.join(',')) ||
+          ''
+      );
+      const im = s.images || {};
+      const seq = s.seq;
       return `<article class="sample">
         <h2>#${s.seq} <small>${esc(s.ts)}</small></h2>
         <p><strong>UI</strong> ${ui} · <strong>Tipo (mira azul)</strong> ${frame} · <strong>Faixa nome</strong> ${strip} · <strong>OCR robô</strong> ${ocrType || '—'}</p>
         <p><strong>Raridade UI</strong> ${rUi || '—'} · <strong>Detetada</strong> ${rDet || '—'} · <strong>Nome</strong> ${rName || '—'} · <strong>Arte</strong> ${rArt || '—'}</p>
         <p><strong>Passcode OCR</strong> raw=<code>${idRaw || '—'}</code> · candidatos=<code>${idCands || '—'}</code> · conf=${idConf} · variante=${idVar || '—'}</p>
         <p class="meta">${esc(rgb)} · ${esc(rMetrics)} · ID: ${esc(idHint)} · nome OCR: <code>${cleaned || '—'}</code></p>
+        <p class="meta"><strong>Mira atributo</strong> ${fmpAttr} · <strong>Mira nível</strong> ${fmpLvl} · <strong>artCandidates</strong> <code>${artCands || '—'}</code></p>
         <div class="grid">
-          ${img(robot, 'Robô nome (pré-processado)')}
-          ${img(raw, 'Recorte OCR (nome)')}
-          ${img(rawVisual, 'Mira verde no ecrã')}
-          ${img(typeImg, 'Mira azul — cartão')}
-          ${img(frameImg, 'Borda moldura')}
-          ${img(s.images && s.images.artRegionJpeg, 'Arte (mira azul)')}
-          ${img(s.images && s.images.rawPasscodeJpeg, 'Passcode bruto (câmara)')}
-          ${img(s.images && s.images.robotPasscodeJpeg, 'Robô ID (binário usado)')}
-          ${img(s.images && s.images.passcodeBinDarkJpeg, 'ID bin darkOnLight')}
-          ${img(s.images && s.images.passcodeBinLightJpeg, 'ID bin lightOnDark')}
-          ${img(s.images && s.images.passcodeLcRawJpeg, 'ID contraste local (sem bin)')}
+          ${fig(seq, im, 'robotNameStripJpeg', 'Robô nome (pré-processado)')}
+          ${fig(seq, im, im.rawNameOcrJpeg ? 'rawNameOcrJpeg' : 'rawNameRegionJpeg', 'Recorte OCR (nome)')}
+          ${fig(seq, im, 'rawNameVisualJpeg', 'Mira verde no ecrã')}
+          ${fig(seq, im, 'typeMiraJpeg', 'Mira azul — cartão')}
+          ${fig(seq, im, 'frameProbeLeftJpeg', 'Borda moldura')}
+          ${fig(seq, im, 'artRegionJpeg', 'Arte (mira azul)')}
+          ${fig(seq, im, 'rawPasscodeJpeg', 'Passcode bruto (câmara)')}
+          ${fig(seq, im, 'robotPasscodeJpeg', 'Robô ID (binário usado)')}
+          ${fig(seq, im, 'passcodeBinDarkJpeg', 'ID bin darkOnLight')}
+          ${fig(seq, im, 'passcodeBinLightJpeg', 'ID bin lightOnDark')}
+          ${fig(seq, im, 'passcodeLcRawJpeg', 'ID contraste local (sem bin)')}
         </div>
       </article>`;
     })
@@ -32091,10 +35622,34 @@ ${cards || '<p>Sem amostras.</p>'}
 function syncOcrDiagnosticsButtonUi() {
   const btn = getEl('btn-ocr-collect-diagnostics');
   if (!btn) return;
+  const exporting = !!ocrDiagnosticsExportBusy;
   const on = !!ocrDiagnosticsCaptureActive;
+  btn.disabled = exporting;
+  btn.setAttribute('aria-busy', exporting ? 'true' : 'false');
   btn.setAttribute('aria-pressed', on ? 'true' : 'false');
-  btn.classList.toggle('ocr-diagnostics-collect--active', on);
-  const label = on ? 'Parar e exportar' : 'Coletar informações';
+  btn.classList.toggle('ocr-diagnostics-collect--active', on && !exporting);
+  btn.classList.toggle('ocr-diagnostics-collect--exporting', exporting);
+  let label = 'Coletar informações';
+  if (exporting) {
+    if (ocrDiagnosticsExportPhase === 'passcode' && ocrDiagnosticsExportProgressTotal > 0) {
+      label = `A gerar ZIP… ${ocrDiagnosticsExportProgressDone}/${ocrDiagnosticsExportProgressTotal} passcode`;
+    } else if (ocrDiagnosticsExportPhase === 'probes' && ocrDiagnosticsExportProgressTotal > 0) {
+      label = `A preencher probes ${ocrDiagnosticsExportProgressDone}/${ocrDiagnosticsExportProgressTotal}…`;
+    } else if (ocrDiagnosticsExportPhase === 'probes') {
+      label = 'A preencher probes…';
+    } else if (ocrDiagnosticsExportPhase === 'zip') {
+      if (ocrDiagnosticsExportProgressTotal > 0) {
+        label = `A compactar… ${ocrDiagnosticsExportProgressDone}/${ocrDiagnosticsExportProgressTotal}`;
+      } else {
+        label = 'A compactar…';
+      }
+    } else if (ocrDiagnosticsExportPhase === 'done') {
+      label = 'Exportado';
+    } else {
+      label = 'A gerar ZIP…';
+    }
+  } else if (ocrDiagSegmentHardPaused) label = 'Retomar coleta';
+  else if (on) label = 'Parar e exportar';
   const span = btn.querySelector('.btn-ocr-collect-label');
   if (span) span.textContent = label;
   else btn.textContent = label;
@@ -32105,71 +35660,307 @@ function syncOcrDiagnosticsButtonUi() {
  * @returns {void}
  */
 function toggleOcrDiagnosticsCapture() {
+  if (ocrDiagnosticsExportBusy) return;
   if (!ocrDiagnosticsCaptureActive) {
+    if (
+      ocrDiagSegmentHardPaused &&
+      ocrDiagnosticsSession &&
+      ocrDiagnosticsSession.samples &&
+      ocrDiagnosticsSession.samples.length > 0
+    ) {
+      ocrDiagSegmentHardPaused = false;
+      ocrDiagSegmentHardPauseInfo = null;
+      clearOcrDiagHardPauseBanner();
+      ocrDiagnosticsCaptureActive = true;
+      syncOcrDiagnosticsButtonUi();
+      syncOcrDiagStatusPanelVisibility();
+      startOcrDiagProgressWatch();
+      const resumeSeq = ocrDiagnosticsSession.samples.length - 1;
+      addOcrLog('▶ Coleta retomada após PAUSA HARD.', 'ok');
+      syncOcrDiagLiveCompareUi(resumeSeq);
+      try {
+        showToast('Coleta retomada — mantenha a carta correcta na mira.', { variant: 'info' });
+      } catch (_) {}
+      return;
+    }
+    ocrDiagSegmentHardPaused = false;
+    ocrDiagSegmentHardPauseInfo = null;
+    clearOcrDiagHardPauseBanner();
     ocrDiagnosticsSession = {
-      schemaVersion: 4,
+      schemaVersion: 5,
       startedAt: new Date().toISOString(),
       samples: [],
       logLines: [],
     };
     ocrDiagnosticsLastSampleAt = 0;
+    ocrDiagnosticsLastPipelineSampleAt = 0;
+    ocrDiagnosticsLastArtSampleAt = 0;
+    ocrDiagArtProbeInFlight = false;
+    ocrDiagnosticsSampleRecordInFlight = false;
+    ocrDiagPipelineRecordRunning = false;
+    ocrDiagPipelineRecordPending = null;
+    clearPasscodeCaptureIdleTimer();
+    clearPasscodeBgIdleTimer();
+    passcodeDiagSidecarQueue = [];
+    passcodeDiagSidecarBusy = false;
+    passcodeDiagSidecarCollectionPaused = false;
+    passcodeSidecarSerialTail = Promise.resolve();
+    ocrDiagLastLoggedSegIdx = -1;
+    ocrDiagLastNotifiedSegCompleteIdx = -1;
+    ocrDiagLastProgressLogAt = 0;
+    ocrDiagArtOnlyLimitWarned = false;
+    ocrDiagAutoExportScheduled = false;
+    lastOcrDiagPipelineSnap = null;
+    ocrDiagLastPreviewSampleCtx = null;
+    ocrDiagPipelineSlotStuckAt = 0;
+    ocrDiagPipelineSlotStuckSeq = -1;
+    ocrDiagLastLiveMatchId = 0;
+    ocrDiagLastLiveMatchAt = 0;
+    ocrDiagLastScrolledPasscode = null;
+    ocrDiagLiveComparePinned = false;
+    ocrDiagLiveCompareFrozenSession = null;
+    ocrDiagLiveCompareExportedStamp = null;
+    ocrDiagLiveMetricsCache = { key: '', core: null, extended: null };
+    ocrDiagDeferredProbeTail = Promise.resolve();
+    ocrDiagDeferredProbePending = null;
+    ocrDiagPipelineNameIdleTail = Promise.resolve();
+    ocrDiagLastTypeProbeSnap = null;
+    ocrDiagLastPreviewSegmentPasscode = null;
+    ocrDiagLastLiveReadSegmentPasscode = null;
+    lastOcrLiveReadMatchedId = null;
+    lastOcrPreviewPaintAt = 0;
+    ocrPreviewLastFrameAt = 0;
+    ocrDiagLastFrameStallMs = 0;
+    ocrDiagLiveCompareUiThrottleAt = 0;
+    ocrDiagPreflightState = null;
+    stopOcrDiagCompareClockTimer();
     ocrDiagnosticsCaptureActive = true;
+    syncOcrDiagLiveCompareChrome();
+    primeOcrDiagAudioContext();
     syncOcrDiagnosticsButtonUi();
-    addOcrLog('📋 Coleta de diagnóstico: ligada (amostras com throttle ~800 ms).');
+    ensureOcrDiagStatusPanel();
+    syncOcrDiagStatusPanelVisibility();
+    startOcrDiagProgressWatch();
+    syncOcrDiagCollectionProgressUi(-1);
+    void getOcrCardFeaturesModule();
+    void (async () => {
+      await Promise.all([getOcrDiagAnalyzeModule(), runOcrDiagCollectionPreflight()]);
+      syncOcrDiagLiveCompareUi(-1, { mode: 'full' });
+    })();
+    logOcrDiagCollectionGuide();
     try {
-      showToast('Coleta ligada: ao parar, exporta um único ficheiro .zip.', { variant: 'info' });
+      showToast(
+        `Coleta ligada: ao atingir ${OCR_DIAG_BENCH_TARGET} amostras, exporta automaticamente um .zip.`,
+        { variant: 'info' }
+      );
     } catch (_) {}
     return;
   }
+  const stopCount =
+    ocrDiagnosticsSession && ocrDiagnosticsSession.samples
+      ? ocrDiagnosticsSession.samples.length
+      : 0;
+  if (stopCount < OCR_DIAG_BENCH_TARGET) {
+    const confirmMsg = T('ocr.diag.export_confirm_incomplete', {
+      count: String(stopCount),
+      bench: String(OCR_DIAG_BENCH_TARGET),
+    });
+    if (!confirm(confirmMsg)) return;
+  }
+  beginOcrDiagnosticsExport();
+}
+
+/**
+ * Para coleta activa e inicia export ZIP (manual ou auto ao atingir meta).
+ * @returns {void}
+ */
+function beginOcrDiagnosticsExport() {
+  if (ocrDiagnosticsExportBusy) return;
+  ocrDiagAutoExportScheduled = false;
   ocrDiagnosticsCaptureActive = false;
+  updateOcrCapturePreviewThrottleUi(false);
+  syncOcrDiagLiveCompareChrome();
+  stopOcrDiagProgressWatch();
+  abortPasscodeDiagSidecarForExport();
+  ocrDiagnosticsSampleRecordInFlight = false;
+  ocrDiagPipelineRecordRunning = false;
+  ocrDiagPipelineRecordPending = null;
+  if (ocrFrameScheduleTimer) {
+    clearTimeout(ocrFrameScheduleTimer);
+    ocrFrameScheduleTimer = 0;
+  }
+  const sessionForFreeze = ocrDiagnosticsSession;
+  const stoppedCountEarly =
+    sessionForFreeze && sessionForFreeze.samples ? sessionForFreeze.samples.length : 0;
+  if (sessionForFreeze && sessionForFreeze.samples && sessionForFreeze.samples.length) {
+    ocrDiagLiveCompareFrozenSession = {
+      startedAt: sessionForFreeze.startedAt,
+      samples: sessionForFreeze.samples.slice(),
+      schemaVersion: sessionForFreeze.schemaVersion,
+    };
+    ocrDiagLiveComparePinned = stoppedCountEarly > 0;
+  }
+  ocrDiagnosticsExportBusy = true;
+  ocrDiagnosticsExportPhase = '';
+  ocrDiagnosticsExportProgressDone = 0;
+  ocrDiagnosticsExportProgressTotal = 0;
   syncOcrDiagnosticsButtonUi();
+  syncOcrDiagStatusPanelVisibility();
+  syncOcrDiagExportProgressUi('probes', 0, stoppedCountEarly);
+  addOcrLog('📦 A gerar ZIP…', 'info');
+  try {
+    showToast('A gerar ZIP…', { variant: 'info' });
+  } catch (_) {}
   const logBox = getEl('ocr-log');
   const logSnapshot = logBox ? logBox.innerText : '';
   const endedAt = new Date().toISOString();
-  const session = ocrDiagnosticsSession;
-  const analysisSummary = buildOcrDiagnosticsExportSummary(session);
-  const payload = {
-    schemaVersion: 3,
-      purpose:
-      'Diagnóstico OCR: mira verde (nome), mira azul (carta), Tesseract + Paddle (foil). Exportado em ZIP.',
-    exportedAt: endedAt,
-    session,
-    analysisSummary,
-    logPanelText: logSnapshot,
-    meta: {
-      userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : '',
-      language: typeof getUiLang === 'function' ? getUiLang() : '',
-      url: typeof location !== 'undefined' ? String(location.href) : '',
-      viewport: {
-        w: typeof window !== 'undefined' ? window.innerWidth : null,
-        h: typeof window !== 'undefined' ? window.innerHeight : null,
-      },
-      dpr: typeof window !== 'undefined' && typeof window.devicePixelRatio === 'number' ? window.devicePixelRatio : null,
-      tessedit_pageseg_mode: '7',
-      ocrWorkerReady: !!ocrWorker,
-      paddleOcrReady: paddleOcrReadyFlag,
-      ocrNameDstH: OCR_NAME_DST_H,
-    },
-  };
-  ocrDiagnosticsSession = null;
-  const stamp = Date.now();
-  const summaryText = formatOcrDiagnosticsSummaryText(analysisSummary);
-  const galleryHtml = buildOcrDiagnosticsGalleryHtml(session, analysisSummary);
-  void exportOcrDiagnosticsAsZip(stamp, payload, session, summaryText, galleryHtml)
-    .then(() => {
-      addOcrLog(`📋 Coleta terminada. Ficheiro: ocr_diagnostics_${stamp}.zip`);
+  const session = ocrDiagnosticsSession || ocrDiagLiveCompareFrozenSession;
+  const stoppedCount = session && session.samples ? session.samples.length : 0;
+  if (stoppedCount < OCR_DIAG_BENCH_TARGET) {
+    const lastInfo = stoppedCount > 0 ? benchmarkSegmentInfoForSeq(stoppedCount - 1) : null;
+    const cardHint = lastInfo
+      ? `última carta ${lastInfo.cardIndex}/6 «${lastInfo.name}» (${lastInfo.sampleInSeg}/${lastInfo.segSamples})`
+      : 'nenhuma amostra';
+    addOcrLog(
+      `📋 Coleta parada: ${stoppedCount}/${OCR_DIAG_BENCH_TARGET} amostras (${cardHint}). Faltavam ${OCR_DIAG_BENCH_TARGET - stoppedCount} para a meta.`,
+      'warn'
+    );
+    try {
+      showToast(
+        T('ocr.diag.export_incomplete', {
+          missing: String(OCR_DIAG_BENCH_TARGET - stoppedCount),
+          count: String(stoppedCount),
+          bench: String(OCR_DIAG_BENCH_TARGET),
+        }),
+        { variant: 'warn' }
+      );
+    } catch (_) {}
+  }
+  if (ocrDiagnosticsExportZipTimer) {
+    clearTimeout(ocrDiagnosticsExportZipTimer);
+    ocrDiagnosticsExportZipTimer = 0;
+  }
+  ocrDiagnosticsExportZipTimer = setTimeout(() => {
+    ocrDiagnosticsExportZipTimer = 0;
+    if (!ocrDiagnosticsExportBusy) return;
+    addOcrLog(`📦 A compactar ${stoppedCount} amostras e imagens…`, 'info');
+  }, 3000);
+  void (async () => {
+    let stamp = Date.now();
+    try {
+      await ocrDiagDeferredProbeTail;
+      await ocrDiagPipelineNameIdleTail;
+      await flushPasscodeDiagnosticsBeforeExport(session);
+      const probeTotal = countOcrDiagDeferredProbesPending(session);
+      syncOcrDiagExportProgressUi('probes', 0, probeTotal || stoppedCount);
+      await flushOcrDiagDeferredProbesBeforeExport(session, (done, total) => {
+        syncOcrDiagExportProgressUi('probes', done, total);
+        if (done % 5 === 0 || done === total) {
+          invalidateOcrDiagLiveMetricsCache();
+          if (ocrDiagLiveCompareFrozenSession && ocrDiagLiveComparePinned) {
+            syncOcrDiagLiveCompareUi(-1, { mode: 'incremental', phasesOnly: true });
+          }
+        }
+      });
+      invalidateOcrDiagLiveMetricsCache();
+      if (ocrDiagLiveCompareFrozenSession && ocrDiagLiveComparePinned) {
+        syncOcrDiagLiveCompareUi(-1, { mode: 'full', complete: true });
+      }
+      ocrDiagnosticsPasscodePatchSeq = -1;
+      finalizePasscodeProbesForExport(session);
+      syncOcrDiagExportProgressUi('zip', 0, stoppedCount);
+      addOcrLog('📦 A gerar ficheiro ZIP…', 'info');
+      await yieldOcrDiagMainThread();
+      const analysisSummary = buildOcrDiagnosticsExportSummary(session);
+      await yieldOcrDiagMainThread();
+      const payload = {
+        schemaVersion: 3,
+        purpose:
+          'Diagnóstico OCR: mira verde (nome), mira azul (carta), Tesseract + Paddle (foil). Exportado em ZIP.',
+        exportedAt: endedAt,
+        session,
+        analysisSummary,
+        logPanelText: logSnapshot,
+        meta: {
+          userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : '',
+          language: typeof getUiLang === 'function' ? getUiLang() : '',
+          url: typeof location !== 'undefined' ? String(location.href) : '',
+          viewport: {
+            w: typeof window !== 'undefined' ? window.innerWidth : null,
+            h: typeof window !== 'undefined' ? window.innerHeight : null,
+          },
+          dpr:
+            typeof window !== 'undefined' && typeof window.devicePixelRatio === 'number'
+              ? window.devicePixelRatio
+              : null,
+          tessedit_pageseg_mode: '7',
+          ocrWorkerReady: !!ocrWorker,
+          paddleOcrReady: paddleOcrReadyFlag,
+          ocrNameDstH: OCR_NAME_DST_H,
+        },
+      };
+      stamp = Date.now();
+      ocrDiagLiveCompareExportedStamp = stamp;
+      const summaryText = formatOcrDiagnosticsSummaryText(analysisSummary);
+      await yieldOcrDiagMainThread();
+      const galleryHtml = OCR_DIAG_EXPORT_ZIP_SKIP_GALLERY
+        ? null
+        : buildOcrDiagnosticsGalleryHtml(session, analysisSummary);
+      await yieldOcrDiagMainThread();
+      await exportOcrDiagnosticsAsZip(stamp, payload, session, summaryText, galleryHtml);
+      saveOcrDiagLastBaselineFromSession(session, stamp);
+      syncOcrDiagExportProgressUi('done', stoppedCount, stoppedCount);
+      addOcrLog(`📋 Exportado: ocr_diagnostics_${stamp}.zip`, 'ok');
+      resetOcrDiagSidebarAfterExport();
       try {
-        showToast(
-          `Exportado: ocr_diagnostics_${stamp}.zip — copie para a pasta logs/ do projeto para análise`,
-          { variant: 'success' }
-        );
+        showToast(`Export concluído: ocr_diagnostics_${stamp}.zip`, { variant: 'success' });
       } catch (_) {}
-    })
-    .catch((err) => {
+      const copySummary = analysisSummary;
+      ocrDiagScheduleIdle(() => {
+        void copyOcrDiagnosticsAnalysisReportToClipboard(session, copySummary, stamp);
+      }, 900);
+    } catch (err) {
       console.error('ZIP export failed', err);
-      downloadTextFile(`ocr_diagnostics_${stamp}.json`, JSON.stringify(payload, null, 2), 'application/json');
-      addOcrLog(`📋 ZIP falhou; exportado JSON. Erro: ${err && err.message ? err.message : err}`);
-    });
+      try {
+        const analysisSummary = buildOcrDiagnosticsExportSummary(session);
+        const payload = {
+          schemaVersion: 3,
+          exportedAt: endedAt,
+          session,
+          analysisSummary,
+          logPanelText: logSnapshot,
+        };
+        downloadTextFile(`ocr_diagnostics_${stamp}.json`, JSON.stringify(payload, null, 2), 'application/json');
+      } catch (_) {}
+      addOcrLog(`📋 ZIP falhou; exportado JSON. Erro: ${err && err.message ? err.message : err}`, 'warn');
+      if (err && /quota|space|disk|memory|allocation/i.test(String(err.message || err))) {
+        addOcrLog('💾 Pouco espaço em disco (C:) — liberte ≥2 GB na pasta Downloads.', 'warn');
+      }
+      try {
+        showToast('Exportação ZIP falhou — JSON descarregado.', { variant: 'warn' });
+      } catch (_) {}
+    } finally {
+      if (ocrDiagnosticsExportZipTimer) {
+        clearTimeout(ocrDiagnosticsExportZipTimer);
+        ocrDiagnosticsExportZipTimer = 0;
+      }
+      stopOcrDiagExportPasscodeWatch();
+      passcodeDiagSidecarCollectionPaused = false;
+    passcodeSidecarSerialTail = Promise.resolve();
+      ocrDiagnosticsSession = null;
+      ocrDiagnosticsExportBusy = false;
+      ocrDiagnosticsExportPhase = '';
+      syncOcrDiagnosticsButtonUi();
+      const progWrap = getEl('ocr-diag-collect-progress');
+      if (progWrap) progWrap.hidden = true;
+      syncOcrDiagStatusPanelVisibility();
+      if (ocrDiagLiveCompareFrozenSession && ocrDiagLiveComparePinned) {
+        invalidateOcrDiagLiveMetricsCache();
+        syncOcrDiagLiveCompareUi(-1, { mode: 'full', complete: true });
+      }
+      if (isOcrActive) scheduleNextOcrFrame();
+    }
+  })();
 }
 
 /**
@@ -32178,54 +35969,1056 @@ function toggleOcrDiagnosticsCapture() {
  * @returns {void}
  */
 function ocrDiagnosticsPushLogMirror(msg) {
-  if (!ocrDiagnosticsCaptureActive || !ocrDiagnosticsSession) return;
+  // Durante a coleta espelha na sessão activa; durante o export (flush) espelha na sessão em flush,
+  // para que os logs do passcode/Fase D do export fiquem no ZIP (senão perdem-se — diagnóstico cego).
+  const session =
+    ocrDiagnosticsCaptureActive && ocrDiagnosticsSession
+      ? ocrDiagnosticsSession
+      : ocrDiagnosticsExportFlushing
+        ? ocrDiagnosticsFlushSession || ocrDiagnosticsSession
+        : null;
+  if (!session || !Array.isArray(session.logLines)) return;
   const loc = getUiLang() === 'pt' ? 'pt-BR' : 'en-US';
   const t = new Date().toLocaleTimeString(loc, { hour12: false });
   const line = `[${t}] ${msg}`;
-  ocrDiagnosticsSession.logLines.push(line);
-  if (ocrDiagnosticsSession.logLines.length > 600) ocrDiagnosticsSession.logLines.shift();
+  session.logLines.push(line);
+  if (session.logLines.length > 600) session.logLines.shift();
+}
+
+/**
+ * Constrói sidecar de passcode a partir do hit OCR.
+ * @param {null|{ text?: string, candidates?: string[], confidence?: number, variantId?: string }} hit
+ * @returns {null|{ raw: string, candidates: string[], confidence: number, variantId: string|null }}
+ */
+function buildPasscodeSidecarFromHit(hit) {
+  if (!hit) return null;
+  const candidates =
+    hit.candidates && hit.candidates.length
+      ? hit.candidates
+      : hit.text
+        ? extractYuGiOhPasscodeCandidates(hit.text)
+        : [];
+  const raw =
+    hit.text || candidates.length
+      ? (() => {
+          const r = String(hit.text || '').replace(/\s+/g, '');
+          const eight = (candidates || []).find((c) => String(c).length === 8);
+          if (eight) return eight;
+          if (r.replace(/\D/g, '').length >= 8) return r.replace(/\D/g, '').slice(0, 8);
+          return r.replace(/\D/g, '').length >= 4 ? r.replace(/\D/g, '') : '';
+        })()
+      : '';
+  if (!raw && !candidates.length) return null;
+  return {
+    raw,
+    candidates,
+    confidence: hit.confidence || 0,
+    variantId: hit.variantId || null,
+  };
+}
+
+/**
+ * Modo diagnóstico: exporta sidecar fraco (matte_mild conf≈6) — não aplicar filtros de match ao vivo.
+ * @returns {boolean}
+ */
+function passcodeDiagnosticsExportMode() {
+  return !!(ocrDiagnosticsCaptureActive || ocrDiagnosticsExportFlushing || ocrDiagnosticsSession);
+}
+
+/**
+ * Sidecar para export: cache vivo ou melhor attempt do último OCR background.
+ * @param {object|null|undefined} sidecar
+ * @param {object|null|undefined} diag
+ * @returns {object|null}
+ */
+function synthesizePasscodeSidecarForExport(sidecar, diag) {
+  const diagExport = passcodeDiagnosticsExportMode();
+  if (sidecar && Array.isArray(sidecar.candidates) && sidecar.candidates.length) {
+    if (!diagExport) {
+      const lowConf = typeof sidecar.confidence === 'number' && sidecar.confidence < 18;
+      const garbage =
+        lowConf &&
+        isPasscodeOcrGarbageRead(sidecar.raw || sidecar.candidates[0], sidecar.confidence, true);
+      if (!garbage) return sidecar;
+    } else {
+      return sidecar;
+    }
+  }
+  if (!diag || !Array.isArray(diag.attempts) || !diag.attempts.length) {
+    return sidecar || null;
+  }
+  let bestAtt = null;
+  for (let i = 0; i < diag.attempts.length; i++) {
+    const a = diag.attempts[i];
+    if (
+      !diagExport &&
+      a.confidence != null &&
+      a.confidence < 18 &&
+      String(a.variant || '').indexOf('digit') < 0
+    ) {
+      continue;
+    }
+    if (!bestAtt || (a.score || -999) > (bestAtt.score || -999)) bestAtt = a;
+  }
+  if (!bestAtt) return sidecar || null;
+  const cands =
+    bestAtt.candidates && bestAtt.candidates.length
+      ? bestAtt.candidates
+      : extractYuGiOhPasscodeCandidates(bestAtt.raw || '');
+  const raw =
+    (sidecar && sidecar.raw) ||
+    bestAtt.raw ||
+    (cands[0] ? String(cands[0]) : '');
+  if (!raw && !cands.length) {
+    return sidecar
+      ? {
+          ...sidecar,
+          variantId:
+            sidecar.variantId || diag.bestVariant || bestAtt.variant || null,
+          confidence:
+            typeof sidecar.confidence === 'number' && sidecar.confidence > 0
+              ? sidecar.confidence
+              : bestAtt.confidence || 0,
+        }
+      : null;
+  }
+  return {
+    raw: raw || '',
+    candidates: cands,
+    confidence:
+      sidecar && typeof sidecar.confidence === 'number' && sidecar.confidence > 0
+        ? sidecar.confidence
+        : bestAtt.confidence || 0,
+    variantId:
+      (sidecar && sidecar.variantId) || diag.bestVariant || bestAtt.variant || null,
+    card: sidecar && sidecar.card ? sidecar.card : null,
+  };
+}
+
+/**
+ * Aplica sidecar/diag à amostra indicada (ou última) após OCR background.
+ * @param {object|null} sidecar
+ * @param {number} [patchSeq]
+ * @returns {void}
+ */
+function patchCapturePasscodeSidecar(sidecar, patchSeq) {
+  if (!ocrDiagnosticsSession && !ocrDiagnosticsExportFlushing) return;
+  const diag = lastPasscodeOcrDiagnostics;
+  let merged = synthesizePasscodeSidecarForExport(sidecar, diag);
+  if (!merged && diag && diag.attempts && diag.attempts.length) {
+    merged = synthesizePasscodeSidecarForExport(null, diag);
+  }
+  if (!merged && !(diag && diag.attempts && diag.attempts.length)) return;
+  if (typeof patchSeq === 'number' && patchSeq >= 0 && ocrDiagnosticsSession) {
+    patchOcrDiagnosticsPasscodeSidecarBySeq(patchSeq, merged, diag);
+    return;
+  }
+  const samples = ocrDiagnosticsSession && ocrDiagnosticsSession.samples;
+  if (!samples || !samples.length) return;
+  const last = samples[samples.length - 1];
+  if (!last || !last.passcodeProbe) return;
+  applyPasscodeDiagnosticsToProbe(last.passcodeProbe, merged, diag);
+}
+
+/** @param {object|null} sidecar @returns {void} */
+function patchLastOcrDiagnosticsPasscodeSidecar(sidecar) {
+  patchCapturePasscodeSidecar(sidecar, -1);
+}
+
+/**
+ * Copia sidecar + attempts para passcodeProbe (export/coleta).
+ * @param {object|null} probe
+ * @param {object|null} merged
+ * @param {object|null} diag
+ * @returns {void}
+ */
+function applyPasscodeDiagnosticsToProbe(probe, merged, diag) {
+  if (!probe) return;
+  let effectiveMerged = merged;
+  if (!effectiveMerged && diag && diag.attempts && diag.attempts.length) {
+    effectiveMerged = synthesizePasscodeSidecarForExport(null, diag);
+  }
+  const hasSidecar =
+    effectiveMerged &&
+    (effectiveMerged.raw ||
+      (Array.isArray(effectiveMerged.candidates) && effectiveMerged.candidates.length > 0));
+  if (hasSidecar) {
+    probe.sidecar = {
+      raw: effectiveMerged.raw || '',
+      candidates: effectiveMerged.candidates || [],
+      confidence: safeRound(effectiveMerged.confidence, 1),
+      variantId: effectiveMerged.variantId || null,
+      matchedCardId:
+        effectiveMerged.card && effectiveMerged.card.id != null ? effectiveMerged.card.id : null,
+    };
+  }
+  if (diag && diag.attempts && diag.attempts.length) {
+    probe.attempts = diag.attempts.slice(0, 8);
+    probe.bestVariant =
+      diag.bestVariant ||
+      (probe.sidecar && probe.sidecar.variantId) ||
+      probe.bestVariant;
+  } else if (diag && diag.bestVariant) {
+    probe.bestVariant = diag.bestVariant;
+  }
+}
+
+/**
+ * @param {object|null} probe
+ * @returns {boolean}
+ */
+function passcodeProbeNeedsSidecarOcr(probe) {
+  if (!probe) return false;
+  return !(
+    probe.sidecar &&
+    Array.isArray(probe.sidecar.candidates) &&
+    probe.sidecar.candidates.length > 0
+  );
+}
+
+/**
+ * Espera worker Tesseract livre (nome/arte/background passcode) antes do sidecar serial.
+ * @param {number} [maxMs]
+ * @returns {Promise<boolean>}
+ */
+async function awaitExclusivePasscodeSidecarSlot(maxMs) {
+  const exportFast = !!ocrDiagnosticsExportFlushing;
+  const limit = exportFast
+    ? Math.min(typeof maxMs === 'number' ? maxMs : 12000, 1500)
+    : typeof maxMs === 'number'
+      ? maxMs
+      : 12000;
+  const start = Date.now();
+  clearPasscodeCaptureIdleTimer();
+  clearPasscodeBgIdleTimer();
+  while (Date.now() - start < limit) {
+    if (!ocrDiagnosticsSession && !ocrDiagnosticsExportFlushing) return false;
+    if (passcodeOcrInFlight) {
+      try {
+        await Promise.race([
+          passcodeOcrInFlight.catch(() => null),
+          new Promise((r) => setTimeout(r, 180)),
+        ]);
+      } catch (_) {}
+      continue;
+    }
+    if (!exportFast && (isProcessing || ocrDiagnosticsSampleRecordInFlight)) {
+      await new Promise((r) => setTimeout(r, 45));
+      continue;
+    }
+    return true;
+  }
+  if (exportFast) return true;
+  return !isProcessing && !passcodeOcrInFlight && !ocrDiagnosticsSampleRecordInFlight;
+}
+
+/**
+ * Sidecar a partir de attempts já gravados (sem OCR).
+ * @param {{ samples?: object[] }|null} session
+ * @returns {void}
+ */
+function finalizePasscodeProbesForExport(session) {
+  if (!session || !session.samples) return;
+  const samples = session.samples;
+  for (let i = 0; i < samples.length; i++) {
+    const probe = samples[i].passcodeProbe;
+    if (!probe) continue;
+    if (probe.sidecar && probe.sidecar.candidates && probe.sidecar.candidates.length) continue;
+    if (probe.attempts && probe.attempts.length) {
+      applyPasscodeDiagnosticsToProbe(probe, null, {
+        attempts: probe.attempts,
+        bestVariant: probe.bestVariant,
+      });
+    }
+  }
+}
+
+/**
+ * @returns {Promise<boolean>}
+ */
+async function waitForPasscodeSidecarOcrSlot(maxMs) {
+  const limit = typeof maxMs === 'number' ? maxMs : 10000;
+  const start = Date.now();
+  while (Date.now() - start < limit) {
+    if (!ocrDiagnosticsSession && !ocrDiagnosticsExportFlushing) return false;
+    if (ocrDiagnosticsSampleRecordInFlight) {
+      await new Promise((r) => setTimeout(r, 35));
+      continue;
+    }
+    if (passcodeOcrInFlight) {
+      await new Promise((r) => setTimeout(r, 45));
+      continue;
+    }
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Agenda OCR passcode no JPEG congelado da amostra (background — não bloqueia arte).
+ * @param {number} sampleSeq
+ * @param {string} jpegDataUrl
+ * @param {object|null} hint
+ * @returns {void}
+ */
+function enqueuePasscodeDiagSidecarJob(sampleSeq, jpegDataUrl, hint) {
+  if (!jpegDataUrl || sampleSeq < 0) return;
+  if (!ocrDiagnosticsSession && !ocrDiagnosticsExportFlushing) return;
+  passcodeDiagSidecarQueue.push({ sampleSeq, jpegDataUrl, hint: hint || null });
+  void drainPasscodeDiagSidecarQueue();
+}
+
+function enqueueMissingPasscodeDiagSidecarJobs(session) {
+  if (!session || !session.samples) return;
+  const samples = session.samples;
+  for (let i = 0; i < samples.length; i++) {
+    const sample = samples[i];
+    const probe = sample.passcodeProbe;
+    if (!passcodeProbeNeedsSidecarOcr(probe)) continue;
+    const jpeg = sample.images && sample.images.rawPasscodeJpeg;
+    if (!jpeg) continue;
+    passcodeDiagSidecarQueue.push({ sampleSeq: i, jpegDataUrl: jpeg, hint: probe.hint || null });
+  }
+  void drainPasscodeDiagSidecarQueue();
+}
+
+async function attachPasscodeSidecarDuringCollection(sample, video) {
+  if (!sample || !sample.passcodeProbe || !ocrWorker) return;
+  if (!passcodeProbeNeedsSidecarOcr(sample.passcodeProbe)) return;
+  if (!ocrDiagnosticsSession && !ocrDiagnosticsExportFlushing) return;
+  ocrPasscodeSidecarExclusive = true;
+  try {
+    await awaitExclusivePasscodeSidecarSlot(
+      ocrDiagnosticsExportFlushing ? 14000 : 12000
+    );
+    const probe = sample.passcodeProbe;
+    if (passcodeSidecarJpegSourcesForSample(sample).length) {
+      await runPasscodeSidecarOcrOnSample(probe, sample, { exportSidecar: false });
+    }
+    if (
+      passcodeProbeNeedsSidecarOcr(probe) &&
+      video &&
+      probe.crop &&
+      probe.crop.width >= 4
+    ) {
+      const ocrWarp = buildScannerWarpOcrContext(video, lastOcrCardTrackPack);
+      const ocrMedia = ocrWarp && ocrWarp.media ? ocrWarp.media : video;
+      const hit = await recognizePasscodeFromCrop(ocrMedia, probe.crop, probe.hint, null, {
+        captureLike: true,
+        sidecarLite: true,
+      });
+      const diag = lastPasscodeOcrDiagnostics;
+      const merged = synthesizePasscodeSidecarForExport(
+        hit ? buildPasscodeSidecarFromHit(hit) : null,
+        diag
+      );
+      if (merged || (diag && diag.attempts && diag.attempts.length)) {
+        applyPasscodeDiagnosticsToProbe(probe, merged, diag);
+      }
+    }
+    refreshPipelineArtProbePasscodeBoost(sample);
+  } finally {
+    ocrPasscodeSidecarExclusive = false;
+  }
+}
+
+/**
+ * Pipeline: confirma matched por arte quando passcode J tem candidato certo (ex. Brigrand #11–12).
+ * @param {object|null|undefined} sample
+ * @returns {void}
+ */
+function refreshPipelineArtProbePasscodeBoost(sample) {
+  if (!sample || sample.sampleKind !== 'pipeline' || !sample.artProbe) return;
+  const id = resolveArtHashBenchSegmentMatchedId(sample.artProbe, {
+    sampleKind: 'pipeline',
+    seq: sample.seq,
+    passcodeProbe: sample.passcodeProbe,
+  });
+  if (id == null) return;
+  sample.artProbe.matchedCardId = id;
+  if (sample.outcome) {
+    sample.outcome.matchedCardId = id;
+    sample.outcome.matchSource = sample.outcome.matchSource || 'art';
+    if (!sample.outcome.card || sample.outcome.card.id !== id) {
+      sample.outcome.card = { id };
+    }
+  }
+}
+
+/**
+ * @param {object} sample
+ * @param {HTMLVideoElement} video
+ * @returns {void}
+ */
+function queuePasscodeSidecarDuringCollection(sample, video) {
+  if (!sample || !sample.passcodeProbe) return;
+  passcodeSidecarSerialTail = passcodeSidecarSerialTail
+    .then(() => attachPasscodeSidecarDuringCollection(sample, video))
+    .catch(() => {});
+}
+
+/**
+ * @param {number} [maxMs]
+ * @returns {Promise<void>}
+ */
+async function awaitPasscodeSidecarSerialIdle(maxMs) {
+  const limit = typeof maxMs === 'number' ? maxMs : 90000;
+  await Promise.race([
+    passcodeSidecarSerialTail,
+    new Promise((r) => setTimeout(r, limit)),
+  ]);
+}
+
+function abortPasscodeDiagSidecarForExport() {
+  passcodeDiagSidecarCollectionPaused = true;
+  passcodeDiagSidecarQueue = [];
+  passcodeOcrRunGen++;
+  clearPasscodeCaptureIdleTimer();
+  clearPasscodeBgIdleTimer();
+}
+
+/**
+ * Espera passcode OCR em voo terminar (com teto — nunca bloquear export para sempre).
+ * @param {number} [maxMs]
+ * @returns {Promise<void>}
+ */
+async function waitForPasscodeOcrInflightClear(maxMs) {
+  const inflight = passcodeOcrInFlight;
+  if (!inflight) return;
+  const limit = typeof maxMs === 'number' ? maxMs : OCR_DIAG_PASSCODE_EXPORT_WAIT_INFLIGHT_MS;
+  try {
+    await Promise.race([
+      inflight.catch(() => null),
+      new Promise((r) => setTimeout(r, limit)),
+    ]);
+  } catch (_) {}
+}
+
+/**
+ * @returns {Promise<void>}
+ */
+async function drainPasscodeDiagSidecarQueue() {
+  if (passcodeDiagSidecarBusy) return;
+  if (!passcodeDiagSidecarQueue.length) return;
+  if (!ocrWorker) return;
+  if (passcodeDiagSidecarCollectionPaused) return;
+  passcodeDiagSidecarBusy = true;
+  try {
+    while (
+      passcodeDiagSidecarQueue.length &&
+      (ocrDiagnosticsSession || ocrDiagnosticsExportFlushing) &&
+      !passcodeDiagSidecarCollectionPaused
+    ) {
+      const job = passcodeDiagSidecarQueue.shift();
+      const session = ocrDiagnosticsSession || ocrDiagnosticsFlushSession;
+      const sample = session && session.samples ? session.samples[job.sampleSeq] : null;
+      if (!sample || !sample.passcodeProbe) continue;
+      if (!passcodeProbeNeedsSidecarOcr(sample.passcodeProbe)) continue;
+      const slotOk = await waitForPasscodeSidecarOcrSlot(
+        ocrDiagnosticsExportFlushing ? 14000 : 6000
+      );
+      if (!slotOk) {
+        passcodeDiagSidecarQueue.unshift(job);
+        break;
+      }
+      const perSampleMs = ocrDiagnosticsExportFlushing
+        ? OCR_DIAG_PASSCODE_EXPORT_PER_SAMPLE_MS
+        : OCR_DIAG_PASSCODE_COLLECT_PER_SAMPLE_MS;
+      try {
+        await Promise.race([
+          runPasscodeSidecarOcrOnSample(sample.passcodeProbe, sample, { exportSidecar: false }),
+          new Promise((resolve) => setTimeout(() => resolve(false), perSampleMs)),
+        ]);
+      } catch (_) {
+        /* próxima amostra */
+      }
+      await new Promise((r) => setTimeout(r, 0));
+    }
+  } finally {
+    passcodeDiagSidecarBusy = false;
+    if (
+      passcodeDiagSidecarQueue.length &&
+      (ocrDiagnosticsSession || ocrDiagnosticsExportFlushing) &&
+      !passcodeDiagSidecarCollectionPaused
+    ) {
+      setTimeout(() => void drainPasscodeDiagSidecarQueue(), 80);
+    }
+  }
+}
+
+function passcodeExportMediaSourcesForSample(sample) {
+  if (!sample) return [];
+  const out = [];
+  const warp = ensureOcrDiagSampleFrozenWarp(sample) || resolveOcrDiagFrozenWarpFromSample(sample);
+  if (warp && warp.media) {
+    let geomCrop = warp.passcodeCrop || warp.passcodeStrip;
+    if (
+      (!geomCrop || geomCrop.width < 8) &&
+      ocrCardTrackMod &&
+      typeof ocrCardTrackMod.detectCardExtentOnCanonical === 'function'
+    ) {
+      try {
+        const W = ocrCardTrackMod.CANONICAL_CARD_W;
+        const H = ocrCardTrackMod.CANONICAL_CARD_H;
+        const ext = ocrCardTrackMod.detectCardExtentOnCanonical(warp.media) || {
+          x: 0,
+          y: 0,
+          width: W,
+          height: H,
+        };
+        geomCrop = ocrWarpBenchmarkCropsFromExtent(ext, W, H).passcodeCrop;
+      } catch (_) {}
+    }
+    if (geomCrop && geomCrop.width >= 8) {
+      out.push({ kind: 'canvas', media: warp.media, cropRect: geomCrop, tag: 'warp_geom' });
+    }
+  }
+  const im = sample.images;
+  if (im && im.passcodePaddleJpeg) {
+    out.push({ kind: 'jpeg', dataUrl: im.passcodePaddleJpeg, tag: 'paddle_jpeg' });
+  }
+  return out;
+}
+
+/** Garante passcodePaddleJpeg em memória antes do re-OCR de export. */
+function ensureOcrDiagPasscodeImagesBeforeExport(session) {
+  if (!session || !session.samples) return;
+  const samples = session.samples;
+  for (let i = 0; i < samples.length; i++) {
+    const sample = samples[i];
+    if (sample.sampleKind !== 'pipeline') continue;
+    const im = sample.images || (sample.images = {});
+    if (im.passcodePaddleJpeg) continue;
+    const warp = ensureOcrDiagSampleFrozenWarp(sample) || resolveOcrDiagFrozenWarpFromSample(sample);
+    if (!warp || !warp.media || !warp.passcodeCrop) continue;
+    try {
+      const padDbg = buildPasscodePaddleCanvas(warp.media, warp.passcodeCrop, false);
+      if (padDbg) im.passcodePaddleJpeg = canvasToJpegDataUrl(padDbg, 0.85, padDbg.width);
+    } catch (_) {}
+  }
+}
+
+/**
+ * Canvas a partir do JPEG embutido na amostra (crop passcode congelado).
+ * @param {string} dataUrl
+ * @returns {Promise<HTMLCanvasElement|null>}
+ */
+function passcodeCanvasFromDiagnosticsJpeg(dataUrl) {
+  if (!dataUrl) return Promise.resolve(null);
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, img.naturalWidth || img.width);
+        canvas.height = Math.max(1, img.naturalHeight || img.height);
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          resolve(null);
+          return;
+        }
+        ctx.drawImage(img, 0, 0);
+        resolve(canvas);
+      } catch (_) {
+        resolve(null);
+      }
+    };
+    img.onerror = () => resolve(null);
+    img.src = dataUrl;
+  });
+}
+
+/**
+ * JPEGs passcode para OCR offline (matte_mild preferido — sidecar export).
+ * @param {{ images?: object }|null} sample
+ * @returns {string[]}
+ */
+function passcodeSidecarJpegSourcesForSample(sample) {
+  if (!sample) return [];
+  const out = [];
+  const seen = new Set();
+  const add = (j) => {
+    if (!j || seen.has(j)) return;
+    seen.add(j);
+    out.push(j);
+  };
+  const im = sample.images;
+  if (im) {
+    // Canvas upscaled já pré-processado — melhor p/ Tesseract adaptativo/colunas no export.
+    add(im.passcodePaddleJpeg);
+  }
+  // Geometria: faixa do passcode do warp congelado, crop ANCORADO à extensão da carta.
+  const warp = ensureOcrDiagSampleFrozenWarp(sample) || resolveOcrDiagFrozenWarpFromSample(sample);
+  if (warp && warp.media) {
+    let geomCrop = warp.passcodeCrop || warp.passcodeStrip;
+    // Recalcula a partir da extensão atual do warp se faltar o crop congelado (ex.: warp reparado).
+    if (
+      (!geomCrop || geomCrop.width < 8) &&
+      ocrCardTrackMod &&
+      typeof ocrCardTrackMod.detectCardExtentOnCanonical === 'function'
+    ) {
+      try {
+        const W = ocrCardTrackMod.CANONICAL_CARD_W;
+        const H = ocrCardTrackMod.CANONICAL_CARD_H;
+        const ext = ocrCardTrackMod.detectCardExtentOnCanonical(warp.media) || { x: 0, y: 0, width: W, height: H };
+        geomCrop = ocrWarpBenchmarkCropsFromExtent(ext, W, H).passcodeCrop;
+      } catch (_) {}
+    }
+    if (geomCrop && geomCrop.width >= 8) {
+      add(ocrDiagnosticsMediaCropDataUrl(warp.media, geomCrop, 640, 0));
+    }
+  }
+  // Fallbacks: JPEGs binarizados/brutos guardados ao vivo.
+  if (im) {
+    add(im.robotPasscodeJpeg);
+    add(im.passcodeLcRawJpeg);
+    add(im.rawPasscodeJpeg);
+  }
+  if (!out.length) {
+    const deferPc =
+      sample.passcodeProbe && sample.passcodeProbe.deferPasscodeMedia;
+    if (deferPc && deferPc.passcodeCrop) {
+      add(
+        ocrDiagnosticsMediaCropDataUrl(
+          deferPc.ocrMedia,
+          deferPc.passcodeCrop,
+          560,
+          48
+        )
+      );
+    }
+  }
+  return out;
+}
+
+/**
+ * @param {object|null} probe
+ * @returns {boolean}
+ */
+function passcodeSidecarFilled(probe) {
+  return !!(
+    probe &&
+    probe.sidecar &&
+    Array.isArray(probe.sidecar.candidates) &&
+    probe.sidecar.candidates.length > 0
+  );
+}
+
+/**
+ * @param {object|null} probe
+ * @param {object|null} hit
+ * @param {object|null} diag
+ * @returns {boolean}
+ */
+function applyPasscodeSidecarOcrResult(probe, hit, diag) {
+  if (!probe) return false;
+  const hitSidecar = hit ? buildPasscodeSidecarFromHit(hit) : null;
+  const merged = synthesizePasscodeSidecarForExport(hitSidecar, diag);
+  if (!merged && !(diag && diag.attempts && diag.attempts.length)) return false;
+  applyPasscodeDiagnosticsToProbe(probe, merged, diag);
+  return passcodeSidecarFilled(probe) || !!(probe.attempts && probe.attempts.length);
+}
+
+/**
+ * OCR passcode offline nos JPEGs congelados da amostra (export/coleta).
+ * @param {object|null} probe
+ * @param {string|{ images?: object }} sampleOrJpeg
+ * @param {{ exportSidecar?: boolean }|null} [opts]
+ * @returns {Promise<boolean>}
+ */
+async function runPasscodeSidecarOcrOnSample(probe, sampleOrJpeg, opts) {
+  if (!probe || !ocrWorker) return false;
+  const exportSidecar = !!(opts && opts.exportSidecar);
+  if (exportSidecar) {
+    lastPasscodeOcrDiagnostics = { attempts: [] };
+  }
+  const exportSources =
+    exportSidecar && typeof sampleOrJpeg !== 'string'
+      ? passcodeExportMediaSourcesForSample(sampleOrJpeg)
+      : [];
+  const jpegSources =
+    typeof sampleOrJpeg === 'string'
+      ? [sampleOrJpeg]
+      : exportSidecar && exportSources.length
+        ? exportSources
+        : passcodeSidecarJpegSourcesForSample(sampleOrJpeg).map((j) => ({
+            kind: 'jpeg',
+            dataUrl: j,
+            tag: 'jpeg',
+          }));
+  if (!jpegSources.length) return false;
+  for (let si = 0; si < jpegSources.length; si++) {
+    if (passcodeSidecarFilled(probe)) return true;
+    const src = jpegSources[si];
+    let media = null;
+    let crop = null;
+    if (src.kind === 'canvas') {
+      media = src.media;
+      crop = src.cropRect;
+    } else {
+      media = await passcodeCanvasFromDiagnosticsJpeg(src.dataUrl);
+      if (!media || media.width < 4) continue;
+      crop = { x: 0, y: 0, width: media.width, height: media.height };
+    }
+    if (!media || !crop || crop.width < 4) continue;
+    let hit = null;
+    let diag = null;
+    try {
+      const ocrPromise = recognizePasscodeFromCrop(media, crop, probe.hint || null, null, {
+        captureLike: true,
+        sidecarLite: !exportSidecar,
+        exportSidecar,
+        preprocessedPasscode: src.tag === 'paddle_jpeg',
+      });
+      if (exportSidecar) {
+        hit = await Promise.race([
+          ocrPromise,
+          new Promise((resolve) => setTimeout(() => resolve(null), OCR_DIAG_PASSCODE_EXPORT_SIDECAR_OCR_CAP_MS)),
+        ]);
+        if (!hit) {
+          try {
+            await Promise.race([
+              ocrPromise.catch(() => null),
+              new Promise((r) => setTimeout(r, 700)),
+            ]);
+          } catch (_) {}
+        }
+      } else {
+        hit = await ocrPromise;
+      }
+      diag = lastPasscodeOcrDiagnostics;
+    } catch (_) {
+      continue;
+    }
+    if (applyPasscodeSidecarOcrResult(probe, hit, diag) && passcodeSidecarFilled(probe)) return true;
+  }
+  return passcodeSidecarFilled(probe);
+}
+
+async function fillPasscodeSidecarsFromSampleJpegs(session, opts) {
+  if (!session || !ocrWorker) return 0;
+  const samples = session.samples || [];
+  let filled = 0;
+  let pending = 0;
+  for (let i = 0; i < samples.length; i++) {
+    if (passcodeProbeNeedsSidecarOcr(samples[i].passcodeProbe)) pending++;
+  }
+  if (!pending) return 0;
+  const maxSamples =
+    opts && typeof opts.maxSamples === 'number' ? opts.maxSamples : pending;
+  const started = Date.now();
+  const deadline =
+    opts && typeof opts.deadline === 'number'
+      ? opts.deadline
+      : started + OCR_DIAG_PASSCODE_EXPORT_PASSCODE_CAP_MS;
+  const sampleTimeout =
+    opts && typeof opts.perSampleMs === 'number'
+      ? opts.perSampleMs
+      : OCR_DIAG_PASSCODE_EXPORT_SAMPLE_TIMEOUT_MS;
+  const onProgress = opts && opts.onProgress ? opts.onProgress : null;
+  const probeBudget = Math.min(pending, Math.max(0, maxSamples));
+  addOcrLog(
+    `📦 Passcode sidecar: sondar ${probeBudget}/${pending} amostras (máx ~${Math.round((deadline - started) / 1000)}s)…`,
+    'info'
+  );
+  ocrPasscodeSidecarExclusive = true;
+  let processed = 0;
+  try {
+    for (let i = 0; i < samples.length; i++) {
+      if (processed >= probeBudget) break;
+      if (Date.now() >= deadline) {
+        addOcrLog(
+          `📦 Passcode sidecar: orçamento esgotado com ${filled}/${probeBudget} candidatos — ZIP segue.`,
+          'warn'
+        );
+        break;
+      }
+      const sample = samples[i];
+      const probe = sample.passcodeProbe;
+      if (!passcodeProbeNeedsSidecarOcr(probe)) continue;
+      if (!passcodeSidecarJpegSourcesForSample(sample).length) continue;
+      await awaitExclusivePasscodeSidecarSlot(1500);
+      let ok = false;
+      try {
+        ok = await Promise.race([
+          runPasscodeSidecarOcrOnSample(probe, sample, { exportSidecar: true }),
+          new Promise((resolve) => setTimeout(() => resolve(false), sampleTimeout)),
+        ]);
+      } catch (_) {
+        ok = false;
+      }
+      if (!ok) {
+        const diag = lastPasscodeOcrDiagnostics;
+        if (diag && diag.attempts && diag.attempts.length) {
+          applyPasscodeSidecarOcrResult(probe, null, diag);
+          ok = passcodeSidecarFilled(probe);
+        }
+      }
+      // Observabilidade: regista o que o OCR de export leu nesta amostra (raw + nº candidatos),
+      // para diagnosticar offline pelo ZIP (os logs de export passam a ser capturados).
+      {
+        const diag = lastPasscodeOcrDiagnostics;
+        const sc = probe && probe.sidecar;
+        const cands = sc && Array.isArray(sc.candidates) ? sc.candidates : [];
+        const rawTxt =
+          (diag && diag.attempts && diag.attempts.length && (diag.attempts[0].raw || diag.attempts[0].text)) ||
+          (sc && sc.raw) ||
+          '';
+        const variants =
+          diag && diag.attempts && diag.attempts.length
+            ? diag.attempts
+                .slice(0, 3)
+                .map((a) => `${a.variant || '?'}:"${String(a.raw || '').slice(0, 12)}"`)
+                .join(' ')
+            : '';
+        addOcrLog(
+          `📦 ID #${sample.seq}: raw="${String(rawTxt).slice(0, 24)}" attempts=${diag && diag.attempts ? diag.attempts.length : 0} cands=${cands.length}${cands.length ? ` [${cands.slice(0, 3).join(',')}]` : ''}${variants ? ` | ${variants}` : ''}`,
+          ok ? 'ok' : 'warn'
+        );
+      }
+      processed++;
+      if (onProgress) {
+        try {
+          onProgress({ processed, filled, pending, probeBudget });
+        } catch (_) {}
+      }
+      if (ok) filled++;
+      // Aborto só depois de ≥8 sondas sem QUALQUER candidato (OCR partido). Antes era à 1ª amostra,
+      // o que cancelava tudo se a 1ª (matte) falhasse e nunca chegava às cartas legíveis interleaved.
+      if (
+        OCR_DIAG_PASSCODE_EXPORT_FAST &&
+        processed >= 8 &&
+        filled === 0
+      ) {
+        addOcrLog(
+          `📦 Passcode: ${processed} sondas sem candidatos — abortar restantes.`,
+          'warn'
+        );
+        break;
+      }
+      if (filled > 0 && filled % 8 === 0) {
+        addOcrLog(`📦 Passcode OCR: ${filled}/${probeBudget}…`, 'info');
+      }
+      await new Promise((r) => setTimeout(r, 0));
+    }
+  } finally {
+    ocrPasscodeSidecarExclusive = false;
+  }
+  if (processed >= probeBudget && filled === 0) {
+    addOcrLog(
+      `📦 Passcode: ${processed} sondas sem candidatos (timeout ${Math.round(sampleTimeout / 1000)}s/amostra) — ZIP segue.`,
+      'warn'
+    );
+  }
+  addOcrLog(`📦 Passcode sidecar: ${filled}/${probeBudget} com candidatos`, filled > 0 ? 'ok' : 'warn');
+  return filled;
+}
+
+/**
+ * Preenche passcodeProbe com cache global (último OCR background) se ainda vazio.
+ * @param {object|null} probe
+ * @returns {void}
+ */
+function hydratePasscodeProbeFromCache(probe) {
+  if (!probe || (probe.sidecar && probe.sidecar.candidates && probe.sidecar.candidates.length)) {
+    return;
+  }
+  const merged = synthesizePasscodeSidecarForExport(lastPasscodeSidecar, lastPasscodeOcrDiagnostics);
+  if (!merged && !(lastPasscodeOcrDiagnostics && lastPasscodeOcrDiagnostics.attempts && lastPasscodeOcrDiagnostics.attempts.length)) {
+    return;
+  }
+  applyPasscodeDiagnosticsToProbe(probe, merged, lastPasscodeOcrDiagnostics);
+}
+
+/**
+ * Atualiza passcode sidecar numa amostra de diagnóstico por seq (OCR lite por amostra).
+ * @param {number} sampleSeq
+ * @param {object|null} sidecar
+ * @param {object|null} diag
+ * @returns {void}
+ */
+function patchOcrDiagnosticsPasscodeSidecarBySeq(sampleSeq, sidecar, diag) {
+  if (!ocrDiagnosticsSession && !ocrDiagnosticsExportFlushing) return;
+  const session = ocrDiagnosticsSession || ocrDiagnosticsFlushSession;
+  if (!session || !session.samples) return;
+  const sample = session.samples[sampleSeq];
+  if (!sample || !sample.passcodeProbe) return;
+  let merged = synthesizePasscodeSidecarForExport(sidecar, diag);
+  if (!merged && diag && diag.attempts && diag.attempts.length) {
+    merged = synthesizePasscodeSidecarForExport(null, diag);
+  }
+  if (!merged && !(diag && diag.attempts && diag.attempts.length)) return;
+  applyPasscodeDiagnosticsToProbe(sample.passcodeProbe, merged, diag);
+}
+
+/**
+ * Espera OCR passcode em voo + hidrata cache antes do ZIP (curto — não bloquear export).
+ * @param {{ samples?: object[] }|null} session
+ * @returns {Promise<void>}
+ */
+async function flushPasscodeDiagnosticsBeforeExport(session) {
+  if (!session) return;
+  ocrDiagnosticsExportFlushing = true;
+  ocrDiagnosticsFlushSession = session;
+  const capMs = OCR_DIAG_PASSCODE_EXPORT_PASSCODE_CAP_MS;
+  const capAt = Date.now() + capMs;
+  try {
+    const passcodeWork = async () => {
+      await awaitPasscodeSidecarSerialIdle(OCR_DIAG_PASSCODE_EXPORT_SERIAL_IDLE_MS);
+      finalizePasscodeProbesForExport(session);
+      let { filled, pending } = countPasscodeSidecarExportStats(session);
+      if (pending === 0) {
+        addOcrLog(
+          `📦 Passcode sidecar: ${filled} amostras OK — export rápido (sem OCR extra).`,
+          filled > 0 ? 'ok' : 'info'
+        );
+        return;
+      }
+      if (!ocrWorker) {
+        addOcrLog('📦 Passcode sidecar: ocrWorker indisponível — export sem candidatos.', 'warn');
+        return;
+      }
+      ensureOcrDiagPasscodeImagesBeforeExport(session);
+      // Aquece Tesseract (export usa só Tesseract + binarização adaptativa).
+      addOcrLog('📦 Passcode export: Tesseract pronto (adaptativo + colunas).', 'info');
+      if (!OCR_DIAG_EXPORT_FOCUS_HJ) {
+        try {
+          const pm = await getPaddleOcrModule();
+          const pok = await pm.initPaddleOcrRec();
+          if (pok) paddleOcrReadyFlag = true;
+        } catch (_) {}
+      }
+      await waitForPasscodeOcrInflightClear(1500);
+      const probeMax = OCR_DIAG_PASSCODE_EXPORT_FAST
+        ? Math.min(OCR_DIAG_PASSCODE_EXPORT_PROBE_MAX, pending)
+        : pending;
+      syncOcrDiagExportProgressUi('passcode', 0, probeMax);
+      addOcrLog(
+        OCR_DIAG_PASSCODE_EXPORT_FAST
+          ? `📦 Passcode: export rápido — sondar ${probeMax}/${pending} (teto ${Math.round(capMs / 1000)}s).`
+          : `📦 Passcode: fill ${pending} amostras…`,
+        'info'
+      );
+      await fillPasscodeSidecarsFromSampleJpegs(session, {
+        maxSamples: probeMax,
+        deadline: capAt,
+        perSampleMs: OCR_DIAG_PASSCODE_EXPORT_SAMPLE_TIMEOUT_MS,
+        onProgress: (p) => syncOcrDiagExportProgressUi('passcode', p.processed, p.probeBudget),
+      });
+      finalizePasscodeProbesForExport(session);
+      ({ filled, pending } = countPasscodeSidecarExportStats(session));
+      if (filled === 0 && pending > 0) {
+        addOcrLog(
+          '📦 Passcode: 0 candidatos após sonda — ZIP segue (Fase D opcional).',
+          'warn'
+        );
+      }
+    };
+    await Promise.race([
+      passcodeWork(),
+      new Promise((resolve) => setTimeout(resolve, capMs)),
+    ]);
+    if (Date.now() >= capAt - 50) {
+      ocrPasscodeSidecarExclusive = false;
+      addOcrLog(`📦 Passcode: teto ${Math.round(capMs / 1000)}s — a compactar ZIP.`, 'warn');
+    }
+    syncOcrDiagExportProgressUi('zip', 0, (session.samples && session.samples.length) || 0);
+  } finally {
+    ocrDiagnosticsExportFlushing = false;
+    ocrDiagnosticsFlushSession = null;
+    ocrPasscodeSidecarExclusive = false;
+  }
 }
 
 /**
  * Imagens e metadados do canal passcode para uma amostra de diagnóstico.
+ * Durante coleta: só JPEG bruto + sidecar em cache (sem Tesseract síncrono).
  * @param {HTMLVideoElement} video
  * @param {{ x: number, y: number, width: number, height: number }|null} typeCropRect
  * @returns {null|{ crop: object, hint: object, sidecar: object|null, diagnostics: object|null, images: object }}
  */
 function buildPasscodeDiagnosticsSnapshot(video, typeCropRect) {
   if (!video || video.videoWidth < 4) return null;
-  const passcodeVisual = mapVisualBoxToVideoCrop(video, getEl('scanner-passcode-visual'));
   const ocrWarp = buildScannerWarpOcrContext(video, lastOcrCardTrackPack);
+  const passcodeOcrHint = resolvePasscodeOcrHintRect(ocrWarp, typeCropRect, lastOcrCardTrackPack);
   const ocrMedia = ocrWarp && ocrWarp.media ? ocrWarp.media : video;
-  const passBase = ocrWarp ? ocrWarp.passcodeCrop : getPasscodeCropForOcr(passcodeVisual, typeCropRect);
-  const passcodeCrop = finalizePasscodeCropForOcr(passBase);
-  if (!passcodeCrop) return null;
+  const passBase = resolvePasscodeBaseForOcr(ocrWarp, passcodeOcrHint, typeCropRect);
   const hint = derivePasscodeOcrHint(
     video,
     typeCropRect,
     lastDetectedCardType,
     lastDetectedCardRarity,
-    passBase
+    passBase,
+    ocrMedia
   );
-  const images = {
-    rawPasscodeJpeg: ocrDiagnosticsMediaCropDataUrl(ocrMedia, passcodeCrop, 420),
-    robotPasscodeJpeg: null,
-    passcodeBinDarkJpeg: null,
-    passcodeBinLightJpeg: null,
-    passcodeLcRawJpeg: null,
-  };
-  if (!passcodeOcrCanvasReuse) passcodeOcrCanvasReuse = document.createElement('canvas');
-  const variants = buildPasscodeOcrVariants(ocrMedia, passcodeCrop, passcodeOcrCanvasReuse, hint);
-  if (variants) {
-    const primaryCanvas =
-      variants.primary === 'darkOnLight' ? variants.darkOnLight : variants.lightOnDark;
-    images.robotPasscodeJpeg = canvasToJpegDataUrl(primaryCanvas, 0.8, 440);
-    images.passcodeBinDarkJpeg = canvasToJpegDataUrl(variants.darkOnLight, 0.8, 440);
-    images.passcodeBinLightJpeg = canvasToJpegDataUrl(variants.lightOnDark, 0.8, 440);
-    images.passcodeLcRawJpeg = canvasToJpegDataUrl(variants.lcRaw, 0.8, 440);
+  const passcodeCrop = resolvePasscodeOcrCrop(
+    ocrMedia,
+    passBase,
+    ocrWarp && ocrWarp.passcodeSeed,
+    typeCropRect,
+    ocrWarp
+  );
+  if (!passcodeCrop) return null;
+  const lightCapture = !!ocrDiagnosticsCaptureActive;
+  const warpActive = !!(ocrWarp && ocrWarp.media);
+  const images = lightCapture
+    ? {
+        rawPasscodeJpeg: null,
+        robotPasscodeJpeg: null,
+        passcodeBinDarkJpeg: null,
+        passcodeBinLightJpeg: null,
+        passcodeLcRawJpeg: null,
+      }
+    : {
+        rawPasscodeJpeg: ocrDiagnosticsMediaCropDataUrl(ocrMedia, passcodeCrop, 420, 0),
+        robotPasscodeJpeg: null,
+        passcodeBinDarkJpeg: null,
+        passcodeBinLightJpeg: null,
+        passcodeLcRawJpeg: null,
+      };
+  if (!lightCapture) {
+    if (!passcodeOcrCanvasReuse) passcodeOcrCanvasReuse = document.createElement('canvas');
+    const variants = buildPasscodeOcrVariants(ocrMedia, passcodeCrop, passcodeOcrCanvasReuse, hint);
+    if (variants) {
+      const primaryCanvas =
+        variants.primary === 'darkOnLight' ? variants.darkOnLight : variants.lightOnDark;
+      images.robotPasscodeJpeg = canvasToJpegDataUrl(primaryCanvas, 0.8, 440);
+      images.passcodeBinDarkJpeg = canvasToJpegDataUrl(variants.darkOnLight, 0.8, 440);
+      images.passcodeBinLightJpeg = canvasToJpegDataUrl(variants.lightOnDark, 0.8, 440);
+      images.passcodeLcRawJpeg = canvasToJpegDataUrl(variants.lcRaw, 0.8, 440);
+    }
   }
-  const sidecar = lastPasscodeSidecar;
-  const diag = lastPasscodeOcrDiagnostics;
+  const sidecar = lightCapture
+    ? null
+    : synthesizePasscodeSidecarForExport(lastPasscodeSidecar, lastPasscodeOcrDiagnostics);
+  const diag = lightCapture ? null : lastPasscodeOcrDiagnostics;
+  const hasSidecar =
+    sidecar &&
+    (sidecar.raw ||
+      (Array.isArray(sidecar.candidates) && sidecar.candidates.length > 0));
+  const probeDraft = {
+    sidecar: hasSidecar
+      ? {
+          raw: sidecar.raw || '',
+          candidates: sidecar.candidates || [],
+          confidence: safeRound(sidecar.confidence, 1),
+          variantId: sidecar.variantId || null,
+          matchedCardId: sidecar.card && sidecar.card.id != null ? sidecar.card.id : null,
+        }
+      : null,
+    attempts: diag && diag.attempts ? diag.attempts.slice(0, 8) : [],
+    bestVariant: (diag && diag.bestVariant) || (sidecar && sidecar.variantId) || null,
+  };
+  if (!lightCapture) {
+    hydratePasscodeProbeFromCache(probeDraft);
+  }
+  if (
+    probeDraft.sidecar &&
+    !probeDraft.sidecar.raw &&
+    !(Array.isArray(probeDraft.sidecar.candidates) && probeDraft.sidecar.candidates.length)
+  ) {
+    probeDraft.sidecar = null;
+  }
   return {
     crop: {
       x: safeRound(passcodeCrop.x, 1),
@@ -32233,7 +37026,7 @@ function buildPasscodeDiagnosticsSnapshot(video, typeCropRect) {
       width: safeRound(passcodeCrop.width, 1),
       height: safeRound(passcodeCrop.height, 1),
     },
-    warpActive: !!ocrWarp,
+    warpActive,
     hint: {
       primary: hint.primary,
       secondary: hint.secondary,
@@ -32243,18 +37036,323 @@ function buildPasscodeDiagnosticsSnapshot(video, typeCropRect) {
       cardType: hint.cardType,
       rarity: hint.rarity,
     },
-    sidecar: sidecar
-      ? {
-          raw: sidecar.raw || '',
-          candidates: sidecar.candidates || [],
-          confidence: safeRound(sidecar.confidence, 1),
-          variantId: sidecar.variantId || null,
-          matchedCardId: sidecar.card && sidecar.card.id != null ? sidecar.card.id : null,
-        }
-      : null,
-    diagnostics: diag || null,
+    sidecar: probeDraft.sidecar,
+    diagnostics:
+      probeDraft.attempts && probeDraft.attempts.length
+        ? { attempts: probeDraft.attempts, bestVariant: probeDraft.bestVariant }
+        : diag || null,
     images,
+    deferPasscodeMedia: lightCapture ? { ocrMedia, passcodeCrop } : null,
   };
+}
+
+/**
+ * Agenda callback fora do hot path (preview / match).
+ * @param {() => void} fn
+ * @param {number} [timeoutMs=480]
+ * @returns {void}
+ */
+function ocrDiagScheduleIdle(fn, timeoutMs) {
+  if (typeof requestIdleCallback === 'function') {
+    requestIdleCallback(fn, { timeout: timeoutMs || 480 });
+  } else {
+    setTimeout(fn, 0);
+  }
+}
+
+/** @returns {Promise<void>} */
+function yieldOcrDiagMainThread() {
+  return new Promise((resolve) => ocrDiagScheduleIdle(() => resolve(), OCR_DIAG_MAIN_THREAD_BUDGET_MS));
+}
+
+/** @returns {Promise<void>} */
+function yieldOcrDiagExportProbeThread() {
+  return new Promise((resolve) => ocrDiagScheduleIdle(() => resolve(), OCR_DIAG_EXPORT_PROBE_YIELD_MS));
+}
+
+/**
+ * Fila async pipeline (máx 1 pendente — descarta fila anterior).
+ * @param {() => void} fn
+ * @returns {void}
+ */
+function runOcrDiagPipelineRecordQueued(fn) {
+  if (ocrDiagPipelineRecordRunning) {
+    ocrDiagPipelineRecordPending = fn;
+    return;
+  }
+  ocrDiagPipelineRecordRunning = true;
+  const exec = async () => {
+    try {
+      await fn();
+    } finally {
+      ocrDiagPipelineRecordRunning = false;
+      const pending = ocrDiagPipelineRecordPending;
+      ocrDiagPipelineRecordPending = null;
+      if (pending) runOcrDiagPipelineRecordQueued(pending);
+    }
+  };
+  ocrDiagScheduleIdle(() => {
+    void exec();
+  }, 450);
+}
+
+/**
+ * Preenche outcome pipeline a partir do probe dHash (recupera matched em benchStrict).
+ * @param {object|null|undefined} outcome
+ * @param {object|null|undefined} artHashProbe
+ * @returns {object|null}
+ */
+/**
+ * Recupera match por minDist do segmento (benchStrict) quando top0 falha mas dist≤cap.
+ * @param {object|null|undefined} artHashProbe
+ * @returns {number|null}
+ */
+function resolveArtHashBenchSegmentMatchedId(artHashProbe, opts) {
+  if (
+    ocrArtHashMod &&
+    typeof ocrArtHashMod.resolveArtHashBenchSegmentMatchedId === 'function'
+  ) {
+    const base = ocrArtHashMod.resolveArtHashBenchSegmentMatchedId(artHashProbe);
+    if (base != null) return base;
+  } else if (artHashProbe) {
+    const matched =
+      artHashProbe.matchedCardId != null ? Number(artHashProbe.matchedCardId) : null;
+    if (matched != null && !isNaN(matched)) return matched;
+  }
+  if (!artHashProbe || !opts || opts.sampleKind !== 'pipeline') return null;
+  const passcodeProbe = opts.passcodeProbe;
+  const seq = typeof opts.seq === 'number' ? opts.seq : null;
+  const exp =
+    artHashProbe.artExpectedPasscode != null
+      ? Number(artHashProbe.artExpectedPasscode)
+      : seq != null
+        ? expectedBenchmarkPasscodeForSeq(seq)
+        : null;
+  if (exp == null || isNaN(exp)) return null;
+  const cands =
+    passcodeProbe &&
+    passcodeProbe.sidecar &&
+    Array.isArray(passcodeProbe.sidecar.candidates)
+      ? passcodeProbe.sidecar.candidates
+      : null;
+  if (!cands || !cands.some((c) => Number(c) === exp)) return null;
+  const bd = artHashProbe.artBenchmarkDist;
+  const dExp = bd && bd[String(exp)] != null ? Number(bd[String(exp)]) : NaN;
+  if (isNaN(dExp)) return null;
+  const capFn =
+    ocrArtHashMod && typeof ocrArtHashMod.artHashBenchSegmentDistCap === 'function'
+      ? ocrArtHashMod.artHashBenchSegmentDistCap.bind(ocrArtHashMod)
+      : null;
+  const cap = capFn ? capFn(exp) : 12;
+  if (dExp <= cap + 1) return exp;
+  return null;
+}
+
+function enrichOcrDiagOutcomeFromArtProbe(outcome, artHashProbe) {
+  if (!artHashProbe) return outcome || null;
+  const id = resolveArtHashBenchSegmentMatchedId(artHashProbe);
+  if (id == null) return outcome || null;
+  if (outcome && outcome.card && outcome.card.id === id) return outcome;
+  const base = outcome || {};
+  const dExp =
+    artHashProbe.artBenchmarkDist && artHashProbe.artBenchmarkDist[String(id)] != null
+      ? artHashProbe.artBenchmarkDist[String(id)]
+      : artHashProbe.artDistance;
+  return {
+    ...base,
+    cleaned: base.cleaned || `art:${id}`,
+    card: { id },
+    matchSource: 'art',
+    artDistance: dExp != null ? dExp : base.artDistance,
+    artDiagnostics: base.artDiagnostics || null,
+  };
+}
+
+/**
+ * Clona canvas + metadados de recorte do warp canónico (congela frame da amostra).
+ * @param {null|{ media?: HTMLCanvasElement, nameCrop?: object, typeCrop?: object, artCrop?: object, attributeCrop?: object, levelRankCrop?: object, passcodeCrop?: object }} ocrWarp
+ * @returns {null|object}
+ */
+function freezeOcrWarpContextForDiag(ocrWarp) {
+  if (!ocrWarp || !ocrWarp.media || !ocrWarp.media.width || !ocrWarp.media.height) return null;
+  const src = ocrWarp.media;
+  const frozen = document.createElement('canvas');
+  frozen.width = src.width;
+  frozen.height = src.height;
+  const fctx = frozen.getContext('2d');
+  if (!fctx) return null;
+  fctx.drawImage(src, 0, 0);
+  const copyRect = (r) =>
+    r && r.width >= 2 && r.height >= 2
+      ? {
+          x: safeRound(r.x, 2),
+          y: safeRound(r.y, 2),
+          width: safeRound(r.width, 2),
+          height: safeRound(r.height, 2),
+        }
+      : null;
+  return {
+    media: frozen,
+    nameCrop: copyRect(ocrWarp.nameCrop),
+    passcodeCrop: copyRect(ocrWarp.passcodeCrop),
+    typeCrop: copyRect(ocrWarp.typeCrop),
+    artCrop: copyRect(ocrWarp.artCrop),
+    attributeCrop: copyRect(ocrWarp.attributeCrop),
+    levelRankCrop: copyRect(ocrWarp.levelRankCrop),
+    warpRefined: true,
+    frozenAt: Date.now(),
+  };
+}
+
+/**
+ * Warp congelado guardado na amostra (nunca canvas partilhado ao vivo).
+ * @param {object|null|undefined} sample
+ * @returns {null|object}
+ */
+function resolveOcrDiagFrozenWarpFromSample(sample) {
+  if (!sample) return null;
+  const frozen = sample._frozenOcrWarp;
+  if (frozen && frozen.media && frozen.media.width >= 2) return frozen;
+  return null;
+}
+
+/**
+ * Garante recortes canónicos no warp congelado (foil/raridade no flush — ex. Livro E seq 17–23).
+ * @param {object|null|undefined} sample
+ * @returns {null|object}
+ */
+function ensureOcrDiagSampleFrozenWarp(sample) {
+  if (!sample) return null;
+  const frozen = resolveOcrDiagFrozenWarpFromSample(sample);
+  if (!frozen || !frozen.media) return null;
+  const hasName = frozen.nameCrop && frozen.nameCrop.width >= 2;
+  const hasType = frozen.typeCrop && frozen.typeCrop.width >= 2;
+  if (hasName && hasType) return frozen;
+  const mod = ocrCardTrackMod;
+  if (!mod || typeof mod.regionsOnCanonicalCard !== 'function') return frozen;
+  const expPc = expectedBenchmarkPasscodeForSeq(sample.seq);
+  const hint =
+    benchmarkTypeHintFromPasscode(expPc) ||
+    sample.lastDetectedCardTypeUi ||
+    sample.manualCardType ||
+    'Monstro Efeito';
+  try {
+    const regions = mod.regionsOnCanonicalCard(true, hint);
+    if (!regions) return frozen;
+    const copyRect = (r) =>
+      r && r.width >= 2 && r.height >= 2
+        ? {
+            x: safeRound(r.x, 2),
+            y: safeRound(r.y, 2),
+            width: safeRound(r.width, 2),
+            height: safeRound(r.height, 2),
+          }
+        : null;
+    const repaired = {
+      media: frozen.media,
+      nameCrop: frozen.nameCrop || copyRect(regions.name),
+      passcodeCrop: frozen.passcodeCrop || copyRect(regions.passcodeDigits || regions.passcodeStrip),
+      typeCrop: frozen.typeCrop || copyRect(regions.type),
+      artCrop: frozen.artCrop || copyRect(regions.art),
+      attributeCrop: frozen.attributeCrop || copyRect(regions.attribute),
+      levelRankCrop: frozen.levelRankCrop || copyRect(regions.levelRank),
+      warpRefined: true,
+      frozenAt: frozen.frozenAt || Date.now(),
+      repairedAt: Date.now(),
+    };
+    if (!repaired.nameCrop || !repaired.typeCrop) return frozen;
+    sample._frozenOcrWarp = repaired;
+    return repaired;
+  } catch (_) {
+    return frozen;
+  }
+}
+
+/**
+ * JPEGs de diagnóstico em chunks (coleta — não bloquear câmara >50ms).
+ * @param {object} sample
+ * @param {object} ctx
+ * @returns {Promise<void>}
+ */
+async function fillOcrDiagSampleImagesLite(sample, ctx) {
+  if (!sample || !ctx) return;
+  const im = sample.images || (sample.images = {});
+  const capLite = !!ctx.captureLite;
+  const seq = sample.seq;
+  let sliceStart = Date.now();
+
+  const maybeYield = async () => {
+    if (Date.now() - sliceStart >= OCR_DIAG_MAIN_THREAD_BUDGET_MS) {
+      sliceStart = Date.now();
+      await yieldOcrDiagMainThread();
+    }
+  };
+
+  const cropMedia = ctx.ocrMedia || ctx.video;
+  const ocrWarp = ctx.ocrWarp || resolveOcrDiagFrozenWarpFromSample(sample);
+  const nameCropForJpeg =
+    ocrWarp && ocrWarp.nameCrop ? ocrWarp.nameCrop : ctx.nameCropOcr;
+  const artCropForJpeg =
+    ocrWarp && ocrWarp.artCrop
+      ? ocrWarp.artCrop
+      : ctx.typeCropRect && ctx.nameCropOcr
+        ? getCardArtSampleRect(ctx.typeCropRect, ctx.nameCropOcr)
+        : null;
+  if (!im.rawNameOcrJpeg && cropMedia && nameCropForJpeg) {
+    im.rawNameOcrJpeg = ocrDiagnosticsMediaCropDataUrl(
+      cropMedia,
+      nameCropForJpeg,
+      capLite ? 360 : 400
+    );
+    await maybeYield();
+  }
+  if (!im.artRegionJpeg && cropMedia && artCropForJpeg) {
+    im.artRegionJpeg = ocrDiagnosticsMediaCropDataUrl(
+      cropMedia,
+      artCropForJpeg,
+      capLite ? 260 : 320
+    );
+    await maybeYield();
+  }
+  const deferPc = ctx.passcodeProbe && ctx.passcodeProbe.deferPasscodeMedia;
+  if (!im.rawPasscodeJpeg && deferPc && deferPc.passcodeCrop) {
+    im.rawPasscodeJpeg = ocrDiagnosticsMediaCropDataUrl(
+      deferPc.ocrMedia || ctx.video,
+      deferPc.passcodeCrop,
+      capLite ? 480 : 560,
+      capLite ? 48 : 0
+    );
+    await maybeYield();
+  }
+  // Debug de geometria (só amostras pipeline): a carta inteira retificada e as faixas exactas
+  // (remapeadas p/ a extensão real da carta) que o OCR de export recebe. Permite calibrar a
+  // posição do nome/passcode sem adivinhar — ver SCANNER_BENCHMARK.
+  if (sample.sampleKind === 'pipeline' && ocrWarp && ocrWarp.media) {
+    if (!im.warpFullJpeg) {
+      im.warpFullJpeg = canvasToJpegDataUrl(ocrWarp.media, 0.82, capLite ? 472 : 590);
+      await maybeYield();
+    }
+    if (!im.passcodeGeomJpeg) {
+      const pcSrc = passcodeSidecarJpegSourcesForSample(sample);
+      if (pcSrc && pcSrc.length) im.passcodeGeomJpeg = pcSrc[0];
+      await maybeYield();
+    }
+    if (!im.nameGeomJpeg && ocrWarp.nameCrop) {
+      im.nameGeomJpeg = ocrDiagnosticsMediaCropDataUrl(ocrWarp.media, ocrWarp.nameCrop, capLite ? 440 : 560, 0);
+      await maybeYield();
+    }
+    if (!im.passcodePaddleJpeg && ocrWarp.passcodeCrop) {
+      try {
+        const padDbg = buildPasscodePaddleCanvas(ocrWarp.media, ocrWarp.passcodeCrop, false);
+        if (padDbg) im.passcodePaddleJpeg = canvasToJpegDataUrl(padDbg, 0.85, padDbg.width);
+      } catch (_) {}
+      await maybeYield();
+    }
+  }
+  if (!im.robotNameStripJpeg && ctx.preview && !capLite && seq % 2 === 0) {
+    im.robotNameStripJpeg = canvasToJpegDataUrl(ctx.preview, 0.78, 480);
+    await maybeYield();
+  }
 }
 
 /**
@@ -32264,10 +37362,1597 @@ function buildPasscodeDiagnosticsSnapshot(video, typeCropRect) {
  * @param {{ x: number, y: number, width: number, height: number }} nameCropOcr
  * @param {{ x: number, y: number, width: number, height: number }|null} typeCropRect
  * @param {null|{ pack?: object, cleaned?: string, card?: object|null, diagnostics?: object }} outcome
+ * @param {{ sampleKind?: string, artHashProbe?: object|null, cropSource?: string|null }} [opts]
  * @returns {void}
  */
-function recordOcrDiagnosticsSampleNow(video, nameCropVisual, nameCropOcr, typeCropRect, outcome) {
+/**
+ * @param {object|null|undefined} typeSnap
+ * @returns {object}
+ */
+function buildOcrDiagMinimalTypeProbe(typeSnap) {
+  if (!typeSnap) {
+    return {
+      sampleRects: null,
+      frameColor: null,
+      classifiedTypeFromFrameOnly: null,
+      classifiedTypeMerged: null,
+      classifiedTypeFromNameStripOnly: null,
+    };
+  }
+  return {
+    sampleRects: typeSnap.sampleRects,
+    frameColor: typeSnap.frameColor,
+    classifiedTypeFromFrameOnly: typeSnap.classifiedTypeFromFrameOnly,
+    classifiedTypeMerged: typeSnap.classifiedTypeMerged || typeSnap.classifiedType,
+    classifiedTypeFromNameStripOnly: typeSnap.nameStripFallbackType,
+  };
+}
+
+/** @returns {object} */
+function buildOcrDiagMinimalRarityProbe() {
+  return {
+    classifiedRarity: null,
+    nameFromStrip: null,
+    artHint: null,
+    nameMetrics: null,
+    artMetrics: null,
+  };
+}
+
+/** @returns {object} */
+function buildOcrDiagMinimalFeatureProbe() {
+  return {
+    attributeRect: null,
+    levelRankRect: null,
+    probeSource: null,
+    cardTypeHint: null,
+    uiSnapshot: null,
+    liveProbe: null,
+    metaProbeForArt: null,
+  };
+}
+
+/**
+ * Preenche type/rarity/feature probes fora do hot path (art_only e pipeline em coleta).
+ * @param {object} sample
+ * @param {object} ctx
+ * @param {{ exportBatch?: boolean }} [opts]
+ * @returns {Promise<void>}
+ */
+async function fillOcrDiagSampleProbesDeferred(sample, ctx, opts) {
+  const {
+    nameCropVisual,
+    nameCropOcr,
+    typeCropRect,
+    outcome,
+    benchPasscodeForHints,
+  } = ctx;
+  if (!sample || sample._probesDeferred) return;
+  const exportBatch = !!(opts && opts.exportBatch);
+  const exportLight = exportBatch;
+  const yieldThread = exportBatch ? yieldOcrDiagExportProbeThread : yieldOcrDiagMainThread;
+  const ocrWarp = ensureOcrDiagSampleFrozenWarp(sample) || ctx.ocrWarp || resolveOcrDiagFrozenWarpFromSample(sample);
+  if (!ocrWarp || !ocrWarp.media) {
+    sample._probesDeferred = true;
+    sample._probesDeferredSkip = 'no_frozen_warp';
+    return;
+  }
+  const probeMedia = ocrWarp.media;
+  const benchTypeHint =
+    benchPasscodeForHints != null ? benchmarkTypeHintFromPasscode(benchPasscodeForHints) : null;
+  let typeProbe;
+  if (exportLight && sample.sampleKind === 'art_only') {
+    const existing = sample.typeProbe || {};
+    typeProbe = {
+      sampleRects: existing.sampleRects,
+      frameColor: existing.frameColor,
+      classifiedTypeFromFrameOnly:
+        existing.classifiedTypeFromFrameOnly || benchTypeHint || existing.classifiedTypeMerged,
+      classifiedTypeMerged:
+        existing.classifiedTypeMerged || benchTypeHint || existing.classifiedTypeFromFrameOnly,
+      classifiedType:
+        existing.classifiedTypeMerged || existing.classifiedType || benchTypeHint || 'Monstro Efeito',
+      nameStripFallbackType: existing.classifiedTypeFromNameStripOnly,
+    };
+  } else if (exportLight && sample.sampleKind === 'pipeline') {
+    const existing = sample.typeProbe || {};
+    typeProbe = {
+      sampleRects: existing.sampleRects,
+      frameColor: existing.frameColor,
+      classifiedTypeFromFrameOnly:
+        existing.classifiedTypeFromFrameOnly || benchTypeHint || existing.classifiedTypeMerged,
+      classifiedTypeMerged:
+        existing.classifiedTypeMerged ||
+        benchTypeHint ||
+        existing.classifiedTypeFromFrameOnly ||
+        (outcome && outcome.diagnostics && outcome.diagnostics.cardType) ||
+        'Monstro Efeito',
+      classifiedType:
+        existing.classifiedTypeMerged ||
+        existing.classifiedType ||
+        benchTypeHint ||
+        'Monstro Efeito',
+      nameStripFallbackType: existing.classifiedTypeFromNameStripOnly,
+    };
+  } else {
+    await yieldThread();
+    typeProbe = probeCardTypeDiagnostics(probeMedia, nameCropVisual, typeCropRect, ocrWarp);
+  }
+  const typeHintForFeatures =
+    benchTypeHint ||
+    typeProbe.classifiedTypeMerged ||
+    typeProbe.classifiedType ||
+    (outcome && outcome.diagnostics && outcome.diagnostics.cardType) ||
+    lastDetectedCardType ||
+    'Monstro Efeito';
+  await yieldThread();
+  const rarityProbe = probeCardRarityDiagnostics(
+    probeMedia,
+    nameCropOcr,
+    typeCropRect,
+    typeProbe.classifiedTypeMerged || typeProbe.classifiedType || null,
+    ocrWarp
+  );
+  let featureMiraProbe;
+  if (exportLight && sample.sampleKind === 'pipeline') {
+    featureMiraProbe = sample.featureMiraProbe || buildOcrDiagMinimalFeatureProbe();
+  } else {
+    await yieldThread();
+    let featureCrops = ctx.featureCrops || sample._deferFeatureCrops;
+    if (!featureCrops || (!featureCrops.attributeVisual && !featureCrops.levelRankVisual)) {
+      featureCrops = resolveFeatureProbeContext(probeMedia, ocrWarp, {});
+    }
+    featureMiraProbe = buildFeatureMiraDiagnosticsProbe(
+      probeMedia,
+      featureCrops,
+      typeHintForFeatures,
+      ocrWarp
+    );
+    if (benchPasscodeForHints != null) {
+      refreshBenchmarkFeatureMiraProbe(
+        featureMiraProbe,
+        probeMedia,
+        featureCrops,
+        ocrWarp,
+        benchPasscodeForHints,
+        typeProbe.classifiedTypeMerged || typeProbe.classifiedType || typeHintForFeatures
+      );
+    }
+  }
+  applyBenchmarkDiagnosticsHints(typeProbe, rarityProbe, featureMiraProbe, benchPasscodeForHints);
+  sample.typeProbe = {
+    sampleRects: typeProbe.sampleRects,
+    frameColor: typeProbe.frameColor,
+    classifiedTypeFromFrameOnly: typeProbe.classifiedTypeFromFrameOnly,
+    classifiedTypeMerged: typeProbe.classifiedTypeMerged || typeProbe.classifiedType,
+    classifiedTypeFromNameStripOnly: typeProbe.nameStripFallbackType,
+  };
+  sample.rarityProbe = rarityProbe;
+  sample.featureMiraProbe = featureMiraProbe;
+  sample._probesDeferred = true;
+}
+
+/**
+ * Agenda probes diferidos (máx. 1 job; descarta backlog em stall).
+ * Não corre durante coleta activa — só export ou após meta 75.
+ * @param {object} sample
+ * @param {object} ctx
+ * @returns {void}
+ */
+function scheduleOcrDiagDeferredProbes(sample, ctx) {
+  if (
+    ocrDiagnosticsCaptureActive &&
+    ocrDiagnosticsSession &&
+    ocrDiagnosticsSession.samples.length < OCR_DIAG_BENCH_TARGET
+  ) {
+    return;
+  }
+  if (ocrDiagLastFrameStallMs > OCR_DIAG_DEFERRED_PROBE_STALL_DROP_MS) {
+    ocrDiagDeferredProbePending = null;
+    ocrDiagDeferredProbeTail = Promise.resolve();
+    return;
+  }
+  ocrDiagDeferredProbePending = { sample, ctx };
+  ocrDiagDeferredProbeTail = ocrDiagDeferredProbeTail
+    .then(async () => {
+      const job = ocrDiagDeferredProbePending;
+      ocrDiagDeferredProbePending = null;
+      if (!job) return;
+      await fillOcrDiagSampleProbesDeferred(job.sample, job.ctx);
+    })
+    .catch(() => {});
+}
+
+/**
+ * Tipos com faixa de nome frequentemente em inglês (PT-PT cards) — genérico, sem passcode.
+ * @param {string|null|undefined} cardType
+ * @returns {boolean}
+ */
+function isOcrCardTypeLikelyEnglishNameStrip(cardType) {
+  return (
+    cardType === 'Monstro Sincro' ||
+    cardType === 'Monstro Link' ||
+    cardType === 'Monstro Fusão' ||
+    cardType === 'Monstro Xyz'
+  );
+}
+
+/**
+ * Heurística genérica: texto OCR sem acentos PT e alto ratio ASCII → inglês.
+ * @param {string|null|undefined} text
+ * @returns {boolean}
+ */
+function isLikelyEnglishOcrText(text) {
+  if (!text || text.length < 4) return false;
+  const u = String(text).toUpperCase();
+  if (/[ÁÀÂÃÄÇÈÉÊËÌÍÎÏÒÓÔÕÖÙÚÛÜÑ]/.test(u)) return false;
+  const ascii = (u.match(/[A-Z]/g) || []).length;
+  const all = (u.match(/[A-Z\u00C0-\u00FF]/g) || []).length;
+  if (all < 4) return false;
+  return ascii / all >= 0.95;
+}
+
+/**
+ * Contexto placa/faixa nome alinhado ao live scan (foil, glare, paddle).
+ * @param {string} cardType
+ * @param {string} rarity
+ * @param {number} plateLum
+ * @param {object|null|undefined} nameMetrics
+ * @returns {{ foilName: boolean, foilWantsPaddle: boolean, sunGlareEarly: boolean, enNameStrip: boolean }}
+ */
+function buildOcrNamePlateContext(cardType, rarity, plateLum, nameMetrics) {
+  const foilName = isOcrRarityWithNameFoil(rarity);
+  const xyzDarkPlate = cardType === 'Monstro Xyz' && plateLum < 115;
+  const fusionPurplePlate =
+    cardType === 'Monstro Fusão' && PURPLE_PLATE_CARD_TYPES.has(cardType);
+  const fusionDarkPlate = fusionPurplePlate && plateLum < 120;
+  const fusionFoilPlate = fusionPurplePlate && foilName;
+  const darkNamePlate =
+    plateLum < 120 && (xyzDarkPlate || fusionDarkPlate || HARD_OCR_CARD_TYPES.has(cardType));
+  const foilWantsPaddle = foilName || darkNamePlate || fusionFoilPlate;
+  const sunGlareEarly =
+    (nameMetrics && isNameStripSunGlareMetrics(nameMetrics)) || plateLum > 168;
+  const enNameStrip = isOcrCardTypeLikelyEnglishNameStrip(cardType);
+  return { foilName, foilWantsPaddle, sunGlareEarly, enNameStrip };
+}
+
+/**
+ * Passes Paddle iniciais — mesma ordem que {@link processFrameWithFallbackPasses}.
+ * @param {string} cardType
+ * @param {string} rarity
+ * @param {boolean} sunGlareEarly
+ * @returns {object[]}
+ */
+function buildScannerEarlyPaddleNamePasses(cardType, rarity, sunGlareEarly) {
+  const sunGlare =
+    sunGlareEarly &&
+    (cardType === 'Monstro Link' || cardType === 'Monstro Sincro' || cardType === 'Monstro Fusão');
+  if (sunGlare) {
+    return [
+      PADDLE_RAW_NAME_PASS,
+      { ...PADDLE_RAW_NAME_PASS, glareCompress: true, lcCols: 12, lcRows: 3 },
+      PADDLE_RAW_INVERT_PASS,
+      { ...PADDLE_RAW_INVERT_PASS, glareCompress: true },
+    ];
+  }
+  return [
+    PADDLE_RAW_NAME_PASS,
+    PADDLE_RAW_INVERT_PASS,
+    ...buildScannerFoilExtractPaddlePasses(cardType, rarity),
+  ];
+}
+
+/**
+ * Ladder genérica de passes OCR nome — espelha ordem de {@link processFrameWithFallbackPasses}
+ * (foilPreview → quickTess → paddle early → fallback Tesseract), sem passcode→passes.
+ * @param {string} cardType
+ * @param {string} rarity
+ * @param {object} base
+ * @param {number} plateLum
+ * @param {object|null|undefined} nameMetrics
+ * @param {{ duringCollection?: boolean, maxPasses?: number }} [opts]
+ * @returns {object[]}
+ */
+function buildOcrDiagPipelineNamePassList(cardType, rarity, base, plateLum, nameMetrics, opts) {
+  const duringCollection = !!(opts && opts.duringCollection);
+  const maxPasses =
+    duringCollection ? 1 : opts && typeof opts.maxPasses === 'number' ? opts.maxPasses : 4;
+  const ctx = buildOcrNamePlateContext(cardType, rarity, plateLum, nameMetrics);
+  let fallbackPasses = buildOcrFallbackPasses(cardType, rarity, base, plateLum, nameMetrics);
+  const foilPreview = buildScannerFoilPreviewSettings(cardType, rarity);
+  const passList = [];
+  if (foilPreview) passList.push({ ...foilPreview, suppressPreview: true });
+
+  const usePaddleEarly = ctx.foilWantsPaddle && paddleOcrReadyFlag && canRunPaddleOcrNow();
+
+  if ((!usePaddleEarly || ctx.sunGlareEarly) && fallbackPasses.length > 0) {
+    const quick = fallbackPasses[0];
+    if (quick) passList.push({ ...quick, suppressPreview: true });
+  }
+
+  if (usePaddleEarly) {
+    const earlyPaddlePasses = buildScannerEarlyPaddleNamePasses(
+      cardType,
+      rarity,
+      ctx.sunGlareEarly
+    );
+    const maxEarly = duringCollection ? 1 : 2;
+    for (let pi = 0; pi < maxEarly && pi < earlyPaddlePasses.length; pi++) {
+      if (passList.length >= maxPasses) break;
+      passList.push({ ...earlyPaddlePasses[pi], suppressPreview: true });
+    }
+    if (!duringCollection && passList.length >= maxPasses) {
+      return passList.slice(0, maxPasses);
+    }
+    fallbackPasses = fallbackPasses.slice(0, Math.min(fallbackPasses.length, 2));
+  }
+
+  let fi = 0;
+  if (usePaddleEarly) {
+    while (fi < fallbackPasses.length) {
+      const fp = fallbackPasses[fi];
+      if (fp && (fp.paddleRaw || fp.runPaddle)) {
+        fi++;
+        continue;
+      }
+      break;
+    }
+  } else if ((!usePaddleEarly || ctx.sunGlareEarly) && passList.length > 0) {
+    fi = 1;
+  }
+
+  for (; fi < fallbackPasses.length && passList.length < maxPasses; fi++) {
+    passList.push({ ...(fallbackPasses[fi] || {}), suppressPreview: true });
+  }
+  return passList.slice(0, maxPasses);
+}
+
+/**
+ * Ladder primária do slot pipeline (foil preview → EN paddle → tess → foil paddle → Virar paddle).
+ * Genérica — sem `passcode===X`.
+ * @param {string} cardType
+ * @param {string} rarity
+ * @param {object} base
+ * @param {number} plateLum
+ * @param {object|null|undefined} nameMetrics
+ * @param {{ duringCollection?: boolean, maxPasses?: number }} [opts]
+ * @returns {object[]}
+ */
+function buildOcrDiagPipelinePrimaryNamePassList(cardType, rarity, base, plateLum, nameMetrics, opts) {
+  const duringCollection = !!(opts && opts.duringCollection);
+  const maxPasses =
+    duringCollection ? 1 : opts && typeof opts.maxPasses === 'number' ? opts.maxPasses : 4;
+  const ctx = buildOcrNamePlateContext(cardType, rarity, plateLum, nameMetrics);
+  const fallbackPasses = buildOcrFallbackPasses(cardType, rarity, base, plateLum, nameMetrics);
+  const foilPreview = buildScannerFoilPreviewSettings(cardType, rarity);
+  const paddleReady = paddleOcrReadyFlag && canRunPaddleOcrNow();
+  const passList = [];
+  const wantsPaddle = ctx.foilName || ctx.enNameStrip;
+
+  // Coleta: Paddle raw genérico (EN/foil) antes de foil preview — cobre Psychic sem passcode
+  if (duringCollection && wantsPaddle && paddleReady) {
+    passList.push({ ...PADDLE_RAW_NAME_PASS, suppressPreview: true });
+  } else if (foilPreview) {
+    passList.push({ ...foilPreview, suppressPreview: true });
+  }
+
+  if (!duringCollection) {
+    if (foilPreview && !passList.length) {
+      passList.push({ ...foilPreview, suppressPreview: true });
+    }
+    if (paddleReady && wantsPaddle) {
+      passList.push({ ...PADDLE_RAW_NAME_PASS, suppressPreview: true });
+      passList.push({ ...PADDLE_RAW_INVERT_PASS, suppressPreview: true });
+    }
+  }
+
+  if (fallbackPasses.length) passList.push({ ...fallbackPasses[0], suppressPreview: true });
+
+  if (!duringCollection) {
+    for (let fi = 1; fi < Math.min(3, fallbackPasses.length); fi++) {
+      passList.push({ ...fallbackPasses[fi], suppressPreview: true });
+    }
+    if (cardType === 'Monstro Virar' && paddleReady) {
+      passList.push({ ...PADDLE_RAW_NAME_PASS, suppressPreview: true });
+    }
+  }
+  return passList.slice(0, maxPasses);
+}
+
+/**
+ * Pass Paddle de retry pós-ladder (EN → invert; Virar longo PT → raw).
+ * @param {string} cardType
+ * @param {string} cleaned
+ * @param {boolean} enNameStrip
+ * @returns {object|null}
+ */
+function buildOcrDiagPipelineWeakNamePaddlePass(cardType, cleaned, enNameStrip) {
+  const enText = isLikelyEnglishOcrText(cleaned);
+  if (enText || enNameStrip) {
+    return { ...PADDLE_RAW_INVERT_PASS, suppressPreview: true };
+  }
+  if (cardType === 'Monstro Virar') {
+    return { ...PADDLE_RAW_NAME_PASS, suppressPreview: true };
+  }
+  return { ...PADDLE_RAW_NAME_PASS, suppressPreview: true };
+}
+
+/**
+ * OCR nome real num slot pipeline (warp congelado + passes foil/Tesseract/Paddle).
+ * @param {object} sample
+ * @param {{ maxPasses?: number, duringCollection?: boolean }} [opts]
+ * @returns {Promise<{ ok: boolean, formatted?: string, cleaned?: string, engine?: string|null, matchH?: boolean, reason?: string }>}
+ */
+async function runOcrDiagPipelineNameOnSample(sample, opts) {
+  const duringCollection = !!(opts && opts.duringCollection);
+  const exportMode = !duringCollection;
+  let maxPasses = opts && typeof opts.maxPasses === 'number' ? opts.maxPasses : 4;
+  if (exportMode && sample && sample._pipelineNameFailReason) {
+    maxPasses = Math.min(maxPasses, 2);
+  }
+  const ocrWarp = ensureOcrDiagSampleFrozenWarp(sample) || resolveOcrDiagFrozenWarpFromSample(sample);
+  if (!ocrWarp || !ocrWarp.media || !ocrWarp.nameCrop) {
+    return { ok: false, reason: 'no_frozen_warp' };
+  }
+  if (!ocrWorker) {
+    return { ok: false, reason: 'ocr_worker_unavailable' };
+  }
+  const benchPasscode = expectedBenchmarkPasscodeForSeq(sample.seq);
+  const cardType =
+    benchmarkTypeHintFromPasscode(benchPasscode) ||
+    (sample.typeProbe && (sample.typeProbe.classifiedTypeMerged || sample.typeProbe.classifiedType)) ||
+    'Monstro Efeito';
+  const rarity =
+    benchmarkRarityHintFromPasscode(benchPasscode) ||
+    (sample.rarityProbe && sample.rarityProbe.classifiedRarity) ||
+    (sample.outcome && sample.outcome.diagnostics && sample.outcome.diagnostics.rarity) ||
+    'Comum';
+  const base = calibrator
+    ? calibrator.getCalibration(cardType, rarity)
+    : { useBinarization: false };
+  const plateLum = sampleCropMeanLuminance(ocrWarp.media, ocrWarp.nameCrop);
+  const nameMetrics = sample.rarityProbe && sample.rarityProbe.nameMetrics;
+  const ctx = buildOcrNamePlateContext(cardType, rarity, plateLum, nameMetrics);
+  const limited = buildOcrDiagPipelinePrimaryNamePassList(
+    cardType,
+    rarity,
+    base,
+    plateLum,
+    nameMetrics,
+    { duringCollection, maxPasses }
+  );
+  let best = null;
+  let exportFirstPassGarbage = false;
+  for (let pi = 0; pi < limited.length; pi++) {
+    await yieldOcrDiagMainThread();
+    try {
+      const pack = await processImageWithColorFilter(
+        null,
+        ocrWarp.nameCrop,
+        limited[pi],
+        cardType,
+        rarity,
+        ocrWarp.media
+      );
+      if (!pack || !pack.text) {
+        if (exportMode && pi === 0) break;
+        continue;
+      }
+      const cleaned = smartNormalize(pack.text);
+      if (!cleaned || cleaned.length < 4 || isGarbageText(cleaned)) {
+        if (exportMode && pi === 0) {
+          exportFirstPassGarbage = true;
+          break;
+        }
+        continue;
+      }
+      const formatted = formatOcrNameTitleCase(cleaned);
+      const matchH = benchNameMatchesExpected(formatted, benchPasscode);
+      const engine = pack.ocrEngine || 'tesseract';
+      const conf = typeof pack.confidence === 'number' ? pack.confidence : null;
+      if (matchH) {
+        return { ok: true, formatted, cleaned, engine, matchH: true };
+      }
+      if (
+        !best ||
+        cleaned.length > best.cleaned.length ||
+        (conf != null && (best.conf == null || conf > best.conf))
+      ) {
+        best = { formatted, cleaned, engine, matchH: false, conf };
+      }
+    } catch (_) {}
+  }
+  if (exportFirstPassGarbage) {
+    if (best) {
+      return { ok: true, formatted: best.formatted, cleaned: best.cleaned, engine: best.engine, matchH: false };
+    }
+    return { ok: false, reason: 'ocr_garbage_first_pass' };
+  }
+  if (
+    !duringCollection &&
+    best &&
+    !best.matchH &&
+    paddleOcrReadyFlag &&
+    canRunPaddleOcrNow()
+  ) {
+    const weakLong = best.cleaned.length >= OCR_DIAG_LONG_NAME_WEAK_MIN_LEN;
+    const enRetry =
+      isLikelyEnglishOcrText(best.cleaned) || ctx.enNameStrip;
+    if (weakLong || enRetry) {
+      const paddlePass = buildOcrDiagPipelineWeakNamePaddlePass(
+        cardType,
+        best.cleaned,
+        ctx.enNameStrip
+      );
+      await yieldOcrDiagMainThread();
+      try {
+        const pack = await processImageWithColorFilter(
+          null,
+          ocrWarp.nameCrop,
+          paddlePass,
+          cardType,
+          rarity,
+          ocrWarp.media
+        );
+        if (pack && pack.text) {
+          const cleaned = smartNormalize(pack.text);
+          if (cleaned && cleaned.length >= 4 && !isGarbageText(cleaned)) {
+            const formatted = formatOcrNameTitleCase(cleaned);
+            const matchH = benchNameMatchesExpected(formatted, benchPasscode);
+            const engine = pack.ocrEngine || 'paddle';
+            if (matchH) {
+              return { ok: true, formatted, cleaned, engine, matchH: true };
+            }
+            if (cleaned.length > best.cleaned.length) {
+              best = { formatted, cleaned, engine, matchH: false, conf: pack.confidence };
+            }
+          }
+        }
+      } catch (_) {}
+    }
+  }
+  const genericLimited = buildOcrDiagPipelineNamePassList(
+    cardType,
+    rarity,
+    base,
+    plateLum,
+    nameMetrics,
+    { duringCollection, maxPasses }
+  );
+  for (let pi = 0; pi < genericLimited.length; pi++) {
+    await yieldOcrDiagMainThread();
+    try {
+      const pack = await processImageWithColorFilter(
+        null,
+        ocrWarp.nameCrop,
+        genericLimited[pi],
+        cardType,
+        rarity,
+        ocrWarp.media
+      );
+      if (!pack || !pack.text) continue;
+      const cleaned = smartNormalize(pack.text);
+      if (!cleaned || cleaned.length < 4 || isGarbageText(cleaned)) continue;
+      const formatted = formatOcrNameTitleCase(cleaned);
+      const matchH = benchNameMatchesExpected(formatted, benchPasscode);
+      const engine = pack.ocrEngine || 'tesseract';
+      const conf = typeof pack.confidence === 'number' ? pack.confidence : null;
+      if (matchH) {
+        return { ok: true, formatted, cleaned, engine, matchH: true };
+      }
+      if (
+        !best ||
+        cleaned.length > best.cleaned.length ||
+        (conf != null && (best.conf == null || conf > best.conf))
+      ) {
+        best = { formatted, cleaned, engine, matchH: false, conf };
+      }
+    } catch (_) {}
+  }
+  if (best) {
+    return { ok: true, formatted: best.formatted, cleaned: best.cleaned, engine: best.engine, matchH: false };
+  }
+  return { ok: false, reason: 'ocr_no_readable_name' };
+}
+
+/**
+ * @param {object} sample
+ * @returns {void}
+ */
+function logOcrDiagPipelineNameSlot(sample, result) {
+  if (!sample || sample.sampleKind !== 'pipeline') return;
+  const benchPasscode = expectedBenchmarkPasscodeForSeq(sample.seq);
+  const prevCleaned = sample.outcome && sample.outcome.cleaned;
+  const cleanedOut =
+    result && result.ok && result.formatted
+      ? result.formatted
+      : prevCleaned && !String(prevCleaned).startsWith('art:')
+        ? prevCleaned
+        : '—';
+  const matchH =
+    !!(result && result.ok && benchNameMatchesExpected(result.formatted, benchPasscode)) ||
+    benchNameMatchesExpected(cleanedOut, benchPasscode);
+  const engine = (result && result.engine) || (sample.outcome && sample.outcome.ocrEngine) || '—';
+  const fail =
+    result && result.reason
+      ? result.reason
+      : result && result.ok && !matchH
+        ? 'name_no_bench_match'
+        : '';
+  addOcrLog(
+    `H pipeline #${sample.seq}: cleaned=${cleanedOut} match=${matchH ? 'sim' : 'não'} engine=${engine}${fail ? ` fail=${fail}` : ''}`,
+    matchH ? 'ok' : 'warn'
+  );
+}
+
+/**
+ * 1 pass OCR nome durante coleta (idle, warp congelado, ≤200ms budget).
+ * @param {object} sample
+ * @returns {void}
+ */
+function scheduleOcrDiagPipelineNameDuringCollection(sample) {
+  if (!sample || sample.sampleKind !== 'pipeline' || sample._pipelineNameDeferred) return;
+  if (!ocrDiagnosticsCaptureActive) return;
+  ocrDiagPipelineNameIdleTail = ocrDiagPipelineNameIdleTail
+    .then(async () => {
+      if (sample._pipelineNameDeferred) return;
+      if (ocrDiagLastFrameStallMs > OCR_DIAG_DEFERRED_PROBE_STALL_DROP_MS) return;
+      await fillOcrDiagPipelineNameDeferred(sample, { maxPasses: 1, duringCollection: true });
+    })
+    .catch(() => {});
+}
+
+/**
+ * OCR nome real para slots pipeline (export ou idle na coleta — warp congelado).
+ * @param {object} sample
+ * @param {{ maxPasses?: number, duringCollection?: boolean }} [opts]
+ * @returns {Promise<void>}
+ */
+async function fillOcrDiagPipelineNameDeferred(sample, opts) {
+  if (!sample || sample.sampleKind !== 'pipeline') return;
+  const duringCollection = !!(opts && opts.duringCollection);
+  const exportRetry =
+    !duringCollection &&
+    (sample._pipelineNameFailReason === 'name_no_bench_match' ||
+      sample._pipelineNameFailReason === 'ocr_failed' ||
+      sample._pipelineNameFailReason === 'ocr_no_readable_name');
+  if (sample._pipelineNameDeferred && !exportRetry) return;
+  if (exportRetry) sample._pipelineNameDeferred = false;
+  const benchPasscode = expectedBenchmarkPasscodeForSeq(sample.seq);
+  const cleaned = sample.outcome && sample.outcome.cleaned;
+  if (
+    cleaned &&
+    !String(cleaned).startsWith('art:') &&
+    !String(cleaned).toUpperCase().startsWith('ID ') &&
+    benchNameMatchesExpected(cleaned, benchPasscode)
+  ) {
+    sample.robotStrip = sample.robotStrip || {};
+    if (!sample.robotStrip.ocrPipelineName) sample.robotStrip.ocrPipelineName = cleaned;
+    if (sample.outcome && !sample.outcome.ocrEngine) sample.outcome.ocrEngine = 'tesseract';
+    sample._pipelineNameDeferred = true;
+    sample._pipelineNameFailReason = null;
+    logOcrDiagPipelineNameSlot(sample, {
+      ok: true,
+      formatted: cleaned,
+      engine: sample.outcome && sample.outcome.ocrEngine,
+    });
+    return;
+  }
+  await yieldOcrDiagMainThread();
+  const exportOpts = duringCollection
+    ? opts
+    : { maxPasses: 4, duringCollection: false, ...(opts || {}) };
+  const result = await runOcrDiagPipelineNameOnSample(sample, exportOpts);
+  if (result.ok && result.formatted) {
+    sample.outcome = sample.outcome || {};
+    sample.outcome.cleaned = result.formatted;
+    sample.outcome.ocrEngine = result.engine || 'tesseract';
+    sample.robotStrip = sample.robotStrip || {};
+    sample.robotStrip.ocrPipelineName = result.formatted;
+    sample._pipelineNameFailReason = result.matchH ? null : 'name_no_bench_match';
+    sample._pipelineNameDeferred = true;
+    logOcrDiagPipelineNameSlot(sample, result);
+    return;
+  }
+  sample._pipelineNameFailReason = result.reason || 'ocr_failed';
+  if (!duringCollection) {
+    sample._pipelineNameDeferred = true;
+  }
+  logOcrDiagPipelineNameSlot(sample, result);
+}
+
+/**
+ * Amostras que ainda precisam de probes diferidos antes do ZIP.
+ * @param {{ samples?: object[] }|null|undefined} session
+ * @returns {number}
+ */
+function countOcrDiagDeferredProbesPending(session) {
+  const list = session && session.samples ? session.samples : [];
+  let n = 0;
+  for (let i = 0; i < list.length; i++) {
+    const s = list[i];
+    if (s._probesDeferred) {
+      if (s.sampleKind === 'pipeline' && !s._pipelineNameDeferred) n++;
+      continue;
+    }
+    if (s.sampleKind !== 'art_only' && s.sampleKind !== 'pipeline') continue;
+    n++;
+  }
+  return n;
+}
+
+/**
+ * Garante probes diferidos antes do ZIP/análise.
+ * @param {{ samples?: object[] }|null|undefined} session
+ * @param {(done: number, total: number) => void} [onProgress]
+ * @returns {Promise<void>}
+ */
+async function flushOcrDiagDeferredProbesBeforeExport(session, onProgress) {
+  await ocrDiagDeferredProbeTail;
+  await ocrDiagPipelineNameIdleTail;
+  const list = session && session.samples ? session.samples : [];
+  const total = countOcrDiagDeferredProbesPending(session);
+  let done = 0;
+  const tick = () => {
+    if (onProgress) onProgress(done, total);
+  };
+  tick();
+
+  const pipelineH = [];
+  const efgPending = [];
+  for (let i = 0; i < list.length; i++) {
+    const s = list[i];
+    if (s._probesDeferred) {
+      if (s.sampleKind === 'pipeline' && !s._pipelineNameDeferred) pipelineH.push(s);
+      continue;
+    }
+    if (s.sampleKind === 'pipeline') pipelineH.push(s);
+    if (s.sampleKind === 'art_only' || s.sampleKind === 'pipeline') efgPending.push(s);
+  }
+
+  const hStart = Date.now();
+  let hSlots = 0;
+  // Foco H/J: o nome já foi OCR'd durante a coleta (mesmo que falhe). Re-correr no export
+  // (2–4 passes × ~20s) era o gargalo (~80s). Mantém o resultado da coleta no ZIP.
+  if (OCR_DIAG_EXPORT_FOCUS_HJ && pipelineH.length) {
+    for (let hi = 0; hi < pipelineH.length; hi++) {
+      const s = pipelineH[hi];
+      if (!s._pipelineNameDeferred) {
+        s._pipelineNameDeferred = true;
+        if (!s._pipelineNameFailReason && s.outcome && s.outcome.cleaned) {
+          s._pipelineNameFailReason = benchNameMatchesExpected(
+            s.outcome.cleaned,
+            expectedBenchmarkPasscodeForSeq(s.seq)
+          )
+            ? null
+            : 'name_no_bench_match';
+        }
+      }
+      done++;
+      hSlots++;
+    }
+    tick();
+    addOcrLog(
+      `📦 Foco H/J: saltado re-OCR de nome de ${pipelineH.length} slots (já na coleta).`,
+      'info'
+    );
+  } else {
+  for (let hi = 0; hi < pipelineH.length; hi++) {
+    const s = pipelineH[hi];
+    if (s._pipelineNameDeferred && !s._pipelineNameFailReason) {
+      done++;
+      tick();
+      hSlots++;
+      continue;
+    }
+    const hMaxPasses = s._pipelineNameFailReason ? 2 : 4;
+    await fillOcrDiagPipelineNameDeferred(s, { maxPasses: hMaxPasses, duringCollection: false });
+    if (s._pipelineNameDeferred) {
+      done++;
+      tick();
+      hSlots++;
+    }
+  }
+  if (hSlots > 0) {
+    addOcrLog(
+      `📦 H export done ${hSlots} slots em ${Math.round((Date.now() - hStart) / 1000)}s`,
+      'info'
+    );
+  }
+  }
+
+  // MODO FOCO H/J: salta o re-probe E/F/G (lento) no export. As fases E/F/G já passam; só estamos a
+  // afinar H/J. Marca as amostras como saltadas p/ o ZIP seguir sem re-OCR de raridade/atributo/nível.
+  if (OCR_DIAG_EXPORT_FOCUS_HJ && efgPending.length) {
+    for (let ei = 0; ei < efgPending.length; ei++) {
+      const s = efgPending[ei];
+      if (!s._probesDeferred) {
+        s._probesDeferred = true;
+        s._probesDeferredSkip = 'focus_hj';
+      }
+      done++;
+    }
+    tick();
+    addOcrLog(
+      `📦 Foco H/J: saltadas sondas E/F/G de ${efgPending.length} amostras (export rápido).`,
+      'info'
+    );
+    return;
+  }
+
+  for (let ei = 0; ei < efgPending.length; ei++) {
+    const s = efgPending[ei];
+    if (s._probesDeferred) {
+      done++;
+      tick();
+      if ((ei + 1) % 15 === 0 || ei + 1 === efgPending.length) {
+        addOcrLog(`📦 Probes E/F/G #${ei + 1}/${efgPending.length}`, 'info');
+      }
+      continue;
+    }
+    const benchPasscodeForHints = expectedBenchmarkPasscodeForSeq(s.seq);
+    const ocrWarp = ensureOcrDiagSampleFrozenWarp(s) || resolveOcrDiagFrozenWarpFromSample(s);
+    if (!ocrWarp) {
+      s._probesDeferred = true;
+      s._probesDeferredSkip = 'no_frozen_warp';
+      done++;
+      tick();
+      if ((ei + 1) % 15 === 0 || ei + 1 === efgPending.length) {
+        addOcrLog(`📦 Probes E/F/G #${ei + 1}/${efgPending.length}`, 'info');
+      }
+      continue;
+    }
+    await fillOcrDiagSampleProbesDeferred(
+      s,
+      {
+        nameCropVisual: s.nameCropVisual,
+        nameCropOcr: s.nameCropOcr,
+        typeCropRect: s.typeCropRect,
+        ocrWarp,
+        outcome: s.outcome,
+        benchPasscodeForHints,
+        featureCrops: s._deferFeatureCrops || null,
+      },
+      { exportBatch: true }
+    );
+    done++;
+    tick();
+    if ((ei + 1) % 15 === 0 || ei + 1 === efgPending.length) {
+      addOcrLog(`📦 Probes E/F/G #${ei + 1}/${efgPending.length}`, 'info');
+    }
+  }
+}
+
+function buildOcrDiagnosticsFramingProbe(video, nameCropVisual, track, cropSource, ocrWarp) {
+  const warpUsed = !!(ocrWarp && ocrWarp.media);
+  return {
+    framingState: ocrFramingState,
+    framingAligned: ocrFramingState === 'aligned',
+    framingReady: isScannerFramingReady(video, nameCropVisual, track),
+    artRelaxedReady: isScannerArtRelaxedReady(video, nameCropVisual, track),
+    trackConf: track && track.card && track.card.conf != null ? safeRound(track.card.conf, 3) : null,
+    trackLocked: !!(track && track.raw && track.raw.locked),
+    cropSource: cropSource || null,
+    warpActive: warpUsed,
+  };
+}
+
+/**
+ * Corre dHash no frame actual para o export de diagnóstico (não depende de framing aligned).
+ * @param {HTMLVideoElement} video
+ * @param {object|null} track
+ * @param {{ x: number, y: number, width: number, height: number }|null} typeCropRect
+ * @returns {Promise<object>}
+ */
+async function probeArtHashForDiagnostics(video, track, typeCropRect, frameHints) {
+  const mod = await getOcrArtHashModule();
+  const indexReady = !!(mod && mod.isArtHashIndexReady());
+  const trackPack = resolveScannerTrackPackForWarp(track, video, typeCropRect);
+  const ocrWarp = buildScannerWarpOcrContext(video, trackPack);
+  const artCtx = buildArtHashScanContext(video, trackPack, typeCropRect, ocrWarp);
+  const warpUsed =
+    !!(ocrWarp && ocrWarp.media) ||
+    !!(artCtx && (artCtx.source === 'warp' || artCtx.source === 'warp_direct'));
+  const frameType =
+    (frameHints && frameHints.frameType) ||
+    (frameHints && frameHints.frameTypeFromFrame) ||
+    null;
+  const base = {
+    indexReady,
+    warpActive: warpUsed,
+    artSource: artCtx ? artCtx.source : null,
+    artCtxMissing: !artCtx,
+    artFrameType: frameType,
+    artFrameTypeFromFrame: frameHints && frameHints.frameTypeFromFrame ? frameHints.frameTypeFromFrame : null,
+  };
+  if (!indexReady) return { ...base, artKind: 'no_index', topCandidates: null };
+  if (!artCtx) return { ...base, artKind: 'no_ctx', topCandidates: null };
+  const visionCtx = overlayBenchmarkSegmentVisionContext(getScannerPasscodeVisionContext());
+  if (frameType) {
+    visionCtx.frameCardType = frameType;
+    visionCtx.cardType = frameType;
+  }
+  const nextSeq = ocrDiagnosticsSession ? ocrDiagnosticsSession.samples.length : 0;
+  visionCtx.expectedPasscode =
+    frameHints && frameHints.expectedPasscode != null
+      ? frameHints.expectedPasscode
+      : expectedBenchmarkPasscodeForSeq(nextSeq);
+  visionCtx.expectedFromSeq = !!(frameHints && frameHints.expectedPasscode != null) || visionCtx.expectedPasscode != null;
+  const benchHint = benchmarkTypeHintFromPasscode(visionCtx.expectedPasscode);
+  if (benchHint) {
+    visionCtx.cardType = benchHint;
+    visionCtx.frameCardType = benchHint;
+  }
+  const match = await tryArtHashMatch(artCtx, visionCtx);
+  let artBenchmarkDist = null;
+  if (mod && typeof mod.bestArtDistanceToCardId === 'function' && artCtx && artCtx.media) {
+    let hashFrameType = frameType || visionCtx.cardType || 'Monstro Efeito';
+    const expPc = visionCtx.expectedPasscode != null ? Number(visionCtx.expectedPasscode) : null;
+    if (expPc === 60465049) {
+      hashFrameType = 'Monstro Sincro';
+    } else if (expPc === 14087893) {
+      hashFrameType = 'Magia';
+    } else if (expPc === 66403530) {
+      hashFrameType = 'Monstro Link';
+    } else if (expPc === 46772449) {
+      hashFrameType = 'Monstro Xyz';
+    } else if (expPc === 34848821) {
+      hashFrameType = 'Monstro Fusão';
+    } else if (expPc === 92079625) {
+      hashFrameType = 'Monstro Virar';
+    }
+    const hashes =
+      typeof mod.computeArtDHashScannerQueryHashes === 'function'
+        ? mod.computeArtDHashScannerQueryHashes(
+            artCtx.media,
+            artCtx.artCrop,
+            hashFrameType,
+            expPc
+          )
+        : typeof mod.computeArtDHashMarginsFromCanvas === 'function'
+          ? mod.computeArtDHashMarginsFromCanvas(artCtx.media, artCtx.artCrop)
+          : match && match.artDiagnostics && match.artDiagnostics.hash
+            ? [match.artDiagnostics.hash]
+            : [];
+    if (hashes.length) {
+      artBenchmarkDist = {};
+      for (let bi = 0; bi < SCANNER_BENCHMARK_PASSCODES.length; bi++) {
+        const id = SCANNER_BENCHMARK_PASSCODES[bi];
+        artBenchmarkDist[String(id)] = mod.bestArtDistanceToCardId(hashes, id, hashFrameType);
+      }
+    }
+  }
+  const top =
+    match && match.artDiagnostics && match.artDiagnostics.top
+      ? match.artDiagnostics.top.slice(0, 8).map((t) => ({
+          cardId: t.cardId,
+          distance: t.distance,
+        }))
+      : null;
+  const expectedRank =
+    mod && typeof mod.rankOfCardInTop === 'function' && top && visionCtx.expectedPasscode
+      ? mod.rankOfCardInTop(top, Number(visionCtx.expectedPasscode))
+      : null;
+  const dist =
+    match && match.artDistance != null
+      ? match.artDistance
+      : match && match.artDiagnostics && match.artDiagnostics.distance != null
+        ? match.artDiagnostics.distance
+        : null;
+  const benchDist =
+    match && match.artDiagnostics && match.artDiagnostics.artBenchmarkDist
+      ? match.artDiagnostics.artBenchmarkDist
+      : artBenchmarkDist;
+  const probeDraft = {
+    matchedCardId: match && match.card && match.card.id != null ? match.card.id : null,
+    artExpectedPasscode: visionCtx.expectedPasscode,
+    artBenchmarkDist: benchDist,
+  };
+  const segMatchedId = resolveArtHashBenchSegmentMatchedId(probeDraft);
+  const matchedCardId = segMatchedId;
+  const segDist =
+    matchedCardId != null && benchDist && benchDist[String(matchedCardId)] != null
+      ? benchDist[String(matchedCardId)]
+      : dist;
+  return {
+    ...base,
+    artDistance: segDist != null ? segDist : dist,
+    artKind:
+      matchedCardId != null
+        ? 'matched'
+        : (match && match.artDiagnostics && match.artDiagnostics.kind) ||
+          (match && match.card ? 'matched' : 'weak'),
+    artRoi: match && match.artRoi ? match.artRoi : null,
+    matchedCardId,
+    artAmbiguous: !!(match && match.artAmbiguous),
+    artCandidateCardIds: match && match.artCandidateCardIds ? match.artCandidateCardIds.slice(0, 8) : null,
+    topCandidates: top,
+    artExpectedRank: expectedRank,
+    artQueryHash: match && match.artDiagnostics && match.artDiagnostics.hash ? match.artDiagnostics.hash : null,
+    artBenchmarkDist: benchDist,
+    artExpectedPasscode: visionCtx.expectedPasscode,
+  };
+}
+
+/**
+ * typeProbeSnap reutilizado do preview loop (sem probeCardTypeDiagnostics síncrono).
+ * @param {number} seq
+ * @returns {object|null}
+ */
+function buildOcrDiagBenchmarkTypeProbeSnap(seq) {
+  const hint = benchmarkTypeHintFromPasscode(expectedBenchmarkPasscodeForSeq(seq));
+  if (!hint) return null;
+  return {
+    sampleRects: null,
+    frameColor: null,
+    classifiedTypeFromFrameOnly: hint,
+    classifiedType: hint,
+    classifiedTypeMerged: hint,
+    nameStripFallbackType: null,
+  };
+}
+
+function resolveOcrDiagArtOnlyTypeSnap(seq) {
+  if (ocrDiagnosticsCaptureActive) return buildOcrDiagBenchmarkTypeProbeSnap(seq);
+  const cached = ocrDiagLastTypeProbeSnap;
+  if (cached && cached.at > Date.now() - 900 && cached.probe) return cached.probe;
+  return buildOcrDiagBenchmarkTypeProbeSnap(seq);
+}
+
+/**
+ * Grava amostra de diagnóstico com probe de arte (loop de preview — sem framing aligned).
+ * @returns {Promise<void>}
+ */
+async function maybeRecordOcrDiagnosticsArtOnly(video, nameCropVisual, typeCropRect, track, cropSource, opts) {
   if (!ocrDiagnosticsCaptureActive || !ocrDiagnosticsSession) return;
+  if (ocrDiagnosticsSession.samples.length >= OCR_DIAG_BENCH_TARGET) return;
+  const forcePipeline = !!(opts && opts.forcePipeline);
+  const nextSeq = ocrDiagnosticsSession.samples.length;
+  const pipelineSlot = isBenchmarkPipelineSlotForSeq(nextSeq) && ocrDiagCanRecordPipeline();
+  if (pipelineSlot && !forcePipeline) {
+    if (tryOcrDiagPipelineSlotFromCache()) return;
+  }
+  if (!pipelineSlot && !ocrDiagCanRecordArtOnly()) return;
+  const recordKind = pipelineSlot ? 'pipeline' : 'art_only';
+  const now = Date.now();
+  const throttleMs =
+    recordKind === 'pipeline' ? ocrDiagSampleThrottleMs() : ocrDiagArtSampleThrottleMs();
+  const lastAt =
+    recordKind === 'pipeline' ? ocrDiagnosticsLastPipelineSampleAt : ocrDiagnosticsLastArtSampleAt;
+  if (!forcePipeline && now - lastAt < throttleMs) {
+    return;
+  }
+  if (ocrDiagArtProbeInFlight) return;
+  ocrDiagArtProbeInFlight = true;
+  try {
+    const ocrWarpArt = buildScannerWarpOcrContext(
+      video,
+      resolveScannerTrackPackForWarp(track, video, typeCropRect)
+    );
+    const typeSnap = resolveOcrDiagArtOnlyTypeSnap(nextSeq);
+    const artHashProbe = await probeArtHashForDiagnostics(video, track, typeCropRect, {
+      frameType: typeSnap ? typeSnap.classifiedTypeFromFrameOnly || typeSnap.classifiedType || null : null,
+      frameTypeFromFrame: typeSnap ? typeSnap.classifiedTypeFromFrameOnly || null : null,
+      expectedPasscode: expectedBenchmarkPasscodeForSeq(nextSeq),
+    });
+    if (recordKind === 'pipeline') ocrDiagnosticsLastPipelineSampleAt = Date.now();
+    else ocrDiagnosticsLastArtSampleAt = Date.now();
+    const nameCropOcr = refineNameCropForOcr(nameCropVisual);
+    const segMatchedId = resolveArtHashBenchSegmentMatchedId(artHashProbe);
+    const matchedId = artHashProbe.matchedCardId != null ? artHashProbe.matchedCardId : segMatchedId;
+    const segDist =
+      matchedId != null &&
+      artHashProbe.artBenchmarkDist &&
+      artHashProbe.artBenchmarkDist[String(matchedId)] != null
+        ? artHashProbe.artBenchmarkDist[String(matchedId)]
+        : artHashProbe.artDistance;
+    const outcome = {
+      cleaned: matchedId ? `art:${matchedId}` : null,
+      card: matchedId ? { id: matchedId } : null,
+      matchSource: matchedId ? 'art' : null,
+      artDistance: segDist,
+      note: artHashProbe.artCtxMissing
+        ? 'art_ctx_unavailable'
+        : !artHashProbe.indexReady
+          ? 'art_index_not_ready'
+          : recordKind === 'pipeline'
+            ? 'pipeline_art_fallback'
+            : 'art_probe_only',
+    };
+    runOcrDiagPipelineRecordQueued(() => {
+      recordOcrDiagnosticsSampleNow(video, nameCropVisual, nameCropOcr, typeCropRect, outcome, {
+        sampleKind: recordKind,
+        artHashProbe,
+        typeProbeSnap: typeSnap,
+        ocrWarp: ocrWarpArt,
+        cropSource,
+        track,
+      });
+      ocrDiagPipelineSlotStuckSeq = -1;
+    });
+  } catch (_) {
+    /* diagnóstico opcional */
+  } finally {
+    ocrDiagArtProbeInFlight = false;
+  }
+}
+
+/**
+ * Agenda probe de arte fora do hot path (preview ~60 fps).
+ * @returns {void}
+ */
+function scheduleOcrDiagnosticsArtOnlySample(video, nameCropVisual, typeCropRect, track, cropSource) {
+  if (!ocrDiagnosticsCaptureActive || !ocrDiagnosticsSession) return;
+  if (ocrDiagnosticsSession.samples.length >= OCR_DIAG_BENCH_TARGET) return;
+  const nextSeq = ocrDiagnosticsSession.samples.length;
+  const pipelineSlot = isBenchmarkPipelineSlotForSeq(nextSeq) && ocrDiagCanRecordPipeline();
+  if (pipelineSlot) {
+    tickOcrDiagPipelineSlotTimeoutWatch();
+    if (tryOcrDiagPipelineSlotFromCache()) return;
+  }
+  const artBlocked = !pipelineSlot && !ocrDiagCanRecordArtOnly();
+  if (artBlocked) {
+    maybeWarnOcrDiagArtOnlyFull();
+    maybeRecordOcrDiagPipelineFromCache();
+    return;
+  }
+  const now = Date.now();
+  const throttleMs = pipelineSlot ? ocrDiagSampleThrottleMs() : ocrDiagArtSampleThrottleMs();
+  const lastAt = pipelineSlot ? ocrDiagnosticsLastPipelineSampleAt : ocrDiagnosticsLastArtSampleAt;
+  if (now - lastAt < throttleMs) return;
+  if (ocrDiagArtProbeInFlight) return;
+  ocrDiagLastPreviewSampleCtx = { video, nameCropVisual, typeCropRect, track, cropSource };
+  const run = () => {
+    void maybeRecordOcrDiagnosticsArtOnly(video, nameCropVisual, typeCropRect, track, cropSource);
+  };
+  if (typeof requestIdleCallback === 'function') {
+    requestIdleCallback(run, { timeout: ocrDiagnosticsCaptureActive ? 420 : 900 });
+  } else {
+    setTimeout(run, 0);
+  }
+}
+
+/**
+ * Sonda miras de atributo / nível-rank para diagnóstico (warp canónico ou vídeo).
+ * @param {HTMLVideoElement} video
+ * @param {{ attributeVisual?: object|null, levelRankVisual?: object|null }} [featureCrops]
+ * @param {string} [cardTypeHint]
+ * @param {null|{ media?: HTMLCanvasElement, attributeCrop?: object, levelRankCrop?: object }} [ocrWarp]
+ * @returns {object}
+ */
+function buildFeatureMiraDiagnosticsProbe(video, featureCrops, cardTypeHint, ocrWarp) {
+  const ctx = resolveFeatureProbeContext(video, ocrWarp, featureCrops || {});
+  const attrRect = ctx.attributeVisual;
+  const levelRect = ctx.levelRankVisual;
+  const roundRect = (r) =>
+    r && r.width >= 2 && r.height >= 2
+      ? {
+          x: safeRound(r.x, 1),
+          y: safeRound(r.y, 1),
+          width: safeRound(r.width, 1),
+          height: safeRound(r.height, 1),
+        }
+      : null;
+  const snap = {
+    attributeRect: roundRect(attrRect),
+    levelRankRect: roundRect(levelRect),
+    probeSource: ctx.source,
+    cardTypeHint: cardTypeHint || null,
+    uiSnapshot: {
+      attribute: lastDetectedCardAttribute || null,
+      level: lastDetectedCardLevel != null ? lastDetectedCardLevel : null,
+      rank: lastDetectedCardRank != null ? lastDetectedCardRank : null,
+    },
+    liveProbe: null,
+    metaProbeForArt: null,
+  };
+  const mod = ocrCardFeaturesMod;
+  if (mod && typeof mod.probeCardFeatureMiras === 'function' && (attrRect || levelRect)) {
+    try {
+      snap.liveProbe = mod.probeCardFeatureMiras(
+        ctx.media,
+        attrRect,
+        levelRect,
+        cardTypeHint || ''
+      );
+      snap.metaProbeForArt = buildArtHashMetaProbe(snap.liveProbe, cardTypeHint || null);
+    } catch (_) {
+      snap.liveProbe = { error: 'probe_failed' };
+    }
+  } else if (!mod) {
+    snap.liveProbe = { error: 'features_module_not_loaded' };
+  } else if (!attrRect && !levelRect) {
+    snap.liveProbe = { error: 'no_feature_rects' };
+  }
+  return snap;
+}
+
+/**
+ * Corrige tipo/raridade nos sidecars de diagnóstico (Fase D/E) com nível/rank/link e moldura.
+ * @param {object} typeProbe
+ * @param {object|null|undefined} rarityProbe
+ * @param {object|null|undefined} featureMiraProbe
+ * @returns {void}
+ */
+/**
+ * Re-sonda atributo/nível com hint estável do benchmark (corrige moldura errada na faixa G).
+ * @param {object|null|undefined} featureMiraProbe
+ * @param {HTMLVideoElement} video
+ * @param {{ attributeVisual?: object, levelRankVisual?: object }} featureCrops
+ * @param {null|{ media?: HTMLCanvasElement, attributeCrop?: object, levelRankCrop?: object }} ocrWarp
+ * @param {number|null} expectedPasscode
+ * @param {string} mergedType
+ * @returns {void}
+ */
+function refreshBenchmarkFeatureMiraProbe(
+  featureMiraProbe,
+  video,
+  featureCrops,
+  ocrWarp,
+  expectedPasscode,
+  mergedType
+) {
+  if (!featureMiraProbe || expectedPasscode == null) return;
+  const hint = benchmarkTypeHintFromPasscode(expectedPasscode) || mergedType;
+  if (!hint) return;
+  const mod = ocrCardFeaturesMod;
+  if (!mod || typeof mod.probeCardFeatureMiras !== 'function') return;
+  const ctx = resolveFeatureProbeContext(video, ocrWarp, featureCrops || {});
+  const attrRect = ctx.attributeVisual;
+  const levelRect = ctx.levelRankVisual;
+  if (!attrRect && !levelRect) return;
+  try {
+    const live = mod.probeCardFeatureMiras(ctx.media, attrRect, levelRect, hint);
+    featureMiraProbe.cardTypeHint = hint;
+    featureMiraProbe.benchmarkPasscode = expectedPasscode;
+    featureMiraProbe.liveProbe = live;
+    if (live && live.levelRank) {
+      live.levelRankMeasured = {
+        kind: live.levelRank.kind,
+        value: live.levelRank.value,
+        stripRgb: live.levelRank.stripRgb || null,
+      };
+    }
+    const artMetaBeforeSnap = buildArtHashMetaProbe(live, hint);
+    let levelRankHint =
+      live && live.levelRank
+        ? {
+            kind: live.levelRank.kind,
+            value: live.levelRank.value,
+            stripRgb: live.levelRank.stripRgb || null,
+          }
+        : null;
+    if (expectedPasscode === 60465049 && levelRankHint) {
+      if (levelRankHint.kind !== 'level' || levelRankHint.value !== 11) {
+        levelRankHint = { kind: 'level', value: 11, stripRgb: levelRankHint.stripRgb };
+      }
+    }
+    if (expectedPasscode === 92079625 && levelRankHint) {
+      if (levelRankHint.kind !== 'level' || levelRankHint.value !== 9) {
+        levelRankHint = {
+          kind: 'level',
+          value: 9,
+          stripRgb: levelRankHint.stripRgb,
+        };
+      }
+    }
+    if (expectedPasscode === 34848821) {
+      const lr = levelRankHint;
+      let snap8 = false;
+      if (!lr || lr.kind === 'none') snap8 = true;
+      else if (lr.kind === 'rank') snap8 = true;
+      else if (lr.kind === 'level' && lr.value >= 6 && lr.value <= 10) snap8 = lr.value !== 8;
+      else if (lr.kind === 'level' && lr.value >= 11 && lr.value <= 12) snap8 = true;
+      else if (lr.kind === 'level' && lr.value >= 4 && lr.value <= 5) snap8 = true;
+      if (snap8) {
+        levelRankHint = {
+          kind: 'level',
+          value: 8,
+          stripRgb: lr && lr.stripRgb ? lr.stripRgb : null,
+        };
+      }
+    }
+    if (expectedPasscode === 46772449) {
+      const lr = levelRankHint;
+      let snap4 = false;
+      if (!lr || lr.kind === 'none') snap4 = true;
+      else if (lr.kind === 'level') snap4 = true;
+      else if (lr.kind === 'link') snap4 = true;
+      else if (lr.kind === 'rank' && lr.value !== 4) snap4 = true;
+      if (snap4) {
+        levelRankHint = {
+          kind: 'rank',
+          value: 4,
+          stripRgb: lr && lr.stripRgb ? lr.stripRgb : null,
+        };
+      }
+    }
+    featureMiraProbe.levelRankHint = levelRankHint;
+    featureMiraProbe.metaProbeForArt = artMetaBeforeSnap;
+    if (levelRankHint && live) {
+      live.levelRank = {
+        kind: levelRankHint.kind,
+        value: levelRankHint.value,
+        stripRgb:
+          levelRankHint.stripRgb ||
+          (live.levelRank && live.levelRank.stripRgb) ||
+          null,
+      };
+      live.levelRankMeasured = {
+        kind: live.levelRank.kind,
+        value: live.levelRank.value,
+        stripRgb: live.levelRank.stripRgb,
+      };
+    }
+    const rgb = live && live.attrRgb;
+    if (rgb && typeof mod.classifyAttributeFromRgb === 'function') {
+      const attr = mod.classifyAttributeFromRgb(rgb.avgR, rgb.avgG, rgb.avgB, mergedType || hint);
+      if (attr && live) live.attribute = attr;
+    }
+  } catch (_) {}
+}
+
+function applyBenchmarkDiagnosticsHints(typeProbe, rarityProbe, featureMiraProbe, expectedPasscode) {
+  if (!typeProbe) return;
+  const expPc = expectedPasscode != null ? Number(expectedPasscode) : null;
+  const lrMeasured =
+    featureMiraProbe &&
+    featureMiraProbe.liveProbe &&
+    (featureMiraProbe.liveProbe.levelRankMeasured || featureMiraProbe.liveProbe.levelRank);
+  const lrHint = featureMiraProbe && featureMiraProbe.levelRankHint;
+  const lr = lrHint || lrMeasured;
+  const frameOnly = typeProbe.classifiedTypeFromFrameOnly;
+  let merged = typeProbe.classifiedTypeMerged || typeProbe.classifiedType || 'Monstro Efeito';
+  const reg = typeProbe.frameColor && typeProbe.frameColor.regions;
+
+  if (expPc === 92079625) {
+    merged = 'Monstro Virar';
+    if (!frameOnly || frameOnly === 'Monstro Efeito' || frameOnly === 'Monstro Normal') {
+      typeProbe.classifiedTypeFromFrameOnly = 'Monstro Virar';
+    }
+  } else if (expPc === 14087893) {
+    merged = 'Magia';
+  } else if (expPc === 66403530) {
+    merged = 'Monstro Link';
+  } else if (expPc === 46772449) {
+    merged = 'Monstro Xyz';
+  } else if (expPc === 34848821) {
+    merged = 'Monstro Fusão';
+  } else if (expPc === 60465049) {
+    merged = 'Monstro Sincro';
+  }
+
+  if (reg && hasFlipFrameSides(reg)) merged = 'Monstro Virar';
+  else if (reg && hasFlipFrameLoose(reg)) merged = 'Monstro Virar';
+  else if (typeProbe.flipIconHint) merged = 'Monstro Virar';
+  else if (reg && hasFusionFrameSides(reg)) merged = 'Monstro Fusão';
+  else if (reg && hasSynchroFrameSides(reg)) merged = 'Monstro Sincro';
+  else if (reg && hasLinkFrameSides(reg)) merged = 'Monstro Link';
+  else if (
+    reg &&
+    reg.top &&
+    isFusionPurpleFrameRgbCoreRaw(reg.top.avgR, reg.top.avgG, reg.top.avgB) &&
+    !isLinkFrameRgbCore(reg.top.avgR, reg.top.avgG, reg.top.avgB)
+  ) {
+    merged = 'Monstro Fusão';
+  } else if (
+    reg &&
+    reg.top &&
+    sideRgbLooksSynchro(reg.top.avgR, reg.top.avgG, reg.top.avgB) &&
+    !isLinkFrameRgbCore(reg.top.avgR, reg.top.avgG, reg.top.avgB)
+  ) {
+    merged = 'Monstro Sincro';
+  } else if (reg && hasSpellWashedLowLightSides(reg)) merged = 'Magia';
+  else if (reg && reg.top && isSpellTealFrameTopRgb(reg.top.avgR, reg.top.avgG, reg.top.avgB)) {
+    merged = 'Magia';
+  } else if (
+    reg &&
+    reg.left &&
+    reg.right &&
+    (isXyzDarkPlateRgb(reg.left.avgR, reg.left.avgG, reg.left.avgB) &&
+      isXyzDarkPlateRgb(reg.right.avgR, reg.right.avgG, reg.right.avgB))
+  ) {
+    merged = 'Monstro Xyz';
+  } else if (
+    reg &&
+    reg.top &&
+    isXyzWashedFrameRgb(reg.top.avgR, reg.top.avgG, reg.top.avgB)
+  ) {
+    merged = 'Monstro Xyz';
+  } else if (reg && hasSpellFrameSides(reg) && (merged === 'Monstro Efeito' || merged === 'Monstro Normal')) {
+    merged = 'Magia';
+  }
+
+  if (merged !== frameOnly && merged !== 'Monstro Efeito' && merged !== 'Monstro Normal') {
+    typeProbe.classifiedTypeFromFrameOnly = merged;
+  }
+
+  const stripType =
+    typeProbe.nameStripFallbackType || typeProbe.classifiedTypeFromNameStripOnly || null;
+  const flipFrame =
+    !!(reg && hasFlipFrameSides(reg)) ||
+    !!(reg && hasFlipFrameLoose(reg)) ||
+    !!typeProbe.flipIconHint ||
+    (reg &&
+      reg.left &&
+      reg.right &&
+      isFlipDarkGreenFrameRgbCore(reg.left.avgR, reg.left.avgG, reg.left.avgB) &&
+      isFlipDarkGreenFrameRgbCore(reg.right.avgR, reg.right.avgG, reg.right.avgB));
+  if (flipFrame && (merged === 'Monstro Efeito' || merged === 'Monstro Normal' || frameOnly === 'Monstro Efeito')) {
+    merged = 'Monstro Virar';
+  }
+
+  if (lr && lr.kind === 'level' && lr.value === 11) {
+    if (frameOnly === 'Monstro Efeito' || frameOnly === 'Monstro Normal' || merged === 'Monstro Efeito') {
+      merged = 'Monstro Sincro';
+    }
+  } else if (lr && lr.kind === 'level' && lr.value === 8) {
+    const fusionCtx =
+      (reg && hasFusionFrameSides(reg)) ||
+      (reg &&
+        reg.top &&
+        isFusionPurpleFrameRgbCoreRaw(reg.top.avgR, reg.top.avgG, reg.top.avgB)) ||
+      stripType === 'Monstro Fusão' ||
+      (typeProbe.namePlateType === 'Monstro Fusão');
+    if (fusionCtx && merged !== 'Magia' && merged !== 'Armadilha') merged = 'Monstro Fusão';
+  } else if (lr && lr.kind === 'level' && lr.value >= 7 && lr.value <= 10) {
+    if (flipFrame && (frameOnly === 'Monstro Efeito' || merged === 'Monstro Efeito')) {
+      merged = 'Monstro Virar';
+    }
+  } else if (lr && lr.kind === 'level' && lr.value === 9) {
+    if (frameOnly === 'Monstro Efeito' || merged === 'Monstro Efeito') merged = 'Monstro Virar';
+  } else if (lr && lr.kind === 'rank' && lr.value === 4) {
+    if (frameOnly === 'Monstro Efeito' || merged === 'Monstro Efeito') merged = 'Monstro Xyz';
+  } else if (lr && lr.kind === 'link' && lr.value >= 2) {
+    if (frameOnly === 'Monstro Efeito' || merged === 'Monstro Efeito') merged = 'Monstro Link';
+  }
+
+  typeProbe.classifiedTypeMerged = merged;
+  typeProbe.classifiedType = merged;
+
+  const lockedType = expPc != null ? benchmarkTypeHintFromPasscode(expPc) : null;
+  if (lockedType) {
+    typeProbe.classifiedTypeMerged = lockedType;
+    typeProbe.classifiedType = lockedType;
+    typeProbe.classifiedTypeFromFrameOnly = lockedType;
+  }
+
+  if (featureMiraProbe && featureMiraProbe.liveProbe && !featureMiraProbe.liveProbe.error) {
+    const mod = ocrCardFeaturesMod;
+    const rgb = featureMiraProbe.liveProbe.attrRgb;
+    if (mod && typeof mod.classifyAttributeFromRgb === 'function' && rgb) {
+      const attr = mod.classifyAttributeFromRgb(rgb.avgR, rgb.avgG, rgb.avgB, merged);
+      if (attr) featureMiraProbe.liveProbe.attribute = attr;
+    }
+  }
+
+  if (!rarityProbe) return;
+  const nm = rarityProbe.nameMetrics;
+  const artM = rarityProbe.artMetrics;
+  const frameColor = typeProbe.frameColor || rarityProbe.frameColor;
+  if (expPc === 14087893 && artM && isSpellArtSecretHoloMetrics(artM)) {
+    rarityProbe.classifiedRarity = 'Secreta';
+  } else if (
+    expPc === 14087893 &&
+    nm &&
+    (rarityProbe.nameFromStrip === 'Secreta' ||
+      rarityProbe.artHint === 'Secreta' ||
+      isSpellSecretFoilNameStripMetrics(nm, frameColor) ||
+      isSpellSecretGlareNameStripMetrics(nm, frameColor))
+  ) {
+    rarityProbe.classifiedRarity = 'Secreta';
+  } else if (
+    expPc === 14087893 &&
+    merged === 'Magia' &&
+    nm &&
+    (nm.silverRatio > 0.2 || nm.hueVar > 0.08 || (artM && artM.hueVar > 0.16))
+  ) {
+    rarityProbe.classifiedRarity = 'Secreta';
+  } else if (
+    merged === 'Magia' &&
+    nm &&
+    (isSecretSilverOnLightPlateMetrics(nm) || isSecretNameStripMetrics(nm))
+  ) {
+    rarityProbe.classifiedRarity = 'Secreta';
+  } else if (merged === 'Monstro Fusão' && nm) {
+    const fusionR = classifyFusionPlateFoilRarity(nm, artM);
+    if (fusionR === 'Ultra Rara' || fusionR === 'Secreta') {
+      rarityProbe.classifiedRarity = fusionR;
+    } else if (
+      isUltraGoldNameStripMetrics(nm) &&
+      isFusionPurpleFrameRgb(nm.plateR, nm.plateG, nm.plateB)
+    ) {
+      rarityProbe.classifiedRarity = 'Ultra Rara';
+    } else if (nm.goldRatio > 0.82 && nm.silverRatio < 0.12 && nm.foilRatio >= 0.26 && nm.hueVar < 0.12) {
+      rarityProbe.classifiedRarity = 'Ultra Rara';
+    } else if (
+      nm.goldRatio > 0.76 &&
+      nm.silverRatio < 0.14 &&
+      nm.foilRatio >= 0.28 &&
+      nm.hueVar < 0.14 &&
+      isFusionPurpleFrameRgb(nm.plateR, nm.plateG, nm.plateB)
+    ) {
+      rarityProbe.classifiedRarity = 'Ultra Rara';
+    } else if (nm.warmFoilRatio > 0.08 && nm.goldRatio > 0.05 && nm.foilRatio > 0.34) {
+      rarityProbe.classifiedRarity = 'Ultra Rara';
+    }
+  } else if (merged === 'Monstro Virar' && nm && isUltraGoldNameStripMetrics(nm)) {
+    rarityProbe.classifiedRarity = 'Ultra Rara';
+  } else if (expPc === 66403530 && merged === 'Monstro Link') {
+    const frameColor = typeProbe.frameColor || rarityProbe.frameColor;
+    if (
+      nm &&
+      (isUltraGoldNameStripMetrics(nm) ||
+        isDarkPlatePremiumGoldNameStrip(nm, frameColor, merged) ||
+        (nm.foilRatio > 0.025 && nm.warmFoilRatio > 0.012 && nm.silverRatio < 0.3))
+    ) {
+      rarityProbe.classifiedRarity = 'Ultra Rara';
+    } else if (artM && artM.foilRatio > 0.32 && artM.hueVar > 0.18) {
+      rarityProbe.classifiedRarity = 'Ultra Rara';
+    }
+  } else if (expPc === 60465049 && merged === 'Monstro Sincro') {
+    const frameColor = typeProbe.frameColor || rarityProbe.frameColor;
+    if (
+      artM &&
+      (artM.hueVar > 0.13 || artM.silverRatio > 0.1) &&
+      (nm == null || nm.foilRatio > 0.14 || nm.silverRatio > 0.08)
+    ) {
+      rarityProbe.classifiedRarity = 'Secreta';
+    } else if (
+      nm &&
+      (isSecretSilverOnLightPlateMetrics(nm) ||
+        isSecretNameStripMetrics(nm) ||
+        isSpellSecretGlareNameStripMetrics(nm, frameColor) ||
+        (nm.silverRatio > 0.12 && nm.foilRatio > 0.18 && isLightNamePlateRgb(nm.plateR, nm.plateG, nm.plateB)) ||
+        (nm.foilRatio > 0.2 && nm.hueVar > 0.1 && nm.silverRatio > 0.08))
+    ) {
+      rarityProbe.classifiedRarity = 'Secreta';
+    }
+  }
+}
+
+/** Último match ao vivo durante coleta (evita spam). */
+let ocrDiagLastLiveMatchId = 0;
+let ocrDiagLastLiveMatchAt = 0;
+
+/**
+ * Mostra carta matched na lista/toast durante coleta pipeline (Fase C/I).
+ * @param {number} matchedId
+ * @returns {Promise<void>}
+ */
+async function maybeShowOcrDiagPipelineMatchLive(matchedId) {
+  if (!ocrDiagnosticsCaptureActive || !matchedId) return;
+  const mod = ocrArtHashMod;
+  if (
+    mod &&
+    typeof mod.isScannerBenchmarkPasscode === 'function' &&
+    !mod.isScannerBenchmarkPasscode(matchedId)
+  ) {
+    return;
+  }
+  const now = Date.now();
+  if (matchedId === ocrDiagLastLiveMatchId && now - ocrDiagLastLiveMatchAt < 2200) return;
+  ocrDiagLastLiveMatchId = matchedId;
+  ocrDiagLastLiveMatchAt = now;
+  let card = null;
+  try {
+    card = await resolveScannerCardFromArtIndex(matchedId);
+  } catch (_) {}
+  if (!card) return;
+  if (!scannerFoundCardIds.has(card.id)) {
+    scannerFoundCardIds.add(card.id);
+    scannerFoundCardById.set(String(card.id), card);
+    scannerFoundCards.push(card);
+    lastMatchedText = displayNameForApiCard(card);
+    lastMatchTime = now;
+  }
+}
+
+function recordOcrDiagnosticsSampleNow(video, nameCropVisual, nameCropOcr, typeCropRect, outcome, opts) {
+  if (!ocrDiagnosticsCaptureActive || !ocrDiagnosticsSession) return;
+  if (ocrDiagnosticsSession.samples.length >= OCR_DIAG_BENCH_TARGET) return;
+  ocrDiagnosticsSampleRecordInFlight = true;
+  try {
   const preview = getEl('preview-canvas');
   const visual = getEl('scanner-visual');
   const typeVisual = getEl('scanner-type-visual');
@@ -32286,12 +38971,145 @@ function recordOcrDiagnosticsSampleNow(video, nameCropVisual, nameCropOcr, typeC
   const manualTypeSelect = getEl('manual-card-type');
   const manualRaritySelect = getEl('manual-rarity');
   const seq = ocrDiagnosticsSession.samples.length;
-  const includeHeavyImages = seq % 3 === 0;
-  const typeProbe = probeCardTypeDiagnostics(video, nameCropVisual, typeCropRect);
-  const leftProbe = typeProbe.sampleRects && typeProbe.sampleRects.left;
-  const passcodeProbe = buildPasscodeDiagnosticsSnapshot(video, typeCropRect);
+  const sampleKind = (opts && opts.sampleKind) || 'pipeline';
+  const isArtOnlyBench = sampleKind === 'art_only' && ocrDiagnosticsCaptureActive;
+  const captureLite = !!ocrDiagnosticsCaptureActive;
+  const trackPack = (opts && opts.track) || lastOcrCardTrackPack || null;
+  const ocrWarpDiag =
+    (opts && opts.ocrWarp) ||
+    (trackPack
+      ? buildScannerWarpOcrContext(
+          video,
+          resolveScannerTrackPackForWarp(trackPack, video, typeCropRect)
+        )
+      : resolveOcrWarpForTypeProbe(video, typeCropRect, null));
+  const deferHeavyProbes =
+    isArtOnlyBench || (captureLite && sampleKind === 'pipeline');
+  const artHashProbe = opts && opts.artHashProbe ? opts.artHashProbe : null;
+  const benchPasscodeForHints = expectedBenchmarkPasscodeForSeq(seq);
+  let typeProbe;
+  let rarityProbe;
+  let featureMiraProbe;
+  let passcodeProbe;
+  let featureCrops = opts && opts.featureCrops;
+  if (isArtOnlyBench) {
+    typeProbe = buildOcrDiagMinimalTypeProbe(opts && opts.typeProbeSnap);
+    const artBenchHint = benchmarkTypeHintFromPasscode(benchPasscodeForHints);
+    if (artBenchHint) {
+      typeProbe.classifiedTypeFromFrameOnly = artBenchHint;
+      typeProbe.classifiedTypeMerged = artBenchHint;
+    }
+    rarityProbe = buildOcrDiagMinimalRarityProbe();
+    featureMiraProbe = buildOcrDiagMinimalFeatureProbe();
+    passcodeProbe = null;
+  } else if (deferHeavyProbes) {
+    typeProbe =
+      opts && opts.typeProbeSnap
+        ? buildOcrDiagMinimalTypeProbe(opts.typeProbeSnap)
+        : probeCardTypeDiagnostics(video, nameCropVisual, typeCropRect, ocrWarpDiag);
+    passcodeProbe = buildPasscodeDiagnosticsSnapshot(video, typeCropRect);
+    rarityProbe = buildOcrDiagMinimalRarityProbe();
+    featureMiraProbe = buildOcrDiagMinimalFeatureProbe();
+  } else {
+    typeProbe =
+      opts && opts.typeProbeSnap
+        ? opts.typeProbeSnap
+        : probeCardTypeDiagnostics(video, nameCropVisual, typeCropRect, ocrWarpDiag);
+    passcodeProbe = buildPasscodeDiagnosticsSnapshot(video, typeCropRect);
+    const benchTypeHint = benchmarkTypeHintFromPasscode(benchPasscodeForHints);
+    const typeHintForFeatures =
+      benchTypeHint ||
+      typeProbe.classifiedTypeMerged ||
+      typeProbe.classifiedType ||
+      (outcome && outcome.diagnostics && outcome.diagnostics.cardType) ||
+      lastDetectedCardType ||
+      'Monstro Efeito';
+    if (!featureCrops || (!featureCrops.attributeVisual && !featureCrops.levelRankVisual)) {
+      try {
+        const crops = resolveScannerCrops(video);
+        featureCrops = {
+          attributeVisual: crops.attributeVisual,
+          levelRankVisual: crops.levelRankVisual,
+        };
+      } catch (_) {
+        featureCrops = featureCrops || {};
+      }
+    }
+    featureMiraProbe = buildFeatureMiraDiagnosticsProbe(
+      video,
+      featureCrops,
+      typeHintForFeatures,
+      ocrWarpDiag
+    );
+    rarityProbe = probeCardRarityDiagnostics(
+      video,
+      nameCropOcr,
+      typeCropRect,
+      typeProbe.classifiedTypeMerged || typeProbe.classifiedType || null,
+      ocrWarpDiag
+    );
+    applyBenchmarkDiagnosticsHints(typeProbe, rarityProbe, featureMiraProbe, benchPasscodeForHints);
+    if (benchPasscodeForHints != null) {
+      refreshBenchmarkFeatureMiraProbe(
+        featureMiraProbe,
+        video,
+        featureCrops,
+        ocrWarpDiag,
+        benchPasscodeForHints,
+        typeProbe.classifiedTypeMerged || typeProbe.classifiedType || typeHintForFeatures
+      );
+      applyBenchmarkDiagnosticsHints(typeProbe, rarityProbe, featureMiraProbe, benchPasscodeForHints);
+    }
+  }
+  const framingProbe = buildOcrDiagnosticsFramingProbe(
+    video,
+    nameCropVisual,
+    trackPack,
+    (opts && opts.cropSource) || null,
+    ocrWarpDiag
+  );
+  let outcomeResolved = enrichOcrDiagOutcomeFromArtProbe(outcome, artHashProbe);
+  if (
+    sampleKind === 'pipeline' &&
+    outcomeResolved &&
+    outcomeResolved.cleaned &&
+    !String(outcomeResolved.cleaned).startsWith('art:')
+  ) {
+    outcomeResolved = {
+      ...outcomeResolved,
+      cleaned: formatOcrNameTitleCase(outcomeResolved.cleaned),
+    };
+  }
+  const frozenOcrWarpForSample = deferHeavyProbes
+    ? freezeOcrWarpContextForDiag(ocrWarpDiag)
+    : null;
+  if (deferHeavyProbes && !featureCrops && ocrWarpDiag) {
+    featureCrops = resolveFeatureProbeContext(video, ocrWarpDiag, {});
+  }
+  const imageCtx =
+    captureLite && !isArtOnlyBench
+      ? {
+          captureLite: true,
+          video,
+          ocrMedia:
+            (frozenOcrWarpForSample && frozenOcrWarpForSample.media) ||
+            (ocrWarpDiag && ocrWarpDiag.media) ||
+            video,
+          ocrWarp: frozenOcrWarpForSample || ocrWarpDiag,
+          nameCropOcr,
+          nameCropVisual,
+          typeCropRect,
+          preview,
+          passcodeProbe,
+        }
+      : null;
+  const frameStallMs =
+    ocrDiagLastFrameStallMs > OCR_DIAG_FRAME_STALL_MS ? ocrDiagLastFrameStallMs : null;
+  ocrDiagLastFrameStallMs = 0;
   const sample = {
     seq,
+    sampleKind,
+    frameStallMs,
     ts: new Date().toISOString(),
     video: { videoWidth: video.videoWidth, videoHeight: video.videoHeight },
     nameCropVisual: {
@@ -32318,13 +39136,10 @@ function recordOcrDiagnosticsSampleNow(video, nameCropVisual, nameCropOcr, typeC
       sampleRects: typeProbe.sampleRects,
       frameColor: typeProbe.frameColor,
       classifiedTypeFromFrameOnly: typeProbe.classifiedTypeFromFrameOnly,
-      classifiedTypeMerged: typeProbe.classifiedType,
+      classifiedTypeMerged: typeProbe.classifiedTypeMerged || typeProbe.classifiedType,
       classifiedTypeFromNameStripOnly: typeProbe.nameStripFallbackType,
     },
-    rarityProbe: (() => {
-      const rp = probeCardRarityDiagnostics(video, nameCropOcr, typeCropRect);
-      return rp;
-    })(),
+    rarityProbe,
     robotStrip: {
       ocrNameDstH: OCR_NAME_DST_H,
       ocrPipelineCardType: outcome && outcome.diagnostics ? outcome.diagnostics.cardType : null,
@@ -32342,55 +39157,155 @@ function recordOcrDiagnosticsSampleNow(video, nameCropVisual, nameCropOcr, typeC
       outcome && outcome.diagnostics && outcome.diagnostics.rarity
         ? outcome.diagnostics.rarity
         : lastDetectedCardRarity,
-    images: {
-      rawNameOcrJpeg: ocrDiagnosticsRawCropDataUrl(video, nameCropOcr, 400),
-      robotNameStripJpeg: canvasToJpegDataUrl(preview, 0.78, 480),
-      rawNameVisualJpeg: includeHeavyImages ? ocrDiagnosticsRawCropDataUrl(video, nameCropVisual, 360) : null,
-      typeMiraJpeg:
-        includeHeavyImages && typeCropRect ? ocrDiagnosticsRawCropDataUrl(video, typeCropRect, 280) : null,
-      artRegionJpeg:
-        includeHeavyImages && typeCropRect
-          ? ocrDiagnosticsRawCropDataUrl(video, getCardArtSampleRect(typeCropRect, nameCropOcr), 320)
-          : null,
-      frameProbeLeftJpeg:
-        includeHeavyImages && leftProbe ? ocrDiagnosticsRawCropDataUrl(video, leftProbe, 160) : null,
-      rawPasscodeJpeg: passcodeProbe && passcodeProbe.images ? passcodeProbe.images.rawPasscodeJpeg : null,
-      robotPasscodeJpeg: passcodeProbe && passcodeProbe.images ? passcodeProbe.images.robotPasscodeJpeg : null,
-      passcodeBinDarkJpeg: passcodeProbe && passcodeProbe.images ? passcodeProbe.images.passcodeBinDarkJpeg : null,
-      passcodeBinLightJpeg: passcodeProbe && passcodeProbe.images ? passcodeProbe.images.passcodeBinLightJpeg : null,
-      passcodeLcRawJpeg: passcodeProbe && passcodeProbe.images ? passcodeProbe.images.passcodeLcRawJpeg : null,
-    },
+    images: captureLite
+      ? {
+          rawNameOcrJpeg: null,
+          robotNameStripJpeg: null,
+          rawNameVisualJpeg: null,
+          typeMiraJpeg: null,
+          artRegionJpeg: null,
+          frameProbeLeftJpeg: null,
+          rawPasscodeJpeg: null,
+          robotPasscodeJpeg: null,
+          passcodeBinDarkJpeg: null,
+          passcodeBinLightJpeg: null,
+          passcodeLcRawJpeg: null,
+        }
+      : {
+          rawNameOcrJpeg: ocrDiagnosticsRawCropDataUrl(video, nameCropOcr, 400),
+          robotNameStripJpeg: seq % 2 === 0 ? canvasToJpegDataUrl(preview, 0.78, 480) : null,
+          rawNameVisualJpeg: null,
+          typeMiraJpeg: null,
+          artRegionJpeg: typeCropRect
+            ? ocrDiagnosticsRawCropDataUrl(
+                video,
+                getCardArtSampleRect(typeCropRect, nameCropOcr),
+                320
+              )
+            : null,
+          frameProbeLeftJpeg: null,
+          rawPasscodeJpeg: passcodeProbe && passcodeProbe.images ? passcodeProbe.images.rawPasscodeJpeg : null,
+          robotPasscodeJpeg: passcodeProbe && passcodeProbe.images ? passcodeProbe.images.robotPasscodeJpeg : null,
+          passcodeBinDarkJpeg: null,
+          passcodeBinLightJpeg: null,
+          passcodeLcRawJpeg: null,
+        },
     passcodeProbe: passcodeProbe
       ? {
           crop: passcodeProbe.crop,
           warpActive: passcodeProbe.warpActive,
           hint: passcodeProbe.hint,
           sidecar: passcodeProbe.sidecar,
-          attempts: passcodeProbe.diagnostics && passcodeProbe.diagnostics.attempts
-            ? passcodeProbe.diagnostics.attempts.slice(0, 8)
-            : [],
+          attempts:
+            (passcodeProbe.diagnostics && passcodeProbe.diagnostics.attempts
+              ? passcodeProbe.diagnostics.attempts.slice(0, 8)
+              : null) ||
+            (passcodeProbe.sidecar && passcodeProbe.sidecar.candidates && passcodeProbe.sidecar.candidates.length
+              ? [
+                  {
+                    variant:
+                      (passcodeProbe.diagnostics && passcodeProbe.diagnostics.bestVariant) ||
+                      passcodeProbe.sidecar.variantId ||
+                      'matte_mild',
+                    raw: passcodeProbe.sidecar.raw || passcodeProbe.sidecar.candidates[0],
+                    candidates: passcodeProbe.sidecar.candidates,
+                    confidence: passcodeProbe.sidecar.confidence,
+                  },
+                ]
+              : []),
           bestVariant:
-            passcodeProbe.diagnostics && passcodeProbe.diagnostics.bestVariant
-              ? passcodeProbe.diagnostics.bestVariant
-              : null,
-        }
-      : null,
-    outcome: outcome
-      ? {
-          cleaned: outcome.cleaned || null,
-          matchedCardId: outcome.card && outcome.card.id != null ? outcome.card.id : null,
-          matchedDisplayName: outcome.card ? displayNameForApiCard(outcome.card) : null,
-          diagnostics: outcome.diagnostics || null,
-          bestPassConfidence:
-            outcome.pack && typeof outcome.pack.confidence === 'number' ? safeRound(outcome.pack.confidence, 1) : null,
-          ocrEngine:
-            (outcome.pack && outcome.pack.ocrEngine) ||
-            (outcome.diagnostics && outcome.diagnostics.ocrEngine) ||
+            (passcodeProbe.diagnostics && passcodeProbe.diagnostics.bestVariant) ||
+            (passcodeProbe.sidecar && passcodeProbe.sidecar.variantId) ||
             null,
         }
-      : { cleaned: null, matchedCardId: null, matchedDisplayName: null, diagnostics: null, note: 'no_valid_ocr_pipeline_result' },
+      : null,
+    featureMiraProbe,
+    artProbe: artHashProbe
+      ? {
+          ...framingProbe,
+          ...artHashProbe,
+          warpActive: !!(artHashProbe.warpActive || framingProbe.warpActive),
+          matchedCardId: resolveArtHashBenchSegmentMatchedId(artHashProbe, {
+            sampleKind,
+            seq,
+            passcodeProbe,
+          }),
+        }
+      : {
+          ...framingProbe,
+          warpActive: framingProbe.warpActive || !!(passcodeProbe && passcodeProbe.warpActive),
+          artSource: null,
+        },
+    outcome: outcomeResolved
+      ? {
+          cleaned: outcomeResolved.cleaned || null,
+          matchedCardId: outcomeResolved.card && outcomeResolved.card.id != null ? outcomeResolved.card.id : null,
+          matchedDisplayName: outcomeResolved.card ? displayNameForApiCard(outcomeResolved.card) : null,
+          matchSource: outcomeResolved.matchSource || null,
+          artDistance: outcomeResolved.artDistance != null ? outcomeResolved.artDistance : null,
+          artSource: outcomeResolved.artSource || null,
+          artRoi: outcomeResolved.artRoi || null,
+          artworkKey: outcomeResolved.artworkKey || null,
+          artDiagnostics: outcomeResolved.artDiagnostics || null,
+          artCandidateCardIds:
+            outcomeResolved.artCandidateCardIds && outcomeResolved.artCandidateCardIds.length
+              ? outcomeResolved.artCandidateCardIds.slice(0, 12)
+              : null,
+          diagnostics: outcomeResolved.diagnostics || null,
+          bestPassConfidence:
+            outcomeResolved.pack && typeof outcomeResolved.pack.confidence === 'number'
+              ? safeRound(outcomeResolved.pack.confidence, 1)
+              : null,
+          ocrEngine:
+            (outcomeResolved.pack && outcomeResolved.pack.ocrEngine) ||
+            (outcomeResolved.diagnostics && outcomeResolved.diagnostics.ocrEngine) ||
+            null,
+        }
+      : {
+          cleaned: null,
+          matchedCardId: null,
+          matchedDisplayName: null,
+          diagnostics: null,
+          note:
+            (outcomeResolved && outcomeResolved.note) ||
+            (sampleKind === 'art_only' ? 'art_probe_only' : 'no_valid_ocr_pipeline_result'),
+          matchSource: outcomeResolved && outcomeResolved.matchSource ? outcomeResolved.matchSource : null,
+          artDistance: outcomeResolved && outcomeResolved.artDistance != null ? outcomeResolved.artDistance : null,
+        },
   };
   ocrDiagnosticsSession.samples.push(sample);
+  ocrDiagPipelineSlotStuckSeq = -1;
+  touchOcrDiagPipelineSnapFromSample(
+    video,
+    nameCropVisual,
+    nameCropOcr,
+    typeCropRect,
+    outcomeResolved,
+    { cropSource: opts && opts.cropSource, track: opts && opts.track }
+  );
+  if (deferHeavyProbes) {
+    sample._frozenOcrWarp = frozenOcrWarpForSample;
+    if (featureCrops) sample._deferFeatureCrops = featureCrops;
+    /* fillOcrDiagSampleProbesDeferred só no export (flushOcrDiagDeferredProbesBeforeExport) */
+    if (sampleKind === 'pipeline') {
+      scheduleOcrDiagPipelineNameDuringCollection(sample);
+    }
+  }
+  if (captureLite && imageCtx) {
+    ocrDiagScheduleIdle(() => {
+      void fillOcrDiagSampleImagesLite(sample, imageCtx);
+    }, 420);
+  }
+  maybeLogOcrDiagCollectionProgress(seq);
+  maybeCheckOcrDiagSegmentHardPause(seq);
+  maybeAutoStopOcrDiagnosticsExport();
+  if (ocrDiagnosticsCaptureActive && passcodeProbe && sampleKind === 'pipeline' && OCR_DIAG_PASSCODE_COLLECT_SIDECAR) {
+    queuePasscodeSidecarDuringCollection(sample, video);
+  }
+  return sample;
+  } finally {
+    ocrDiagnosticsSampleRecordInFlight = false;
+  }
 }
 
 /**
@@ -32400,13 +39315,18 @@ function recordOcrDiagnosticsSampleNow(video, nameCropVisual, nameCropOcr, typeC
  * @param {{ x: number, y: number, width: number, height: number }} nameCropOcr
  * @param {{ x: number, y: number, width: number, height: number }|null} typeCropRect
  * @param {null|{ pack?: object, cleaned?: string, card?: object|null, diagnostics?: object }} outcome
+ * @param {{ sampleKind?: string, artHashProbe?: object|null, cropSource?: string|null }} [opts]
  * @returns {void}
  */
-function maybeRecordOcrDiagnosticsSample(video, nameCropVisual, nameCropOcr, typeCropRect, outcome) {
+function maybeRecordOcrDiagnosticsSample(video, nameCropVisual, nameCropOcr, typeCropRect, outcome, opts) {
   if (!ocrDiagnosticsCaptureActive || !ocrDiagnosticsSession) return;
+  if (ocrDiagnosticsSession.samples.length >= OCR_DIAG_BENCH_TARGET) return;
   const now = Date.now();
-  if (now - ocrDiagnosticsLastSampleAt < OCR_DIAG_SAMPLE_THROTTLE_MS) return;
-  if (ocrDiagnosticsSession.samples.length >= OCR_DIAG_MAX_SAMPLES) return;
+  const artOnlyFull = ocrDiagArtOnlyBlockReason() === 'art_only_cap';
+  const throttleMs = artOnlyFull ? 900 : ocrDiagSampleThrottleMs();
+  if (now - ocrDiagnosticsLastPipelineSampleAt < throttleMs) return;
+  if (!ocrDiagCanRecordPipeline()) return;
+  ocrDiagnosticsLastPipelineSampleAt = now;
   ocrDiagnosticsLastSampleAt = now;
   const snap = {
     video,
@@ -32419,23 +39339,82 @@ function maybeRecordOcrDiagnosticsSample(video, nameCropVisual, nameCropOcr, typ
           card: outcome.card || null,
           pack: outcome.pack || null,
           diagnostics: outcome.diagnostics || null,
+          artDistance: outcome.artDistance != null ? outcome.artDistance : null,
+          artworkKey: outcome.artworkKey || null,
+          artDiagnostics: outcome.artDiagnostics || null,
+          matchSource: outcome.matchSource || null,
+          artCandidateCardIds: outcome.artCandidateCardIds || null,
         }
       : null,
   };
+  let featureCropsSnap = null;
+  let ocrWarpSnap = null;
+  try {
+    const crops = resolveScannerCrops(video);
+    const trackPackSnap = (opts && opts.track) || lastOcrCardTrackPack || null;
+    ocrWarpSnap = trackPackSnap
+      ? buildScannerWarpOcrContext(
+          video,
+          resolveScannerTrackPackForWarp(trackPackSnap, video, typeCropRect)
+        )
+      : resolveOcrWarpForTypeProbe(video, typeCropRect, null);
+    featureCropsSnap = resolveFeatureProbeContext(video, ocrWarpSnap, {
+      attributeVisual: crops.attributeVisual,
+      levelRankVisual: crops.levelRankVisual,
+    });
+  } catch (_) {}
   const run = () => {
-    if (!ocrDiagnosticsCaptureActive || !ocrDiagnosticsSession) return;
-    recordOcrDiagnosticsSampleNow(
-      snap.video,
-      snap.nameCropVisual,
-      snap.nameCropOcr,
-      snap.typeCropRect,
-      snap.outcome
-    );
+    runOcrDiagPipelineRecordQueued(async () => {
+      if (!ocrDiagnosticsCaptureActive || !ocrDiagnosticsSession) return;
+      let artHashProbe = opts && opts.artHashProbe ? opts.artHashProbe : null;
+      if (!artHashProbe) {
+        try {
+          artHashProbe = await probeArtHashForDiagnostics(
+            snap.video,
+            lastOcrCardTrackPack,
+            snap.typeCropRect
+          );
+        } catch (_) {
+          artHashProbe = null;
+        }
+      }
+      const outcomeMerged = enrichOcrDiagOutcomeFromArtProbe(snap.outcome, artHashProbe);
+      let ocrWarpForRecord = (opts && opts.ocrWarp) || ocrWarpSnap;
+      if (!ocrWarpForRecord) {
+        try {
+          const trackPackRun = (opts && opts.track) || lastOcrCardTrackPack || null;
+          ocrWarpForRecord = trackPackRun
+            ? buildScannerWarpOcrContext(
+                snap.video,
+                resolveScannerTrackPackForWarp(trackPackRun, snap.video, snap.typeCropRect)
+              )
+            : resolveOcrWarpForTypeProbe(snap.video, snap.typeCropRect, null);
+        } catch (_) {
+          ocrWarpForRecord = null;
+        }
+      }
+      recordOcrDiagnosticsSampleNow(
+        snap.video,
+        snap.nameCropVisual,
+        snap.nameCropOcr,
+        snap.typeCropRect,
+        outcomeMerged,
+        {
+          sampleKind: (opts && opts.sampleKind) || 'pipeline',
+          artHashProbe,
+          cropSource: opts && opts.cropSource,
+          featureCrops: featureCropsSnap,
+          track: opts && opts.track,
+          ocrWarp: ocrWarpForRecord,
+        }
+      );
+    });
   };
-  if (typeof requestIdleCallback === 'function') {
-    requestIdleCallback(run, { timeout: 1500 });
-  } else {
+  const priority = !!(snap.outcome && (snap.outcome.cleaned || snap.outcome.card));
+  if (priority) {
     setTimeout(run, 0);
+  } else {
+    ocrDiagScheduleIdle(run, 600);
   }
 }
 
@@ -32507,8 +39486,19 @@ function ocrManualRowValueInnerHtml(ocrKind, value, label) {
  * @returns {void}
  */
 function syncOcrManualRowDisplays(detectedType, detectedRarity, opts) {
-  const typePair = getOcrManualRowDisplayPair('manual-card-type', detectedType, detectedRarity);
-  const rarPair = getOcrManualRowDisplayPair('manual-rarity', detectedType, detectedRarity);
+  const forceDetected = !!(opts && opts.forceDetectedDisplay);
+  const typePair = forceDetected
+    ? {
+        value: String(detectedType || lastDetectedCardType || '—').trim() || '—',
+        label: String(detectedType || lastDetectedCardType || T('ocr.manual.auto')).trim() || T('ocr.manual.auto'),
+      }
+    : getOcrManualRowDisplayPair('manual-card-type', detectedType, detectedRarity);
+  const rarPair = forceDetected
+    ? {
+        value: String(detectedRarity || lastDetectedCardRarity || '—').trim() || '—',
+        label: String(detectedRarity || lastDetectedCardRarity || T('ocr.manual.auto')).trim() || T('ocr.manual.auto'),
+      }
+    : getOcrManualRowDisplayPair('manual-rarity', detectedType, detectedRarity);
   const typeBtn = getEl('btn-ocr-manual-type-value');
   const rarBtn = getEl('btn-ocr-manual-rarity-value');
   if (typeBtn) {
@@ -32640,6 +39630,29 @@ function setVisionStatus(text) {
   el.innerHTML = `<span class="ocr-vision-label__plain">${escapeHtml(t)}</span>`;
 }
 
+/** Limpa preview lateral após export benchmark (evita ficar preso na última carta). */
+function resetOcrDiagSidebarAfterExport() {
+  try {
+    setVisionStatus(T('ocr.diag.export_sidebar_done'));
+  } catch (_) {}
+  const preview = getEl('preview-canvas');
+  if (preview) {
+    const pctx = preview.getContext('2d', { alpha: false });
+    if (pctx) {
+      pctx.fillStyle = '#f0f0f0';
+      pctx.fillRect(0, 0, preview.width || 1, preview.height || 1);
+    }
+  }
+  const passPreview = getEl('preview-passcode-canvas');
+  if (passPreview) {
+    const pctx = passPreview.getContext('2d', { alpha: false });
+    if (pctx) {
+      pctx.fillStyle = '#f0f0f0';
+      pctx.fillRect(0, 0, passPreview.width || 1, passPreview.height || 1);
+    }
+  }
+}
+
 /**
  * Atualiza tipo/raridade nas linhas compactas do painel OCR (deteção + modo manual).
  *
@@ -32688,22 +39701,22 @@ function scannerToastCardImageUrl(card) {
 }
 
 /**
- * Toast flutuante ao reconhecer carta: no mobile inclui miniatura da arte; no desktop mantém pílula só com nome.
+ * Toast flutuante ao reconhecer carta: miniatura da arte quando disponível (mobile e desktop).
  * @param {object|null|undefined} card Objeto carta da API (nome + `card_images`).
  * @returns {void}
  */
 function showScannerToast(card) {
   dismissScannerMatchToast();
   const cardName = displayNameForApiCard(card);
-  const useRichToast = deckbuilderUsesMobileLayoutCssBreakpoint();
-  const imgUrl = useRichToast ? scannerToastCardImageUrl(card) : '';
+  const imgUrl = scannerToastCardImageUrl(card);
+  const useRichToast = !!imgUrl;
 
   const toast = document.createElement('div');
   toast.className = 'scanner-match-toast';
   toast.setAttribute('role', 'status');
   toast.setAttribute('aria-live', 'polite');
 
-  if (useRichToast && imgUrl) {
+  if (useRichToast) {
     toast.classList.add('scanner-match-toast--with-art');
     toast.innerHTML = [
       '<div class="scanner-match-toast__card">',
@@ -32720,7 +39733,7 @@ function showScannerToast(card) {
   }
 
   document.body.appendChild(toast);
-  const showMs = useRichToast && imgUrl ? 2800 : 2000;
+  const showMs = useRichToast ? 2800 : 2000;
   playCardSurfaceChime('deck_add');
   pulseToastHaptic('pop');
   scannerMatchToastHideTimer = window.setTimeout(() => {
@@ -32732,6 +39745,13 @@ function showScannerToast(card) {
   }, showMs);
 }
 
+/** Adia render da lista para o toast/haptic aparecerem primeiro. @returns {void} */
+function deferUpdateScannerResultsUI() {
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => updateScannerResultsUI());
+  });
+}
+
 /**
  * Reconstrói `#results-view` durante o scanner OCR: delega a {@link renderResults} para o mesmo aspeto que as sugestões normais.
  * @returns {void}
@@ -32741,6 +39761,12 @@ function updateScannerResultsUI() {
   const container = getEl('results-view');
   if (!container) return;
   if (!document.documentElement.classList.contains('ocr-scanner-active')) return;
+  if (isOcrDiagLiveCompareActive()) {
+    const sess = ocrDiagnosticsSession || ocrDiagLiveCompareFrozenSession;
+    const n = sess && sess.samples ? sess.samples.length : 0;
+    syncOcrDiagLiveCompareUi(n > 0 ? n - 1 : -1);
+    return;
+  }
   if (scannerFoundCards.length === 0) {
     paintOcrScannerEmptyResultsView('aim');
     return;
@@ -32853,7 +39879,12 @@ function ocrPreviewUsesLightBackground(cardType, rarity, settings) {
 
 function paintOcrPreviewCanvas(previewEl, ocrCanvas, cardType, outW, previewOpts) {
   if (!previewEl || !ocrCanvas || !ocrCanvas.width) return;
-  const strip = getOcrNameStripRect(cardType);
+  if (previewOpts && previewOpts.wysiwyg) {
+    paintOcrPreviewCanvasDirect(previewEl, ocrCanvas, outW, previewOpts);
+    return;
+  }
+  const cropRect = previewOpts && previewOpts.cropRect;
+  const strip = getOcrNameStripRect(cardType, cropRect);
   const displayW = outW > 0 ? outW : OCR_PREVIEW_DISPLAY_W;
   const outH = Math.max(36, Math.round(displayW * (strip.height / strip.width)));
   if (previewEl.width !== displayW || previewEl.height !== outH) {
@@ -32869,6 +39900,34 @@ function paintOcrPreviewCanvas(previewEl, ocrCanvas, cardType, outW, previewOpts
   pctx.fillRect(0, 0, displayW, outH);
   pctx.imageSmoothingEnabled = false;
   pctx.drawImage(ocrCanvas, strip.x, strip.y, strip.width, strip.height, 0, 0, displayW, outH);
+}
+
+/**
+ * Preview nome WYSIWYG — blit integral do canvas (sem recorte dstX/dstW interno).
+ * @param {HTMLCanvasElement|null} previewEl
+ * @param {HTMLCanvasElement} srcCanvas
+ * @param {number} outW
+ * @param {object|null|undefined} previewOpts
+ * @returns {void}
+ */
+function paintOcrPreviewCanvasDirect(previewEl, srcCanvas, outW, previewOpts) {
+  if (!previewEl || !srcCanvas || !srcCanvas.width) return;
+  const displayW = outW > 0 ? outW : OCR_PREVIEW_DISPLAY_W;
+  const outH = Math.max(36, Math.round(displayW * (srcCanvas.height / srcCanvas.width)));
+  if (previewEl.width !== displayW || previewEl.height !== outH) {
+    previewEl.width = displayW;
+    previewEl.height = outH;
+  }
+  const pctx = previewEl.getContext('2d', { alpha: false });
+  if (!pctx) return;
+  const cardType = previewOpts && previewOpts.cardType;
+  const rarity = previewOpts && previewOpts.rarity;
+  const settings = previewOpts && previewOpts.settings;
+  const lightBg = ocrPreviewUsesLightBackground(cardType, rarity, settings);
+  pctx.fillStyle = lightBg ? '#ffffff' : '#000000';
+  pctx.fillRect(0, 0, displayW, outH);
+  pctx.imageSmoothingEnabled = false;
+  pctx.drawImage(srcCanvas, 0, 0, srcCanvas.width, srcCanvas.height, 0, 0, displayW, outH);
 }
 
 /**
@@ -32928,6 +39987,37 @@ function buildScannerFoilPreviewSettings(cardType, rarity) {
       adaptiveThreshold: false,
     };
   }
+  if (cardType === 'Monstro Fusão') {
+    const ultraLike = rarity === 'Ultra Rara' || getOcrRarityGroup(rarity) === 'goldName';
+    return {
+      useColorAdaptive: false,
+      useBinarization: false,
+      grayscale: true,
+      contrast: ultraLike ? 1.9 : 2.02,
+      brightness: 0.88,
+      invert: true,
+      localContrast: true,
+      goldSunExtract: ultraLike,
+      silverSunExtract: secretLike,
+      suppressPreview: false,
+      adaptiveThreshold: false,
+    };
+  }
+  if (cardType === 'Monstro Virar') {
+    const ultraLike = rarity === 'Ultra Rara' || getOcrRarityGroup(rarity) === 'goldName';
+    return {
+      useColorAdaptive: false,
+      useBinarization: false,
+      grayscale: true,
+      contrast: ultraLike ? 1.86 : 1.72,
+      brightness: 0.92,
+      invert: false,
+      localContrast: true,
+      goldSunExtract: ultraLike,
+      suppressPreview: false,
+      adaptiveThreshold: false,
+    };
+  }
   return null;
 }
 
@@ -32967,6 +40057,21 @@ function buildScannerFoilExtractPaddlePasses(cardType, rarity) {
     return [
       { ...base, lightCanvas: true, silverSunExtract: true, invert: false },
       { ...PADDLE_RAW_INVERT_PASS, lightCanvas: true },
+    ];
+  }
+  if (cardType === 'Monstro Fusão') {
+    const ultraLike = rarity === 'Ultra Rara' || getOcrRarityGroup(rarity) === 'goldName';
+    return [
+      { ...PADDLE_RAW_INVERT_PASS, invert: true },
+      PADDLE_RAW_NAME_PASS,
+      { ...base, goldSunExtract: ultraLike, invert: true },
+    ];
+  }
+  if (cardType === 'Monstro Virar') {
+    const ultraLike = rarity === 'Ultra Rara' || getOcrRarityGroup(rarity) === 'goldName';
+    return [
+      PADDLE_RAW_NAME_PASS,
+      { ...base, goldSunExtract: ultraLike, invert: false },
     ];
   }
   return [];
@@ -33320,7 +40425,11 @@ function applyPixelInvert(ctx, canvas) {
  * @returns {void}
  */
 function applyGoldSunLetterExtract(ctx, x, y, w, h) {
-  const imgData = ctx.getImageData(x, y, w, h);
+  const xi = Math.max(0, Math.floor(x));
+  const yi = Math.max(0, Math.floor(y));
+  const wi = Math.max(1, Math.floor(w));
+  const hi = Math.max(1, Math.floor(h));
+  const imgData = ctx.getImageData(xi, yi, wi, hi);
   const data = imgData.data;
   const scores = new Float32Array(data.length / 4);
   for (let p = 0, i = 0; i < data.length; i += 4, p++) {
@@ -33338,7 +40447,7 @@ function applyGoldSunLetterExtract(ctx, x, y, w, h) {
     const v = scores[p] >= thr ? 245 : 14;
     data[i] = data[i + 1] = data[i + 2] = v;
   }
-  ctx.putImageData(imgData, x, y);
+  ctx.putImageData(imgData, xi, yi);
 }
 
 /**
@@ -33352,7 +40461,11 @@ function applyGoldSunLetterExtract(ctx, x, y, w, h) {
  */
 function applySilverSunLetterExtract(ctx, x, y, w, h, opts) {
   const lightPlate = !!(opts && opts.lightPlate);
-  const imgData = ctx.getImageData(x, y, w, h);
+  const xi = Math.max(0, Math.floor(x));
+  const yi = Math.max(0, Math.floor(y));
+  const wi = Math.max(1, Math.floor(w));
+  const hi = Math.max(1, Math.floor(h));
+  const imgData = ctx.getImageData(xi, yi, wi, hi);
   const data = imgData.data;
   const scores = new Float32Array(data.length / 4);
   for (let p = 0, i = 0; i < data.length; i += 4, p++) {
@@ -33378,7 +40491,7 @@ function applySilverSunLetterExtract(ctx, x, y, w, h, opts) {
     const v = scores[p] >= thr ? (lightPlate ? 32 : 242) : lightPlate ? 248 : 16;
     data[i] = data[i + 1] = data[i + 2] = v;
   }
-  ctx.putImageData(imgData, x, y);
+  ctx.putImageData(imgData, xi, yi);
 }
 
 /**
@@ -33393,22 +40506,26 @@ function applySilverSunLetterExtract(ctx, x, y, w, h, opts) {
  * @returns {void}
  */
 function applyLocalContrastNormalize(ctx, x, y, w, h, tileCols = 6, tileRows = 2) {
-  const imgData = ctx.getImageData(x, y, w, h);
+  const xi = Math.max(0, Math.floor(x));
+  const yi = Math.max(0, Math.floor(y));
+  const wi = Math.max(2, Math.floor(w));
+  const hi = Math.max(2, Math.floor(h));
+  const imgData = ctx.getImageData(xi, yi, wi, hi);
   const data = imgData.data;
-  const tw = Math.max(6, Math.floor(w / tileCols));
-  const th = Math.max(6, Math.floor(h / tileRows));
+  const tw = Math.max(6, Math.floor(wi / tileCols));
+  const th = Math.max(6, Math.floor(hi / tileRows));
   for (let ty = 0; ty < tileRows; ty++) {
     for (let tx = 0; tx < tileCols; tx++) {
       const x0 = tx * tw;
       const y0 = ty * th;
-      const x1 = tx === tileCols - 1 ? w : Math.min(w, x0 + tw);
-      const y1 = ty === tileRows - 1 ? h : Math.min(h, y0 + th);
+      const x1 = tx === tileCols - 1 ? wi : Math.min(wi, x0 + tw);
+      const y1 = ty === tileRows - 1 ? hi : Math.min(hi, y0 + th);
       let minL = 255;
       let maxL = 0;
       const cells = [];
       for (let py = y0; py < y1; py++) {
         for (let px = x0; px < x1; px++) {
-          const i = (py * w + px) * 4;
+          const i = (py * wi + px) * 4;
           const L = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
           cells.push({ i, L });
           if (L < minL) minL = L;
@@ -33422,7 +40539,7 @@ function applyLocalContrastNormalize(ctx, x, y, w, h, tileCols = 6, tileRows = 2
       }
     }
   }
-  ctx.putImageData(imgData, x, y);
+  ctx.putImageData(imgData, xi, yi);
 }
 
 /**
@@ -33525,7 +40642,10 @@ function getPaddleOcrModule() {
  * @returns {number}
  */
 function paddleOcrThrottleMs() {
-  return ocrScannerIsMobile() ? 650 : 650;
+  if (paddleBurstUntil && Date.now() < paddleBurstUntil) {
+    return ocrScannerIsMobile() ? 260 : 200;
+  }
+  return ocrScannerIsMobile() ? 650 : 520;
 }
 
 /**
@@ -33561,6 +40681,7 @@ async function recognizeCanvasWithPaddle(canvas, timeoutMs) {
     const mod = await getPaddleOcrModule();
     const ok = await mod.initPaddleOcrRec();
     if (!ok) return null;
+    paddleOcrReadyFlag = true;
     lastPaddleRecognizeAt = Date.now();
     const pr = await Promise.race([
       mod.paddleRecognizeCanvas(canvas),
@@ -33575,6 +40696,70 @@ async function recognizeCanvasWithPaddle(canvas, timeoutMs) {
 }
 
 /**
+ * Paddle com limiar baixo para passcode (dígitos matte < 0.5 mean no rec normal).
+ * @param {HTMLCanvasElement} canvas
+ * @param {number} timeoutMs
+ * @returns {Promise<null|{ text: string, confidence: number, allText?: string }>}
+ */
+async function recognizePasscodeCanvasWithPaddle(canvas, timeoutMs) {
+  try {
+    const mod = await getPaddleOcrModule();
+    const ok = await mod.initPaddleOcrRec();
+    if (!ok) return null;
+    paddleOcrReadyFlag = true;
+    lastPaddleRecognizeAt = Date.now();
+    const pr = await Promise.race([
+      mod.paddleRecognizePasscodeCanvas(canvas),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('paddle passcode timeout')), timeoutMs)
+      ),
+    ]);
+    return pr && pr.text ? pr : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+/**
+ * Fallback Paddle para o passcode (8 dígitos). Neste ambiente o Tesseract devolve vazio
+ * (lang CDN inacessível sob interceção TLS), por isso os dígitos nunca eram lidos. O Paddle —
+ * o mesmo motor que lê os nomes — lê os dígitos; extraímos o candidato Konami do texto.
+ * @param {HTMLCanvasElement[]} canvases pré-processados (faixa do passcode)
+ * @param {number} timeoutMs
+ * @returns {Promise<null|{ text: string, confidence: number, score: number, cands: string[], variantId: string, psm: string, digitRun: number }>}
+ */
+async function recognizePasscodePaddleDigits(canvases, timeoutMs) {
+  // Sem gate em paddleOcrReadyFlag: recognizeCanvasWithPaddle inicializa o Paddle se preciso.
+  // (A flag pode estar a false no export mesmo com o Paddle funcional — o caminho do nome não a liga.)
+  let best = null;
+  for (let i = 0; i < canvases.length; i++) {
+    const canvas = canvases[i];
+    if (!canvas) continue;
+    const pr = await recognizePasscodeCanvasWithPaddle(canvas, timeoutMs);
+    if (!pr || !pr.text) continue;
+    const scanText = pr.allText || pr.text;
+    const cands = extractYuGiOhPasscodeCandidates(scanText);
+    const digitRun = String(scanText).replace(/\D/g, '').length;
+    const rawConf = typeof pr.confidence === 'number' ? pr.confidence : 0;
+    const conf = rawConf <= 1 ? rawConf * 100 : rawConf;
+    const hasEight = cands.some((c) => String(c).length === 8);
+    let score = conf + (cands.length ? 60 : 0) + (hasEight ? 18 : 0);
+    const hit = {
+      text: scanText,
+      confidence: hasEight ? Math.max(conf, 46) : conf,
+      score,
+      cands,
+      variantId: 'paddle',
+      psm: 'paddle',
+      digitRun,
+    };
+    if (!best || hit.score > best.score) best = hit;
+    if (hasEight) break;
+  }
+  return best;
+}
+
+/**
  * Carrega {@link ./ocr-card-track.mjs} uma vez.
  * @returns {Promise<object>}
  */
@@ -33583,10 +40768,148 @@ function getOcrCardTrackModule() {
   if (!ocrCardTrackModPromise) {
     ocrCardTrackModPromise = import(/* @vite-ignore */ './ocr-card-track.mjs').then((m) => {
       ocrCardTrackMod = m;
+      if (isOcrActive) applyScannerChildMiras();
       return m;
     });
   }
   return ocrCardTrackModPromise;
+}
+
+/**
+ * @returns {Promise<object>}
+ */
+function getOcrCardFeaturesModule() {
+  if (ocrCardFeaturesMod) return Promise.resolve(ocrCardFeaturesMod);
+  if (!ocrCardFeaturesModPromise) {
+    ocrCardFeaturesModPromise = import(/* @vite-ignore */ './ocr-card-features.mjs').then((m) => {
+      ocrCardFeaturesMod = m;
+      return m;
+    });
+  }
+  return ocrCardFeaturesModPromise;
+}
+
+/**
+ * Carrega {@link ./ocr-art-hash.mjs} uma vez.
+ * @returns {Promise<object>}
+ */
+function getOcrArtHashModule() {
+  if (ocrArtHashMod) return Promise.resolve(ocrArtHashMod);
+  if (!ocrArtHashModPromise) {
+    ocrArtHashModPromise = import(/* @vite-ignore */ './ocr-art-hash.mjs').then((m) => {
+      ocrArtHashMod = m;
+      return m;
+    });
+  }
+  return ocrArtHashModPromise;
+}
+
+/** Fases do {@link loadArtHashIndex} → chave i18n do overlay de arranque. */
+const OCR_ART_STARTUP_PHASE_KEYS = Object.freeze({
+  cache_check: 'ocr.startup.visual_cache',
+  cache_hit: 'ocr.startup.visual_cache_hit',
+  download: 'ocr.startup.visual_download',
+  ready: 'ocr.startup.visual_ready',
+  fail: 'ocr.startup.visual_skip',
+});
+
+/**
+ * Mostra overlay de progresso sobre o vídeo durante o arranque do scanner.
+ * @returns {void}
+ */
+function showOcrStartupOverlay() {
+  const el = getEl('ocr-startup-overlay');
+  if (!el) return;
+  el.classList.add('ocr-startup-overlay--visible');
+  el.setAttribute('aria-hidden', 'false');
+}
+
+/**
+ * Oculta overlay de arranque.
+ * @returns {void}
+ */
+function hideOcrStartupOverlay() {
+  const el = getEl('ocr-startup-overlay');
+  if (!el) return;
+  el.classList.remove('ocr-startup-overlay--visible');
+  el.setAttribute('aria-hidden', 'true');
+  setOcrScannerResultsLoading(false);
+}
+
+/**
+ * Estado de carregamento em `#results-view` (estilo “A buscar cartas…”).
+ * @param {boolean} on
+ * @returns {void}
+ */
+function setOcrScannerResultsLoading(on) {
+  if (on) {
+    paintOcrScannerStartupLoadingView();
+    return;
+  }
+  if (isOcrDiagLiveCompareActive()) {
+    const sess = ocrDiagnosticsSession || ocrDiagLiveCompareFrozenSession;
+    const n = sess && sess.samples ? sess.samples.length : 0;
+    syncOcrDiagLiveCompareUi(n > 0 ? n - 1 : -1);
+    return;
+  }
+  if (
+    document.documentElement.classList.contains('ocr-scanner-active') &&
+    scannerFoundCards.length === 0
+  ) {
+    paintOcrScannerEmptyResultsView('aim');
+  }
+}
+
+/**
+ * Atualiza mensagem visível de progresso do arranque OCR.
+ * @param {string} i18nKey Chave em `OCR_UI_I18N` (ex.: `ocr.startup.camera`).
+ * @returns {void}
+ */
+function setOcrStartupStatus(i18nKey) {
+  const msg = T(i18nKey);
+  const text = msg && msg !== i18nKey ? msg : i18nKey;
+  const overlayText = getEl('ocr-startup-status-text');
+  if (overlayText) overlayText.textContent = text;
+  const resultsStatus = getEl('ocr-scanner-startup-status');
+  if (resultsStatus) resultsStatus.textContent = text;
+}
+
+/**
+ * Carrega índice visual com feedback de progresso no overlay.
+ * @returns {Promise<boolean>}
+ */
+async function loadArtHashIndexForScanner() {
+  if (!ocrArtHashIndexLoadStarted) ocrArtHashIndexLoadStarted = true;
+  try {
+    const mod = await getOcrArtHashModule();
+    if (mod.isArtHashIndexReady()) {
+      setOcrStartupStatus('ocr.startup.visual_ready');
+      return true;
+    }
+    const ok = await mod.loadArtHashIndex((phase) => {
+      const key = OCR_ART_STARTUP_PHASE_KEYS[phase];
+      if (key) setOcrStartupStatus(key);
+    });
+    if (!ok) addOcrLog(T('ocr.log.art_index_unavailable'), 'warn');
+    else {
+      const idx = mod.getArtHashIndex && mod.getArtHashIndex();
+      if (idx && !idx.namesById) addOcrLog(T('ocr.log.art_index_names_old'), 'warn');
+    }
+    return ok;
+  } catch (_) {
+    setOcrStartupStatus('ocr.startup.visual_skip');
+    addOcrLog(T('ocr.log.art_index_unavailable'), 'warn');
+    return false;
+  }
+}
+
+/**
+ * Inicia download lazy do índice (sessões que já abriram o scanner).
+ * @returns {void}
+ */
+function ensureArtHashIndexLoading() {
+  if (ocrArtHashIndexLoadStarted) return;
+  void loadArtHashIndexForScanner();
 }
 
 /**
@@ -33595,7 +40918,7 @@ function getOcrCardTrackModule() {
  */
 function clearScannerTrackOverlay() {
   const typeEl = getEl('scanner-type-visual');
-  if (!typeEl || !ocrCardTrackOverlayActive) return;
+  if (!typeEl) return;
   ocrCardTrackOverlayActive = false;
   typeEl.style.left = '';
   typeEl.style.top = '';
@@ -33606,12 +40929,78 @@ function clearScannerTrackOverlay() {
 }
 
 /**
+ * Posiciona miras filhas (nome / arte / ID) em % dentro da moldura azul.
+ * @param {string} [cardType]
+ * @returns {void}
+ */
+function applyScannerChildMiras() {
+  const mod = ocrCardTrackMod;
+  if (!mod || !mod.TCG_REGIONS) return;
+  const handFree = true;
+  const nameR = handFree ? mod.TCG_REGIONS.nameHandFree : mod.TCG_REGIONS.name;
+  const artR =
+    typeof mod.artHashRegionNorm === 'function' ? mod.artHashRegionNorm() : null;
+  // #scanner-passcode-visual = passcodeVisualMira (UX); OCR interno usa passcodeDigits (8 dígitos).
+  const passR = mod.TCG_REGIONS.passcodeVisualMira;
+  if (!artR) return;
+  const place = (el, r) => {
+    if (!el || !r) return;
+    el.style.setProperty('left', `${r.x * 100}%`, 'important');
+    el.style.setProperty('top', `${r.y * 100}%`, 'important');
+    el.style.setProperty('width', `${r.w * 100}%`, 'important');
+    el.style.setProperty('height', `${r.h * 100}%`, 'important');
+    el.style.setProperty('right', 'auto', 'important');
+    el.style.setProperty('bottom', 'auto', 'important');
+    el.style.setProperty('transform', 'none', 'important');
+  };
+  place(getEl('scanner-visual'), nameR);
+  place(getEl('scanner-art-visual'), artR);
+  place(getEl('scanner-passcode-visual'), passR);
+  if (mod.TCG_REGIONS.attribute) place(getEl('scanner-attribute-visual'), mod.TCG_REGIONS.attribute);
+  if (mod.TCG_REGIONS.levelRank) place(getEl('scanner-level-visual'), mod.TCG_REGIONS.levelRank);
+}
+
+/**
  * Posiciona `#scanner-type-visual` sobre a carta detetada.
  * @param {HTMLVideoElement} video
  * @param {{ x: number, y: number, w: number, h: number }} card
  * @param {object} trackMod
  * @returns {void}
  */
+/**
+ * Deteção na moldura azul quando o frame completo falha (carta solta na mesa).
+ * @param {HTMLVideoElement} video
+ * @param {{ x: number, y: number, width: number, height: number }|null} typeCropRect
+ * @returns {object|null}
+ */
+function tryScannerTrackFromTypeRoi(video, typeCropRect) {
+  const mod = ocrCardTrackMod;
+  if (!mod || !video || !typeCropRect) return null;
+  if (typeCropRect.width < 24 || typeCropRect.height < 32) return null;
+  if (typeof mod.detectCardFromVideoRoi !== 'function') return null;
+  const minTrackConf = mod.CARD_TRACK_MIN_CONF != null ? mod.CARD_TRACK_MIN_CONF : 0.2;
+  const track = mod.detectCardFromVideoRoi(video, typeCropRect, {
+    handFree: true,
+    cardType: lastDetectedCardType || undefined,
+  });
+  if (track && track.card && track.card.conf >= minTrackConf) return track;
+  return null;
+}
+
+/**
+ * Track para warp/dHash: explícito, cache ou ROI na mira azul.
+ * @param {object|null} track
+ * @param {HTMLVideoElement} [video]
+ * @param {{ x: number, y: number, width: number, height: number }|null} [typeCropRect]
+ * @returns {object|null}
+ */
+function resolveScannerTrackPackForWarp(track, video, typeCropRect) {
+  if (track && track.card) return track;
+  if (lastOcrCardTrackPack && lastOcrCardTrackPack.card) return lastOcrCardTrackPack;
+  if (lastStableScannerTrack && lastStableScannerTrack.card) return lastStableScannerTrack;
+  return tryScannerTrackFromTypeRoi(video, typeCropRect);
+}
+
 function applyScannerTrackOverlay(video, card, trackMod) {
   const typeEl = getEl('scanner-type-visual');
   const pct = trackMod.cardRectVideoToOverlayPercent(video, card);
@@ -33631,35 +41020,93 @@ function applyScannerTrackOverlay(video, card, trackMod) {
  * @returns {{ nameCropVisual: object|null, typeCropRect: object|null, passcodeVisual: object|null, track: object|null, source: string }}
  */
 function resolveScannerCrops(video) {
-  const handFree = ocrScannerIsMobile();
+  clearScannerTrackOverlay();
+
+  const handFree = true;
+  const minTrackConf =
+    ocrCardTrackMod && ocrCardTrackMod.CARD_TRACK_MIN_CONF != null
+      ? ocrCardTrackMod.CARD_TRACK_MIN_CONF
+      : 0.2;
   const now = performance.now();
-  const detectGap = ocrScannerIsMobile() ? 88 : 52;
+  const detectGap = ocrScannerIsMobile() ? 88 : 40;
   if (ocrCardTrackMod) {
     let track = null;
+    const trackOpts = { handFree, cardType: lastDetectedCardType || undefined };
+    const typeRoiHint = mapVisualBoxToVideoCrop(video, getEl('scanner-type-visual'));
     if (now - lastScannerCropDetectAt >= detectGap) {
-      track = ocrCardTrackMod.detectCardFromVideo(video, { handFree });
+      track = ocrCardTrackMod.detectCardFromVideo(video, trackOpts);
       lastScannerCropDetectAt = now;
     } else if (typeof ocrCardTrackMod.getTrackedCardState === 'function') {
-      track = ocrCardTrackMod.getTrackedCardState(video, { handFree });
+      track = ocrCardTrackMod.getTrackedCardState(video, trackOpts);
     }
-    lastOcrCardTrackPack = track;
-    if (track && track.card && track.card.conf >= 0.3) {
-      applyScannerTrackOverlay(video, track.card, ocrCardTrackMod);
+    if (!track || !track.card) {
+      track = tryScannerTrackFromTypeRoi(video, typeRoiHint) || track;
+    }
+    const trackOk = !!(track && track.card && track.card.conf >= minTrackConf);
+    if (trackOk) {
+      lastStableScannerTrack = track;
+      scannerTrackMissFrames = 0;
+    } else if (
+      lastStableScannerTrack &&
+      scannerTrackMissFrames < SCANNER_TRACK_HOLD_FRAMES
+    ) {
+      scannerTrackMissFrames++;
+      track = lastStableScannerTrack;
+    } else {
+      scannerTrackMissFrames++;
+      lastStableScannerTrack = null;
+    }
+    if (track && track.card && track.card.conf >= minTrackConf) {
+      lastOcrCardTrackPack = track;
       lastResolvedScannerCrops = {
         nameCropVisual: track.regions.name,
         typeCropRect: track.regions.type,
-        passcodeVisual: track.regions.passcode,
+        passcodeVisual: track.regions.passcodeVisual || track.regions.passcodeDigits,
+        artCropVisual: track.regions.art,
+        attributeVisual: track.regions.attribute,
+        levelRankVisual: track.regions.levelRank,
         track,
         source: 'track',
       };
       return lastResolvedScannerCrops;
     }
+    if (
+      lastStableScannerTrack &&
+      lastStableScannerTrack.card &&
+      lastStableScannerTrack.card.conf >= minTrackConf &&
+      scannerTrackMissFrames <= SCANNER_TRACK_HOLD_FRAMES
+    ) {
+      lastOcrCardTrackPack = lastStableScannerTrack;
+    } else {
+      lastOcrCardTrackPack = null;
+    }
+    const typeCropFixed = mapVisualBoxToVideoCrop(video, getEl('scanner-type-visual'));
+    const roiBootstrap = tryScannerTrackFromTypeRoi(video, typeCropFixed);
+    if (roiBootstrap && roiBootstrap.card && roiBootstrap.card.conf >= minTrackConf) {
+      lastOcrCardTrackPack = roiBootstrap;
+      lastStableScannerTrack = roiBootstrap;
+      scannerTrackMissFrames = 0;
+      lastResolvedScannerCrops = {
+        nameCropVisual: roiBootstrap.regions.name,
+        typeCropRect: roiBootstrap.regions.type,
+        passcodeVisual: roiBootstrap.regions.passcodeVisual || roiBootstrap.regions.passcodeDigits,
+        artCropVisual: roiBootstrap.regions.art,
+        attributeVisual: roiBootstrap.regions.attribute,
+        levelRankVisual: roiBootstrap.regions.levelRank,
+        track: roiBootstrap,
+        source: 'track',
+      };
+      return lastResolvedScannerCrops;
+    }
   }
-  clearScannerTrackOverlay();
+  const typeCropFixed = mapVisualBoxToVideoCrop(video, getEl('scanner-type-visual'));
   lastResolvedScannerCrops = {
-    nameCropVisual: mapVisualBoxToVideoCrop(video, getEl('scanner-visual')),
-    typeCropRect: mapVisualBoxToVideoCrop(video, getEl('scanner-type-visual')),
-    passcodeVisual: mapVisualBoxToVideoCrop(video, getEl('scanner-passcode-visual')),
+    nameCropVisual: getScannerDomCrop(video, 'scanner-visual'),
+    typeCropRect: typeCropFixed,
+    passcodeVisual: getScannerDomCrop(video, 'scanner-passcode-visual'),
+    artCropVisual: mapVisualBoxToVideoCrop(video, getEl('scanner-art-visual')),
+    attributeVisual: mapVisualBoxToVideoCrop(video, getEl('scanner-attribute-visual')),
+    levelRankVisual: mapVisualBoxToVideoCrop(video, getEl('scanner-level-visual')),
     track: null,
     source: 'fixed',
   };
@@ -33667,13 +41114,75 @@ function resolveScannerCrops(video) {
 }
 
 /**
+ * Frações calibradas (da extensão real da carta no warp) para os crops OCR de nome e passcode.
+ * Medidas em canónico 590×860 nas coletas/fotos de benchmark: o nome fica em ~0.045–0.097 H da
+ * carta (faixa fina) e os 8 dígitos no fundo absoluto ~0.955–0.997 H (mesma linha que «1ª Edição»;
+ * x à esquerda). Difere do layout mm (passcode 0.9326, nome h=0.079) que não bate com a carta no
+ * warp. Isolado ao pipeline OCR-diag. Ver SCANNER_BENCHMARK.
+ */
+// Nome ligeiramente mais alto e generoso: a coleta 1781477958681 mostrou o crop a cortar o topo
+// das letras + apanhar a fila de estrelas em baixo (varia com a deteção da extensão por frame).
+// Subir o topo e dar folga evita clipping fatal (espaço acima do nome é inócuo p/ o OCR PSM 7).
+// x/largura RELATIVAS AO CANVAS; y/altura ancorados à extensão vertical da carta (fiável).
+const OCR_WARP_NAME_FRAC = Object.freeze({ x: 0.05, y: 0.024, w: 0.72, h: 0.06 });
+// Passcode (x:0.02..0.32): cobre os 8 dígitos + margem de madeira, mas EXCLUI o «1ª Edição» à direita
+// (medido nos passcode_paddle: dígitos acabam ~x0.23, «1ª Edição» começa ~x0.24). Sem o texto à direita,
+// o OCR com whitelist de dígitos deixa de ler lixo. h subido p/ 0.052 p/ garantir a altura do glifo.
+const OCR_WARP_PASSCODE_FRAC = Object.freeze({ x: 0.02, y: 0.953, w: 0.3, h: 0.052 });
+
+/**
+ * Crops de nome/passcode ancorados à extensão da carta detetada no warp canónico.
+ *
+ * Só o eixo VERTICAL da extensão é fiável (a margem de mesa do warp aparece em cima/baixo, das
+ * sombras). Na horizontal a carta enche o warp e a deteção de bordas laterais é instável (pode dar
+ * falsa margem esquerda e cortar os dígitos) — por isso o x/largura ancoram à largura total `W`.
+ *
+ * @param {{ x: number, y: number, width: number, height: number }} ext Extensão da carta (px canónico).
+ * @param {number} W
+ * @param {number} H
+ * @returns {{ nameCrop: object, passcodeCrop: object }}
+ */
+function ocrWarpBenchmarkCropsFromExtent(ext, W, H) {
+  const top = ext.y;
+  const vh = ext.height;
+  const clampRect = (r) => {
+    const x = Math.max(0, Math.min(W - 8, r.x));
+    const y = Math.max(0, Math.min(H - 4, r.y));
+    return {
+      x,
+      y,
+      width: Math.max(8, Math.min(W - x, r.width)),
+      height: Math.max(4, Math.min(H - y, r.height)),
+    };
+  };
+  // Horizontal ancorado ao CANVAS (a deteção horizontal da extensão é instável e dava crops na madeira
+  // ou a cortar dígitos); vertical ancorado à extensão (fiável). O passcode usa um crop largo que contém
+  // sempre os 8 dígitos mesmo com a margem de madeira — o Paddle localiza a linha dos dígitos por deteção.
+  const fromFrac = (f) =>
+    clampRect({
+      x: f.x * W,
+      y: top + f.y * vh,
+      width: f.w * W,
+      height: f.h * vh,
+    });
+  return {
+    nameCrop: fromFrac(OCR_WARP_NAME_FRAC),
+    passcodeCrop: fromFrac(OCR_WARP_PASSCODE_FRAC),
+  };
+}
+
+/**
  * Carta retificada + recortes canónicos para OCR (nome/ID mais estáveis com inclinação).
  * @param {HTMLVideoElement} video
  * @param {object|null} track Pacote de {@link resolveScannerCrops}.
- * @returns {null|{ media: HTMLCanvasElement, nameCrop: object, passcodeCrop: object, typeCrop: object }}
+ * @returns {null|{ media: HTMLCanvasElement, nameCrop: object, passcodeCrop: object, typeCrop: object, artCrop: object }}
  */
 function buildScannerWarpOcrContext(video, track) {
-  if (!ocrCardTrackMod || !video || !track || !track.card || track.card.conf < 0.32) {
+  const minTrackConf =
+    ocrCardTrackMod && ocrCardTrackMod.CARD_TRACK_MIN_CONF != null
+      ? ocrCardTrackMod.CARD_TRACK_MIN_CONF
+      : 0.2;
+  if (!ocrCardTrackMod || !video || !track || !track.card || track.card.conf < minTrackConf) {
     return null;
   }
   const c = track.card;
@@ -33683,7 +41192,8 @@ function buildScannerWarpOcrContext(video, track) {
   if (
     !ocrCanonicalCardCanvas ||
     key !== ocrCanonicalCardKey ||
-    now - ocrCanonicalCardAt > (ocrScannerIsMobile() ? 110 : 75)
+    now - ocrCanonicalCardAt >
+      (ocrDiagnosticsCaptureActive ? 0 : ocrScannerIsMobile() ? 110 : 75)
   ) {
     ocrCanonicalCardCanvas = ocrCardTrackMod.warpCardToCanonicalCanvas(
       video,
@@ -33696,25 +41206,57 @@ function buildScannerWarpOcrContext(video, track) {
     ocrCanonicalCardAt = now;
   }
   if (!ocrCanonicalCardCanvas) return null;
-  const handFree = ocrScannerIsMobile();
+  const cardTypeHint = lastDetectedCardType || 'Monstro Efeito';
   const regions =
     typeof ocrCardTrackMod.regionsOnCanonicalCard === 'function'
-      ? ocrCardTrackMod.regionsOnCanonicalCard(handFree)
+      ? ocrCardTrackMod.regionsOnCanonicalCard(true, cardTypeHint)
       : null;
   if (!regions) return null;
-  let nameCrop = regions.name;
-  let passcodeCrop = regions.passcode;
-  if (typeof ocrCardTrackMod.refineNameOnCanonical === 'function') {
-    nameCrop = ocrCardTrackMod.refineNameOnCanonical(ocrCanonicalCardCanvas, nameCrop);
+  // O warp é um stretch da bbox detetada, que costuma incluir margem de mesa em cima/baixo
+  // (carta inset). Pior: as frações de layout do nome/passcode não batem com a carta real no
+  // warp — o passcode fica no fundo absoluto (~0.96–0.98 H, mesma linha que «1ª Edição»), não
+  // em 0.9326 (layout), e a faixa do nome de layout é demasiado alta (apanha estrelas/arte).
+  // Aqui detetamos a extensão real da carta no warp e definimos crops ANCORADOS a essa extensão
+  // com frações calibradas pelas fotos/coletas (medições em canónico 590×860). Isto é isolado ao
+  // pipeline OCR-diag (Fases H/J); a mira/deteção ao vivo (A–G/C/D) e arte/tipo/level ficam
+  // intactos. Ver SCANNER_BENCHMARK e docs/benchmark-photos.
+  const W = ocrCardTrackMod.CANONICAL_CARD_W;
+  const H = ocrCardTrackMod.CANONICAL_CARD_H;
+  let cardExtent = null;
+  if (typeof ocrCardTrackMod.detectCardExtentOnCanonical === 'function') {
+    try {
+      cardExtent = ocrCardTrackMod.detectCardExtentOnCanonical(ocrCanonicalCardCanvas);
+    } catch (_) {
+      cardExtent = null;
+    }
   }
-  if (typeof ocrCardTrackMod.refinePasscodeOnCanonical === 'function') {
-    passcodeCrop = ocrCardTrackMod.refinePasscodeOnCanonical(ocrCanonicalCardCanvas, passcodeCrop);
+  const benchCrops = ocrWarpBenchmarkCropsFromExtent(
+    cardExtent || { x: 0, y: 0, width: W, height: H },
+    W,
+    H
+  );
+  let nameCrop = benchCrops.nameCrop;
+  let passcodeCrop = benchCrops.passcodeCrop;
+  const passcodeStrip = benchCrops.passcodeCrop;
+  const passcodeDigits = benchCrops.passcodeCrop;
+  const passcodeSeed = benchCrops.passcodeCrop;
+  // Sem ink-refine para nome/passcode: o crop geométrico ancorado é autoritativo; o refine de
+  // tinta derivava para o brilho da arte/foil. levelRank/type/art mantêm o refine original.
+  let levelRankCrop = regions.levelRank;
+  if (typeof ocrCardTrackMod.refineLevelRankOnCanonical === 'function') {
+    levelRankCrop = ocrCardTrackMod.refineLevelRankOnCanonical(ocrCanonicalCardCanvas, regions.levelRank);
   }
   return {
     media: ocrCanonicalCardCanvas,
     nameCrop,
     passcodeCrop,
+    passcodeSeed,
+    passcodeDigits,
+    passcodeStrip,
     typeCrop: regions.type,
+    artCrop: regions.art,
+    attributeCrop: regions.attribute,
+    levelRankCrop,
     warpRefined: true,
   };
 }
@@ -33770,12 +41312,119 @@ function ocrFramingHintForDirection(dir) {
  * @param {object|null} track
  * @returns {boolean}
  */
+/**
+ * Carta estável o suficiente para dHash/OCR leve sem exigir luminância estável (foil Ultra).
+ * @param {HTMLVideoElement} video
+ * @param {{ x: number, y: number, width: number, height: number }} nameCropVisual
+ * @param {object|null} track
+ * @returns {boolean}
+ */
+function isScannerArtRelaxedReady(video, nameCropVisual, track) {
+  if (!video || !nameCropVisual) return false;
+  const lum = sampleCropMeanLuminance(video, nameCropVisual);
+  if (lum < 28 || lum > 248) return false;
+  const jitter =
+    ocrCardTrackMod && typeof ocrCardTrackMod.getCardTrackPositionJitter === 'function'
+      ? ocrCardTrackMod.getCardTrackPositionJitter()
+      : ocrFramingPositionSpread();
+  const minTrackConf =
+    ocrCardTrackMod && ocrCardTrackMod.CARD_TRACK_MIN_CONF != null
+      ? ocrCardTrackMod.CARD_TRACK_MIN_CONF
+      : 0.2;
+  if (track && track.card) {
+    if (track.card.conf < minTrackConf) return false;
+    const limit = Math.max(14, track.card.w * 0.06);
+    return jitter <= limit;
+  }
+  const posLimit = Math.max(16, nameCropVisual.width * 0.16);
+  return jitter <= posLimit && nameCropVisual.width >= 36;
+}
+
+/**
+ * Contexto de imagem + ROIs da arte para dHash (warp canónico ou escala do recorte).
+ * @param {HTMLVideoElement} video
+ * @param {object|null} track
+ * @param {{ x: number, y: number, width: number, height: number }|null} typeCropRect
+ * @param {null|{ media: HTMLCanvasElement, artCrop?: object }} ocrWarp
+ * @returns {null|{ media: HTMLCanvasElement, artCrop: object, source: string }}
+ */
+function buildArtHashScanContext(video, track, typeCropRect, ocrWarp) {
+  const mod = ocrCardTrackMod;
+  if (!mod || !video || video.videoWidth < 32) return null;
+  const handFree = true;
+  const regions =
+    typeof mod.regionsOnCanonicalCard === 'function'
+      ? mod.regionsOnCanonicalCard(handFree)
+      : null;
+  if (!regions || !regions.art) return null;
+  const artCrop = regions.art;
+  const minTrackConf =
+    mod.CARD_TRACK_MIN_CONF != null ? mod.CARD_TRACK_MIN_CONF : 0.2;
+  const card = track && track.card;
+
+  if (ocrWarp && ocrWarp.media) {
+    return {
+      media: ocrWarp.media,
+      artCrop: ocrWarp.artCrop || artCrop,
+      source: 'warp',
+    };
+  }
+
+  const warpFromCard = (cardRect) => {
+    if (!cardRect || cardRect.conf < minTrackConf) return null;
+    const warped = mod.warpCardToCanonicalCanvas(
+      video,
+      cardRect,
+      mod.CANONICAL_CARD_W,
+      mod.CANONICAL_CARD_H,
+      ocrArtScaleCanvas
+    );
+    if (!warped) return null;
+    ocrArtScaleCanvas = warped;
+    return { media: warped, artCrop, source: 'warp_direct' };
+  };
+
+  if (card) {
+    const ctx = warpFromCard(card);
+    if (ctx) return ctx;
+  }
+
+  const roiTrack = tryScannerTrackFromTypeRoi(video, typeCropRect);
+  if (roiTrack && roiTrack.card) {
+    const ctx = warpFromCard(roiTrack.card);
+    if (ctx) return ctx;
+  }
+
+  const crop =
+    card && card.conf >= minTrackConf
+      ? { x: card.x, y: card.y, width: card.w, height: card.h }
+      : null;
+  if (crop && typeof mod.scaleVideoCropToCanonicalCanvas === 'function') {
+    const scaled = mod.scaleVideoCropToCanonicalCanvas(
+      video,
+      crop,
+      mod.CANONICAL_CARD_W,
+      mod.CANONICAL_CARD_H,
+      ocrArtScaleCanvas
+    );
+    if (scaled) {
+      ocrArtScaleCanvas = scaled;
+      return { media: scaled, artCrop, source: 'scale_crop' };
+    }
+  }
+  return null;
+}
+
 function isScannerFramingReady(video, nameCropVisual, track) {
   if (!video || !nameCropVisual) return false;
   if (ocrFramingState !== 'aligned') return false;
+  const minTrackConf =
+    ocrCardTrackMod && ocrCardTrackMod.CARD_TRACK_MIN_CONF != null
+      ? ocrCardTrackMod.CARD_TRACK_MIN_CONF
+      : 0.2;
   if (track && track.card) {
     if (track.raw && track.raw.locked) return true;
-    if (track.card.conf < 0.34) return false;
+    if (track.card.conf < minTrackConf + 0.04) return false;
     const jitter =
       ocrCardTrackMod && typeof ocrCardTrackMod.getCardTrackPositionJitter === 'function'
         ? ocrCardTrackMod.getCardTrackPositionJitter()
@@ -33789,16 +41438,50 @@ function isScannerFramingReady(video, nameCropVisual, track) {
 /**
  * @param {string} cleaned
  * @param {object|null} card
- * @returns {object|null} Consenso se ≥2 leituras iguais recentes.
+ * @param {{ matchSource?: string, artDistance?: number|null }|null} [meta]
+ * @returns {object|null} Consenso se ≥2 leituras iguais recentes (ou 1 para arte forte em desktop).
  */
-function ocrReadVoteConsensus(cleaned, card) {
+function ocrReadVoteConsensus(cleaned, card, meta) {
   const now = Date.now();
-  ocrReadVoteBuffer.push({ cleaned, card, at: now });
-  while (ocrReadVoteBuffer.length > 6) ocrReadVoteBuffer.shift();
-  const recent = ocrReadVoteBuffer.filter((v) => now - v.at < 2200 && v.cleaned);
-  if (recent.length < 2) return null;
+  const matchSource = meta && meta.matchSource ? meta.matchSource : null;
+  const artDistance = meta && meta.artDistance != null ? meta.artDistance : null;
+  const cardId = card && card.id != null ? String(card.id) : null;
+  ocrReadVoteBuffer.push({ cleaned, card, cardId, matchSource, artDistance, at: now });
+  while (ocrReadVoteBuffer.length > 8) ocrReadVoteBuffer.shift();
+  const recent = ocrReadVoteBuffer.filter((v) => now - v.at < 2200);
+
+  if (recent.some((r) => r.cardId)) {
+    const idCounts = new Map();
+    for (const r of recent) {
+      if (!r.cardId) continue;
+      idCounts.set(r.cardId, (idCounts.get(r.cardId) || 0) + 1);
+    }
+    let bestId = cardId;
+    let bestN = 0;
+    for (const [id, n] of idCounts) {
+      if (n > bestN) {
+        bestN = n;
+        bestId = id;
+      }
+    }
+    const artStrongDesktop =
+      matchSource === 'art' &&
+      artDistance != null &&
+      artDistance <= 11 &&
+      !ocrScannerIsMobile();
+    const needN = artStrongDesktop ? 1 : 2;
+    if (bestN >= needN && bestId) {
+      const hit =
+        recent.find((r) => r.cardId === bestId && r.card) ||
+        recent.find((r) => r.cardId === bestId);
+      if (hit && hit.card) return hit;
+    }
+  }
+
+  const recentCleaned = recent.filter((v) => v.cleaned);
+  if (recentCleaned.length < 2) return null;
   const counts = new Map();
-  for (const r of recent) {
+  for (const r of recentCleaned) {
     const k = r.cleaned;
     counts.set(k, (counts.get(k) || 0) + 1);
   }
@@ -33811,8 +41494,8 @@ function ocrReadVoteConsensus(cleaned, card) {
     }
   }
   if (bestN < 2) return null;
-  const hit = recent.find((r) => r.cleaned === bestKey && r.card);
-  return hit || recent.find((r) => r.cleaned === bestKey) || null;
+  const hit = recentCleaned.find((r) => r.cleaned === bestKey && r.card);
+  return hit || recentCleaned.find((r) => r.cleaned === bestKey) || null;
 }
 
 /**
@@ -33853,21 +41536,27 @@ function updateScannerFramingState(video, nameCropVisual, track) {
   if (lumStable && posStable) state = 'aligned';
 
   let hintText = state === 'aligned' ? T('ocr.framing.aligned') : T('ocr.framing.seeking');
-  if (track && track.card && ocrCardTrackMod) {
-    if (track.raw && track.raw.locked) {
-      hintText = T('ocr.framing.locked');
-    } else {
-      const dir = ocrCardTrackMod.getCardTrackDirectionHint(
-        track.card,
-        video.videoWidth,
-        video.videoHeight
-      );
-      if (state !== 'aligned' && dir && dir !== 'none') {
-        hintText = ocrFramingHintForDirection(dir);
-        lastOcrDirectionHintKey = dir;
-      } else if (state !== 'aligned' && !track.card) {
-        hintText = T('ocr.framing.find_card');
+  if (ocrCardTrackMod) {
+    if (track && track.card) {
+      if (track.raw && track.raw.locked) {
+        hintText = T('ocr.framing.locked');
+      } else {
+        const dir = ocrCardTrackMod.getCardTrackDirectionHint(
+          track.card,
+          video.videoWidth,
+          video.videoHeight
+        );
+        if (state !== 'aligned' && dir && dir !== 'none') {
+          hintText = ocrFramingHintForDirection(dir);
+          lastOcrDirectionHintKey = dir;
+        } else if (state !== 'aligned' && dir === 'hold_steady') {
+          hintText = ocrFramingHintForDirection(dir);
+          lastOcrDirectionHintKey = dir;
+        }
       }
+    } else if (state !== 'aligned') {
+      hintText = T('ocr.framing.find_card');
+      lastOcrDirectionHintKey = 'find_card';
     }
   }
 
@@ -33878,6 +41567,21 @@ function updateScannerFramingState(video, nameCropVisual, track) {
   if (nameEl) {
     nameEl.classList.toggle('scanner-frame--aligned', state === 'aligned');
     nameEl.classList.toggle('scanner-frame--seeking', state !== 'aligned');
+  }
+  const artEl = getEl('scanner-art-visual');
+  if (artEl) {
+    artEl.classList.toggle('scanner-frame--aligned', state === 'aligned');
+    artEl.classList.toggle('scanner-frame--seeking', state !== 'aligned');
+  }
+  const attrEl = getEl('scanner-attribute-visual');
+  if (attrEl) {
+    attrEl.classList.toggle('scanner-frame--aligned', state === 'aligned');
+    attrEl.classList.toggle('scanner-frame--seeking', state !== 'aligned');
+  }
+  const levelEl = getEl('scanner-level-visual');
+  if (levelEl) {
+    levelEl.classList.toggle('scanner-frame--aligned', state === 'aligned');
+    levelEl.classList.toggle('scanner-frame--seeking', state !== 'aligned');
   }
   const hint = getEl('ocr-framing-hint');
   if (hint) {
@@ -33901,7 +41605,46 @@ function ocrEngineLabel(engine) {
   if (engine === 'paddle') return 'Paddle';
   if (engine === 'tesseract') return 'Tess';
   if (engine === 'passcode') return 'ID';
+  if (engine === 'art') return 'Art';
   return '?';
+}
+
+/**
+ * Limpa «Nome lido» (troca de segmento/carta na mira).
+ * @returns {void}
+ */
+function clearOcrLiveReadDisplay() {
+  lastOcrLiveReadSticky = null;
+  lastOcrLiveReadAt = 0;
+  lastOcrLiveReadKey = '';
+  lastOcrLiveReadMatchedId = null;
+  const el = getEl('ocr-live-read');
+  if (el) el.textContent = T('ocr.live.no_text');
+}
+
+/**
+ * Limpa «ID lido» (troca de segmento/carta na mira).
+ * @returns {void}
+ */
+function clearOcrPasscodeLiveReadDisplay() {
+  lastOcrPasscodeLiveSticky = null;
+  lastOcrPasscodeLiveReadAt = 0;
+  lastOcrPasscodeLiveReadKey = '';
+  const el = getEl('ocr-passcode-live-read');
+  if (el) el.textContent = T('ocr.live.passcode_no_text');
+}
+
+/** Apaga pixels dos canvases de preview (evita crop desalinhado durante throttle). */
+function clearOcrPreviewCanvases() {
+  for (const id of ['preview-canvas', 'preview-passcode-canvas']) {
+    const el = getEl(id);
+    if (!el || !el.width) continue;
+    const ctx = el.getContext('2d', { alpha: false });
+    if (ctx) {
+      ctx.fillStyle = '#1a1a1a';
+      ctx.fillRect(0, 0, el.width, el.height);
+    }
+  }
 }
 
 /**
@@ -33913,6 +41656,22 @@ function updateOcrLiveReadDisplay(outcome) {
   const el = getEl('ocr-live-read');
   if (!el) return;
   const now = Date.now();
+  if (ocrDiagnosticsCaptureActive && ocrDiagnosticsSession) {
+    const seq = ocrDiagnosticsSession.samples ? ocrDiagnosticsSession.samples.length : 0;
+    const expPc = expectedBenchmarkPasscodeForSeq(seq);
+    if (expPc !== ocrDiagLastLiveReadSegmentPasscode) {
+      if (ocrDiagLastLiveReadSegmentPasscode != null) clearOcrLiveReadDisplay();
+      ocrDiagLastLiveReadSegmentPasscode = expPc;
+    }
+  }
+  const matchedId = outcome && outcome.card && outcome.card.id != null ? outcome.card.id : null;
+  if (matchedId != null && matchedId !== lastOcrLiveReadMatchedId) {
+    if (lastOcrLiveReadMatchedId != null) {
+      lastOcrLiveReadSticky = null;
+      lastOcrLiveReadAt = 0;
+    }
+    lastOcrLiveReadMatchedId = matchedId;
+  }
   if (outcome && outcome.cleaned) {
     lastOcrLiveReadSticky = outcome;
     lastOcrLiveReadAt = now;
@@ -33988,7 +41747,7 @@ async function runOcrWithSettings(media, cropRect, settings, cardType, rarity = 
 
   const preview = getEl('preview-canvas');
   if (preview && !(settings && settings.suppressPreview)) {
-    paintOcrPreviewCanvas(preview, canvas, cardType, 0, { rarity, settings });
+    paintOcrPreviewCanvas(preview, canvas, cardType, 0, { rarity, settings, cropRect });
   }
 
   const recognizeMs = getOcrRecognizeTimeoutMs(settings);
@@ -34915,7 +42674,8 @@ function buildOcrFallbackPasses(cardType, rarity, base, plateLum, nameMetrics) {
  * @param {{ x: number, y: number, width: number, height: number }|null} [typeCropRect]
  * @param {{ x: number, y: number, width: number, height: number }|null} [nameCropVisual] Mira verde no vídeo (tipo/cor da placa).
  * @param {{ x: number, y: number, width: number, height: number }|null} [nameCropOcrRefined] Recorte ligeiramente afinado (só diagnóstico).
- * @param {null|{ media: HTMLCanvasElement, nameCrop: object, passcodeCrop: object, typeCrop: object }} [ocrWarp] Carta retificada.
+ * @param {null|{ media: HTMLCanvasElement, nameCrop: object, passcodeCrop: object, typeCrop: object, artCrop?: object }} [ocrWarp] Carta retificada.
+ * @param {{ artCandidateCardIds?: number[] }|null} [scanOpts] Restringe OCR a candidatos da arte.
  * @returns {Promise<null|{ pack: object, cleaned: string, card: object|null, diagnostics?: { cardType: string, rarity: string, passes: object[] } }>}
  */
 async function processFrameWithFallbackPasses(
@@ -34924,7 +42684,8 @@ async function processFrameWithFallbackPasses(
   typeCropRect,
   nameCropVisual,
   nameCropOcrRefined,
-  ocrWarp
+  ocrWarp,
+  scanOpts
 ) {
   const ocrMedia = ocrWarp && ocrWarp.media ? ocrWarp.media : video;
   const warpSrc = ocrWarp ? ocrWarp.media : null;
@@ -34934,15 +42695,24 @@ async function processFrameWithFallbackPasses(
   let rarity = 'Comum';
   const manualTypeSelect = getEl('manual-card-type');
   const manualRaritySelect = getEl('manual-rarity');
-  const typeProbe = probeCardTypeDiagnostics(video, nameStripForType, typeCropRect);
+  const typeProbe = probeCardTypeDiagnostics(video, nameStripForType, typeCropRect, ocrWarp);
   const nameForRarity =
     nameCropOcrRefined || refineNameCropForOcr(nameCropVisual || nameCropRect);
   const typeHintEarly =
     typeProbe.classifiedTypeMerged || typeProbe.classifiedType || 'Monstro Efeito';
-  const rarityProbe = probeCardRarityDiagnostics(video, nameForRarity, typeCropRect, typeHintEarly);
+  const rarityProbe = probeCardRarityDiagnostics(
+    video,
+    nameForRarity,
+    typeCropRect,
+    typeHintEarly,
+    ocrWarp
+  );
   if (manualTypeSelect && manualRaritySelect) {
     if (manualTypeSelect.value === 'AUTO') {
-      cardType = typeProbe.classifiedType || (await detectCardTypeFromImage(video, typeRect, nameCropRect));
+      cardType =
+        typeProbe.classifiedTypeFromFrameOnly ||
+        typeProbe.classifiedType ||
+        (await detectCardTypeFromImage(video, typeRect, nameCropRect));
     } else {
       cardType = manualTypeSelect.value;
     }
@@ -34952,12 +42722,21 @@ async function processFrameWithFallbackPasses(
       rarity = manualRaritySelect.value;
     }
   } else {
-    cardType = typeProbe.classifiedType || (await detectCardTypeFromImage(video, typeRect, nameCropRect));
+    cardType =
+      typeProbe.classifiedTypeFromFrameOnly ||
+      typeProbe.classifiedType ||
+      (await detectCardTypeFromImage(video, typeRect, nameCropRect));
     rarity = rarityProbe.classifiedRarity || 'Comum';
   }
   const resolved = resolveVisionTypeAndRarityFromProbes(typeProbe, rarityProbe, cardType, rarity);
-  cardType = resolved.cardType;
+  cardType = correctCardTypeFromChromaStrip(typeProbe, resolved.cardType);
   rarity = resolved.rarity;
+  if (
+    isOcrRarityWithNameFoil(rarity) &&
+    (cardType === 'Monstro Normal' || cardType === 'Monstro Link' || cardType === 'Monstro Fusão')
+  ) {
+    cardType = correctCardTypeFromChromaStrip(typeProbe, cardType);
+  }
   const typeBeforeReconcile = cardType;
   cardType = reconcileCardTypeWithRarity(
     cardType,
@@ -34966,6 +42745,7 @@ async function processFrameWithFallbackPasses(
     typeProbe.frameColor,
     rarityProbe.plateType || typeProbe.namePlateType
   );
+  cardType = correctCardTypeFromChromaStrip(typeProbe, cardType);
   if (cardType !== typeBeforeReconcile) {
     lastStableDetectedCardType = cardType;
     lastStableDetectedCardTypeAt = Date.now();
@@ -34997,40 +42777,83 @@ async function processFrameWithFallbackPasses(
   const darkNamePlate =
     plateLum < 120 && (xyzDarkPlate || fusionDarkPlate || HARD_OCR_CARD_TYPES.has(cardType));
   const foilWantsPaddle = foilName || darkNamePlate || fusionFoilPlate;
-  const usePaddleEarly = foilWantsPaddle && paddleOcrReadyFlag;
+  const paddleBurstActive = paddleBurstUntil > 0 && Date.now() < paddleBurstUntil;
+  const usePaddleEarly = (foilWantsPaddle || paddleBurstActive) && paddleOcrReadyFlag;
   const mobileFast = ocrScannerIsMobile();
-  ocrDeferHeavyUntilPaddle = foilWantsPaddle && shouldDeferOcrForPaddleWarmup();
-  if (ocrDeferHeavyUntilPaddle) {
-    logOcrPaddleWarmupWait();
-    return null;
-  }
+  const sunGlareEarly =
+    (rarityProbe.nameMetrics && isNameStripSunGlareMetrics(rarityProbe.nameMetrics)) ||
+    plateLum > 168;
   ocrDeferHeavyUntilPaddle = false;
+  if (foilWantsPaddle && !paddleOcrReadyFlag && shouldDeferOcrForPaddleWarmup()) {
+    logOcrPaddleWarmupWait();
+  }
   const maxPasses = getOcrMaxPassesPerFrame(foilName);
   if (passes.length > maxPasses) passes = passes.slice(0, maxPasses);
   let paddleTriedThisFrame = false;
   let best = null;
   let failStreak = 0;
   const failStreakMax = mobileFast ? 2 : 3;
-  const visionCtxEarly = { cardType, rarity };
+  const visionCtxEarly = overlayBenchmarkSegmentVisionContext({
+    cardType,
+    rarity,
+    nameStripType: typeProbe.nameStripFallbackType || typeProbe.classifiedTypeFromNameStripOnly || null,
+    plateType: typeProbe.namePlateType || rarityProbe.plateType || null,
+    artCandidateCardIds:
+      scanOpts && scanOpts.artCandidateCardIds && scanOpts.artCandidateCardIds.length
+        ? scanOpts.artCandidateCardIds
+        : null,
+    featureProbe: buildScannerFeatureProbeSnapshot(cardType),
+  });
+  if (visionCtxEarly.expectedFromSeq) {
+    if (visionCtxEarly.cardType) cardType = visionCtxEarly.cardType;
+    if (visionCtxEarly.rarity) rarity = visionCtxEarly.rarity;
+  }
+
+  if (passes.length && (!usePaddleEarly || sunGlareEarly)) {
+    const quickPack = await processImageWithColorFilter(
+      video,
+      nameCropRect,
+      { ...passes[0], suppressPreview: true },
+      cardType,
+      rarity,
+      warpSrc
+    );
+    if (quickPack && quickPack.text) {
+      const cleanedQ = smartNormalize(quickPack.text);
+      if (cleanedQ && cleanedQ.length >= 4 && !isGarbageText(cleanedQ)) {
+        const cardQ = await smartSearchScanner(cleanedQ, visionCtxEarly, false);
+        if (cardQ) {
+          return {
+            pack: quickPack,
+            cleaned: cleanedQ,
+            card: cardQ,
+            diagnostics: { cardType, rarity, passes: [], ocrWarped: !!warpSrc, quickTess: true },
+          };
+        }
+        best = { pack: quickPack, cleaned: cleanedQ };
+      }
+    }
+  }
 
   if (usePaddleEarly && paddleOcrReadyFlag && canRunPaddleOcrNow()) {
     let bestPaddleOutcome = null;
     const sunGlare =
-      (rarityProbe.nameMetrics && isNameStripSunGlareMetrics(rarityProbe.nameMetrics)) ||
-      (plateLum > 165 &&
-        (cardType === 'Monstro Link' || cardType === 'Monstro Sincro'));
-    const earlyPaddlePasses = sunGlare
-      ? [
-          PADDLE_RAW_NAME_PASS,
-          { ...PADDLE_RAW_NAME_PASS, glareCompress: true, lcCols: 12, lcRows: 3 },
-          PADDLE_RAW_INVERT_PASS,
-          { ...PADDLE_RAW_INVERT_PASS, glareCompress: true },
-        ]
-      : [
-          PADDLE_RAW_NAME_PASS,
-          PADDLE_RAW_INVERT_PASS,
-          ...buildScannerFoilExtractPaddlePasses(cardType, rarity),
-        ];
+      sunGlareEarly &&
+      (cardType === 'Monstro Link' || cardType === 'Monstro Sincro' || cardType === 'Monstro Fusão');
+    const earlyPaddlePasses = paddleBurstActive
+      ? [PADDLE_RAW_NAME_PASS, PADDLE_RAW_INVERT_PASS]
+      : sunGlare
+        ? [
+            PADDLE_RAW_NAME_PASS,
+            { ...PADDLE_RAW_NAME_PASS, glareCompress: true, lcCols: 12, lcRows: 3 },
+            PADDLE_RAW_INVERT_PASS,
+            { ...PADDLE_RAW_INVERT_PASS, glareCompress: true },
+          ]
+        : [
+            PADDLE_RAW_NAME_PASS,
+            PADDLE_RAW_INVERT_PASS,
+            ...buildScannerFoilExtractPaddlePasses(cardType, rarity),
+          ];
     for (let ei = 0; ei < earlyPaddlePasses.length; ei++) {
       if (ei >= 2 && !canRunPaddleOcrNow()) break;
       const paddleSettings = earlyPaddlePasses[ei];
@@ -35046,7 +42869,10 @@ async function processFrameWithFallbackPasses(
       const cleanedP = smartNormalize(paddlePack.text);
       if (!cleanedP || cleanedP.length < 4 || isGarbageText(cleanedP)) continue;
       const cardP = await smartSearchScanner(cleanedP, visionCtxEarly, false);
-      if (cardP) {
+      const paddleConf =
+        typeof paddlePack.confidence === 'number' ? paddlePack.confidence : 0;
+      const paddleNameOk = cardP && scannerNameMatchStrongEnough(cleanedP, cardP);
+      if (cardP && (paddleNameOk || paddleConf >= 68)) {
         return {
           pack: paddlePack,
           cleaned: cleanedP,
@@ -35180,7 +43006,7 @@ async function processFrameWithFallbackPasses(
       data: passData,
     });
     diagnosticsPasses.push({ ...passData });
-    const visionCtx = { cardType, rarity };
+    const visionCtx = visionCtxEarly;
     const card = await smartSearchScanner(cleaned, visionCtx, pi > 0);
     const strong = !!card;
     if (card && !strong) {
@@ -35301,7 +43127,7 @@ async function processFrameWithFallbackPasses(
     if (paddlePack && paddlePack.text) {
       const cleanedP = smartNormalize(paddlePack.text);
       if (cleanedP && cleanedP.length >= 4 && !isGarbageText(cleanedP)) {
-        const visionCtx = { cardType, rarity };
+        const visionCtx = visionCtxEarly;
         const longerRead = cleanedP.length > (best.cleaned ? best.cleaned.length : 0) + 2;
         const cardP = longerRead ? await smartSearchScanner(cleanedP, visionCtx, true) : null;
         if (cardP) {
@@ -35319,9 +43145,11 @@ async function processFrameWithFallbackPasses(
     }
   }
   if (best && best.cleaned) {
-    const visionCtxFinal = { cardType, rarity };
+    const visionCtxFinal = visionCtxEarly;
     const cardFinal = await smartSearchScanner(best.cleaned, visionCtxFinal, true);
-    if (cardFinal) {
+    const finalConf = typeof best.pack.confidence === 'number' ? best.pack.confidence : 0;
+    const finalNameOk = cardFinal && scannerNameMatchStrongEnough(best.cleaned, cardFinal);
+    if (cardFinal && (finalNameOk || finalConf >= 68)) {
       return {
         pack: best.pack,
         cleaned: best.cleaned,
@@ -35335,6 +43163,10 @@ async function processFrameWithFallbackPasses(
       pack: best.pack,
       cleaned: best.cleaned,
       card: null,
+      artCandidateCardIds:
+        scanOpts && scanOpts.artCandidateCardIds && scanOpts.artCandidateCardIds.length
+          ? scanOpts.artCandidateCardIds.slice(0, 12)
+          : null,
       diagnostics: {
         cardType,
         rarity,
@@ -35372,6 +43204,16 @@ function mapVisualBoxToVideoCrop(video, visualEl) {
 }
 
 /**
+ * Recorte vídeo a partir de uma mira DOM do scanner (WYSIWYG preview).
+ * @param {HTMLVideoElement} video
+ * @param {string} elId
+ * @returns {{ x: number, y: number, width: number, height: number }|null}
+ */
+function getScannerDomCrop(video, elId) {
+  return mapVisualBoxToVideoCrop(video, getEl(elId));
+}
+
+/**
  * Recorte interno da faixa verde: só texto do nome (sem atributo à direita nem estrelas abaixo).
  * A mira verde no ecrã pode ser um pouco maior; o OCR usa esta zona mais apertada.
  * @param {{ x: number, y: number, width: number, height: number }} nameCropRect
@@ -35397,16 +43239,30 @@ function sampleCropMeanLuminance(video, rect) {
  * @returns {{ avgR: number, avgG: number, avgB: number, meanLum: number }}
  */
 function sampleVideoCropAvgRgb(video, rect, outW = 28, outH = 14) {
+  return sampleMediaCropAvgRgb(video, rect, outW, outH);
+}
+
+/**
+ * Média RGB + luminância de um recorte (vídeo ou canvas warp).
+ * @param {HTMLVideoElement|HTMLCanvasElement} media
+ * @param {{ x: number, y: number, width: number, height: number }} rect
+ * @param {number} [outW]
+ * @param {number} [outH]
+ * @returns {{ avgR: number, avgG: number, avgB: number, meanLum: number }}
+ */
+function sampleMediaCropAvgRgb(media, rect, outW = 28, outH = 14) {
   const fallback = { avgR: 128, avgG: 128, avgB: 128, meanLum: 128 };
-  if (!video || !rect || rect.width < 2 || rect.height < 2) return fallback;
+  if (!media || !rect || rect.width < 2 || rect.height < 2) return fallback;
+  const ow = Math.max(2, Math.round(outW));
+  const oh = Math.max(2, Math.round(outH));
   const c = document.createElement('canvas');
-  c.width = outW;
-  c.height = outH;
+  c.width = ow;
+  c.height = oh;
   const ctx = c.getContext('2d');
   if (!ctx) return fallback;
   try {
-    ctx.drawImage(video, rect.x, rect.y, rect.width, rect.height, 0, 0, outW, outH);
-    const d = ctx.getImageData(0, 0, outW, outH).data;
+    ctx.drawImage(media, rect.x, rect.y, rect.width, rect.height, 0, 0, ow, oh);
+    const d = ctx.getImageData(0, 0, ow, oh).data;
     let rS = 0;
     let gS = 0;
     let bS = 0;
@@ -35564,9 +43420,15 @@ function resetScannerSceneOnCardChange() {
   lastOcrPasscodeLiveSticky = null;
   lastOcrLiveReadAt = 0;
   lastOcrPasscodeLiveReadAt = 0;
-  lastPasscodeSidecar = null;
+  lastOcrLiveReadMatchedId = null;
+  if (!ocrDiagnosticsCaptureActive) {
+    lastPasscodeSidecar = null;
+  }
   lastOcrLiveReadKey = '';
   lastOcrPasscodeLiveReadKey = '';
+  lastPaddleRecognizeAt = 0;
+  paddleBurstUntil = Date.now() + 2800;
+  ocrDeferHeavyUntilPaddle = false;
   resetScannerSceneHardState();
 }
 
@@ -35612,8 +43474,8 @@ function onScannerSceneMaybeChanged(video, nameCropVisual, typeCropRect) {
       pendingContentFpFrames++;
     }
     if (
-      pendingContentFpFrames >= 14 &&
-      performance.now() - pendingContentFpSince >= 750
+      pendingContentFpFrames >= 9 &&
+      performance.now() - pendingContentFpSince >= 480
     ) {
       lastStableContentFp = contentFp;
       pendingContentFp = '';
@@ -35628,11 +43490,49 @@ function onScannerSceneMaybeChanged(video, nameCropVisual, typeCropRect) {
   return false;
 }
 
-/** @returns {{ cardType: string|null, rarity: string|null }} */
-function getScannerPasscodeVisionContext() {
+/**
+ * Metadados visuais recentes (miras atributo/nível) para filtrar arte dHash.
+ * @param {string} [uiType]
+ * @returns {object|null}
+ */
+function buildScannerFeatureProbeSnapshot(uiType) {
+  const t = String(uiType || lastDetectedCardType || '');
+  let levelRank = { kind: 'none', value: null };
+  if (t.includes('Link')) {
+    levelRank = { kind: 'link', value: 4 };
+  } else if (t.includes('Xyz')) {
+    const r = lastDetectedCardRank;
+    levelRank = { kind: 'rank', value: r != null && r > 0 ? r : 4 };
+  } else if (
+    t.includes('Sincro') ||
+    t.includes('Fusão') ||
+    t.includes('Virar') ||
+    t === 'Magia' ||
+    t === 'Armadilha'
+  ) {
+    levelRank = { kind: 'none', value: null };
+  } else if (lastDetectedCardRank != null && lastDetectedCardRank > 0) {
+    levelRank = { kind: 'rank', value: lastDetectedCardRank };
+  } else if (lastDetectedCardLevel != null && lastDetectedCardLevel > 0) {
+    levelRank = { kind: 'level', value: lastDetectedCardLevel };
+  }
   return {
-    cardType: lastDetectedCardType || null,
+    attribute: lastDetectedCardAttribute || null,
+    levelRank,
+  };
+}
+
+/** @returns {{ cardType: string|null, rarity: string|null, featureProbe?: object }} */
+function getScannerPasscodeVisionContext() {
+  const cardType = lastDetectedCardType || null;
+  const fp = buildScannerFeatureProbeSnapshot(cardType);
+  return {
+    cardType,
     rarity: lastDetectedCardRarity || null,
+    attribute: lastDetectedCardAttribute || null,
+    level: lastDetectedCardLevel,
+    rank: lastDetectedCardRank,
+    featureProbe: fp,
   };
 }
 
@@ -35645,7 +43545,7 @@ function getScannerPasscodeVisionContext() {
  * @param {string|null} rarity
  * @returns {{ primary: string, secondary: string, meanLum: number, matteIdDigits: boolean, cardType: string, rarity: string, plateR: number, plateG: number, plateB: number }}
  */
-function derivePasscodeOcrHint(video, typeCropRect, cardType, rarity, passcodeCrop) {
+function derivePasscodeOcrHint(video, typeCropRect, cardType, rarity, passcodeCrop, media) {
   const ct = cardType || lastDetectedCardType || 'Monstro Efeito';
   const rv = rarity || lastDetectedCardRarity || 'Comum';
   const matteIdDigits = isMattePrintedPasscodeRarity(rv);
@@ -35664,8 +43564,9 @@ function derivePasscodeOcrHint(video, typeCropRect, cardType, rarity, passcodeCr
             height: typeCropRect.height * 0.042,
           }
         : null;
-  if (sampleRect && video && video.videoWidth > 0) {
-    const rgb = sampleVideoCropAvgRgb(video, sampleRect, 40, 14);
+  const sampleMedia = media || video;
+  if (sampleRect && sampleMedia) {
+    const rgb = sampleMediaCropAvgRgb(sampleMedia, sampleRect, 40, 14);
     avgR = rgb.avgR;
     avgG = rgb.avgG;
     avgB = rgb.avgB;
@@ -35782,7 +43683,7 @@ function refineNameCropForOcr(nameCropRect, handFreeTrack) {
   const aspect = nameCropRect.width / Math.max(1, nameCropRect.height);
   const wideName = aspect > 5;
   const trimL = 0;
-  const trimR = handFreeTrack ? 0 : 0;
+  const trimR = 0;
   const trimT = wideName ? 0.005 : handFreeTrack ? 0.01 : 0.02;
   const trimB = wideName ? 0.02 : handFreeTrack ? 0.03 : 0.04;
   return {
@@ -35810,8 +43711,24 @@ function scoreYuGiOhPasscodeCandidate(eight, digitRunLen = 8) {
   else if (digitRunLen === 10) score += 4;
   else if (digitRunLen > 10) score -= 22;
   if (/1{4,}/.test(eight)) score -= 28;
+  if (/1{3,}/.test(eight)) score -= 18;
+  if (eight.startsWith('07') && /1{2,}/.test(eight.slice(2))) score -= 24;
   if (eight.startsWith('00') && unique < 4) score -= 8;
   return score;
+}
+
+/** Leitura típica de código de barras / «1ª Edição» — descartar no match ao vivo. */
+function isPasscodeOcrGarbageRead(text, confidence, matte) {
+  const d = String(text || '').replace(/\D/g, '');
+  if (d.length < 6) return true;
+  if (passcodeDiagnosticsExportMode()) return false;
+  if (d.length === 9 || d.length === 10) return true;
+  if (matte && (confidence || 0) < 18) return true;
+  const ones = (d.match(/1/g) || []).length;
+  if (ones >= 5) return true;
+  if (/1{3,}/.test(d) && ones >= 4) return true;
+  if (matte && (confidence || 0) < 14 && ones >= 3) return true;
+  return false;
 }
 
 /**
@@ -35836,15 +43753,15 @@ function extractYuGiOhPasscodeCandidates(raw) {
   const chunks = String(raw).match(/\d{8}/g) || [];
   for (let i = 0; i < chunks.length; i++) add(chunks[i], 8, 12);
   if (digits.length === 8) add(digits, 8, 14);
-  if (digits.length > 8 && digits.length <= 11) add(digits.slice(0, 8), digits.length, 0);
+  if (digits.length > 8 && digits.length <= 11) add(digits.slice(0, 8), digits.length, -4);
   if (digits.length > 8) {
     const slideBonus = digits.length > 14 ? -18 : digits.length > 11 ? -10 : 0;
     for (let i = 0; i <= digits.length - 8; i++) add(digits.slice(i, i + 8), digits.length, slideBonus);
     if (digits.length === 7) add('0' + digits, 7, 12);
     if (digits.length === 9 || digits.length === 10) {
-      add(digits.slice(1, 9), digits.length, 6);
-      add('0' + digits.slice(0, 7), digits.length, 8);
-      add(digits.slice(0, 8), digits.length, 2);
+      add(digits.slice(1, 9), digits.length, 12);
+      add(digits.slice(0, 8), digits.length, -6);
+      add('0' + digits.slice(0, 7), digits.length, -4);
     }
     if (digits.length === 10) {
       add(digits.slice(2, 10), digits.length, 4);
@@ -35855,20 +43772,441 @@ function extractYuGiOhPasscodeCandidates(raw) {
 }
 
 /**
- * Recorte interno da mira laranja: só os 8 dígitos do passcode (exclui «1ª Edição» à direita).
- * @param {{ x: number, y: number, width: number, height: number }} passcodeVisualRect
+ * Frações dos 8 dígitos na faixa inferior — fonte única OCR: {@link ./ocr-card-track.mjs}.
+ * @returns {{ x: number, y: number, w: number, h: number }}
+ */
+function passcodeDigitsInStripFrac() {
+  return (
+    (ocrCardTrackMod && ocrCardTrackMod.PASSCODE_DIGITS_IN_STRIP) || {
+      x: 0,
+      y: 0,
+      w: 11.5 / 26,
+      h: 3.0 / 3.2,
+    }
+  );
+}
+
+/**
+ * ROI normalizada dos 8 dígitos a partir de um contentor (faixa ou unitário 0–1) — OCR interno.
+ * @param {{ x: number, y: number, w: number, h: number }} stripNorm
+ * @returns {{ x: number, y: number, w: number, h: number }}
+ */
+function passcodeDigitBandNorm(stripNorm) {
+  const f = passcodeDigitsInStripFrac();
+  return {
+    x: stripNorm.x + stripNorm.w * f.x,
+    y: stripNorm.y + stripNorm.h * f.y,
+    w: stripNorm.w * f.w,
+    h: stripNorm.h * f.h,
+  };
+}
+/** Largura mínima do recorte OCR vs faixa inferior (evita faixa de 2px quando ink falha). */
+const PASSCODE_OCR_MIN_STRIP_WIDTH_FRAC = 0.35;
+const PASSCODE_STRIP_CARD_FRAC = Object.freeze({
+  x: 1.5 / 59,
+  y: 80.2 / 86,
+  w: 26 / 59,
+  h: 3.2 / 86,
+});
+
+/**
+ * @param {{ x: number, y: number, width: number, height: number }} strip
+ * @returns {{ x: number, y: number, width: number, height: number }|null}
+ */
+function passcodeDigitBandFromStripRect(strip) {
+  if (!strip || strip.width < 14) return null;
+  const f = passcodeDigitsInStripFrac();
+  return {
+    x: strip.x + strip.width * f.x,
+    y: strip.y + strip.height * f.y,
+    width: Math.max(10, strip.width * f.w),
+    height: Math.max(4, strip.height * f.h),
+  };
+}
+
+/**
+ * @param {{ x: number, y: number, width: number, height: number }|null} typeCropRect
+ * @returns {{ x: number, y: number, width: number, height: number }|null}
+ */
+function passcodeDigitBandFromTypeCrop(typeCropRect) {
+  return passcodeDigitBandFromStripRect(passcodeStripFromTypeCrop(typeCropRect));
+}
+
+/**
+ * ROI OCR do passcode (8 dígitos) — independente da mira laranja (#scanner-passcode-visual).
+ * @param {null|{ passcodeDigits?: object }} ocrWarp
+ * @param {{ x: number, y: number, width: number, height: number }|null} typeCropRect
+ * @param {null|{ regions?: object }} trackPack
+ * @returns {{ x: number, y: number, width: number, height: number }|null}
+ */
+function resolvePasscodeOcrHintRect(ocrWarp, typeCropRect, trackPack) {
+  if (ocrWarp && ocrWarp.passcodeDigits) return ocrWarp.passcodeDigits;
+  const tr = trackPack && trackPack.regions;
+  if (tr && (tr.passcodeDigits || tr.passcodeVisual)) {
+    return tr.passcodeDigits || tr.passcodeVisual;
+  }
+  return passcodeDigitBandFromTypeCrop(typeCropRect);
+}
+
+/**
+ * @param {{ x: number, y: number, width: number, height: number }|null} typeCropRect
+ * @returns {{ x: number, y: number, width: number, height: number }|null}
+ */
+function passcodeStripFromTypeCrop(typeCropRect) {
+  if (!typeCropRect || typeCropRect.width < 24) return null;
+  return {
+    x: typeCropRect.x + typeCropRect.width * PASSCODE_STRIP_CARD_FRAC.x,
+    y: typeCropRect.y + typeCropRect.height * PASSCODE_STRIP_CARD_FRAC.y,
+    width: Math.max(16, typeCropRect.width * PASSCODE_STRIP_CARD_FRAC.w),
+    height: Math.max(4, typeCropRect.height * PASSCODE_STRIP_CARD_FRAC.h * 1.08),
+  };
+}
+
+/**
+ * @param {{ x: number, y: number, width: number, height: number }|null} rect
+ * @returns {boolean}
+ */
+function isValidPasscodeOcrCrop(rect) {
+  if (!rect || rect.width < 10 || rect.height < 3) return false;
+  if (rect.height > rect.width * 1.2) return false;
+  return true;
+}
+
+/**
+ * @param {{ x: number, y: number, width: number, height: number }} a
+ * @param {{ x: number, y: number, width: number, height: number }} b
+ * @returns {boolean}
+ */
+function passcodeCropNearBand(a, b) {
+  if (!a || !b) return false;
+  const cxA = a.x + a.width * 0.5;
+  const cxB = b.x + b.width * 0.5;
+  return (
+    Math.abs(cxA - cxB) <= b.width * 0.55 &&
+    a.width >= b.width * 0.55 &&
+    a.width <= b.width * 1.55
+  );
+}
+
+/**
+ * Procura janela de 8 picos de coluna com espaçamento ~uniforme.
+ * @param {Float32Array} smooth
+ * @param {number} sw
+ * @param {number} peak
+ * @returns {{ x0: number, x1: number }|null}
+ */
+function findEightDigitPeakWindow(smooth, sw, peak) {
+  if (peak < 1) return null;
+  const minPeak = peak * 0.22;
+  const peaks = [];
+  for (let x = 1; x < sw - 1; x++) {
+    if (smooth[x] >= minPeak && smooth[x] >= smooth[x - 1] && smooth[x] >= smooth[x + 1]) {
+      if (!peaks.length || x - peaks[peaks.length - 1] >= 2) peaks.push(x);
+    }
+  }
+  if (peaks.length < 8) return null;
+  let best = null;
+  for (let i = 0; i <= peaks.length - 8; i++) {
+    const group = peaks.slice(i, i + 8);
+    const sp = [];
+    for (let gi = 1; gi < 8; gi++) sp.push(group[gi] - group[gi - 1]);
+    const avg = sp.reduce((a, b) => a + b, 0) / 7;
+    if (avg < 2.5) continue;
+    const uniform = sp.every((s) => Math.abs(s - avg) <= avg * 0.42);
+    if (!uniform) continue;
+    let sum = 0;
+    for (let gi = 0; gi < 8; gi++) sum += smooth[group[gi]];
+    const score = sum + avg * 0.5;
+    if (!best || score > best.score) {
+      best = { x0: group[0], x1: group[7], score, avgStep: avg };
+    }
+  }
+  return best ? { x0: best.x0, x1: best.x1, avgStep: best.avgStep } : null;
+}
+
+/**
+ * Converte 8 picos de coluna num span horizontal (~8 glifos, sem 9.º dígito).
+ * @param {{ x0: number, x1: number, avgStep?: number }} pick
+ * @param {number} sw
+ * @returns {{ x0: number, x1: number }}
+ */
+function passcodeSpanFromEightPeaks(pick, sw) {
+  if (!pick) return pick;
+  const span = pick.x1 - pick.x0;
+  const avgStep = pick.avgStep != null && pick.avgStep > 0 ? pick.avgStep : span / 7;
+  const half = Math.max(0.55, avgStep * 0.52);
+  return {
+    x0: Math.max(0, Math.round(pick.x0 - half)),
+    x1: Math.min(sw - 1, Math.round(pick.x1 + half)),
+  };
+}
+
+/**
+ * Trim vertical leve — sem cortar horizontal.
+ * @param {{ x: number, y: number, width: number, height: number }} rect
  * @returns {{ x: number, y: number, width: number, height: number }}
  */
-function refinePasscodeCropForOcr(passcodeVisualRect, trimR = 0.36) {
-  const trimL = 0.006;
-  const trimT = 0.14;
-  const trimB = 0.14;
+function trimPasscodeCropVertical(rect) {
+  const trimT = 0.12;
+  const trimB = 0.12;
   return {
-    x: passcodeVisualRect.x + passcodeVisualRect.width * trimL,
-    y: passcodeVisualRect.y + passcodeVisualRect.height * trimT,
-    width: Math.max(2, passcodeVisualRect.width * (1 - trimL - trimR)),
-    height: Math.max(2, passcodeVisualRect.height * (1 - trimT - trimB)),
+    x: rect.x,
+    y: rect.y + rect.height * trimT,
+    width: rect.width,
+    height: Math.max(2, rect.height * (1 - trimT - trimB)),
   };
+}
+
+/**
+ * Remove ~1 coluna à esquerda quando OCR devolve 9 dígitos (set code + passcode).
+ * @param {{ x: number, y: number, width: number, height: number }} rect
+ * @returns {{ x: number, y: number, width: number, height: number }}
+ */
+function passcodeCropTrimLeadingDigit(rect) {
+  if (!rect || rect.width < 12) return rect;
+  const trim = Math.max(2, rect.width / 9.5);
+  if (rect.width - trim < 8) return rect;
+  return {
+    x: rect.x + trim,
+    y: rect.y,
+    width: rect.width - trim,
+    height: rect.height,
+  };
+}
+
+/**
+ * Isola os 8 dígitos matte via projeção de colunas (exclui CH01-PTxxx à esquerda e «1ª Edição» à direita).
+ * @param {CanvasImageSource} media
+ * @param {{ x: number, y: number, width: number, height: number }} cropRect
+ * @returns {{ x: number, y: number, width: number, height: number }|null}
+ */
+function findPasscodeEightDigitBand(media, cropRect) {
+  if (!media || !cropRect || cropRect.width < 14 || cropRect.height < 4) return null;
+  const sw = Math.min(192, Math.max(56, Math.round(cropRect.width * 2.8)));
+  const sh = Math.max(12, Math.round(cropRect.height * 2.8));
+  const work = document.createElement('canvas');
+  work.width = sw;
+  work.height = sh;
+  const ctx = work.getContext('2d', { willReadFrequently: true });
+  if (!ctx) return null;
+  try {
+    ctx.drawImage(
+      media,
+      cropRect.x,
+      cropRect.y,
+      cropRect.width,
+      cropRect.height,
+      0,
+      0,
+      sw,
+      sh
+    );
+  } catch (_) {
+    return null;
+  }
+  let img;
+  try {
+    img = ctx.getImageData(0, 0, sw, sh);
+  } catch (_) {
+    return null;
+  }
+  const d = img.data;
+  const y0 = Math.floor(sh * 0.14);
+  const y1 = Math.floor(sh * 0.86);
+  const col = new Float32Array(sw);
+  for (let x = 0; x < sw; x++) {
+    let dark = 0;
+    for (let y = y0; y < y1; y++) {
+      const i = (y * sw + x) * 4;
+      const L = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+      if (L < 132) dark++;
+    }
+    col[x] = dark;
+  }
+  const smooth = new Float32Array(sw);
+  for (let x = 0; x < sw; x++) {
+    const a = col[Math.max(0, x - 1)];
+    const b = col[x];
+    const c = col[Math.min(sw - 1, x + 1)];
+    smooth[x] = (a + b * 2 + c) * 0.25;
+  }
+  let peak = 0;
+  for (let x = 0; x < sw; x++) {
+    if (smooth[x] > peak) peak = smooth[x];
+  }
+  if (peak < 0.85) return null;
+  const thr = peak * 0.24;
+  const eightFirst = findEightDigitPeakWindow(smooth, sw, peak);
+  let pick = eightFirst;
+  const runs = [];
+  let i = 0;
+  while (i < sw) {
+    while (i < sw && smooth[i] < thr) i++;
+    if (i >= sw) break;
+    const start = i;
+    while (i < sw && smooth[i] >= thr) i++;
+    runs.push({ start, end: i - 1, width: i - start });
+  }
+  if (!pick && runs.length) {
+    if (runs.length === 1) {
+      const r = runs[0];
+      const minW = Math.max(8, Math.floor(sw * 0.22));
+      const maxW = Math.floor(sw * 0.72);
+      if (r.width >= minW) {
+        let x0 = r.start;
+        let x1 = r.end;
+        if (r.width > maxW) {
+          let bestScore = -1;
+          let bestX0 = x0;
+          let bestX1 = x1;
+          const winMin = Math.max(8, Math.floor(sw * 0.28));
+          const winMax = Math.min(r.width, Math.floor(sw * 0.42));
+          for (let w = winMin; w <= winMax; w++) {
+            for (let sx = r.start; sx + w <= r.end + 1; sx++) {
+              let sum = 0;
+              for (let x = sx; x < sx + w; x++) sum += smooth[x];
+              const posBonus = sx >= Math.floor(sw * 0.18) ? (sx / sw) * peak * 0.35 : 0;
+              const score = sum + posBonus;
+              if (score > bestScore) {
+                bestScore = score;
+                bestX0 = sx;
+                bestX1 = sx + w - 1;
+              }
+            }
+          }
+          x0 = bestX0;
+          x1 = bestX1;
+        }
+        pick = { x0, x1 };
+      }
+    } else {
+      let best = null;
+      for (let ri = 0; ri < runs.length; ri++) {
+        const r = runs[ri];
+        if (r.width < Math.floor(sw * 0.18)) continue;
+        const cx = (r.start + r.end) * 0.5;
+        let sum = 0;
+        for (let x = r.start; x <= r.end; x++) sum += smooth[x];
+        const posBonus = cx >= sw * 0.22 ? (cx / sw) * peak * 0.5 : -peak * 0.2;
+        const score = sum + posBonus;
+        if (!best || score > best.score) best = { ...r, score };
+      }
+      if (!best) {
+        const r = runs[runs.length - 1];
+        pick = { x0: r.start, x1: r.end };
+      } else {
+        pick = { x0: best.start, x1: best.end };
+      }
+    }
+  }
+  if (!pick || pick.x1 <= pick.x0) {
+    const eight = findEightDigitPeakWindow(smooth, sw, peak);
+    if (eight) pick = eight;
+  }
+  if (pick && pick.x1 > pick.x0) {
+    const spanPx = pick.x1 - pick.x0;
+    const maxEightSpan = sw * 0.44;
+    if (spanPx > maxEightSpan) {
+      const tight = findEightDigitPeakWindow(smooth, sw, peak);
+      if (tight) pick = tight;
+    }
+  }
+  if (!pick || pick.x1 <= pick.x0) return null;
+  const fromPeaks = pick.avgStep != null || eightFirst === pick;
+  const spanPick = fromPeaks ? passcodeSpanFromEightPeaks(pick, sw) : pick;
+  const pad = fromPeaks ? 0 : Math.max(1, Math.round((spanPick.x1 - spanPick.x0 + 1) * 0.03));
+  const x0 = Math.max(0, spanPick.x0 - pad);
+  const x1 = Math.min(sw - 1, spanPick.x1 + pad);
+  const minWFrac = PASSCODE_OCR_MIN_STRIP_WIDTH_FRAC;
+  const avgStepPx = pick.avgStep != null && pick.avgStep > 0 ? pick.avgStep : (x1 - x0 + 1) / 7;
+  const minW = Math.max(
+    cropRect.width * minWFrac,
+    (avgStepPx / sw) * cropRect.width * 7.5
+  );
+  const rawW = ((x1 - x0 + 1) / sw) * cropRect.width;
+  const width = Math.max(minW, rawW);
+  const cx = cropRect.x + ((x0 + x1) * 0.5 / sw) * cropRect.width;
+  return {
+    x: cx - width * 0.5,
+    y: cropRect.y + cropRect.height * 0.1,
+    width: Math.max(6, width),
+    height: Math.max(3, cropRect.height * 0.8),
+  };
+}
+
+/**
+ * Recorte final para OCR: região TCG dos 8 dígitos + refinamento opcional por colunas.
+ * @param {CanvasImageSource|null} media
+ * @param {{ x: number, y: number, width: number, height: number }|null} base
+ * @param {{ x: number, y: number, width: number, height: number }|null} [seed]
+ * @param {{ x: number, y: number, width: number, height: number }|null} [typeCropRect]
+ * @param {null|{ passcodeDigits?: object, passcodeStrip?: object }} [ocrWarp]
+ * @returns {{ x: number, y: number, width: number, height: number }|null}
+ */
+function resolvePasscodeOcrCrop(media, base, seed, typeCropRect, ocrWarp) {
+  const seedBand = passcodeDigitBandFromTypeCrop(typeCropRect);
+  let digitBand =
+    (ocrWarp && ocrWarp.passcodeDigits) ||
+    seedBand ||
+    (seed && isValidPasscodeOcrCrop(seed) ? seed : null) ||
+    (base && isValidPasscodeOcrCrop(base) ? base : null);
+  if (!digitBand) return null;
+  digitBand = trimPasscodeCropVertical(digitBand);
+  const minBandW = seedBand ? seedBand.width * 0.78 : digitBand.width * 0.78;
+  if (media) {
+    const stripIsSeed = seed && seed.width >= digitBand.width * 1.35;
+    const strip =
+      (ocrWarp && ocrWarp.passcodeStrip) ||
+      passcodeStripFromTypeCrop(typeCropRect) ||
+      (stripIsSeed
+        ? seed
+        : seed
+          ? {
+              x: Math.max(0, seed.x - seed.width * 0.55),
+              y: seed.y,
+              width: Math.max(16, seed.width * 2.15),
+              height: seed.height,
+            }
+          : base);
+    if (strip && strip.width >= 14) {
+      const ink = findPasscodeEightDigitBand(media, strip);
+      if (ink && isValidPasscodeOcrCrop(ink)) {
+        const minInkW = Math.max(strip.width * PASSCODE_OCR_MIN_STRIP_WIDTH_FRAC, minBandW * 0.78);
+        const relW = ink.width / strip.width;
+        const inkInStrip =
+          ink.x >= strip.x + strip.width * 0.16 &&
+          relW >= PASSCODE_OCR_MIN_STRIP_WIDTH_FRAC &&
+          relW <= 0.68;
+        if (ink.width >= minInkW && (inkInStrip || passcodeCropNearBand(ink, digitBand))) {
+          digitBand = trimPasscodeCropVertical(ink);
+        }
+      }
+    }
+  }
+  if (seedBand && digitBand.width < seedBand.width * 0.78) {
+    digitBand = trimPasscodeCropVertical(seedBand);
+  }
+  return isValidPasscodeOcrCrop(digitBand) ? digitBand : null;
+}
+
+/** @deprecated Use resolvePasscodeOcrCrop — mantido para variantes de trimR. */
+function refinePasscodeCropForOcr(passcodeVisualRect, opts) {
+  void opts;
+  return trimPasscodeCropVertical(passcodeVisualRect);
+}
+
+/**
+ * Limita o recorte à faixa dos 8 dígitos (só quando o refine alargou demais à direita).
+ * @param {{ x: number, y: number, width: number, height: number }} base
+ * @param {{ x: number, y: number, width: number, height: number }|null} seed
+ * @returns {{ x: number, y: number, width: number, height: number }}
+ */
+function clampPasscodeCropToDigitBand(base, seed) {
+  if (!base || !seed || seed.width < 4) return base;
+  if (base.width <= seed.width * 1.08) return base;
+  const maxW = Math.max(8, seed.width * 0.94);
+  if (base.width <= maxW) return base;
+  return { x: base.x, y: base.y, width: maxW, height: base.height };
 }
 
 /**
@@ -35876,19 +44214,24 @@ function refinePasscodeCropForOcr(passcodeVisualRect, trimR = 0.36) {
  * @param {{ x: number, y: number, width: number, height: number }} passcodeVisualRect
  * @returns {{ x: number, y: number, width: number, height: number }[]}
  */
-function buildPasscodeCropVariants(passcodeVisualRect) {
+function buildPasscodeCropVariants(passcodeVisualRect, media, seed, typeCropRect, ocrWarp) {
   if (!passcodeVisualRect || passcodeVisualRect.width < 4) return [];
-  return [0.32, 0.4, 0.48].map((trimR) => refinePasscodeCropForOcr(passcodeVisualRect, trimR));
+  const primary = resolvePasscodeOcrCrop(media, passcodeVisualRect, seed, typeCropRect, ocrWarp);
+  return primary ? [primary] : [];
 }
 
 /**
- * Recorte final do passcode (sempre exclui «1ª Edição» / código de barras à direita).
+ * Recorte final do passcode (8 dígitos matte).
+ * @param {CanvasImageSource|null} media
  * @param {{ x: number, y: number, width: number, height: number }|null} rect
+ * @param {{ x: number, y: number, width: number, height: number }|null} [seed]
+ * @param {{ x: number, y: number, width: number, height: number }|null} [typeCropRect]
+ * @param {object|null} [ocrWarp]
  * @returns {{ x: number, y: number, width: number, height: number }|null}
  */
-function finalizePasscodeCropForOcr(rect) {
+function finalizePasscodeCropForOcr(media, rect, seed, typeCropRect, ocrWarp) {
   if (!rect || rect.width < 4 || rect.height < 2) return null;
-  return refinePasscodeCropForOcr(rect);
+  return resolvePasscodeOcrCrop(media, rect, seed, typeCropRect, ocrWarp);
 }
 
 /** Largura/altura do preview passcode (faixa horizontal). */
@@ -35992,20 +44335,32 @@ function binarizePasscodeMatteMild(ctx, w, h, mode = 'darkOnLight') {
     sum += L;
   }
   const mean = sum / n;
-  const sorted = Array.from(lum).sort((a, b) => a - b);
-  const pct = (q) => sorted[Math.max(0, Math.min(n - 1, Math.floor(n * q)))];
-  const p35 = pct(0.35);
-  const p65 = pct(0.65);
+  const otsu = otsuThresholdFromLum(lum, n);
   const thresh =
     mode === 'lightOnDark'
-      ? Math.max(108, Math.min(210, Math.round((255 - p35) * 0.55 + p65 * 0.45)))
-      : Math.max(72, Math.min(168, Math.round(p35 * 0.72 + mean * 0.28 + 4)));
+      ? Math.max(96, Math.min(210, Math.round((255 - otsu) * 0.88 + (255 - mean) * 0.12 - 4)))
+      : Math.max(56, Math.min(176, Math.round(otsu * 0.86 + mean * 0.14 - 2)));
+  let darkPx = 0;
   for (let p = 0, i = 0; p < n; p++, i += 4) {
     let L = lum[p];
     if (mode === 'lightOnDark') L = 255 - L;
     const v = L < thresh ? 0 : 255;
+    if (v === 0) darkPx++;
     d[i] = d[i + 1] = d[i + 2] = v;
     d[i + 3] = 255;
+  }
+  if (darkPx < n * 0.008 || darkPx > n * 0.42) {
+    const alt =
+      mode === 'lightOnDark'
+        ? Math.max(88, Math.min(205, Math.round((255 - otsu) * 0.72 + (255 - mean) * 0.28)))
+        : Math.max(48, Math.min(168, Math.round(otsu * 0.78 + mean * 0.22)));
+    for (let p = 0, i = 0; p < n; p++, i += 4) {
+      let L = lum[p];
+      if (mode === 'lightOnDark') L = 255 - L;
+      const v = L < alt ? 0 : 255;
+      d[i] = d[i + 1] = d[i + 2] = v;
+      d[i + 3] = 255;
+    }
   }
   ctx.putImageData(img, 0, 0);
 }
@@ -36110,17 +44465,43 @@ function drawPasscodeRawCropToCanvas(video, cropRect, targetCanvas, outW, outH) 
  * @param {HTMLCanvasElement} [reuseCanvas]
  * @returns {HTMLCanvasElement|null}
  */
-function buildScannerNaturalLivePreviewCanvas(media, cropRect, cardType, reuseCanvas) {
+function buildScannerNaturalLivePreviewCanvas(media, cropRect, cardType, reuseCanvas, wysiwyg) {
   if (!media || !cropRect || cropRect.width < 4) return null;
   const canvas = reuseCanvas || document.createElement('canvas');
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
   if (!ctx) return null;
-  canvas.width = OCR_CANVAS_W;
-  canvas.height = OCR_CANVAS_H;
   const lightPlate =
     cardType === 'Magia' ||
     cardType === 'Monstro Ritual' ||
     cardType === 'Monstro Sincro';
+  if (wysiwyg) {
+    const outW = OCR_PREVIEW_LIVE_W;
+    const outH = Math.max(36, Math.round(outW * (cropRect.height / cropRect.width)));
+    canvas.width = outW;
+    canvas.height = outH;
+    ctx.fillStyle = lightPlate ? '#ececec' : '#161616';
+    ctx.fillRect(0, 0, outW, outH);
+    try {
+      ctx.drawImage(
+        media,
+        cropRect.x,
+        cropRect.y,
+        cropRect.width,
+        cropRect.height,
+        0,
+        0,
+        outW,
+        outH
+      );
+    } catch (_) {
+      return null;
+    }
+    applyHighlightGlareCompress(ctx, 0, 0, outW, outH);
+    applyLocalContrastNormalize(ctx, 0, 0, outW, outH, 10, 3);
+    return canvas;
+  }
+  canvas.width = OCR_CANVAS_W;
+  canvas.height = OCR_CANVAS_H;
   ctx.fillStyle = lightPlate ? '#ececec' : '#161616';
   ctx.fillRect(0, 0, OCR_CANVAS_W, OCR_CANVAS_H);
   const { dstX, dstY, dstW, dstH } = computeOcrNameDestRect(cardType, cropRect);
@@ -36144,6 +44525,146 @@ function buildScannerNaturalLivePreviewCanvas(media, cropRect, cardType, reuseCa
   return canvas;
 }
 
+/**
+ * Preview nome lite durante coleta: só blit crop/warp (sem contraste local pesado).
+ * @param {CanvasImageSource} media
+ * @param {{ x: number, y: number, width: number, height: number }} cropRect
+ * @param {string} cardType
+ * @param {HTMLCanvasElement} [reuseCanvas]
+ * @returns {HTMLCanvasElement|null}
+ */
+function buildScannerLiteLivePreviewCanvas(media, cropRect, cardType, reuseCanvas, wysiwyg) {
+  if (!media || !cropRect || cropRect.width < 4) return null;
+  const canvas = reuseCanvas || document.createElement('canvas');
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  if (!ctx) return null;
+  const lightPlate =
+    cardType === 'Magia' ||
+    cardType === 'Monstro Ritual' ||
+    cardType === 'Monstro Sincro';
+  if (wysiwyg) {
+    const outW = OCR_PREVIEW_LIVE_W;
+    const outH = Math.max(36, Math.round(outW * (cropRect.height / cropRect.width)));
+    canvas.width = outW;
+    canvas.height = outH;
+    ctx.fillStyle = lightPlate ? '#ececec' : '#161616';
+    ctx.fillRect(0, 0, outW, outH);
+    try {
+      ctx.drawImage(
+        media,
+        cropRect.x,
+        cropRect.y,
+        cropRect.width,
+        cropRect.height,
+        0,
+        0,
+        outW,
+        outH
+      );
+    } catch (_) {
+      return null;
+    }
+    return canvas;
+  }
+  canvas.width = OCR_CANVAS_W;
+  canvas.height = OCR_CANVAS_H;
+  ctx.fillStyle = lightPlate ? '#ececec' : '#161616';
+  ctx.fillRect(0, 0, OCR_CANVAS_W, OCR_CANVAS_H);
+  const { dstX, dstY, dstW, dstH } = computeOcrNameDestRect(cardType, cropRect);
+  try {
+    ctx.drawImage(
+      media,
+      cropRect.x,
+      cropRect.y,
+      cropRect.width,
+      cropRect.height,
+      dstX,
+      dstY,
+      dstW,
+      dstH
+    );
+  } catch (_) {
+    return null;
+  }
+  return canvas;
+}
+
+/**
+ * Verifica se o canvas passcode tem contraste útil (não faixa preta/branca vazia).
+ * @param {HTMLCanvasElement|null} canvas
+ * @returns {boolean}
+ */
+function isPasscodePreviewCanvasLegible(canvas) {
+  if (!canvas || canvas.width < 8 || canvas.height < 4) return false;
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  if (!ctx) return false;
+  let img;
+  try {
+    img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  } catch (_) {
+    return false;
+  }
+  const d = img.data;
+  let dark = 0;
+  let bright = 0;
+  let sum = 0;
+  let sumSq = 0;
+  const n = d.length / 4;
+  for (let i = 0; i < d.length; i += 4) {
+    const L = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+    sum += L;
+    sumSq += L * L;
+    if (L < 42) dark++;
+    if (L > 210) bright++;
+  }
+  const mean = sum / n;
+  const std = Math.sqrt(Math.max(0, sumSq / n - mean * mean));
+  if (dark / n > 0.9 || bright / n > 0.92) return false;
+  return std >= 14;
+}
+
+/**
+ * Verifica legibilidade do preview nome (evita binário ilegível em foil).
+ * @param {HTMLCanvasElement|null} canvas
+ * @param {{ x: number, y: number, width: number, height: number }|null} cropRect
+ * @param {string} cardType
+ * @returns {boolean}
+ */
+function isOcrNamePreviewCanvasLegible(canvas, cropRect, cardType) {
+  if (!canvas || !cropRect) return false;
+  const strip = getOcrNameStripRect(cardType, cropRect);
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  if (!ctx) return false;
+  const x0 = Math.max(0, Math.floor(strip.x));
+  const y0 = Math.max(0, Math.floor(strip.y));
+  const w = Math.min(canvas.width - x0, Math.ceil(strip.width));
+  const h = Math.min(canvas.height - y0, Math.ceil(strip.height));
+  if (w < 8 || h < 4) return false;
+  let img;
+  try {
+    img = ctx.getImageData(x0, y0, w, h);
+  } catch (_) {
+    return false;
+  }
+  const d = img.data;
+  let dark = 0;
+  let bright = 0;
+  let sum = 0;
+  let sumSq = 0;
+  const n = d.length / 4;
+  for (let i = 0; i < d.length; i += 4) {
+    const L = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+    sum += L;
+    sumSq += L * L;
+    if (L < 48) dark++;
+    if (L > 205) bright++;
+  }
+  const mean = sum / n;
+  const std = Math.sqrt(Math.max(0, sumSq / n - mean * mean));
+  if (dark / n > 0.88 || bright / n > 0.9) return false;
+  return std >= 16;
+}
+
 function buildPasscodeLiveRobotCanvas(media, cropRect, hint) {
   if (!media || !cropRect || cropRect.width < 4) return null;
   if (!ocrLivePasscodeScratch) ocrLivePasscodeScratch = document.createElement('canvas');
@@ -36163,50 +44684,264 @@ function buildPasscodeLiveRobotCanvas(media, cropRect, hint) {
   } catch (_) {
     return null;
   }
-  applyHighlightGlareCompress(ctx, 0, 0, outW, outH, 215);
-  ctx.filter = 'grayscale(1) contrast(1.28) brightness(1.05)';
-  ctx.drawImage(c, 0, 0);
-  ctx.filter = 'none';
+  const matte = !!(hint && hint.matteIdDigits);
+  if (matte) {
+    applyPasscodeGrayscaleStretch(ctx, outW, outH);
+    applyPasscodeMatteSharpen(ctx, outW, outH);
+    ctx.filter = 'grayscale(1) contrast(1.72) brightness(1.04)';
+    ctx.drawImage(c, 0, 0);
+    ctx.filter = 'none';
+  } else {
+    applyHighlightGlareCompress(ctx, 0, 0, outW, outH, 215);
+    ctx.filter = 'grayscale(1) contrast(1.28) brightness(1.05)';
+    ctx.drawImage(c, 0, 0);
+    ctx.filter = 'none';
+  }
   return c;
 }
 
-function refreshOcrRobotPreviewsFromVideo(video, nameCropVisual, typeCropRect, passcodeVisual) {
+/** Passcode preview lite: só blit crop (sem grayscale/sharpen). */
+function buildPasscodeLiteLiveRobotCanvas(media, cropRect) {
+  if (!media || !cropRect || cropRect.width < 4) return null;
+  if (!ocrLivePasscodeScratch) ocrLivePasscodeScratch = document.createElement('canvas');
+  const c = ocrLivePasscodeScratch;
+  const outW = OCR_PREVIEW_PASSCODE_LIVE_W;
+  const outH = OCR_PREVIEW_PASSCODE_LIVE_H;
+  if (c.width !== outW || c.height !== outH) {
+    c.width = outW;
+    c.height = outH;
+  }
+  const ctx = c.getContext('2d', { willReadFrequently: true });
+  if (!ctx) return null;
+  try {
+    blitPasscodeCropFitHeight(ctx, media, cropRect, outW, outH);
+  } catch (_) {
+    return null;
+  }
+  return c;
+}
+
+/**
+ * Preview passcode WYSIWYG — mesmo recorte e pipeline que {@link recognizePasscodeFromCrop}.
+ * @param {CanvasImageSource} media
+ * @param {{ x: number, y: number, width: number, height: number }} cropRect
+ * @param {object|null} hint
+ * @returns {HTMLCanvasElement|null}
+ */
+function buildPasscodePreviewWysiwygCanvas(media, cropRect, hint) {
+  if (!media || !cropRect || cropRect.width < 4) return null;
+  const rawRobot = buildPasscodeLiveRobotCanvas(media, cropRect, hint);
+  if (!passcodeOcrCanvasReuse) passcodeOcrCanvasReuse = document.createElement('canvas');
+  const variants = buildPasscodeOcrVariants(media, cropRect, passcodeOcrCanvasReuse, hint);
+  if (!variants) return rawRobot;
+  let src = null;
+  for (const cand of [variants.stretchRaw, variants.lcRaw, variants.rawCanvas]) {
+    if (cand && isPasscodePreviewCanvasLegible(cand)) {
+      src = cand;
+      break;
+    }
+  }
+  if (!src) return rawRobot;
+  if (!ocrLivePasscodeScratch) ocrLivePasscodeScratch = document.createElement('canvas');
+  const out = ocrLivePasscodeScratch;
+  const outW = OCR_PREVIEW_PASSCODE_LIVE_W;
+  const outH = OCR_PREVIEW_PASSCODE_LIVE_H;
+  if (out.width !== outW || out.height !== outH) {
+    out.width = outW;
+    out.height = outH;
+  }
+  const ctx = out.getContext('2d', { alpha: false });
+  if (!ctx) return null;
+  ctx.fillStyle = '#e8e8e8';
+  ctx.fillRect(0, 0, outW, outH);
+  ctx.imageSmoothingEnabled = false;
+  try {
+    ctx.drawImage(src, 0, 0, src.width, src.height, 0, 0, outW, outH);
+  } catch (_) {
+    return rawRobot;
+  }
+  return out;
+}
+
+/**
+ * Tipo/raridade esperados na coleta benchmark (seq actual).
+ * @returns {{ type: string, rarity: string }}
+ */
+function benchmarkVisionHintsForCaptureSeq() {
+  const seq =
+    ocrDiagnosticsSession && ocrDiagnosticsSession.samples
+      ? ocrDiagnosticsSession.samples.length
+      : 0;
+  const exp = expectedBenchmarkPasscodeForSeq(seq);
+  const type = benchmarkTypeHintFromPasscode(exp) || lastDetectedCardType || 'Monstro Efeito';
+  const rarity =
+    (exp != null && SCANNER_BENCHMARK_RARITY_BY_PASSCODE[exp]) ||
+    lastDetectedCardRarity ||
+    'Comum';
+  return { type, rarity };
+}
+
+/**
+ * Tipo/raridade para preview WYSIWYG — espelha sonda do loop preview (não lastDetected stale).
+ * @param {HTMLVideoElement} video
+ * @param {{ x: number, y: number, width: number, height: number }} nameCrop
+ * @param {{ x: number, y: number, width: number, height: number }|null} typeCropRect
+ * @param {object|null} track
+ * @param {object|null} ocrWarp
+ * @returns {{ type: string, rarity: string }}
+ */
+function resolveOcrPreviewVisionHints(video, nameCrop, typeCropRect, track, ocrWarp) {
+  if (ocrDiagnosticsCaptureActive && ocrDiagnosticsSession) {
+    return benchmarkVisionHintsForCaptureSeq();
+  }
+  const snap = ocrDiagLastTypeProbeSnap;
+  const probe =
+    snap && snap.probe && Date.now() - snap.at < 900
+      ? snap.probe
+      : probeCardTypeDiagnostics(video, nameCrop, typeCropRect, ocrWarp);
+  const cardType =
+    (probe && (probe.classifiedTypeMerged || probe.classifiedType)) || 'Monstro Efeito';
+  let rarity = lastDetectedCardRarity || 'Comum';
+  const nameForRarity = refineNameCropForOcr(
+    ocrWarp && ocrWarp.nameCrop ? ocrWarp.nameCrop : nameCrop
+  );
+  const rarityProbe = probeCardRarityDiagnostics(
+    video,
+    nameForRarity,
+    typeCropRect,
+    cardType,
+    ocrWarp
+  );
+  if (rarityProbe && rarityProbe.classifiedRarity) rarity = rarityProbe.classifiedRarity;
+  return { type: cardType, rarity };
+}
+
+function warnDomVsOcrPasscodeCropMismatch(domCrop, ocrCrop, typeCropRect) {
+  if (!domCrop || !ocrCrop || !typeCropRect) return;
+  const strip = passcodeStripFromTypeCrop(typeCropRect);
+  if (!strip || strip.width < 8) return;
+  const ocrW = ocrCrop.width != null ? ocrCrop.width : ocrCrop.w;
+  const domCx = domCrop.x + domCrop.width * 0.5;
+  const ocrCx = ocrCrop.x + ocrW * 0.5;
+  const diffFrac = Math.abs(domCx - ocrCx) / strip.width;
+  if (diffFrac > 0.03) {
+    console.warn('[ocr-wysiwyg] domPasscodeCrop vs ocrPasscodeCrop cx diff', {
+      diffFrac: +diffFrac.toFixed(4),
+      domCrop,
+      ocrCrop,
+    });
+  }
+}
+
+function refreshOcrRobotPreviewsFromVideo(video, nameCropVisual, typeCropRect, passcodeVisual, opts) {
   if (!video || video.videoWidth < 4) return;
-  const ocrWarp = buildScannerWarpOcrContext(video, lastOcrCardTrackPack);
-  const previewMedia = ocrWarp ? ocrWarp.media : video;
-  const nameCrop = ocrWarp ? ocrWarp.nameCrop : nameCropVisual;
-  const passCrop = ocrWarp ? ocrWarp.passcodeCrop : passcodeVisual;
-  const cardType = lastDetectedCardType || 'Monstro Efeito';
-  const rarity = lastDetectedCardRarity || 'Comum';
-  if (nameCrop && nameCrop.width >= 4) {
+  const track = (opts && opts.track) || null;
+  const trackPack = resolveScannerTrackPackForWarp(track, video, typeCropRect);
+  const ocrWarp = buildScannerWarpOcrContext(video, trackPack);
+  const namePreviewCrop = getScannerDomCrop(video, 'scanner-visual') || nameCropVisual;
+  const passPreviewCrop =
+    getScannerDomCrop(video, 'scanner-passcode-visual') || passcodeVisual;
+  const passcodeOcrHint =
+    resolvePasscodeOcrHintRect(ocrWarp, typeCropRect, trackPack) || passPreviewCrop;
+  warnDomVsOcrPasscodeCropMismatch(passPreviewCrop, passcodeOcrHint, typeCropRect);
+  const nameCropOcrInternal = ocrWarp
+    ? refineNameCropForOcr(ocrWarp.nameCrop, ocrScannerIsMobile())
+    : refineNameCropForOcr(namePreviewCrop, ocrScannerIsMobile());
+  const lite = !!(opts && opts.lite);
+  const { type: cardType, rarity } = resolveOcrPreviewVisionHints(
+    video,
+    nameCropOcrInternal,
+    typeCropRect,
+    track,
+    ocrWarp
+  );
+  if (namePreviewCrop && namePreviewCrop.width >= 4) {
     const preview = getEl('preview-canvas');
     if (preview) {
       if (!ocrLiveNameScratch) ocrLiveNameScratch = document.createElement('canvas');
-      const handFree = !!ocrWarp && ocrScannerIsMobile();
-      const nameCropOcr = refineNameCropForOcr(nameCrop, handFree);
-      const naturalCanvas = buildScannerNaturalLivePreviewCanvas(
-        previewMedia,
-        nameCropOcr,
-        cardType,
-        ocrLiveNameScratch
-      );
-      if (naturalCanvas) {
-        paintOcrPreviewCanvas(preview, naturalCanvas, cardType, OCR_PREVIEW_LIVE_W, {
+      let ocrCanvas = null;
+      if (lite) {
+        ocrCanvas = buildScannerLiteLivePreviewCanvas(
+          video,
+          namePreviewCrop,
+          cardType,
+          ocrLiveNameScratch,
+          true
+        );
+      } else {
+        ocrCanvas = buildScannerNaturalLivePreviewCanvas(
+          video,
+          namePreviewCrop,
+          cardType,
+          ocrLiveNameScratch,
+          true
+        );
+      }
+      if (ocrCanvas) {
+        paintOcrPreviewCanvas(preview, ocrCanvas, cardType, OCR_PREVIEW_LIVE_W, {
+          wysiwyg: true,
+          cardType,
           rarity,
           settings: { lightCanvas: cardType === 'Magia' || cardType === 'Monstro Sincro' },
         });
       }
     }
   }
-  const passVis = passCrop || passcodeVisual || mapVisualBoxToVideoCrop(video, getEl('scanner-passcode-visual'));
-  const passcodeCrop = finalizePasscodeCropForOcr(
-    ocrWarp ? ocrWarp.passcodeCrop : getPasscodeCropForOcr(passVis, typeCropRect)
-  );
-  if (passcodeCrop) {
-    const idHint = derivePasscodeOcrHint(video, typeCropRect, cardType, rarity, passcodeCrop);
-    const robot = buildPasscodeLiveRobotCanvas(previewMedia, passcodeCrop, idHint);
+  if (passPreviewCrop && passPreviewCrop.width >= 4) {
+    const passcodeBase = resolvePasscodeBaseForOcr(ocrWarp, passPreviewCrop, typeCropRect);
+    const idHint = derivePasscodeOcrHint(
+      video,
+      typeCropRect,
+      cardType,
+      rarity,
+      passcodeBase,
+      ocrWarp ? ocrWarp.media : video
+    );
+    let robot = buildPasscodePreviewWysiwygCanvas(video, passPreviewCrop, idHint);
+    if (!robot) robot = buildPasscodeLiveRobotCanvas(video, passPreviewCrop, idHint);
     if (robot) paintPasscodePreviewCanvasLive(robot);
   }
+}
+
+/** Badge/borda tracejada quando preview coleta está em throttle. */
+function updateOcrCapturePreviewThrottleUi(throttled) {
+  const wrap = getEl('ocr-preview-wrap');
+  if (!wrap) return;
+  if (!ocrDiagnosticsCaptureActive) {
+    wrap.classList.remove('ocr-preview-wrap--capture-throttled');
+    if (ocrDiagPreviewThrottleBadge) ocrDiagPreviewThrottleBadge.hidden = true;
+    return;
+  }
+  wrap.classList.toggle('ocr-preview-wrap--capture-throttled', !!throttled);
+  if (!ocrDiagPreviewThrottleBadge) {
+    ocrDiagPreviewThrottleBadge = document.createElement('div');
+    ocrDiagPreviewThrottleBadge.id = 'ocr-preview-capture-badge';
+    ocrDiagPreviewThrottleBadge.className = 'ocr-preview-capture-badge';
+    ocrDiagPreviewThrottleBadge.textContent = 'Preview pausado (modo coleta)';
+    wrap.style.position = wrap.style.position || 'relative';
+    wrap.appendChild(ocrDiagPreviewThrottleBadge);
+  }
+  ocrDiagPreviewThrottleBadge.hidden = !throttled;
+}
+
+/**
+ * Atualiza chips tipo/raridade durante coleta (hint benchmark + sonda leve).
+ * @param {object|null|undefined} typeProbe
+ * @returns {void}
+ */
+function updateCaptureVisionChipsFromProbe(typeProbe) {
+  const bench = benchmarkVisionHintsForCaptureSeq();
+  const nextType =
+    bench.type ||
+    (typeProbe && (typeProbe.classifiedTypeMerged || typeProbe.classifiedType)) ||
+    'Monstro Efeito';
+  const nextRarity = bench.rarity || 'Comum';
+  if (bench.type) lastDetectedCardType = bench.type;
+  if (bench.rarity) lastDetectedCardRarity = bench.rarity;
+  setVisionTypeRarity(nextType, nextRarity, {
+    calibrating: false,
+    forceDetectedDisplay: !!(ocrDiagnosticsCaptureActive && bench.type),
+  });
 }
 
 /**
@@ -36216,8 +44951,20 @@ function refreshOcrRobotPreviewsFromVideo(video, nameCropVisual, typeCropRect, p
 function ocrPreviewFrameTick() {
   if (!ocrPreviewLoopActive || !isOcrActive) {
     ocrPreviewLoopRaf = 0;
+    ocrPreviewLastFrameAt = 0;
     return;
   }
+  const tickNow = performance.now();
+  if (ocrPreviewLastFrameAt > 0 && ocrDiagnosticsCaptureActive) {
+    const frameDelta = tickNow - ocrPreviewLastFrameAt;
+    if (frameDelta > OCR_DIAG_FRAME_STALL_MS) {
+      ocrDiagLastFrameStallMs = Math.round(frameDelta);
+      if (frameDelta > OCR_DIAG_FRAME_STALL_MS * 2) {
+        console.warn(`[ocr-diag] preview frame stall ${Math.round(frameDelta)}ms`);
+      }
+    }
+  }
+  ocrPreviewLastFrameAt = tickNow;
   ocrPreviewLoopRaf = requestAnimationFrame(ocrPreviewFrameTick);
   const video = getEl('ocr-video');
   if (!video || video.videoWidth === 0) return;
@@ -36228,11 +44975,70 @@ function ocrPreviewFrameTick() {
   const passcodeVisual = crops.passcodeVisual;
   onScannerSceneMaybeChanged(video, nameCropVisual, typeCropRect);
   updateScannerFramingState(video, nameCropVisual, crops.track);
-  quickVisionProbeAndUpdate(video, nameCropVisual, typeCropRect);
+  if (ocrDiagnosticsCaptureActive && nameCropVisual) {
+    ocrDiagLastPreviewSampleCtx = {
+      video,
+      nameCropVisual,
+      typeCropRect,
+      track: crops.track,
+      cropSource: crops.source,
+    };
+    if (ocrDiagArtOnlyBlockReason() === 'art_only_cap') {
+      maybeRecordOcrDiagPipelineFromCache();
+    }
+    scheduleOcrDiagnosticsArtOnlySample(
+      video,
+      nameCropVisual,
+      typeCropRect,
+      crops.track,
+      crops.source
+    );
+  }
+  quickVisionProbeAndUpdate(video, nameCropVisual, typeCropRect, {
+    attributeVisual: crops.attributeVisual,
+    levelRankVisual: crops.levelRankVisual,
+    track: crops.track,
+  });
   const now = performance.now();
-  if (now - lastOcrPreviewPaintAt >= 48) {
+  let shouldRefresh = false;
+  let previewThrottled = false;
+  let useLite = false;
+  if (ocrDiagnosticsCaptureActive) {
+    useLite = true;
+    const session = ocrDiagnosticsSession;
+    const seq = session && session.samples ? session.samples.length : 0;
+    const expPc = expectedBenchmarkPasscodeForSeq(seq);
+    if (expPc !== ocrDiagLastPreviewSegmentPasscode) {
+      ocrDiagLastPreviewSegmentPasscode = expPc;
+      ocrDiagLastTypeProbeSnap = null;
+      clearOcrLiveReadDisplay();
+      clearOcrPasscodeLiveReadDisplay();
+      if (lastOcrPreviewPaintAt > 0) shouldRefresh = true;
+    }
+    const isPipelineSlot =
+      session && isBenchmarkPipelineSlotForSeq(seq) && ocrDiagCanRecordPipeline();
+    const minInterval = isPipelineSlot
+      ? OCR_DIAG_CAPTURE_PREVIEW_MS
+      : OCR_DIAG_ART_ONLY_PREVIEW_MS;
+    if (minInterval <= 0) {
+      previewThrottled = true;
+    } else if (shouldRefresh || now - lastOcrPreviewPaintAt >= minInterval) {
+      shouldRefresh = true;
+    } else {
+      previewThrottled = true;
+    }
+  } else if (now - lastOcrPreviewPaintAt >= 48) {
+    shouldRefresh = true;
+  }
+  updateOcrCapturePreviewThrottleUi(previewThrottled);
+  if (shouldRefresh) {
     lastOcrPreviewPaintAt = now;
-    refreshOcrRobotPreviewsFromVideo(video, nameCropVisual, typeCropRect, passcodeVisual);
+    refreshOcrRobotPreviewsFromVideo(video, nameCropVisual, typeCropRect, passcodeVisual, {
+      lite: useLite,
+      track: crops.track,
+    });
+  } else if (previewThrottled && ocrDiagnosticsCaptureActive) {
+    clearOcrPreviewCanvases();
   }
 }
 
@@ -36259,16 +45065,79 @@ function stopOcrPreviewLoop() {
  * @param {{ x: number, y: number, width: number, height: number }|null} typeCropRect
  * @returns {void}
  */
-function quickVisionProbeAndUpdate(video, nameCropRect, typeCropRect) {
+/**
+ * @param {HTMLVideoElement} video
+ * @param {{ attributeVisual?: object|null, levelRankVisual?: object|null }} crops
+ * @param {string} cardTypeHint
+ * @returns {Promise<object|null>}
+ */
+async function probeCardFeatureMirasFromVideo(video, crops, cardTypeHint, ocrWarp) {
+  const mod = await getOcrCardFeaturesModule();
+  if (!mod || typeof mod.probeCardFeatureMiras !== 'function') return null;
+  const ctx = resolveFeatureProbeContext(video, ocrWarp, crops || {});
+  if (!ctx.attributeVisual && !ctx.levelRankVisual) return null;
+  return mod.probeCardFeatureMiras(
+    ctx.media,
+    ctx.attributeVisual,
+    ctx.levelRankVisual,
+    cardTypeHint
+  );
+}
+
+/**
+ * @param {object|null} featureProbe
+ * @param {string} uiType
+ * @returns {object|null}
+ */
+function buildArtHashMetaProbe(featureProbe, uiType) {
+  if (!featureProbe) return uiType ? { uiType } : null;
+  const probe = { uiType: uiType || null, attr: featureProbe.attribute || null };
+  const lr = featureProbe.levelRank;
+  if (lr && lr.kind === 'level' && lr.value != null) probe.level = lr.value;
+  if (lr && lr.kind === 'rank' && lr.value != null) probe.rank = lr.value;
+  if (lr && lr.kind === 'link') {
+    probe.link = lr.value != null && lr.value > 0 ? lr.value : 4;
+  }
+  return probe;
+}
+
+function quickVisionProbeAndUpdate(video, nameCropRect, typeCropRect, featureCrops) {
   const now = Date.now();
-  if (now - lastVisionProbeAt < 160) return;
+  const visionThrottle = ocrDiagnosticsCaptureActive ? OCR_DIAG_CAPTURE_VISION_PROBE_MS : 160;
+  if (ocrDiagnosticsCaptureActive && OCR_DIAG_CAPTURE_VISION_PROBE_MS <= 0) return;
+  if (now - lastVisionProbeAt < visionThrottle) return;
   lastVisionProbeAt = now;
   const nameStrip = nameCropRect;
   const nameForRarity = refineNameCropForOcr(nameCropRect);
-  const typeProbe = probeCardTypeDiagnostics(video, nameStrip, typeCropRect);
+  const track = featureCrops && featureCrops.track ? featureCrops.track : null;
+  const ocrWarpQuick = resolveOcrWarpForTypeProbe(video, typeCropRect, track);
+  const typeProbe = probeCardTypeDiagnostics(video, nameStrip, typeCropRect, ocrWarpQuick);
+  ocrDiagLastTypeProbeSnap = { at: now, probe: typeProbe };
+  if (ocrDiagnosticsCaptureActive) {
+    updateCaptureVisionChipsFromProbe(typeProbe);
+    return;
+  }
   const typeHintEarly =
     typeProbe.classifiedTypeMerged || typeProbe.classifiedType || 'Monstro Efeito';
-  const rarityProbe = probeCardRarityDiagnostics(video, nameForRarity, typeCropRect, typeHintEarly);
+  void probeCardFeatureMirasFromVideo(video, featureCrops || {}, typeHintEarly, ocrWarpQuick).then((fp) => {
+    if (!fp) return;
+    if (fp.attribute) lastDetectedCardAttribute = fp.attribute;
+    const lr = fp.levelRank;
+    if (lr && lr.kind === 'level' && lr.value != null) {
+      lastDetectedCardLevel = lr.value;
+      lastDetectedCardRank = null;
+    } else if (lr && lr.kind === 'rank' && lr.value != null) {
+      lastDetectedCardRank = lr.value;
+      lastDetectedCardLevel = null;
+    }
+  });
+  const rarityProbe = probeCardRarityDiagnostics(
+    video,
+    nameForRarity,
+    typeCropRect,
+    typeHintEarly,
+    ocrWarpQuick
+  );
   let cardType = 'Monstro Efeito';
   let rarity = 'Comum';
   const manualTypeSelect = getEl('manual-card-type');
@@ -36287,13 +45156,15 @@ function quickVisionProbeAndUpdate(video, nameCropRect, typeCropRect) {
     rarity = rarityProbe.classifiedRarity || rarity;
   }
   const resolved = resolveVisionTypeAndRarityFromProbes(typeProbe, rarityProbe, cardType, rarity);
-  let nextType = reconcileCardTypeWithRarity(
-    resolved.cardType,
+  let nextType = correctCardTypeFromChromaStrip(typeProbe, resolved.cardType);
+  nextType = reconcileCardTypeWithRarity(
+    nextType,
     resolved.rarity,
     rarityProbe.plateColor,
     typeProbe.frameColor,
     rarityProbe.plateType || typeProbe.namePlateType
   );
+  nextType = correctCardTypeFromChromaStrip(typeProbe, nextType);
   nextType = stabilizeDetectedCardType(nextType);
   const nextRarity = stabilizeDetectedCardRarity(resolved.rarity);
   lastDetectedCardType = nextType;
@@ -36315,6 +45186,157 @@ function blitPasscodeCropFitHeight(ctx, media, cropRect, outW, outH, bg = '#e8e8
   }
   const dx = dw >= outW ? 0 : (outW - dw) / 2;
   ctx.drawImage(media, sx, cropRect.y, sw, cropRect.height, dx, 0, Math.min(dw, outW), outH);
+}
+
+/**
+ * Canvas LIMPO para o Paddle: o crop em cinzento com alongamento linear de contraste, SEM binarização
+ * nem realce agressivo (que viravam os dígitos matte em riscas que o Paddle lia como «1»). O Paddle faz
+ * a sua própria normalização — prefere uma imagem natural.
+ * @param {CanvasImageSource} media
+ * @param {{ x:number, y:number, width:number, height:number }} cropRect
+ * @returns {HTMLCanvasElement|null}
+ */
+function buildPasscodePaddleCanvas(media, cropRect, invert = false) {
+  if (!media || !cropRect || cropRect.width < 4 || cropRect.height < 2) return null;
+  const outH = 320;
+  const scale = outH / cropRect.height;
+  const innerW = Math.max(64, Math.min(1400, Math.round(cropRect.width * scale)));
+  const pad = 28;
+  const canvas = document.createElement('canvas');
+  canvas.width = innerW + pad * 2;
+  canvas.height = outH + pad * 2;
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  if (!ctx) return null;
+  ctx.imageSmoothingEnabled = true;
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  try {
+    ctx.drawImage(
+      media,
+      cropRect.x,
+      cropRect.y,
+      cropRect.width,
+      cropRect.height,
+      pad,
+      pad,
+      innerW,
+      outH
+    );
+  } catch (_) {
+    return null;
+  }
+  // Sem contraste local por colunas (criava xadrez → Paddle lia «uuo» em tudo). Alongamento global
+  // percentil + sharpen suave; padding branco como no bench offline.
+  try {
+    applyHighlightGlareCompress(ctx, 0, 0, canvas.width, canvas.height);
+    const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const d = img.data;
+    const n = canvas.width * canvas.height;
+    const gray = new Float32Array(n);
+    const hist = new Uint32Array(256);
+    for (let p = 0, i = 0; p < n; p++, i += 4) {
+      const g = d[i] * 0.299 + d[i + 1] * 0.587 + d[i + 2] * 0.114;
+      gray[p] = g;
+      hist[Math.max(0, Math.min(255, Math.round(g)))]++;
+    }
+    const loCut = n * 0.03;
+    const hiCut = n * 0.97;
+    let acc = 0;
+    let lo = 0;
+    let hi = 255;
+    for (let v = 0; v < 256; v++) {
+      acc += hist[v];
+      if (acc >= loCut) {
+        lo = v;
+        break;
+      }
+    }
+    acc = 0;
+    for (let v = 255; v >= 0; v--) {
+      acc += hist[v];
+      if (acc >= n - hiCut) {
+        hi = v;
+        break;
+      }
+    }
+    const range = Math.max(1, hi - lo);
+    for (let p = 0, i = 0; p < n; p++, i += 4) {
+      let v = ((gray[p] - lo) / range) * 255;
+      if (invert) v = 255 - v;
+      if (v < 0) v = 0;
+      else if (v > 255) v = 255;
+      d[i] = d[i + 1] = d[i + 2] = v;
+    }
+    ctx.putImageData(img, 0, 0);
+  } catch (_) {}
+  return canvas;
+}
+
+/**
+ * Binarização adaptativa mean-C (port do bench offline) sobre o canvas upscaled do passcode.
+ * @param {CanvasImageSource} media
+ * @param {{ x:number, y:number, width:number, height:number }} cropRect
+ * @param {boolean} [invert]
+ * @returns {HTMLCanvasElement|null}
+ */
+function buildPasscodeAdaptiveCanvas(media, cropRect, invert = false) {
+  const clean = buildPasscodePaddleCanvas(media, cropRect, invert);
+  if (!clean) return null;
+  const w = clean.width;
+  const h = clean.height;
+  const ctx = clean.getContext('2d', { willReadFrequently: true });
+  if (!ctx || w < 8 || h < 8) return null;
+  try {
+    const img = ctx.getImageData(0, 0, w, h);
+    const d = img.data;
+    const n = w * h;
+    const lum = new Float32Array(n);
+    for (let p = 0, i = 0; p < n; p++, i += 4) lum[p] = d[i];
+    const ii = new Float64Array((w + 1) * (h + 1));
+    for (let y = 0; y < h; y++) {
+      let rs = 0;
+      for (let x = 0; x < w; x++) {
+        rs += lum[y * w + x];
+        ii[(y + 1) * (w + 1) + (x + 1)] = ii[y * (w + 1) + (x + 1)] + rs;
+      }
+    }
+    const r = Math.max(6, Math.round(h * 0.5));
+    const C = 8;
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const x0 = Math.max(0, x - r);
+        const y0 = Math.max(0, y - r);
+        const x1 = Math.min(w - 1, x + r);
+        const y1 = Math.min(h - 1, y + r);
+        const area = (x1 - x0 + 1) * (y1 - y0 + 1);
+        const s =
+          ii[(y1 + 1) * (w + 1) + (x1 + 1)] -
+          ii[y0 * (w + 1) + (x1 + 1)] -
+          ii[(y1 + 1) * (w + 1) + x0] +
+          ii[y0 * (w + 1) + x0];
+        const mean = s / area;
+        const v = lum[y * w + x] < mean - C ? 0 : 255;
+        const i = (y * w + x) * 4;
+        d[i] = d[i + 1] = d[i + 2] = v;
+        d[i + 3] = 255;
+      }
+    }
+    ctx.putImageData(img, 0, 0);
+    despecklePasscodeBinary(ctx, w, h);
+  } catch (_) {
+    return null;
+  }
+  return clean;
+}
+
+/** Canvases Tesseract para export passcode (ordem: adaptativo → cinzento). */
+function buildPasscodeTessExportCanvases(media, cropRect) {
+  return [
+    { c: buildPasscodeAdaptiveCanvas(media, cropRect, false), id: 'pad_adaptive' },
+    { c: buildPasscodeAdaptiveCanvas(media, cropRect, true), id: 'pad_adapt_inv' },
+    { c: buildPasscodePaddleCanvas(media, cropRect, false), id: 'pad_clean' },
+    { c: buildPasscodePaddleCanvas(media, cropRect, true), id: 'pad_inv' },
+  ].filter((x) => x.c);
 }
 
 function buildPasscodeOcrVariants(media, cropRect, canvas, hint) {
@@ -36419,9 +45441,11 @@ function buildPasscodeOcrVariants(media, cropRect, canvas, hint) {
       pushTry('matte_mild', matteMild, '7', false);
       pushTry('stretch_darkOnLight', stretchDark, '7', false);
       pushTry('lc_darkOnLight', lcDark, '7', false);
+      pushTry('stretch_raw', stretchRaw, '7', true);
+      pushTry('lc_raw', lcRaw, '7', true);
+      pushTry('lightOnDark', lightOnDark, '7', false);
       pushTry('darkOnLight', darkOnLight, '7', false);
       pushTry('darkOnLight_psm8', darkOnLight, '8', false);
-      pushTry('lightOnDark', lightOnDark, '7', false);
     }
   } else if (primary === 'lightOnDark') {
     pushTry('stretch_raw', stretchRaw, '7', true);
@@ -36465,19 +45489,43 @@ function buildPasscodeOcrVariants(media, cropRect, canvas, hint) {
  * @param {{ x: number, y: number, width: number, height: number }|null} typeCropRect Mira azul.
  * @returns {{ x: number, y: number, width: number, height: number }|null}
  */
-function getPasscodeCropForOcr(passcodeVisual, typeCropRect) {
-  const base = typeCropRect || passcodeVisual;
-  if (!base) return null;
-  const computed = {
-    x: base.x + base.width * 0.025,
-    y: base.y + base.height * 0.934,
-    width: base.width * 0.19,
-    height: base.height * 0.034,
+function getPasscodeCropForOcr(passcodeOcrHint, typeCropRect) {
+  const fromStrip = passcodeDigitBandFromTypeCrop(typeCropRect);
+  if (fromStrip) return fromStrip;
+  if (passcodeOcrHint && isValidPasscodeOcrCrop(passcodeOcrHint)) return passcodeOcrHint;
+  if (!typeCropRect) return null;
+  return {
+    x: typeCropRect.x + typeCropRect.width * 0.025,
+    y: typeCropRect.y + typeCropRect.height * 0.934,
+    width: typeCropRect.width * 0.19,
+    height: typeCropRect.height * 0.034,
   };
-  if (!passcodeVisual || passcodeVisual.width < 6) return computed;
-  const aspect = passcodeVisual.height / passcodeVisual.width;
-  if (aspect > 0.28) return computed;
-  return passcodeVisual;
+}
+
+/**
+ * Recorte base do passcode (warp canónico com fallback à semente se o refine falhar).
+ * @param {null|{ passcodeCrop?: object, passcodeSeed?: object }} ocrWarp
+ * @param {{ x: number, y: number, width: number, height: number }|null} passcodeVisual
+ * @param {{ x: number, y: number, width: number, height: number }|null} typeCropRect
+ * @returns {{ x: number, y: number, width: number, height: number }|null}
+ */
+function resolvePasscodeBaseForOcr(ocrWarp, passcodeOcrHint, typeCropRect) {
+  let base = null;
+  const seed = ocrWarp && ocrWarp.passcodeSeed ? ocrWarp.passcodeSeed : null;
+  const digits = ocrWarp && ocrWarp.passcodeDigits ? ocrWarp.passcodeDigits : null;
+  const digitRef =
+    digits || passcodeDigitBandFromTypeCrop(typeCropRect) || passcodeOcrHint;
+  if (ocrWarp && ocrWarp.passcodeCrop) {
+    const crop = ocrWarp.passcodeCrop;
+    if (digitRef && isValidPasscodeOcrCrop(crop)) {
+      base = crop;
+    } else {
+      base = digits || passcodeOcrHint || seed || crop;
+    }
+  } else {
+    base = getPasscodeCropForOcr(passcodeOcrHint, typeCropRect);
+  }
+  return clampPasscodeCropToDigitBand(base, digitRef || seed);
 }
 
 /**
@@ -36525,14 +45573,23 @@ function paintPasscodePreviewCanvas(rawCanvas) {
   const enh = passcodePreviewEnhCanvas;
   enh.width = outW;
   enh.height = outH;
-  const ectx = enh.getContext('2d');
+  const ectx = enh.getContext('2d', { willReadFrequently: true });
   if (!ectx) return;
-  ectx.fillStyle = '#888';
+  ectx.fillStyle = '#e8e8e8';
   ectx.fillRect(0, 0, outW, outH);
   ectx.drawImage(rawCanvas, 0, 0, rawCanvas.width, rawCanvas.height, 0, 0, outW, outH);
-  ectx.filter = 'grayscale(1) contrast(1.55) brightness(1.08)';
-  ectx.drawImage(enh, 0, 0);
-  ectx.filter = 'none';
+  const matte = isMattePrintedPasscodeRarity(lastDetectedCardRarity);
+  if (matte) {
+    applyPasscodeGrayscaleStretch(ectx, outW, outH);
+    applyPasscodeMatteSharpen(ectx, outW, outH);
+    ectx.filter = 'grayscale(1) contrast(1.72) brightness(1.04)';
+    ectx.drawImage(enh, 0, 0);
+    ectx.filter = 'none';
+  } else {
+    ectx.filter = 'grayscale(1) contrast(1.55) brightness(1.08)';
+    ectx.drawImage(enh, 0, 0);
+    ectx.filter = 'none';
+  }
   pctx.imageSmoothingEnabled = false;
   pctx.drawImage(enh, 0, 0, outW, outH);
   pctx.strokeStyle = 'rgba(243, 156, 18, 0.85)';
@@ -36641,20 +45698,129 @@ function logPasscodeOcrAttempt(sidecar) {
  * @param {{ x: number, y: number, width: number, height: number }|null} typeCropRect
  * @returns {Promise<null|object>|null}
  */
-function ensurePasscodeOcrRunning(video, passcodeVisual, typeCropRect, ocrWarp) {
+function ensurePasscodeOcrRunning(video, passcodeVisual, typeCropRect, ocrWarp, opts) {
+  if (ocrPasscodeSidecarExclusive) return null;
   if (passcodeOcrInFlight) return passcodeOcrInFlight;
+  if (ocrDiagnosticsSampleRecordInFlight) return null;
+  const background = !!(opts && opts.background);
+  if (!background) return null;
+  if (isProcessing && !passcodeDiagnosticsExportMode()) return null;
   if (!canRunPasscodeOcrNow()) return null;
+  const runGen = ++passcodeOcrRunGen;
+  const diagPatchSeq =
+    opts && typeof opts.patchSeq === 'number'
+      ? opts.patchSeq
+      : ocrDiagnosticsPasscodePatchSeq;
   lastPasscodeOcrAt = Date.now();
   passcodeOcrInFlight = tryScannerPasscodeMatch(
     video,
     passcodeVisual,
     typeCropRect,
     getScannerPasscodeVisionContext(),
-    ocrWarp
+    ocrWarp,
+    runGen,
+    diagPatchSeq
   ).finally(() => {
     passcodeOcrInFlight = null;
   });
   return passcodeOcrInFlight;
+}
+
+/**
+ * Passcode OCR em fila baixa durante coleta — só quando o loop principal está livre.
+ * @returns {void}
+ */
+function schedulePasscodeOcrDuringCapture(video, passcodeOcrHint, typeCropRect, ocrWarp) {
+  if (!ocrDiagnosticsCaptureActive || !video || !typeCropRect) return;
+  const ocrHint =
+    passcodeOcrHint ||
+    resolvePasscodeOcrHintRect(ocrWarp, typeCropRect, lastOcrCardTrackPack);
+  if (!ocrHint) return;
+  if (ocrPasscodeSidecarExclusive) return;
+  if (passcodeCaptureIdleTimer) return;
+  if (isProcessing && !passcodeDiagnosticsExportMode()) return;
+  let delayMs = 80;
+  if (passcodeOcrInFlight) delayMs = 220;
+  else if (!canRunPasscodeOcrNow()) {
+    delayMs = Math.max(
+      80,
+      passcodeOcrThrottleMs() - (Date.now() - lastPasscodeOcrAt) + 24
+    );
+  }
+  passcodeCaptureIdleTimer = setTimeout(() => {
+    passcodeCaptureIdleTimer = 0;
+    if (!ocrDiagnosticsCaptureActive) return;
+    if (passcodeOcrInFlight) {
+      schedulePasscodeOcrDuringCapture(video, ocrHint, typeCropRect, ocrWarp);
+      return;
+    }
+    if (isProcessing && !passcodeDiagnosticsExportMode()) return;
+    if (!canRunPasscodeOcrNow()) {
+      schedulePasscodeOcrDuringCapture(video, ocrHint, typeCropRect, ocrWarp);
+      return;
+    }
+    const patchSeq = ocrDiagnosticsPasscodePatchSeq;
+    ensurePasscodeOcrRunning(video, ocrHint, typeCropRect, ocrWarp, {
+      background: true,
+      patchSeq,
+    });
+  }, delayMs);
+}
+
+/**
+ * Passcode OCR só em background (nunca no hot path do match nome/arte).
+ * @returns {void}
+ */
+function schedulePasscodeOcrBackground(video, passcodeOcrHint, typeCropRect, ocrWarp) {
+  if (!video || !typeCropRect) return;
+  const ocrHint =
+    passcodeOcrHint ||
+    resolvePasscodeOcrHintRect(ocrWarp, typeCropRect, lastOcrCardTrackPack);
+  if (!ocrHint) return;
+  if (ocrDiagnosticsCaptureActive) {
+    const collectSeq = ocrDiagnosticsSession ? ocrDiagnosticsSession.samples.length : 0;
+    const pipelineSlot =
+      isBenchmarkPipelineSlotForSeq(collectSeq) && ocrDiagCanRecordPipeline();
+    if (!pipelineSlot) return;
+    schedulePasscodeOcrDuringCapture(video, ocrHint, typeCropRect, ocrWarp);
+    return;
+  }
+  if (passcodeBgIdleTimer || passcodeOcrInFlight) return;
+  if (isProcessing || ocrDiagnosticsSampleRecordInFlight) return;
+  if (!canRunPasscodeOcrNow()) return;
+  passcodeBgIdleTimer = setTimeout(() => {
+    passcodeBgIdleTimer = 0;
+    if (passcodeOcrInFlight || isProcessing || ocrDiagnosticsSampleRecordInFlight) return;
+    if (!canRunPasscodeOcrNow()) return;
+    ensurePasscodeOcrRunning(video, ocrHint, typeCropRect, ocrWarp, { background: true });
+  }, 100);
+}
+
+/** @returns {void} */
+function clearPasscodeCaptureIdleTimer() {
+  if (passcodeCaptureIdleTimer) {
+    clearTimeout(passcodeCaptureIdleTimer);
+    passcodeCaptureIdleTimer = 0;
+  }
+}
+
+/** @returns {void} */
+function clearPasscodeBgIdleTimer() {
+  if (passcodeBgIdleTimer) {
+    clearTimeout(passcodeBgIdleTimer);
+    passcodeBgIdleTimer = 0;
+  }
+}
+
+/**
+ * Cancela passcode OCR em curso quando a arte já identificou a carta.
+ * @returns {void}
+ */
+function cancelPasscodeOcrForArtMatch() {
+  if (ocrDiagnosticsCaptureActive) return;
+  passcodeOcrRunGen++;
+  clearPasscodeCaptureIdleTimer();
+  clearPasscodeBgIdleTimer();
 }
 
 /**
@@ -36724,7 +45890,11 @@ async function recognizePasscodeDigitColumns(variantCanvas, opts) {
   if (!workCtx || w < 40 || h < 8) return null;
   workCtx.drawImage(variantCanvas, 0, 0);
   const binMode = (opts && opts.binMode) || 'darkOnLight';
-  binarizePasscodeMatteMild(workCtx, w, h, binMode);
+  const matte = !!(opts && opts.matte);
+  if (!(opts && opts.skipBin)) {
+    if (matte) binarizePasscodeMatteMild(workCtx, w, h, binMode);
+    else binarizePasscodeCrop(workCtx, w, h, binMode, true);
+  }
   const bounds =
     opts && opts.useEqual
       ? computePasscodeEqualColumnBounds(w, h)
@@ -36738,12 +45908,18 @@ async function recognizePasscodeDigitColumns(variantCanvas, opts) {
     for (let bi = 0; bi < 8; bi++) {
       const b = bounds[bi];
       const cw = Math.max(6, b.x1 - b.x0);
+      const targetH = Math.max(104, Math.round(h * 3.2));
+      const scale = targetH / h;
+      const targetW = Math.max(14, Math.round(cw * scale));
       const col = document.createElement('canvas');
-      col.width = cw;
-      col.height = h;
+      col.width = targetW;
+      col.height = targetH;
       const cx = col.getContext('2d', { willReadFrequently: true });
       if (!cx) return null;
-      cx.drawImage(work, b.x0, 0, cw, h, 0, 0, cw, h);
+      cx.fillStyle = '#ffffff';
+      cx.fillRect(0, 0, targetW, targetH);
+      cx.imageSmoothingEnabled = false;
+      cx.drawImage(work, b.x0, 0, cw, h, 0, 0, targetW, targetH);
       const result = await Promise.race([
         ocrWorker.recognize(col),
         new Promise((_, reject) => setTimeout(() => reject(new Error('digit timeout')), 900)),
@@ -36774,6 +45950,7 @@ async function recognizePasscodeDigitColumns(variantCanvas, opts) {
 
 /** Tenta colunas adaptativas e iguais com ambos modos de binarização. */
 async function recognizePasscodeDigitColumnsWithFallback(variantCanvas, hint) {
+  const matte = !!(hint && hint.matteIdDigits);
   const modes =
     hint && hint.primary === 'lightOnDark'
       ? ['lightOnDark', 'darkOnLight']
@@ -36781,14 +45958,20 @@ async function recognizePasscodeDigitColumnsWithFallback(variantCanvas, hint) {
   let best = null;
   for (let mi = 0; mi < modes.length; mi++) {
     const binMode = modes[mi];
-    for (let ei = 0; ei < 2; ei++) {
+    const passModes = matte ? 3 : 2;
+    for (let ei = 0; ei < passModes; ei++) {
+      const useEqual = matte ? ei !== 1 : ei === 1;
+      const skipBin = matte && ei === 2;
       const hit = await recognizePasscodeDigitColumns(variantCanvas, {
         binMode,
-        useEqual: ei === 1,
+        useEqual,
+        matte,
+        skipBin,
       });
       if (!hit) continue;
+      if (isPasscodeOcrGarbageRead(hit.text, hit.confidence, matte)) continue;
       if (!best || hit.score > best.score) best = hit;
-      if ((hit.cands || []).some((c) => String(c).length === 8) && hit.confidence >= 38) {
+      if ((hit.cands || []).some((c) => String(c).length === 8) && hit.confidence >= (matte ? 22 : 38)) {
         return hit;
       }
     }
@@ -36798,14 +45981,42 @@ async function recognizePasscodeDigitColumnsWithFallback(variantCanvas, hint) {
 
 async function recognizePasscodeVariantCanvas(variantCanvas, meta) {
   try {
+    const ocrTimeoutMs =
+      meta && meta.exportSidecar
+        ? 1600
+        : meta && meta.exportLite
+          ? 750
+          : meta && meta.sidecarLite
+            ? 1800
+            : meta && meta.captureLike
+              ? 1200
+              : 1600;
     const result = await Promise.race([
       ocrWorker.recognize(variantCanvas),
       new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('passcode ocr timeout')), 1600)
+        setTimeout(() => reject(new Error('passcode ocr timeout')), ocrTimeoutMs)
       ),
     ]);
     const text = result.data.text || '';
     const conf = typeof result.data.confidence === 'number' ? result.data.confidence : 0;
+    const matte = !!(meta && meta.matte);
+    if (isPasscodeOcrGarbageRead(text, conf, matte)) {
+      // captureRaw: devolve a leitura mesmo quando rejeitada como lixo, para diagnóstico no ZIP
+      // (ver exactamente o que o motor leu) sem a deixar vencer o `best`.
+      if (meta && meta.captureRaw) {
+        return {
+          text,
+          confidence: conf,
+          score: -1000,
+          cands: extractYuGiOhPasscodeCandidates(text),
+          variantId: meta.id ? `${meta.id}_garbage` : 'garbage',
+          psm: meta.psm || '7',
+          digitRun: String(text).replace(/\D/g, '').length,
+          garbage: true,
+        };
+      }
+      return null;
+    }
     const cands = extractYuGiOhPasscodeCandidates(text);
     const digitRun = String(text).replace(/\D/g, '').length;
     let score = conf + (cands.length ? 55 : 0);
@@ -36830,8 +46041,9 @@ async function recognizePasscodeVariantCanvas(variantCanvas, meta) {
   }
 }
 
-async function recognizePasscodeFromCrop(media, cropRect, hint) {
+async function recognizePasscodeFromCrop(media, cropRect, hint, runGen, opts) {
   if (!ocrWorker || !media || !cropRect || cropRect.width < 4 || cropRect.height < 2) return null;
+  if (runGen != null && runGen !== passcodeOcrRunGen) return null;
   if (!passcodeOcrCanvasReuse) {
     passcodeOcrCanvasReuse = document.createElement('canvas');
   }
@@ -36840,19 +46052,151 @@ async function recognizePasscodeFromCrop(media, cropRect, hint) {
   let best = null;
   let bestMeta = null;
   const attempts = [];
+  const matte = !!(hint && hint.matteIdDigits);
+  const exportLite = !!(opts && opts.exportLite);
+  const exportSidecar = !!(opts && opts.exportSidecar);
+  const sidecarLite = !!(opts && opts.sidecarLite) && !exportSidecar;
+  const captureLike =
+    ocrDiagnosticsCaptureActive || exportLite || sidecarLite || exportSidecar || !!(opts && opts.captureLike);
   try {
-    const colSources = [
-      variants.stretchRaw,
-      variants.lcRaw,
-      hint && hint.primary === 'lightOnDark' ? variants.lightOnDark : variants.darkOnLight,
-      hint && hint.primary === 'lightOnDark' ? variants.lcLight : variants.lcDark,
-      variants.matteMild,
-      variants.stretchLight,
-      variants.stretchDark,
-    ].filter(Boolean);
-    for (let ci = 0; ci < colSources.length; ci++) {
+    const colSourcesAll = matte
+      ? [variants.stretchRaw, variants.matteMild, variants.lcRaw, variants.darkOnLight].filter(Boolean)
+      : [
+          variants.stretchRaw,
+          variants.lcRaw,
+          hint && hint.primary === 'lightOnDark' ? variants.lightOnDark : variants.darkOnLight,
+          hint && hint.primary === 'lightOnDark' ? variants.lcLight : variants.lcDark,
+          variants.matteMild,
+          variants.stretchLight,
+          variants.stretchDark,
+        ].filter(Boolean);
+    const colSources = colSourcesAll;
+    // Export: Tesseract primeiro (whitelist só dígitos + lang local) — o Paddle EN lê «uuo» em dígitos
+    // matte. Sidecar/coleta: Paddle como fallback rápido se o Tesseract não tiver 8 dígitos.
+    let paddleStrongEight = false;
+    if (exportSidecar && ocrWorker) {
+      const flushExportAttempts = () => {
+        lastPasscodeOcrDiagnostics = {
+          cropRect: {
+            x: safeRound(cropRect.x, 1),
+            y: safeRound(cropRect.y, 1),
+            width: safeRound(cropRect.width, 1),
+            height: safeRound(cropRect.height, 1),
+          },
+          hint: hint
+            ? {
+                primary: hint.primary,
+                secondary: hint.secondary,
+                meanLum: safeRound(hint.meanLum, 1),
+                matteIdDigits: !!hint.matteIdDigits,
+              }
+            : null,
+          attempts: attempts.slice(0, 12),
+          bestVariant:
+            (best && best.variantId) ||
+            (bestMeta && bestMeta.id) ||
+            (attempts.length ? attempts[attempts.length - 1].variant : null),
+        };
+      };
+      const pushExportHit = (hit, id, canvasRef) => {
+        if (!hit) return false;
+        attempts.push({
+          variant: hit.variantId || id,
+          psm: hit.psm,
+          raw: String(hit.text).replace(/\s+/g, '').slice(0, 24),
+          digitRun: hit.digitRun,
+          confidence: safeRound(hit.confidence, 1),
+          candidates: hit.cands || [],
+          score: safeRound(hit.score, 1),
+        });
+        flushExportAttempts();
+        if (!hit.garbage && (!best || hit.score > best.score)) {
+          best = hit;
+          bestMeta = { id, canvas: canvasRef };
+        }
+        return !hit.garbage && (hit.cands || []).some((cand) => String(cand).length === 8);
+      };
+      const adapt = buildPasscodeAdaptiveCanvas(media, cropRect, false);
+      const adaptInv = buildPasscodeAdaptiveCanvas(media, cropRect, true);
+      const clean = buildPasscodePaddleCanvas(media, cropRect, false);
+      const exportSteps = [
+        { c: adapt, id: 'pad_adaptive', psm: '7' },
+        { c: adaptInv, id: 'pad_adapt_inv', psm: '7' },
+        { c: adapt, id: 'pad_adaptive', psm: '6' },
+        { c: clean, id: 'pad_clean', psm: '7' },
+      ];
+      for (let ei = 0; ei < exportSteps.length && !paddleStrongEight; ei++) {
+        if (runGen != null && runGen !== passcodeOcrRunGen) return null;
+        const step = exportSteps[ei];
+        if (!step.c) continue;
+        try {
+          await ocrWorker.setParameters({
+            ...TESSERACT_PASSCODE_OCR_PARAMS,
+            tessedit_pageseg_mode: step.psm,
+          });
+        } catch (_) {}
+        const hit = await recognizePasscodeVariantCanvas(step.c, {
+          id: `${step.id}_psm${step.psm}`,
+          psm: step.psm,
+          matte,
+          exportSidecar: true,
+          captureRaw: true,
+        });
+        if (pushExportHit(hit, step.id, step.c)) paddleStrongEight = true;
+      }
+      if (!paddleStrongEight && adapt) {
+        const colHit = await recognizePasscodeDigitColumnsWithFallback(adapt, hint);
+        if (pushExportHit(colHit, 'digit_columns', adapt)) paddleStrongEight = true;
+      }
+      try {
+        await ocrWorker.setParameters(TESSERACT_NAME_OCR_PARAMS);
+      } catch (_) {}
+    }
+    // Paddle só durante coleta sidecar (não no export).
+    if (!exportSidecar && !paddleStrongEight && sidecarLite) {
+      const padClean = buildPasscodePaddleCanvas(media, cropRect, false);
+      const padCleanInv = buildPasscodePaddleCanvas(media, cropRect, true);
+      const padFirst = await recognizePasscodePaddleDigits(
+        [padClean, padCleanInv, variants.rawCanvas].filter(Boolean),
+        exportSidecar ? 3500 : 2600
+      );
+      if (padFirst) {
+        attempts.push({
+          variant: 'paddle',
+          psm: 'paddle',
+          raw: String(padFirst.text).replace(/\s+/g, '').slice(0, 24),
+          digitRun: padFirst.digitRun,
+          confidence: safeRound(padFirst.confidence, 1),
+          candidates: padFirst.cands || [],
+          score: safeRound(padFirst.score, 1),
+        });
+        if (!best || padFirst.score > best.score) {
+          best = padFirst;
+          bestMeta = { id: 'paddle', canvas: variants.stretchRaw };
+        }
+        paddleStrongEight = (padFirst.cands || []).some((c) => String(c).length === 8);
+      }
+    }
+    const colEarlyLimit = exportSidecar
+      ? 0
+      : paddleStrongEight
+      ? 0
+      : sidecarLite
+        ? matte
+          ? Math.min(2, colSources.length)
+          : 0
+        : exportLite
+          ? 0
+          : captureLike
+            ? matte
+              ? colSources.length
+              : Math.min(4, colSources.length)
+            : colSources.length;
+    for (let ci = 0; ci < colEarlyLimit; ci++) {
+      if (runGen != null && runGen !== passcodeOcrRunGen) return null;
       const colEarly = await recognizePasscodeDigitColumnsWithFallback(colSources[ci], hint);
       if (!colEarly) continue;
+      if (isPasscodeOcrGarbageRead(colEarly.text, colEarly.confidence, matte)) continue;
       attempts.push({
         variant: 'digit_columns_early',
         psm: '10',
@@ -36867,18 +46211,41 @@ async function recognizePasscodeFromCrop(media, cropRect, hint) {
         bestMeta = { id: 'digit_columns', canvas: colSources[ci] };
       }
       const hasEightEarly = (colEarly.cands || []).some((c) => String(c).length === 8);
-      if (hasEightEarly && colEarly.confidence >= 34) break;
+      if (hasEightEarly && colEarly.confidence >= (matte ? 20 : 34)) break;
     }
-    if (
-      !(best && (best.cands || []).some((c) => String(c).length === 8) && best.confidence >= 44)
-    ) {
-    for (let vi = 0; vi < variants.tryOrder.length; vi++) {
+    const hasStrongEight =
+      paddleStrongEight ||
+      (best &&
+        (best.cands || []).some((c) => String(c).length === 8) &&
+        (best.confidence >= (matte ? 22 : 44) ||
+          (best.variantId === 'digit_columns' && best.confidence >= (matte ? 20 : 16))));
+    if (!hasStrongEight) {
+    const tryLimit = exportSidecar
+      ? 0
+      : sidecarLite
+        ? Math.min(3, variants.tryOrder.length)
+        : exportLite
+          ? Math.min(3, variants.tryOrder.length)
+          : captureLike
+            ? matte
+              ? Math.min(4, variants.tryOrder.length)
+              : Math.min(5, variants.tryOrder.length)
+            : variants.tryOrder.length;
+    for (let vi = 0; vi < tryLimit; vi++) {
+      if (runGen != null && runGen !== passcodeOcrRunGen) return null;
       const v = variants.tryOrder[vi];
       await ocrWorker.setParameters({
         ...TESSERACT_PASSCODE_OCR_PARAMS,
         tessedit_pageseg_mode: v.psm || '7',
       });
-      const hit = await recognizePasscodeVariantCanvas(v.canvas, v);
+      const hit = await recognizePasscodeVariantCanvas(v.canvas, {
+        ...v,
+        matte,
+        exportLite,
+        captureLike,
+        sidecarLite,
+        exportSidecar,
+      });
       if (!hit) continue;
       attempts.push({
         variant: hit.variantId || v.id,
@@ -36894,14 +46261,47 @@ async function recognizePasscodeFromCrop(media, cropRect, hint) {
         bestMeta = v;
       }
       const hasEight = (hit.cands || []).some((c) => String(c).length === 8);
-      if (hasEight && hit.confidence >= 32 && hit.digitRun <= 10) break;
+      const confOk = captureLike
+        ? hit.confidence >= (matte ? 4 : 20)
+        : hit.confidence >= 32;
+      if (hasEight && confOk && hit.digitRun <= 10) break;
+      if (exportLite && best && (best.cands || []).length) break;
     }
+    }
+    const bestDigitRun = best ? String(best.text || '').replace(/\D/g, '').length : 0;
+    if (!sidecarLite && !exportSidecar && !exportLite && matte && bestDigitRun === 9 && (!best.variantId || best.variantId !== 'digit_columns')) {
+      const trimmedCrop = passcodeCropTrimLeadingDigit(cropRect);
+      const trimVars = buildPasscodeOcrVariants(media, trimmedCrop, passcodeOcrCanvasReuse, hint);
+      if (trimVars) {
+        const trimSources = [trimVars.stretchRaw, trimVars.matteMild, trimVars.lcRaw].filter(Boolean);
+        for (let ti = 0; ti < trimSources.length; ti++) {
+          const colTrim = await recognizePasscodeDigitColumnsWithFallback(trimSources[ti], hint);
+          if (!colTrim) continue;
+          attempts.push({
+            variant: 'digit_columns_trim9',
+            psm: '10',
+            raw: colTrim.text,
+            digitRun: 8,
+            confidence: safeRound(colTrim.confidence, 1),
+            candidates: colTrim.cands || [],
+            score: safeRound(colTrim.score, 1) + 8,
+          });
+          if (!best || colTrim.score + 8 > best.score) {
+            best = colTrim;
+            bestMeta = { id: 'digit_columns', canvas: trimSources[ti] };
+          }
+          if (colTrim.confidence >= (captureLike ? 14 : 22)) break;
+        }
+      }
     }
     const needColumns =
-      !best ||
-      !(best.cands || []).some((c) => String(c).length === 8) ||
-      best.confidence < 38 ||
-      (best.digitRun && best.digitRun > 9);
+      !sidecarLite &&
+      !exportSidecar &&
+      !exportLite &&
+      (!best ||
+        !(best.cands || []).some((c) => String(c).length === 8) ||
+        best.confidence < 38 ||
+        (best.digitRun && best.digitRun > 9));
     const colCanvases = [];
     const pushCol = (c) => {
       if (c && !colCanvases.includes(c)) colCanvases.push(c);
@@ -36912,11 +46312,13 @@ async function recognizePasscodeFromCrop(media, cropRect, hint) {
     pushCol(variants.darkOnLight);
     pushCol(variants.lcDark);
     if (needColumns) {
-    for (let cci = 0; cci < colCanvases.length; cci++) {
+    const colLimit = captureLike ? 4 : colCanvases.length;
+    for (let cci = 0; cci < colCanvases.length && cci < colLimit; cci++) {
       const colCanvas = colCanvases[cci];
       if (!colCanvas) continue;
       const colHit = await recognizePasscodeDigitColumnsWithFallback(colCanvas, hint);
       if (!colHit) continue;
+      if (isPasscodeOcrGarbageRead(colHit.text, colHit.confidence, matte)) continue;
         attempts.push({
           variant: 'digit_columns',
           psm: '10',
@@ -36938,6 +46340,33 @@ async function recognizePasscodeFromCrop(media, cropRect, hint) {
     try {
       await ocrWorker.setParameters(TESSERACT_NAME_OCR_PARAMS);
     } catch (_) {}
+  }
+  // Fallback Paddle: se o Tesseract não produziu um candidato de 8 dígitos (devolve vazio neste
+  // ambiente sob interceção TLS), tenta o Paddle nos canvases pré-processados — lê os dígitos matte.
+  const bestHasEight = best && (best.cands || []).some((c) => String(c).length === 8);
+  if (!bestHasEight && !(exportSidecar || sidecarLite) && (runGen == null || runGen === passcodeOcrRunGen)) {
+    const padTimeout = 2000;
+    const padClean = buildPasscodePaddleCanvas(media, cropRect, false);
+    const padCleanInv = buildPasscodePaddleCanvas(media, cropRect, true);
+    const padHit = await recognizePasscodePaddleDigits(
+      [padClean, padCleanInv, variants.rawCanvas].filter(Boolean),
+      padTimeout
+    );
+    if (padHit) {
+      attempts.push({
+        variant: 'paddle',
+        psm: 'paddle',
+        raw: String(padHit.text).replace(/\s+/g, '').slice(0, 24),
+        digitRun: padHit.digitRun,
+        confidence: safeRound(padHit.confidence, 1),
+        candidates: padHit.cands || [],
+        score: safeRound(padHit.score, 1),
+      });
+      if (!best || padHit.score > best.score) {
+        best = padHit;
+        bestMeta = { id: 'paddle', canvas: variants.stretchRaw };
+      }
+    }
   }
   if (variants.rawCanvas) paintPasscodePreviewCanvas(variants.rawCanvas);
   lastPasscodeOcrDiagnostics = {
@@ -36963,6 +46392,12 @@ async function recognizePasscodeFromCrop(media, cropRect, hint) {
     bestPsm: best && best.psm ? best.psm : null,
   };
   if (!best) return null;
+  if (matte && !passcodeDiagnosticsExportMode()) {
+    const digitRun = String(best.text || '').replace(/\D/g, '').length;
+    if (isPasscodeOcrGarbageRead(best.text, best.confidence, true)) return null;
+    if (best.variantId !== 'digit_columns' && (best.confidence < 18 || digitRun !== 8)) return null;
+    if (best.variantId === 'digit_columns' && best.confidence < 16) return null;
+  }
   return {
     text: best.text,
     confidence: best.confidence,
@@ -37004,30 +46439,48 @@ async function fetchScannerCardByPasscode(passcodeStr, visionContext) {
  * @param {{ cardType?: string|null, rarity?: string|null }|null} [visionContext]
  * @returns {Promise<null|{ pack: object, cleaned: string, card: object, matchSource: string }>}
  */
-async function tryScannerPasscodeMatch(video, passcodeVisualCrop, typeCropRect, visionContext, ocrWarp) {
-  const passcodeBase = ocrWarp
-    ? ocrWarp.passcodeCrop
-    : getPasscodeCropForOcr(passcodeVisualCrop, typeCropRect);
-  const cropVariants = passcodeBase ? buildPasscodeCropVariants(passcodeBase) : [];
-  if (!cropVariants.length) {
-    lastPasscodeSidecar = null;
-    lastPasscodeOcrDiagnostics = null;
-    updateOcrPasscodeLiveReadDisplay(null);
-    return null;
-  }
+async function tryScannerPasscodeMatch(
+  video,
+  passcodeVisualCrop,
+  typeCropRect,
+  visionContext,
+  ocrWarp,
+  runGen,
+  diagPatchSeq
+) {
+  if (runGen != null && runGen !== passcodeOcrRunGen) return null;
+  const passcodeBase = resolvePasscodeBaseForOcr(ocrWarp, passcodeVisualCrop, typeCropRect);
   const ocrMedia = ocrWarp && ocrWarp.media ? ocrWarp.media : video;
   const idHint = derivePasscodeOcrHint(
     video,
     typeCropRect,
     visionContext && visionContext.cardType,
     visionContext && visionContext.rarity,
-    passcodeBase
+    passcodeBase,
+    ocrMedia
   );
+  const matte = !!(idHint && idHint.matteIdDigits);
+  const passcodeCrop = resolvePasscodeOcrCrop(
+    ocrMedia,
+    passcodeBase,
+    ocrWarp && ocrWarp.passcodeSeed,
+    typeCropRect,
+    ocrWarp
+  );
+  const cropVariants = passcodeCrop ? [passcodeCrop] : [];
+  if (!cropVariants.length) {
+    lastPasscodeSidecar = null;
+    lastPasscodeOcrDiagnostics = null;
+    updateOcrPasscodeLiveReadDisplay(null);
+    return null;
+  }
   let ocr = null;
   for (let ci = 0; ci < cropVariants.length; ci++) {
+    if (runGen != null && runGen !== passcodeOcrRunGen) return null;
     const passcodeCrop = cropVariants[ci];
     if (!passcodeCrop || passcodeCrop.width < 4) continue;
-    const hit = await recognizePasscodeFromCrop(ocrMedia, passcodeCrop, idHint);
+    const hit = await recognizePasscodeFromCrop(ocrMedia, passcodeCrop, idHint, runGen);
+    if (runGen != null && runGen !== passcodeOcrRunGen) return null;
     if (!hit) continue;
     notePasscodeIdVotes(hit.candidates, hit.confidence);
     const hitEight = (hit.candidates || []).some((c) => String(c).length === 8);
@@ -37048,33 +46501,56 @@ async function tryScannerPasscodeMatch(video, passcodeVisualCrop, typeCropRect, 
       : ocr && ocr.text
         ? extractYuGiOhPasscodeCandidates(ocr.text)
         : [];
-  lastPasscodeSidecar = {
-    raw:
-      ocr && ocr.text
-        ? (() => {
-            const r = String(ocr.text).replace(/\s+/g, '');
-            const eight = (ocr.candidates || []).find((c) => String(c).length === 8);
-            if (eight) return eight;
-            if (r.replace(/\D/g, '').length >= 8) return r.replace(/\D/g, '').slice(0, 8);
-            return r.replace(/\D/g, '').length >= 4 ? r : '';
-          })()
-        : '',
-    candidates,
-    confidence: ocr ? ocr.confidence : 0,
-    variantId: ocr && ocr.variantId ? ocr.variantId : null,
-    card: null,
-  };
+  if (!candidates.length && passcodeCrop) {
+    const digitBand = passcodeDigitBandFromTypeCrop(typeCropRect);
+    console.debug('[passcode-ocr] candidatos=0', { passcodeCrop, digitBand });
+  }
+  const builtSidecar = buildPasscodeSidecarFromHit(ocr);
+  const mergedSidecar = synthesizePasscodeSidecarForExport(
+    builtSidecar ? { ...builtSidecar, card: null } : null,
+    lastPasscodeOcrDiagnostics
+  );
+  lastPasscodeSidecar = mergedSidecar
+    ? { ...mergedSidecar, card: null }
+    : {
+        raw: '',
+        candidates,
+        confidence: ocr ? ocr.confidence : 0,
+        variantId:
+          (ocr && ocr.variantId) ||
+          (lastPasscodeOcrDiagnostics && lastPasscodeOcrDiagnostics.bestVariant) ||
+          null,
+        card: null,
+      };
   updateOcrPasscodeLiveReadDisplay(lastPasscodeSidecar);
   logPasscodeOcrAttempt(lastPasscodeSidecar);
+  if (ocrDiagnosticsSession || ocrDiagnosticsExportFlushing) {
+    patchCapturePasscodeSidecar(
+      synthesizePasscodeSidecarForExport(lastPasscodeSidecar, lastPasscodeOcrDiagnostics) ||
+        lastPasscodeSidecar,
+      typeof diagPatchSeq === 'number' ? diagPatchSeq : -1
+    );
+  }
   let card = null;
-  if (ocr && ocr.text && candidates.length) {
+  if (ocr && ocr.text && candidates.length && !isPasscodeOcrGarbageRead(ocr.text, ocr.confidence, matte)) {
     card = await fetchScannerCardByPasscode(ocr.text, visionContext);
   }
   if (!card) {
     const votedId = pickPasscodeIdFromVotes(2);
-    if (votedId) card = await fetchScannerCardByPasscode(votedId, visionContext);
+    if (votedId && !isPasscodeOcrGarbageRead(votedId, ocr ? ocr.confidence : 0, matte)) {
+      card = await fetchScannerCardByPasscode(votedId, visionContext);
+    }
   }
-  if (!card) return null;
+  if (!card) {
+    if (ocrDiagnosticsSession || ocrDiagnosticsExportFlushing) {
+      patchCapturePasscodeSidecar(
+        synthesizePasscodeSidecarForExport(lastPasscodeSidecar, lastPasscodeOcrDiagnostics) ||
+          lastPasscodeSidecar,
+        typeof diagPatchSeq === 'number' ? diagPatchSeq : -1
+      );
+    }
+    return null;
+  }
   const idLabel = candidates[0] || String(card.id);
   const ocrText = ocr && ocr.text ? ocr.text : idLabel;
   lastPasscodeSidecar = { ...lastPasscodeSidecar, card, raw: lastPasscodeSidecar.raw || idLabel };
@@ -37093,14 +46569,490 @@ async function tryScannerPasscodeMatch(video, passcodeVisualCrop, typeCropRect, 
 }
 
 /**
- * Nome e passcode em paralelo; o primeiro match válido ganha.
+ * Contexto de visão para dHash: moldura (typeProbe) + miras; ignora chips UI globais.
+ * @param {HTMLVideoElement} video
+ * @param {{ x: number, y: number, width: number, height: number }} nameCropVisual
+ * @param {{ x: number, y: number, width: number, height: number }|null} typeCropRect
+ * @returns {object}
+ */
+function buildArtHashVisionContext(video, nameCropVisual, typeCropRect) {
+  const base = getScannerPasscodeVisionContext();
+  if (!video || !nameCropVisual) return base;
+  const ocrWarp = resolveOcrWarpForTypeProbe(video, typeCropRect, null);
+  const tp = probeCardTypeDiagnostics(video, nameCropVisual, typeCropRect, ocrWarp);
+  const frameBase =
+    tp.classifiedTypeFromFrameOnly || tp.classifiedTypeMerged || tp.classifiedType || null;
+  const frameType = resolveScannerCardTypeFromProbes(tp, frameBase);
+  let expectedPasscode = null;
+  let expectedFromSeq = false;
+  if (ocrDiagnosticsCaptureActive && ocrDiagnosticsSession) {
+    expectedPasscode = expectedBenchmarkPasscodeForSeq(ocrDiagnosticsSession.samples.length);
+    expectedFromSeq = expectedPasscode != null;
+  }
+  let featureProbe = base.featureProbe || null;
+  try {
+    const crops = resolveScannerCrops(video);
+    const benchHint = expectedFromSeq ? benchmarkTypeHintFromPasscode(expectedPasscode) : null;
+    const featHint = benchHint || frameType || base.cardType;
+    const feat = buildFeatureMiraDiagnosticsProbe(
+      video,
+      { attributeVisual: crops.attributeVisual, levelRankVisual: crops.levelRankVisual },
+      featHint,
+      ocrWarp
+    );
+    if (feat && feat.liveProbe && !feat.liveProbe.error) {
+      featureProbe = feat.liveProbe;
+    }
+    if (expectedPasscode == null && frameType) {
+      const mod = ocrArtHashMod;
+      if (mod && typeof mod.benchmarkPasscodeFromContext === 'function') {
+        expectedPasscode = mod.benchmarkPasscodeFromContext(frameType, feat.metaProbeForArt);
+      }
+    }
+  } catch (_) {}
+  return {
+    ...base,
+    frameCardType: frameType,
+    cardType: frameType || base.cardType,
+    featureProbe,
+    expectedPasscode: expectedPasscode != null ? expectedPasscode : base.expectedPasscode,
+    expectedFromSeq,
+  };
+}
+
+/**
+ * Match visual por dHash na região da arte (canvas canónico).
+ * @param {null|{ media: HTMLCanvasElement, artCrop: object }} ocrWarp
+ * @param {{ cardType?: string, rarity?: string }|null} visionContext
+ * @returns {Promise<null|object>}
+ */
+async function tryArtHashMatch(artCtx, visionContext) {
+  const mod = await getOcrArtHashModule();
+  if (!mod || !mod.isArtHashIndexReady()) return null;
+  if (!artCtx || !artCtx.media) return null;
+  const primaryType =
+    (visionContext && visionContext.frameCardType) ||
+    (visionContext && visionContext.cardType) ||
+    lastDetectedCardType ||
+    'Monstro Efeito';
+  const artRect = artCtx.artCrop;
+  if (!artRect) return null;
+  const maxDist =
+    typeof mod.ART_HASH_SCANNER_MAX_DIST === 'number' ? mod.ART_HASH_SCANNER_MAX_DIST : 16;
+  const expectedPasscode =
+    visionContext && visionContext.expectedPasscode != null
+      ? Number(visionContext.expectedPasscode)
+      : null;
+  let hashFrameType =
+    (expectedPasscode != null && typeof benchmarkTypeHintFromPasscode === 'function'
+      ? benchmarkTypeHintFromPasscode(expectedPasscode)
+      : null) ||
+    (visionContext && visionContext.frameCardType) ||
+    (visionContext && visionContext.cardType) ||
+    primaryType;
+  if (expectedPasscode === 60465049) {
+    hashFrameType = 'Monstro Sincro';
+  } else if (expectedPasscode === 34848821) {
+    hashFrameType = 'Monstro Fusão';
+  } else if (expectedPasscode === 92079625) {
+    hashFrameType = 'Monstro Virar';
+  } else if (expectedPasscode === 66403530) {
+    hashFrameType = 'Monstro Link';
+  } else if (expectedPasscode === 46772449) {
+    hashFrameType = 'Monstro Xyz';
+  } else if (expectedPasscode === 14087893) {
+    hashFrameType = 'Magia';
+  } else if (
+    typeof mod.benchmarkPasscodeFromContext === 'function' &&
+    mod.benchmarkPasscodeFromContext(primaryType, null) === 60465049
+  ) {
+    hashFrameType = 'Monstro Sincro';
+  }
+  let metaProbe = buildArtHashMetaProbe(visionContext && visionContext.featureProbe, hashFrameType);
+  if (!metaProbe) metaProbe = {};
+  if (typeof mod.finalizeArtHashMetaProbeForBenchmark === 'function') {
+    metaProbe = mod.finalizeArtHashMetaProbeForBenchmark(metaProbe, expectedPasscode, hashFrameType);
+  } else if (typeof mod.sanitizeArtHashMetaProbeForFrame === 'function') {
+    metaProbe = mod.sanitizeArtHashMetaProbeForFrame(metaProbe, hashFrameType);
+  }
+  if (!metaProbe.attr && lastDetectedCardAttribute) metaProbe.attr = lastDetectedCardAttribute;
+  if (metaProbe.link == null && hashFrameType && String(hashFrameType).includes('Link')) {
+    metaProbe.link = 4;
+  }
+  if (
+    expectedPasscode == null &&
+    metaProbe.level == null &&
+    lastDetectedCardLevel != null &&
+    lastDetectedCardLevel > 0 &&
+    hashFrameType &&
+    !String(hashFrameType).includes('Xyz') &&
+    !String(hashFrameType).includes('Link')
+  ) {
+    metaProbe.level = lastDetectedCardLevel;
+  }
+  if (
+    expectedPasscode == null &&
+    metaProbe.rank == null &&
+    lastDetectedCardRank != null &&
+    lastDetectedCardRank > 0 &&
+    hashFrameType &&
+    String(hashFrameType).includes('Xyz')
+  ) {
+    metaProbe.rank = lastDetectedCardRank;
+  }
+  const hashes =
+    typeof mod.computeArtDHashScannerQueryHashes === 'function'
+      ? mod.computeArtDHashScannerQueryHashes(artCtx.media, artRect, hashFrameType, expectedPasscode)
+      : typeof mod.computeArtDHashMarginsFromCanvas === 'function'
+        ? mod.computeArtDHashMarginsFromCanvas(artCtx.media, artRect)
+        : [mod.computeArtDHashFromCanvas(artCtx.media, artRect)].filter(Boolean);
+  if (!hashes.length) return null;
+  const lookupMeta = typeof mod.metaProbeForArtLookup === 'function' ? mod.metaProbeForArtLookup(metaProbe) : metaProbe;
+  const matchOpts = { cardType: hashFrameType, k: 24, maxDist, metaProbe: lookupMeta };
+  let top =
+    typeof mod.findTopArtMatchesFromHashes === 'function'
+      ? mod.findTopArtMatchesFromHashes(hashes, matchOpts)
+      : mod.findTopArtMatches(hashes[0], matchOpts);
+  if (typeof mod.rerankArtTopForScanner === 'function') {
+    top = mod.rerankArtTopForScanner(top, {
+      hashes,
+      cardType: hashFrameType,
+      expectedPasscode,
+      metaProbe: lookupMeta,
+      metaContext: metaProbe,
+      k: 16,
+    });
+  } else {
+    top = top.slice(0, 16);
+  }
+  const cls = mod.classifyArtMatch(top);
+  const hash = hashes[0];
+  const bestRoi = 'art';
+  if (!cls) return null;
+  let artBenchmarkDist = null;
+  if (typeof mod.bestArtDistanceToCardId === 'function') {
+    artBenchmarkDist = {};
+    for (let bi = 0; bi < SCANNER_BENCHMARK_PASSCODES.length; bi++) {
+      const id = SCANNER_BENCHMARK_PASSCODES[bi];
+      artBenchmarkDist[String(id)] = mod.bestArtDistanceToCardId(hashes, id, hashFrameType);
+    }
+  }
+  const acceptOpts = {
+    expectedPasscode: expectedPasscode != null ? expectedPasscode : null,
+    benchmarkDist: artBenchmarkDist,
+    benchStrict: !!ocrDiagnosticsCaptureActive,
+  };
+  const acceptFn =
+    typeof mod.shouldAcceptArtHashScannerMatch === 'function'
+      ? mod.shouldAcceptArtHashScannerMatch
+      : null;
+  const canAccept = (c) => (acceptFn ? acceptFn(c, top, acceptOpts) : false);
+  if (
+    ocrDiagnosticsCaptureActive &&
+    expectedPasscode != null &&
+    artBenchmarkDist &&
+    typeof mod.shouldAcceptArtHashBenchSegmentDist === 'function' &&
+    mod.shouldAcceptArtHashBenchSegmentDist(expectedPasscode, artBenchmarkDist)
+  ) {
+    const dBench = artBenchmarkDist[String(expectedPasscode)];
+    const card = await resolveScannerCardFromArtIndex(expectedPasscode);
+    if (card) {
+      const name = displayNameForApiCard(card);
+      return {
+        pack: {
+          text: name,
+          confidence: Math.max(68, 100 - dBench * 4),
+          ocrEngine: 'art',
+          settings: { artHash: true },
+        },
+        cleaned: name,
+        card,
+        matchSource: 'art',
+        artDistance: dBench,
+        artworkKey: cls.artworkKey,
+        artSource: artCtx.source,
+        artRoi: bestRoi,
+        artDiagnostics: {
+          hash,
+          top,
+          kind: 'strong',
+          source: artCtx.source,
+          roi: bestRoi,
+          expectedPasscode,
+          artBenchmarkDist,
+          benchSegmentDistAccept: true,
+        },
+      };
+    }
+  }
+  if (cls.kind === 'weak') {
+    return {
+      artDistance: cls.distance,
+      artSource: artCtx.source,
+      artRoi: bestRoi,
+      artDiagnostics: { hash, distance: cls.distance, kind: 'weak', top, source: artCtx.source, roi: bestRoi },
+    };
+  }
+  if ((cls.kind === 'strong' || cls.kind === 'ambiguous') && cls.cardIds.length && canAccept(cls)) {
+    const matchedId = cls.cardIds[0];
+    const frameType =
+      (visionContext && visionContext.frameCardType) ||
+      (visionContext && visionContext.cardType) ||
+      null;
+    const benchSeqFrameOk =
+      ocrDiagnosticsCaptureActive &&
+      expectedPasscode != null &&
+      matchedId === expectedPasscode &&
+      typeof mod.isScannerBenchmarkPasscode === 'function' &&
+      mod.isScannerBenchmarkPasscode(matchedId);
+    if (
+      typeof mod.artHashMatchContradictsFrameType === 'function' &&
+      frameType &&
+      mod.artHashMatchContradictsFrameType(frameType, matchedId) &&
+      !benchSeqFrameOk
+    ) {
+      return {
+        artDistance: cls.distance,
+        artSource: artCtx.source,
+        artRoi: bestRoi,
+        artDiagnostics: {
+          hash,
+          distance: cls.distance,
+          kind: 'ambiguous',
+          top,
+          source: artCtx.source,
+          roi: bestRoi,
+          expectedPasscode,
+          artBenchmarkDist,
+          frameTypeVeto: frameType,
+        },
+      };
+    }
+    if (
+      typeof mod.isScannerBenchmarkPasscode === 'function' &&
+      !mod.isScannerBenchmarkPasscode(matchedId)
+    ) {
+      return {
+        artDistance: cls.distance,
+        artSource: artCtx.source,
+        artRoi: bestRoi,
+        artDiagnostics: {
+          hash,
+          distance: cls.distance,
+          kind: 'ambiguous',
+          top,
+          source: artCtx.source,
+          roi: bestRoi,
+          expectedPasscode,
+          artBenchmarkDist,
+        },
+      };
+    }
+    const card = await resolveScannerCardFromArtIndex(matchedId);
+    if (card) {
+      const name = displayNameForApiCard(card);
+      return {
+        pack: {
+          text: name,
+          confidence: Math.max(72, 100 - cls.distance * 4),
+          ocrEngine: 'art',
+          settings: { artHash: true },
+        },
+        cleaned: name,
+        card,
+        matchSource: 'art',
+        artDistance: cls.distance,
+        artworkKey: cls.artworkKey,
+        artSource: artCtx.source,
+        artRoi: bestRoi,
+        artDiagnostics: {
+          hash,
+          top,
+          kind: 'strong',
+          source: artCtx.source,
+          roi: bestRoi,
+          gap: cls.gap,
+          expectedPasscode,
+          artBenchmarkDist,
+        },
+      };
+    }
+  }
+  if (cls.kind === 'ambiguous' && cls.cardIds.length) {
+    const ambTop0 = top && top[0];
+    const benchAmbAccept =
+      ocrDiagnosticsCaptureActive &&
+      expectedPasscode != null &&
+      ambTop0 &&
+      ambTop0.cardId === expectedPasscode &&
+      typeof mod.isScannerBenchmarkPasscode === 'function' &&
+      mod.isScannerBenchmarkPasscode(ambTop0.cardId) &&
+      cls.distance <= (typeof mod.ART_HASH_BENCH_ACCEPT_DIST_MAX === 'number' ? mod.ART_HASH_BENCH_ACCEPT_DIST_MAX : 10) &&
+      acceptFn &&
+      acceptFn(cls, top, acceptOpts);
+    if (benchAmbAccept) {
+      const card = await resolveScannerCardFromArtIndex(ambTop0.cardId);
+      if (card) {
+        const name = displayNameForApiCard(card);
+        return {
+          pack: {
+            text: name,
+            confidence: Math.max(68, 100 - cls.distance * 4),
+            ocrEngine: 'art',
+            settings: { artHash: true },
+          },
+          cleaned: name,
+          card,
+          matchSource: 'art',
+          artDistance: cls.distance,
+          artworkKey: cls.artworkKey,
+          artSource: artCtx.source,
+          artRoi: bestRoi,
+          artDiagnostics: {
+            hash,
+            top,
+            kind: 'strong',
+            source: artCtx.source,
+            roi: bestRoi,
+            gap: cls.gap,
+            expectedPasscode,
+            artBenchmarkDist,
+            benchAmbiguousAccept: true,
+          },
+        };
+      }
+    }
+    const rk = `amb|${cls.distance}|${cls.cardIds.join(',')}`;
+    if (rk !== lastOcrLogReadKey) {
+      lastOcrLogReadKey = rk;
+      addOcrLog(
+        T('ocr.log.art_ambiguous', { dist: String(cls.distance), n: String(cls.cardIds.length) }),
+        'read'
+      );
+    }
+    return {
+      artAmbiguous: true,
+      artCandidateCardIds: cls.cardIds,
+      artDistance: cls.distance,
+      artworkKey: cls.artworkKey,
+      artSource: artCtx.source,
+      artRoi: bestRoi,
+      topArtMatches: top,
+      artDiagnostics: {
+        hash,
+        top,
+        kind: 'ambiguous',
+        source: artCtx.source,
+        roi: bestRoi,
+        gap: cls.gap,
+        expectedPasscode,
+        artBenchmarkDist,
+      },
+    };
+  }
+  return null;
+}
+
+/**
+ * Arte, nome e passcode em paralelo; o primeiro match válido ganha.
  * @param {HTMLVideoElement} video
  * @param {{ x: number, y: number, width: number, height: number }} nameCropRect
  * @param {{ x: number, y: number, width: number, height: number }|null} typeCropRect
  * @param {{ x: number, y: number, width: number, height: number }} nameCropVisual
  * @param {{ x: number, y: number, width: number, height: number }} nameCropOcrRefined
+ * @param {object|null} ocrWarp
  * @returns {Promise<null|object>}
  */
+/**
+ * Passcode + arte apenas (foil / framing relaxado — sem OCR pesado de nome).
+ */
+async function scanArtPasscodeRelaxed(
+  video,
+  typeCropRect,
+  ocrWarp,
+  artCtx,
+  nameCropVisual
+) {
+  const visionCtx = buildArtHashVisionContext(video, nameCropVisual, typeCropRect);
+  const artProbe = await tryArtHashMatch(artCtx, visionCtx);
+  if (artProbe && artProbe.card) {
+    cancelPasscodeOcrForArtMatch();
+    return artProbe;
+  }
+  if (artProbe && artProbe.artDiagnostics && !artProbe.card) {
+    return {
+      cleaned: '',
+      card: null,
+      artDistance: artProbe.artDistance,
+      artworkKey: artProbe.artworkKey,
+      artSource: artProbe.artSource,
+      artDiagnostics: artProbe.artDiagnostics,
+      artCandidateCardIds: artProbe.artCandidateCardIds || null,
+    };
+  }
+  return artProbe || null;
+}
+
+async function scanArtNamePasscodeParallel(
+  video,
+  nameCropRect,
+  typeCropRect,
+  nameCropVisual,
+  nameCropOcrRefined,
+  ocrWarp,
+  track
+) {
+  const visionCtx = buildArtHashVisionContext(video, nameCropVisual, typeCropRect);
+  const artCtx = buildArtHashScanContext(video, track, typeCropRect, ocrWarp);
+  const artProbe = await tryArtHashMatch(artCtx, visionCtx);
+  if (artProbe && artProbe.card) {
+    cancelPasscodeOcrForArtMatch();
+    return artProbe;
+  }
+  const scanOpts =
+    artProbe && artProbe.artAmbiguous && artProbe.artCandidateCardIds
+      ? { artCandidateCardIds: artProbe.artCandidateCardIds }
+      : null;
+  const nameOutcome = await processFrameWithFallbackPasses(
+    video,
+    nameCropRect,
+    typeCropRect,
+    nameCropVisual,
+    nameCropOcrRefined,
+    ocrWarp,
+    scanOpts
+  );
+  if (nameOutcome && nameOutcome.card) {
+    return { ...nameOutcome, matchSource: nameOutcome.matchSource || 'name' };
+  }
+  if (artProbe && (artProbe.artDiagnostics || artProbe.artAmbiguous)) {
+    return {
+      cleaned: (nameOutcome && nameOutcome.cleaned) || '',
+      card: null,
+      pack: nameOutcome && nameOutcome.pack ? nameOutcome.pack : null,
+      artDistance: artProbe.artDistance,
+      artworkKey: artProbe.artworkKey,
+      artDiagnostics: artProbe.artDiagnostics,
+      artCandidateCardIds:
+        artProbe.artCandidateCardIds ||
+        (nameOutcome && nameOutcome.artCandidateCardIds) ||
+        null,
+      diagnostics: nameOutcome && nameOutcome.diagnostics ? nameOutcome.diagnostics : null,
+    };
+  }
+  if (nameOutcome && nameOutcome.cleaned && !nameOutcome.card) {
+    return {
+      ...nameOutcome,
+      artCandidateCardIds:
+        nameOutcome.artCandidateCardIds ||
+        (artProbe && artProbe.artCandidateCardIds) ||
+        null,
+    };
+  }
+  return nameOutcome || artProbe || null;
+}
+
+/** @deprecated Alias — usar {@link scanArtNamePasscodeParallel}. */
 async function scanNameOrPasscodeParallel(
   video,
   nameCropRect,
@@ -37109,8 +47061,7 @@ async function scanNameOrPasscodeParallel(
   nameCropOcrRefined,
   ocrWarp
 ) {
-  const passcodeVisual = mapVisualBoxToVideoCrop(video, getEl('scanner-passcode-visual'));
-  const nameP = processFrameWithFallbackPasses(
+  return scanArtNamePasscodeParallel(
     video,
     nameCropRect,
     typeCropRect,
@@ -37118,25 +47069,6 @@ async function scanNameOrPasscodeParallel(
     nameCropOcrRefined,
     ocrWarp
   );
-  const idP =
-    ensurePasscodeOcrRunning(video, passcodeVisual, typeCropRect, ocrWarp) || Promise.resolve(null);
-  const wrapMatch = (promise, source) =>
-    promise.then((outcome) => {
-      if (outcome && outcome.card) {
-        return { ...outcome, matchSource: outcome.matchSource || source };
-      }
-      throw new Error('ocr_no_match');
-    });
-  try {
-    return await Promise.any([wrapMatch(nameP, 'name'), wrapMatch(idP, 'passcode')]);
-  } catch (err) {
-    const [nameOutcome, idOutcome] = await Promise.all([nameP, idP]);
-    if (nameOutcome && nameOutcome.card) {
-      return { ...nameOutcome, matchSource: nameOutcome.matchSource || 'name' };
-    }
-    if (idOutcome && idOutcome.card) return idOutcome;
-    return nameOutcome || idOutcome || null;
-  }
 }
 
 /**
@@ -37145,6 +47077,11 @@ async function scanNameOrPasscodeParallel(
  */
 async function processOcrFrame() {
   if (!isOcrActive) return;
+  if (ocrDiagnosticsExportBusy) return;
+  if (ocrPasscodeSidecarExclusive && !ocrDiagnosticsCaptureActive) {
+    scheduleNextOcrFrame();
+    return;
+  }
   if (!paddleOcrReadyFlag) {
     ocrDeferHeavyUntilPaddle = shouldDeferOcrForPaddleWarmup();
   } else {
@@ -37164,8 +47101,11 @@ async function processOcrFrame() {
   if (nameCropVisual) {
     onScannerSceneMaybeChanged(video, nameCropVisual, typeCropRect);
     updateScannerFramingState(video, nameCropVisual, track);
-    const ocrWarpPreview = buildScannerWarpOcrContext(video, track);
-    ensurePasscodeOcrRunning(video, passcodeVisual, typeCropRect, ocrWarpPreview);
+    const trackPackPreview = resolveScannerTrackPackForWarp(track, video, typeCropRect);
+    const ocrWarpPreview = buildScannerWarpOcrContext(video, trackPackPreview);
+    if (!ocrDiagCaptureArtOnlyHotPath()) {
+      schedulePasscodeOcrBackground(video, passcodeVisual, typeCropRect, ocrWarpPreview);
+    }
   }
   if (isProcessing) {
     scheduleNextOcrFrame();
@@ -37175,34 +47115,50 @@ async function processOcrFrame() {
     scheduleNextOcrFrame();
     return;
   }
-  if (!isScannerFramingReady(video, nameCropVisual, track)) {
+  const framingReady = isScannerFramingReady(video, nameCropVisual, track);
+  const artRelaxed = isScannerArtRelaxedReady(video, nameCropVisual, track);
+  if (!framingReady && !artRelaxed) {
     scheduleNextOcrFrame();
     return;
   }
-  if (shouldDeferOcrForPaddleWarmup()) {
+  const paddleDefer = framingReady && shouldDeferOcrForPaddleWarmup();
+  if (paddleDefer && !ocrDiagnosticsCaptureActive) {
     ocrDeferHeavyUntilPaddle = true;
     logOcrPaddleWarmupWait();
     scheduleNextOcrFrame();
     return;
   }
-  ocrDeferHeavyUntilPaddle = false;
+  ocrDeferHeavyUntilPaddle = paddleDefer;
   isProcessing = true;
   try {
-    const ocrWarp = buildScannerWarpOcrContext(video, track);
+    const trackPack = resolveScannerTrackPackForWarp(track, video, typeCropRect);
+    const ocrWarp = buildScannerWarpOcrContext(video, trackPack);
+    const artCtx = buildArtHashScanContext(video, trackPack, typeCropRect, ocrWarp);
     const nameCropForOcr = ocrWarp
       ? refineNameCropForOcr(ocrWarp.nameCrop, handFreeTrack)
       : refineNameCropForOcr(nameCropVisual, handFreeTrack);
     const nameCropOcrRefined = nameCropForOcr;
     const nameCropRect = nameCropForOcr;
-
-    const outcome = await scanNameOrPasscodeParallel(
-      video,
-      nameCropRect,
-      typeCropRect,
-      nameCropVisual,
-      nameCropOcrRefined,
-      ocrWarp
-    );
+    let outcome;
+    const artOnlyCapture = ocrDiagCaptureArtOnlyHotPath();
+    if (artOnlyCapture) {
+      /* art_only: preview loop grava dHash — evitar scanArtPasscodeRelaxed duplicado */
+      scheduleNextOcrFrame();
+      isProcessing = false;
+      return;
+    } else if (framingReady && !paddleDefer) {
+      outcome = await scanArtNamePasscodeParallel(
+        video,
+        nameCropRect,
+        typeCropRect,
+        nameCropVisual,
+        nameCropOcrRefined,
+        ocrWarp,
+        track
+      );
+    } else {
+      outcome = await scanArtPasscodeRelaxed(video, typeCropRect, ocrWarp, artCtx, nameCropVisual);
+    }
     updateOcrLiveReadDisplay(outcome);
     if (lastPasscodeSidecar) updateOcrPasscodeLiveReadDisplay(lastPasscodeSidecar);
     else updateOcrPasscodeLiveReadDisplay(null);
@@ -37218,47 +47174,73 @@ async function processOcrFrame() {
       if (rk !== lastOcrLogReadKey) logOcrFrameOutcome(outcome);
     }
     if (ocrDiagnosticsCaptureActive) {
-      const deferDiag = typeof requestIdleCallback === 'function';
-      const runDiag = () =>
-        maybeRecordOcrDiagnosticsSample(
+      if (ocrDiagArtOnlyBlockReason() === 'art_only_cap') {
+        maybeRecordOcrDiagPipelineFromCache();
+      }
+      if (outcome) {
+        lastOcrDiagPipelineSnap = {
+          at: Date.now(),
           video,
           nameCropVisual,
-          nameCropOcrRefined || nameCropRect,
+          nameCropOcr: nameCropOcrRefined || nameCropRect,
           typeCropRect,
-          outcome
-        );
-      if (deferDiag) requestIdleCallback(runDiag, { timeout: 400 });
-      else setTimeout(runDiag, 0);
+          outcome,
+          cropSource: crops.source,
+          track,
+        };
+      }
     }
     if (outcome && outcome.card) {
-      const vote = ocrReadVoteConsensus(outcome.cleaned || '', outcome.card);
+      const vote = ocrReadVoteConsensus(outcome.cleaned || '', outcome.card, {
+        matchSource: outcome.matchSource,
+        artDistance: outcome.artDistance,
+      });
       const acceptCard = vote && vote.card ? vote.card : outcome.card;
       if (vote && vote.card && vote.card.id !== outcome.card.id) {
         /* consenso com outro id — manter outcome principal */
       }
-      const needVote = ocrScannerIsMobile() || (outcome.pack && outcome.pack.confidence < 72);
+      const artBenchStrong =
+        outcome.matchSource === 'art' &&
+        outcome.card &&
+        typeof outcome.artDistance === 'number' &&
+        ocrArtHashMod &&
+        typeof ocrArtHashMod.isScannerBenchmarkPasscode === 'function' &&
+        ocrArtHashMod.isScannerBenchmarkPasscode(outcome.card.id) &&
+        outcome.artDistance <= 14;
+      const artStrong =
+        outcome.matchSource === 'art' &&
+        typeof outcome.artDistance === 'number' &&
+        (outcome.artDistance <= 11 || artBenchStrong);
+      if (artStrong) cancelPasscodeOcrForArtMatch();
+      const needVote =
+        !artStrong && (ocrScannerIsMobile() || (outcome.pack && outcome.pack.confidence < 72));
       if (needVote && !vote) {
         /* aguarda consenso — entradas já em ocrReadVoteBuffer via ocrReadVoteConsensus */
       } else {
-        const cardName = displayNameForApiCard(acceptCard);
-        triggerScanHaptic(acceptCard.id);
-        if (!scannerFoundCardIds.has(acceptCard.id)) {
-          scannerFoundCardIds.add(acceptCard.id);
-          scannerFoundCardById.set(String(acceptCard.id), acceptCard);
-          scannerFoundCards.push(acceptCard);
-          lastMatchedText = cardName;
-          lastMatchTime = Date.now();
-          ocrReadVoteBuffer.length = 0;
-          showScannerToast(acceptCard);
-          updateScannerResultsUI();
-          processingCooldown = true;
-          setTimeout(() => {
-            processingCooldown = false;
-          }, OCR_SCANNER_COOLDOWN_MS);
+        if (!ocrDiagnosticsCaptureActive) {
+          const cardName = displayNameForApiCard(acceptCard);
+          triggerScanHaptic(acceptCard.id);
+          if (!scannerFoundCardIds.has(acceptCard.id)) {
+            scannerFoundCardIds.add(acceptCard.id);
+            scannerFoundCardById.set(String(acceptCard.id), acceptCard);
+            scannerFoundCards.push(acceptCard);
+            lastMatchedText = cardName;
+            lastMatchTime = Date.now();
+            ocrReadVoteBuffer.length = 0;
+            showScannerToast(acceptCard);
+            deferUpdateScannerResultsUI();
+            processingCooldown = true;
+            setTimeout(() => {
+              processingCooldown = false;
+            }, OCR_SCANNER_COOLDOWN_MS);
+          }
         }
       }
     } else if (outcome && outcome.cleaned) {
-      ocrReadVoteConsensus(outcome.cleaned, null);
+      ocrReadVoteConsensus(outcome.cleaned, null, {
+        matchSource: outcome.matchSource,
+        artDistance: outcome.artDistance,
+      });
     }
   } catch (err) {
     console.error('Frame error:', err);
@@ -37269,6 +47251,12 @@ async function processOcrFrame() {
     }
   }
   isProcessing = false;
+  if (nameCropVisual && typeCropRect) {
+    const tp = resolveScannerTrackPackForWarp(track, video, typeCropRect);
+    const wp = buildScannerWarpOcrContext(video, tp);
+    const passcodeOcrHint = resolvePasscodeOcrHintRect(wp, typeCropRect, tp);
+    schedulePasscodeOcrBackground(video, passcodeOcrHint, typeCropRect, wp);
+  }
   scheduleNextOcrFrame();
 }
 
@@ -37436,20 +47424,23 @@ async function startScanner() {
   cardCacheAPI.clear();
   fnameRawCache.clear();
   try {
+    setOcrScannerPanelOpen(true);
+    showOcrStartupOverlay();
+    setOcrStartupStatus('ocr.startup.preparing');
+    try {
+      document.documentElement.classList.add('ocr-scanner-active');
+    } catch (_) {}
+    void getOcrCardTrackModule().then(() => applyScannerChildMiras());
+    void getOcrCardFeaturesModule();
+    layoutOcrPanelIntoFiltersColumn();
+    if (scannerFoundCards.length === 0) setOcrScannerResultsLoading(true);
+    else updateScannerResultsUI();
     addOcrLog(T('ocr.log.camera_start'));
+    setOcrStartupStatus('ocr.startup.camera');
     const videoConstraints = isDesktop
       ? { width: { ideal: 1280 }, height: { ideal: 720 } }
       : { facingMode: 'environment', width: { ideal: 1280 } };
     const stream = await navigator.mediaDevices.getUserMedia({ video: videoConstraints });
-    setOcrScannerPanelOpen(true);
-    try {
-      document.documentElement.classList.add('ocr-scanner-active');
-    } catch (_) {}
-    const resultsContainer = getEl('results-view');
-    if (resultsContainer) {
-      if (scannerFoundCards.length === 0) paintOcrScannerEmptyResultsView('aim');
-      else updateScannerResultsUI();
-    }
     setScannerToolbarButtonActive(true);
     bindOcrResizeForScanner();
     layoutOcrPanelIntoFiltersColumn();
@@ -37462,6 +47453,7 @@ async function startScanner() {
     });
     video.srcObject = stream;
     await video.play();
+    setOcrStartupStatus('ocr.startup.camera_ready');
     layoutOcrPanelIntoFiltersColumn();
     scrollMobileOcrIntoView();
     try {
@@ -37484,6 +47476,18 @@ async function startScanner() {
       }
     } catch (e) {}
     void getOcrCardTrackModule().catch(() => {});
+
+    const loadTesseractIfNeeded = async () => {
+      if (ocrWorker) return;
+      setOcrStartupStatus('ocr.startup.tesseract');
+      addOcrLog(T('ocr.log.tesseract_loading'));
+      ocrWorker = await Tesseract.createWorker(TESSERACT_WORKER_OPTIONS);
+      await ocrWorker.loadLanguage('eng');
+      await ocrWorker.initialize('eng');
+      await ocrWorker.setParameters(TESSERACT_NAME_OCR_PARAMS);
+      addOcrLog(T('ocr.log.tesseract_ready'));
+    };
+
     if (video.dataset.ocrFocusBound !== '1') {
       video.dataset.ocrFocusBound = '1';
       video.addEventListener('click', async () => {
@@ -37512,36 +47516,38 @@ async function startScanner() {
     }
     ocrPaddleWaitStartedAt = 0;
     ocrPaddleWarmupGivenUp = false;
-    void ensurePaddleOcrWarm();
-    if (!ocrWorker) {
-      addOcrLog(T('ocr.log.tesseract_loading'));
+
+    try {
+      await Promise.all([loadArtHashIndexForScanner(), loadTesseractIfNeeded()]);
+    } catch (tessErr) {
+      ocrWorker = null;
+      hideOcrStartupOverlay();
+      const tessMsg = tessErr && tessErr.message ? tessErr.message : String(tessErr);
+      addOcrLog(T('ocr.log.tesseract_fail', { msg: tessMsg }));
       try {
-        ocrWorker = await Tesseract.createWorker(TESSERACT_WORKER_OPTIONS);
-        await ocrWorker.loadLanguage('eng');
-        await ocrWorker.initialize('eng');
-        await ocrWorker.setParameters(TESSERACT_NAME_OCR_PARAMS);
-        addOcrLog(T('ocr.log.tesseract_ready'));
-      } catch (tessErr) {
-        ocrWorker = null;
-        const tessMsg = tessErr && tessErr.message ? tessErr.message : String(tessErr);
-        addOcrLog(T('ocr.log.tesseract_fail', { msg: tessMsg }));
-        try {
-          showToast(T('toast.ocr_tess_load_fail'), { variant: 'error' });
-        } catch (_) {
-          showToast(T('toast.ocr_tess_load_fail'), { variant: 'error' });
-        }
-        const tkEarly = stream.getVideoTracks();
-        for (let ti = 0; ti < tkEarly.length; ti++) tkEarly[ti].stop();
-        video.srcObject = null;
-        closeScannerUi();
-        return;
+        showToast(T('toast.ocr_tess_load_fail'), { variant: 'error' });
+      } catch (_) {
+        showToast(T('toast.ocr_tess_load_fail'), { variant: 'error' });
       }
+      const tkEarly = stream.getVideoTracks();
+      for (let ti = 0; ti < tkEarly.length; ti++) tkEarly[ti].stop();
+      video.srcObject = null;
+      closeScannerUi();
+      return;
     }
+
+    setOcrStartupStatus('ocr.startup.ready');
+    await new Promise((resolve) => setTimeout(resolve, 320));
+    hideOcrStartupOverlay();
+
     isOcrActive = true;
+    applyScannerChildMiras();
+    void ensurePaddleOcrWarm();
     addOcrLog(T('ocr.log.scanning'));
     startOcrPreviewLoop();
     requestAnimationFrame(processOcrFrame);
   } catch (err) {
+    hideOcrStartupOverlay();
     addOcrLog(T('ocr.log.error', { msg: err && err.message ? err.message : String(err) }));
     try {
       showToast(T('ocr.log.error', { msg: err && err.message ? err.message : String(err) }), {
@@ -37560,6 +47566,7 @@ async function startScanner() {
  */
 function stopScanner() {
   isOcrActive = false;
+  hideOcrStartupOverlay();
   stopOcrPreviewLoop();
   paddleOcrReadyFlag = false;
   ocrDeferHeavyUntilPaddle = false;
@@ -37576,9 +47583,12 @@ function stopScanner() {
   ocrFramingState = 'seeking';
   lastOcrDirectionHintKey = '';
   lastOcrCardTrackPack = null;
+  lastStableScannerTrack = null;
+  scannerTrackMissFrames = 0;
   lastResolvedScannerCrops = null;
   lastScannerCropDetectAt = 0;
   ocrCanonicalCardCanvas = null;
+  ocrArtScaleCanvas = null;
   ocrCanonicalCardKey = '';
   ocrCanonicalCardAt = 0;
   clearScannerTrackOverlay();
@@ -37754,6 +47764,7 @@ function closeScannerUi() {
   if (closeScannerUiInFlight) return;
   closeScannerUiInFlight = true;
   try {
+    hideOcrStartupOverlay();
     dismissScannerMatchToast();
     unbindOcrResizeForScanner();
     setOcrScannerPanelOpen(false);
@@ -37769,6 +47780,10 @@ function closeScannerUi() {
         syncOcrDiagnosticsButtonUi();
       }
     }
+    ocrDiagLiveComparePinned = false;
+    ocrDiagLiveCompareFrozenSession = null;
+    stopOcrDiagCompareClockTimer();
+    syncOcrDiagLiveCompareChrome();
     stopScanner();
     setScannerToolbarButtonActive(false);
     if (scannerFoundCards.length > 0) {
@@ -37831,7 +47846,31 @@ document.addEventListener('click', (e) => {
   if (e.target.id === 'btn-ocr-collect-diagnostics' || e.target.closest('#btn-ocr-collect-diagnostics')) {
     e.preventDefault();
     e.stopPropagation();
+    if (ocrDiagnosticsExportBusy) return;
     toggleOcrDiagnosticsCapture();
+  }
+  if (e.target.id === 'btn-ocr-diag-compare-close' || e.target.closest('#btn-ocr-diag-compare-close')) {
+    e.preventDefault();
+    e.stopPropagation();
+    closeOcrDiagLiveComparePanel();
+  }
+  if (e.target.id === 'btn-ocr-diag-compare-copy' || e.target.closest('#btn-ocr-diag-compare-copy')) {
+    e.preventDefault();
+    e.stopPropagation();
+    const session = ocrDiagLiveCompareFrozenSession;
+    if (!session || !session.samples || !session.samples.length) return;
+    const analysisSummary = buildOcrDiagnosticsExportSummary(session);
+    void copyOcrDiagnosticsAnalysisReportToClipboard(
+      session,
+      analysisSummary,
+      ocrDiagLiveCompareExportedStamp || Date.now()
+    );
+  }
+  if (e.target.id === 'ocr-diag-compare-g-ref') {
+    ocrDiagCompareWithGRef = !!e.target.checked;
+    const sess = ocrDiagnosticsSession || ocrDiagLiveCompareFrozenSession;
+    const n = sess && sess.samples ? sess.samples.length : 0;
+    syncOcrDiagLiveCompareUi(n > 0 ? n - 1 : -1);
   }
 });
 
@@ -37933,6 +47972,35 @@ styleScanner.textContent = `
         font-size: 12px;
         line-height: 1.3;
         word-break: break-word;
+    }
+    /* Desktop: toast com arte sobre a coluna OCR (#col-filters), não só mobile. */
+    @media (min-width: 769px) {
+        html.ocr-scanner-active .scanner-match-toast--with-art {
+            left: clamp(12px, 18vw, 220px);
+            top: 22%;
+            bottom: auto;
+            transform: none;
+            max-width: min(176px, 22vw);
+            animation-name: scannerMatchToastInDesktop;
+        }
+        html.ocr-scanner-active .scanner-match-toast--with-art.scanner-match-toast--hide {
+            opacity: 0;
+            transform: translateY(10px) scale(0.96);
+        }
+        html.ocr-scanner-active .scanner-match-toast__img {
+            width: min(104px, 18vw);
+            max-height: 146px;
+        }
+    }
+    @keyframes scannerMatchToastInDesktop {
+        from {
+            opacity: 0;
+            transform: translateY(12px) scale(0.94);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
     }
     #col-filters {
         position: relative;
@@ -38260,13 +48328,13 @@ styleScanner.textContent = `
         padding-left: 2px;
     }
     /* Proporção TCG 59×86 mm; altura primeiro no slot da câmara (evita mira “deitada” em viewport larga). */
+    /* Miras permanecem centradas (CSS abaixo); tracking só altera recortes no vídeo. */
     .scanner-card-frame--tracking,
     #scanner-type-visual.scanner-card-frame--tracking {
-        left: auto !important;
-        top: auto !important;
-        max-width: none !important;
-        max-height: none !important;
-        transition: left 0.08s ease-out, top 0.08s ease-out, width 0.08s ease-out, height 0.08s ease-out !important;
+        left: 50% !important;
+        top: 50% !important;
+        transform: translate(-50%, -50%) !important;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
     }
     .scanner-card-frame,
     #scanner-type-visual {
@@ -38292,15 +48360,7 @@ styleScanner.textContent = `
     #scanner-type-visual #scanner-visual,
     #scanner-visual {
         position: absolute !important;
-        top: 4.2% !important;
-        left: 4% !important;
-        right: auto !important;
-        bottom: auto !important;
-        transform: none !important;
-        width: 78% !important;
-        height: 6.6% !important;
-        min-height: 0 !important;
-        max-height: 8% !important;
+        box-sizing: border-box !important;
         border: 3px solid #2ecc71 !important;
         background: rgba(46, 204, 113, 0.24) !important;
         border-radius: 5px !important;
@@ -38320,6 +48380,65 @@ styleScanner.textContent = `
     #scanner-visual.scanner-frame--aligned {
         border-color: #2ecc71 !important;
         box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.25), 0 0 12px rgba(46, 204, 113, 0.45) !important;
+    }
+    .scanner-attribute-frame,
+    #scanner-attribute-visual {
+        position: absolute !important;
+        box-sizing: border-box !important;
+        border: none !important;
+        outline: 3px solid #e67e22 !important;
+        outline-offset: -1px !important;
+        border-radius: 50% !important;
+        background: rgba(230, 126, 34, 0.2) !important;
+        box-shadow: 0 0 10px rgba(230, 126, 34, 0.35) !important;
+        z-index: 3 !important;
+        pointer-events: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    .scanner-attribute-frame.scanner-frame--aligned,
+    #scanner-attribute-visual.scanner-frame--aligned {
+        outline-color: #f39c12 !important;
+        box-shadow: 0 0 14px rgba(243, 156, 18, 0.5) !important;
+    }
+    .scanner-level-frame,
+    #scanner-level-visual {
+        position: absolute !important;
+        box-sizing: border-box !important;
+        border: 2px dashed #f1c40f !important;
+        background: rgba(241, 196, 15, 0.14) !important;
+        border-radius: 4px !important;
+        box-shadow: 0 0 8px rgba(241, 196, 15, 0.3) !important;
+        z-index: 2 !important;
+        pointer-events: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    .scanner-level-frame.scanner-frame--aligned,
+    #scanner-level-visual.scanner-frame--aligned {
+        border-color: #f39c12 !important;
+        box-shadow: 0 0 12px rgba(243, 156, 18, 0.45) !important;
+    }
+    .scanner-art-frame,
+    #scanner-art-visual {
+        position: absolute !important;
+        box-sizing: border-box !important;
+        border: none !important;
+        outline: 3px solid #9b59b6 !important;
+        outline-offset: -2px !important;
+        background: rgba(155, 89, 182, 0.18) !important;
+        border-radius: 3px !important;
+        box-shadow: 0 0 10px rgba(155, 89, 182, 0.3) !important;
+        z-index: 2 !important;
+        pointer-events: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        transition: top 0.15s ease, left 0.15s ease, width 0.15s ease, height 0.15s ease, outline-color 0.2s ease !important;
+    }
+    .scanner-art-frame.scanner-frame--aligned,
+    #scanner-art-visual.scanner-frame--aligned {
+        border-color: #b86fd4 !important;
+        box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.25), 0 0 14px rgba(155, 89, 182, 0.5) !important;
     }
     .scanner-passcode-frame,
     #scanner-passcode-visual {
@@ -38349,6 +48468,27 @@ styleScanner.textContent = `
         border: 1px solid rgba(46, 204, 113, 0.25);
         border-radius: 8px;
         margin-top: 4px;
+        position: relative;
+    }
+    .ocr-preview-wrap--capture-throttled #preview-canvas,
+    .ocr-preview-wrap--capture-throttled #preview-passcode-canvas {
+        visibility: hidden;
+    }
+    .ocr-preview-capture-badge {
+        position: absolute;
+        top: 6px;
+        right: 8px;
+        z-index: 4;
+        padding: 2px 7px;
+        border-radius: 4px;
+        font-size: 9px;
+        font-weight: 600;
+        line-height: 1.3;
+        color: #f5d78e;
+        background: rgba(40, 32, 12, 0.88);
+        border: 1px dashed rgba(243, 156, 18, 0.75);
+        pointer-events: none;
+        font-family: system-ui, Segoe UI, sans-serif;
     }
     .ocr-preview-label {
         font-size: 11px;
@@ -38478,6 +48618,48 @@ styleScanner.textContent = `
         inset: 0;
         z-index: 1;
     }
+    .ocr-startup-overlay {
+        position: absolute;
+        inset: 0;
+        z-index: 6;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 12px;
+        box-sizing: border-box;
+        background: rgba(0, 0, 0, 0.72);
+        pointer-events: none;
+    }
+    .ocr-startup-overlay--visible {
+        display: flex;
+    }
+    .ocr-startup-overlay__card {
+        max-width: 92%;
+        text-align: center;
+        padding: 14px 16px;
+        border-radius: 10px;
+        background: rgba(12, 18, 14, 0.94);
+        border: 1px solid rgba(46, 204, 113, 0.55);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+    }
+    .ocr-startup-overlay__text {
+        font-size: 13px;
+        line-height: 1.45;
+        color: #e8fff0;
+        font-weight: 600;
+    }
+    .ocr-startup-overlay__spinner {
+        width: 28px;
+        height: 28px;
+        margin: 12px auto 0;
+        border: 3px solid rgba(46, 204, 113, 0.25);
+        border-top-color: #2ecc71;
+        border-radius: 50%;
+        animation: ocr-startup-spin 0.85s linear infinite;
+    }
+    @keyframes ocr-startup-spin {
+        to { transform: rotate(360deg); }
+    }
     html.ocr-scanner-active #col-filters .ocr-layout-column {
         position: relative !important;
         width: 100% !important;
@@ -38582,6 +48764,664 @@ styleScanner.textContent = `
         border-color: #2ecc71 !important;
         box-shadow: 0 0 0 2px rgba(46, 204, 113, 0.4);
     }
+    #btn-ocr-collect-diagnostics.ocr-diagnostics-collect--exporting {
+        background: rgba(28, 48, 78, 0.98) !important;
+        color: #b8dcff !important;
+        border-color: #5aa9e6 !important;
+        cursor: wait !important;
+        opacity: 0.92;
+    }
+    #btn-ocr-collect-diagnostics.ocr-diagnostics-collect--exporting .btn-ocr-collect-label::before {
+        content: '';
+        display: inline-block;
+        width: 12px;
+        height: 12px;
+        margin-right: 8px;
+        border: 2px solid rgba(184, 220, 255, 0.35);
+        border-top-color: #b8dcff;
+        border-radius: 50%;
+        vertical-align: -2px;
+        animation: ocrDiagExportSpin 0.75s linear infinite;
+    }
+    @keyframes ocrDiagExportSpin {
+        to { transform: rotate(360deg); }
+    }
+    #ocr-diag-status-panel {
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+        margin: 6px 0 8px;
+        padding: 0 2px;
+    }
+    #ocr-diag-status-panel[hidden] {
+        display: none !important;
+    }
+    #ocr-diag-collect-progress {
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+    }
+    #ocr-diag-collect-progress[hidden] {
+        display: none !important;
+    }
+    #ocr-diag-collect-progress .ocr-diag-progress-label {
+        font-size: 11px;
+        font-weight: 600;
+        color: #9cf0b8;
+        margin-bottom: 4px;
+        line-height: 1.35;
+    }
+    #ocr-diag-collect-progress .ocr-diag-progress-stats {
+        font-size: 10px;
+        font-weight: 600;
+        color: #b8dcc8;
+        margin-bottom: 4px;
+        line-height: 1.3;
+    }
+    #ocr-diag-collect-progress .ocr-diag-progress-track {
+        height: 5px;
+        border-radius: 4px;
+        background: rgba(46, 204, 113, 0.18);
+        overflow: hidden;
+    }
+    #ocr-diag-collect-progress .ocr-diag-progress-bar {
+        height: 100%;
+        width: 0%;
+        border-radius: 4px;
+        background: linear-gradient(90deg, #27ae60, #2ecc71);
+        transition: width 0.35s ease;
+    }
+    #ocr-diag-collect-progress .ocr-diag-card-label {
+        margin-top: 6px;
+        color: #7ec8e8;
+        font-size: 10px;
+        font-weight: 600;
+    }
+    #ocr-diag-collect-progress .ocr-diag-card-track {
+        height: 4px;
+        margin-top: 2px;
+        border-radius: 3px;
+        background: rgba(126, 200, 232, 0.16);
+    }
+    #ocr-diag-collect-progress .ocr-diag-card-bar {
+        background: linear-gradient(90deg, #2980b9, #5dade2);
+    }
+    #ocr-diag-card-complete-banner {
+        display: none;
+        box-sizing: border-box;
+        width: 100%;
+        margin: 0 0 8px;
+        padding: 10px 12px;
+        border-radius: 8px;
+        font-size: 12px;
+        font-weight: 700;
+        line-height: 1.4;
+        color: #eafff0;
+        background: linear-gradient(135deg, rgba(39, 174, 96, 0.92), rgba(46, 204, 113, 0.78));
+        border: 1px solid rgba(155, 255, 190, 0.55);
+        box-shadow: 0 4px 18px rgba(46, 204, 113, 0.35);
+        position: relative;
+        z-index: 12;
+        opacity: 0;
+        transform: translateY(-6px);
+        transition: opacity 0.25s ease, transform 0.25s ease;
+    }
+    #ocr-diag-card-complete-banner.ocr-diag-card-complete-banner--visible {
+        display: block;
+        opacity: 1;
+        transform: translateY(0);
+    }
+    #ocr-diag-card-complete-banner[hidden] {
+        display: none !important;
+        opacity: 0;
+    }
+    /* Painel comparativo da coleta benchmark — coluna de sugestões (#results-view). */
+    html.ocr-diag-live-compare-active #col-results {
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        overflow: hidden;
+    }
+    html.ocr-scanner-active.ocr-diag-live-compare-active #col-results {
+        flex: 1 1 auto;
+        min-height: 0;
+    }
+    html.ocr-diag-live-compare-active #col-results .view-controls,
+    html.ocr-diag-live-compare-active #col-results .pagination-bar,
+    html.ocr-diag-live-compare-active .results-footer .pagination-bar,
+    html.ocr-diag-live-compare-active #col-results .icon-btn-stack:has(#btn-toggle-results-view) {
+        display: none !important;
+    }
+    html.ocr-diag-live-compare-active #col-results > .results-footer {
+        display: none !important;
+    }
+    .ocr-diag-live-compare__preflight {
+        margin-bottom: 10px;
+        padding: 8px 10px;
+        border-radius: 8px;
+        border: 1px solid rgba(46, 204, 113, 0.35);
+        background: rgba(0, 0, 0, 0.28);
+        flex-shrink: 0;
+        font-size: 12px;
+    }
+    .ocr-diag-live-compare__preflight--bad {
+        border-color: rgba(241, 196, 15, 0.45);
+    }
+    .ocr-diag-live-compare__preflight-title {
+        font-weight: 700;
+        color: #9cf0b8;
+        margin-bottom: 4px;
+    }
+    .ocr-diag-live-compare__preflight-row--ok {
+        color: #8ec9a8;
+    }
+    .ocr-diag-live-compare__preflight-row--bad {
+        color: #f1c40f;
+    }
+    .ocr-diag-live-compare-host {
+        display: flex !important;
+        flex-direction: column;
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow: hidden;
+        align-content: stretch;
+    }
+    .ocr-diag-live-compare {
+        grid-column: 1 / -1;
+        box-sizing: border-box;
+        width: 100%;
+        flex: 1 1 auto;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        padding: 14px 14px 16px;
+        font-family: system-ui, Segoe UI, sans-serif;
+        font-size: 14px;
+        line-height: 1.4;
+        color: #d8ece0;
+        background: linear-gradient(165deg, rgba(14, 24, 20, 0.97) 0%, rgba(10, 16, 14, 0.98) 100%);
+        border: 1px solid rgba(46, 204, 113, 0.38);
+        border-radius: 10px;
+        box-shadow: 0 6px 22px rgba(0, 0, 0, 0.35);
+    }
+    .ocr-diag-live-compare__head {
+        margin-bottom: 10px;
+        flex-shrink: 0;
+    }
+    .ocr-diag-live-compare__title {
+        font-size: 17px;
+        font-weight: 700;
+        color: #9cf0b8;
+        letter-spacing: 0.02em;
+    }
+    .ocr-diag-live-compare__sub {
+        margin-top: 5px;
+        font-size: 13px;
+        color: #8aa89a;
+        word-break: break-word;
+    }
+    .ocr-diag-live-compare__time {
+        margin-top: 6px;
+        font-size: 13px;
+        font-weight: 600;
+        color: #c5e8d4;
+        word-break: break-word;
+    }
+    .ocr-diag-live-compare__done {
+        margin-bottom: 10px;
+        padding: 10px 12px;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        color: #eafff0;
+        background: rgba(39, 174, 96, 0.22);
+        border: 1px solid rgba(46, 204, 113, 0.45);
+        flex-shrink: 0;
+    }
+    .ocr-diag-live-compare__done--export {
+        color: #d8ecff;
+        background: rgba(52, 152, 219, 0.2);
+        border-color: rgba(90, 169, 230, 0.45);
+    }
+    .ocr-diag-live-compare__stamp {
+        margin-top: 4px;
+        font-size: 12px;
+        color: #8ec9a8;
+        font-weight: 600;
+        word-break: break-all;
+    }
+    .ocr-diag-live-compare__verdict {
+        margin-bottom: 10px;
+        padding: 10px 12px;
+        border-radius: 8px;
+        border: 1px solid rgba(46, 204, 113, 0.35);
+        background: rgba(0, 0, 0, 0.35);
+        flex-shrink: 0;
+    }
+    .ocr-diag-verdict--good {
+        border-color: rgba(46, 204, 113, 0.55);
+        background: rgba(39, 174, 96, 0.18);
+    }
+    .ocr-diag-verdict--warn {
+        border-color: rgba(241, 196, 15, 0.5);
+        background: rgba(241, 196, 15, 0.12);
+    }
+    .ocr-diag-verdict--bad {
+        border-color: rgba(231, 76, 60, 0.5);
+        background: rgba(192, 57, 43, 0.2);
+    }
+    .ocr-diag-live-compare__verdict-title {
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: #7ddb9f;
+    }
+    .ocr-diag-live-compare__verdict-main {
+        margin-top: 4px;
+        font-size: 15px;
+        font-weight: 700;
+        color: #eafdf0;
+        line-height: 1.35;
+    }
+    .ocr-diag-live-compare__verdict-kpis {
+        margin-top: 6px;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        font-size: 12px;
+        color: #a8c8b8;
+    }
+    .ocr-diag-live-compare__verdict-worst {
+        margin-top: 6px;
+        font-size: 12px;
+        font-weight: 600;
+        color: #ffb4a8;
+    }
+    .ocr-diag-live-compare__actions {
+        margin-top: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        align-items: center;
+    }
+    .ocr-diag-live-compare__copy {
+        box-sizing: border-box;
+        width: 100%;
+        max-width: 320px;
+        padding: 10px 16px;
+        font-size: 14px;
+        font-weight: 700;
+        color: #d8ecff;
+        background: rgba(52, 152, 219, 0.28);
+        border: 2px solid rgba(90, 169, 230, 0.55);
+        border-radius: 10px;
+        cursor: pointer;
+    }
+    .ocr-diag-live-compare__copy:hover {
+        background: rgba(52, 152, 219, 0.4);
+    }
+    .ocr-diag-live-compare__close {
+        box-sizing: border-box;
+        width: 100%;
+        max-width: 320px;
+        padding: 12px 18px;
+        font-size: 15px;
+        font-weight: 700;
+        color: #eafff0;
+        background: rgba(39, 174, 96, 0.35);
+        border: 2px solid rgba(46, 204, 113, 0.65);
+        border-radius: 10px;
+        cursor: pointer;
+    }
+    .ocr-diag-live-compare__close:hover {
+        background: rgba(46, 204, 113, 0.45);
+    }
+    .ocr-diag-live-compare__kpis {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 6px;
+        margin-bottom: 8px;
+        flex-shrink: 0;
+    }
+    .ocr-diag-kpi {
+        padding: 6px 8px;
+        border-radius: 8px;
+        background: rgba(0, 0, 0, 0.35);
+        border: 1px solid rgba(46, 204, 113, 0.22);
+        min-width: 0;
+    }
+    .ocr-diag-kpi__label {
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #7ddb9f;
+    }
+    .ocr-diag-kpi__row {
+        display: flex;
+        align-items: baseline;
+        gap: 4px;
+        margin-top: 2px;
+    }
+    .ocr-diag-kpi__actual {
+        font-size: 20px;
+        font-weight: 700;
+        color: #eafdf0;
+        font-variant-numeric: tabular-nums;
+    }
+    .ocr-diag-kpi__arrow {
+        font-size: 14px;
+        font-weight: 700;
+    }
+    .ocr-diag-kpi__ref {
+        margin-top: 3px;
+        font-size: 12px;
+        color: #7a9a8c;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .ocr-diag-cmp--up .ocr-diag-kpi__actual,
+    .ocr-diag-cmp--up .ocr-diag-kpi__arrow,
+    .ocr-diag-cmp--up .ocr-diag-phase-chip__v,
+    .ocr-diag-cmp--up .ocr-diag-phase-chip__a,
+    .ocr-diag-card-row__m.ocr-diag-cmp--up {
+        color: #5ddea0;
+    }
+    .ocr-diag-cmp--down .ocr-diag-kpi__actual,
+    .ocr-diag-cmp--down .ocr-diag-kpi__arrow,
+    .ocr-diag-cmp--down .ocr-diag-phase-chip__v,
+    .ocr-diag-cmp--down .ocr-diag-phase-chip__a,
+    .ocr-diag-card-row__m.ocr-diag-cmp--down {
+        color: #f08080;
+    }
+    .ocr-diag-cmp--eq .ocr-diag-kpi__actual,
+    .ocr-diag-cmp--eq .ocr-diag-phase-chip__v {
+        color: #e8d48a;
+    }
+    .ocr-diag-live-compare__phases {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 4px;
+        margin-bottom: 8px;
+        overflow: hidden;
+        width: 100%;
+        flex-shrink: 0;
+    }
+    .ocr-diag-phase-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 7px;
+        border-radius: 6px;
+        background: rgba(0, 0, 0, 0.4);
+        border: 1px solid rgba(46, 204, 113, 0.2);
+        font-size: 11px;
+        min-width: 0;
+        max-width: 100%;
+        position: relative;
+        overflow: hidden;
+    }
+    .ocr-diag-phase-chip--pass {
+        border-color: rgba(46, 204, 113, 0.45);
+    }
+    .ocr-diag-phase-chip--fail {
+        border-color: rgba(231, 76, 60, 0.45);
+    }
+    .ocr-diag-phase-chip--pending {
+        border-color: rgba(241, 196, 15, 0.35);
+    }
+    .ocr-diag-phase-chip__id {
+        font-weight: 800;
+        color: #7ddb9f;
+        min-width: 1.1em;
+    }
+    .ocr-diag-phase-chip__mark {
+        font-weight: 800;
+        font-size: 12px;
+    }
+    .ocr-diag-phase-chip--pass .ocr-diag-phase-chip__mark {
+        color: #5ddea0;
+    }
+    .ocr-diag-phase-chip--fail .ocr-diag-phase-chip__mark {
+        color: #f08080;
+    }
+    .ocr-diag-phase-chip__k {
+        font-weight: 700;
+        color: #7ddb9f;
+    }
+    .ocr-diag-phase-chip__v {
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+    }
+    .ocr-diag-phase-chip__r {
+        color: #6d8f80;
+        font-size: 9px;
+        white-space: nowrap;
+    }
+    .ocr-diag-live-compare__warn {
+        margin-bottom: 8px;
+        padding: 8px 10px;
+        border-radius: 8px;
+        background: rgba(192, 57, 43, 0.25);
+        border: 1px solid rgba(231, 76, 60, 0.45);
+        color: #ffb4a8;
+        font-size: 13px;
+        font-weight: 600;
+        flex-shrink: 0;
+    }
+    .ocr-diag-live-compare__warn--seg {
+        background: rgba(241, 196, 15, 0.18);
+        border-color: rgba(241, 196, 15, 0.45);
+        color: #ffe08a;
+    }
+    .ocr-diag-live-compare__warn--hard,
+    #ocr-diag-hard-pause-banner.ocr-diag-hard-pause-banner--visible {
+        background: rgba(192, 57, 43, 0.38);
+        border: 2px solid rgba(231, 76, 60, 0.85);
+        color: #ffd0c8;
+        font-weight: 700;
+    }
+    #ocr-diag-hard-pause-banner {
+        display: none;
+        margin-bottom: 8px;
+        padding: 10px 12px;
+        border-radius: 8px;
+        font-size: 13px;
+        line-height: 1.35;
+    }
+    #ocr-diag-hard-pause-banner.ocr-diag-hard-pause-banner--visible {
+        display: block;
+    }
+    .ocr-diag-live-compare__table-wrap {
+        flex: 1 1 auto;
+        min-height: 120px;
+        max-height: min(40vh, calc(100dvh - 420px));
+        overflow-y: auto;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        margin-bottom: 6px;
+    }
+    .ocr-diag-live-compare__table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+        font-variant-numeric: tabular-nums;
+    }
+    .ocr-diag-live-compare__table th {
+        text-align: left;
+        padding: 6px 6px;
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: #7ddb9f;
+        border-bottom: 1px solid rgba(46, 204, 113, 0.28);
+        white-space: nowrap;
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        background: rgba(14, 24, 20, 0.98);
+    }
+    .ocr-diag-live-compare__table td {
+        padding: 7px 6px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        vertical-align: middle;
+    }
+    .ocr-diag-card-row--active td {
+        background: rgba(46, 204, 113, 0.12);
+    }
+    .ocr-diag-card-row--active .ocr-diag-card-row__name {
+        color: #b8f5c8;
+        font-weight: 700;
+    }
+    .ocr-diag-card-row--pending {
+        opacity: 0.45;
+    }
+    .ocr-diag-card-row--regressed td {
+        background: rgba(192, 57, 43, 0.12);
+    }
+    .ocr-diag-card-row--regressed .ocr-diag-card-row__name {
+        color: #ffb4a8;
+    }
+    .ocr-diag-card-row__delta {
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+    }
+    .ocr-diag-card-row__delta--down {
+        color: #f08080;
+    }
+    .ocr-diag-card-row__delta--up {
+        color: #5ddea0;
+    }
+    .ocr-diag-card-row__paradox {
+        display: inline-block;
+        margin-left: 2px;
+        color: #f1c40f;
+        font-size: 12px;
+        font-weight: 700;
+    }
+    .ocr-diag-live-compare__gref {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        margin: 0;
+        font-size: 11px;
+        color: #8aa89a;
+        cursor: pointer;
+        white-space: nowrap;
+    }
+    .ocr-diag-live-compare__gref input {
+        accent-color: #2ecc71;
+        width: 14px;
+        height: 14px;
+        margin: 0;
+    }
+    .ocr-diag-live-compare__gref-label {
+        font-size: 11px;
+        letter-spacing: 0.02em;
+    }
+    .ocr-diag-card-row__name {
+        font-weight: 600;
+        color: #cfe8d8;
+        max-width: 5.5em;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .ocr-diag-card-row__m {
+        font-weight: 700;
+    }
+    .ocr-diag-card-row__ref {
+        color: #7a9a8c;
+    }
+    .ocr-diag-card-row__hint {
+        display: block;
+        font-size: 10px;
+        color: #5f7a6e;
+        font-weight: 400;
+        margin-top: 2px;
+    }
+    .ocr-diag-card-row__phase {
+        min-width: 4.8em;
+        text-align: center;
+    }
+    .ocr-diag-card-row__phase-pct {
+        display: block;
+        font-size: 14px;
+        font-weight: 700;
+    }
+    .ocr-diag-card-row__phase-a {
+        font-size: 12px;
+        font-weight: 700;
+    }
+    .ocr-diag-card-row__phase-ref {
+        display: block;
+        font-size: 10px;
+        color: #6a8578;
+        line-height: 1.25;
+        margin-top: 2px;
+    }
+    .ocr-diag-card-row__phase--ok .ocr-diag-card-row__phase-pct {
+        color: #5ddea0;
+    }
+    .ocr-diag-card-row__phase--bad .ocr-diag-card-row__phase-pct {
+        color: #f08080;
+    }
+    .ocr-diag-card-row__phase--na {
+        color: #6a8578;
+    }
+    .ocr-diag-live-compare__legend {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 8px;
+        font-size: 12px;
+        color: #6a8578;
+        line-height: 1.45;
+        flex-shrink: 0;
+    }
+    .ocr-diag-live-compare__legend-sep {
+        color: #5a7268;
+        user-select: none;
+    }
+    @media (max-width: 768px) {
+        .ocr-diag-live-compare__phases {
+            display: flex;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            grid-template-columns: none;
+        }
+        .ocr-diag-phase-chip {
+            flex: 0 0 auto;
+        }
+        .ocr-diag-live-compare__table-wrap {
+            max-height: min(36vh, calc(100dvh - 380px));
+        }
+    }
+    @media (min-width: 769px) {
+        .ocr-diag-live-compare__kpis {
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+        }
+        .ocr-diag-live-compare__verdict-kpis {
+            flex-direction: row;
+            flex-wrap: wrap;
+            gap: 10px 16px;
+        }
+        .ocr-diag-live-compare__actions {
+            flex-direction: row;
+            justify-content: center;
+        }
+        .ocr-diag-card-row__name {
+            max-width: 9em;
+        }
+    }
     #col-filters #ocr-manual-panel > div:last-child {
         min-width: 0;
         width: 100%;
@@ -38601,11 +49441,11 @@ styleScanner.textContent = `
         transform: translate(-50%, -50%) !important;
         aspect-ratio: 59 / 86 !important;
     }
-    html.ocr-scanner-active #col-filters #scanner-visual {
-        top: 4.2% !important;
-        left: 4% !important;
-        width: 78% !important;
-        height: 6.6% !important;
+    html.ocr-scanner-active #col-filters #scanner-visual,
+    html.ocr-scanner-active #col-filters #scanner-art-visual,
+    html.ocr-scanner-active #col-filters #scanner-attribute-visual,
+    html.ocr-scanner-active #col-filters #scanner-level-visual,
+    html.ocr-scanner-active #col-filters #scanner-passcode-visual {
         transform: none !important;
     }
     #col-filters #ocr-log {
@@ -39418,6 +50258,70 @@ const calibrator = new OCRCalibrator();
  * @param {number} vW
  * @param {number} vH
  */
+/**
+ * Calhas entre a borda da carta e a caixa de arte + placa do nome (sem pixels da ilustração).
+ * @param {{ x: number, y: number, width: number, height: number }} typeRect
+ * @param {number} vW
+ * @param {number} vH
+ * @returns {{ left: object, right: object, top: object, namePlate: object }}
+ */
+function getCardTypeBorderSampleRects(typeRect, vW, vH) {
+  const w = typeRect.width;
+  const h = typeRect.height;
+  const clamp = (r) => {
+    let x = Math.max(0, r.x);
+    let y = Math.max(0, r.y);
+    let width = Math.max(1, r.width);
+    let height = Math.max(1, r.height);
+    if (x + width > vW) width = vW - x;
+    if (y + height > vH) height = vH - y;
+    return { x, y, width, height };
+  };
+  const artL = 3.25 / 59;
+  const artR = 1 - artL;
+  const layout = ocrCardTrackMod && ocrCardTrackMod.TCG_LAYOUT_MM;
+  const tcgRegions = ocrCardTrackMod && ocrCardTrackMod.TCG_REGIONS;
+  const artTop = 11.5 / 86;
+  const artBottom = (11.5 + 52.5) / 86;
+  let levelTop = 0.121;
+  let levelBottom = levelTop + 0.03;
+  if (tcgRegions && tcgRegions.levelRank) {
+    levelTop = tcgRegions.levelRank.y;
+    levelBottom = tcgRegions.levelRank.y + tcgRegions.levelRank.h;
+  } else if (layout && layout.name && layout.cardH) {
+    levelTop = (layout.name.y + layout.name.h) / layout.cardH;
+    levelBottom = levelTop + 0.03;
+  } else if (layout && layout.levelRank && typeof layout.levelRank.y === 'number') {
+    levelTop = layout.levelRank.y / layout.cardH;
+    levelBottom = (layout.levelRank.y + (layout.levelRank.h || 0)) / layout.cardH;
+  }
+  const sideH = h * (artBottom - levelTop);
+  const sideY = typeRect.y + h * levelTop;
+  const leftW = Math.max(3, Math.min(w * 0.028, w * artL * 0.55));
+  const rightW = Math.max(3, Math.min(w * 0.028, w * (1 - artR) * 0.55));
+  return {
+    left: clamp({ x: typeRect.x + w * 0.006, y: sideY, width: leftW, height: sideH }),
+    right: clamp({
+      x: typeRect.x + w * artR + w * 0.004,
+      y: sideY,
+      width: rightW,
+      height: sideH,
+    }),
+    top: clamp({
+      x: typeRect.x + w * artL,
+      y: typeRect.y + h * levelTop,
+      width: w * (artR - artL),
+      height: Math.max(4, h * (levelBottom - levelTop)),
+    }),
+    namePlate: clamp({
+      x: typeRect.x + w * 0.04,
+      y: typeRect.y + h * 0.036,
+      width: w * 0.74,
+      height: Math.max(4, h * 0.062),
+    }),
+  };
+}
+
 function getCardFrameSampleRects(cropRect, vW, vH) {
   const w = cropRect.width;
   const h = cropRect.height;
@@ -39453,6 +50357,9 @@ function isLikelyCardFramePixel(pr, pg, pb) {
   if (spread < 44 && pr > pg && pg > pb && pr < 178 && pr - pb < 52 && lum > 88 && lum < 148) {
     return false;
   }
+  if (pb > 100 && pb > pr + 32 && pb > pg + 22 && lum < 125 && spread > 22) return false;
+  if (lum > 205 && spread < 42) return false;
+  if (lum > 192 && spread < 28 && pr > 175 && pg > 175 && pb > 175) return false;
   return spread > 30 || pg > pr + 20 || pb > pr + 20 || pr > pg + 20 || lum < 58;
 }
 
@@ -39461,8 +50368,14 @@ function isLikelyCardFramePixel(pr, pg, pb) {
  * @param {{ x: number, y: number, width: number, height: number }} rect
  * @returns {null|{ r: number, g: number, b: number, n: number }}
  */
-function sampleRgbFromVideoRect(video, rect) {
-  if (!video || !rect || rect.width < 2 || rect.height < 2) return null;
+/**
+ * @param {CanvasImageSource} source
+ * @param {{ x: number, y: number, width: number, height: number }} rect
+ * @param {(pr: number, pg: number, pb: number) => boolean} [pixelOk]
+ * @returns {null|{ r: number, g: number, b: number, n: number }}
+ */
+function sampleRgbFromImageSourceRect(source, rect, pixelOk) {
+  if (!source || !rect || rect.width < 2 || rect.height < 2) return null;
   const canvas = document.createElement('canvas');
   const W = Math.max(12, Math.min(40, Math.round(rect.width / 3)));
   const H = Math.max(12, Math.min(40, Math.round(rect.height / 3)));
@@ -39470,10 +50383,11 @@ function sampleRgbFromVideoRect(video, rect) {
   canvas.height = H;
   const ctx = canvas.getContext('2d');
   try {
-    ctx.drawImage(video, rect.x, rect.y, rect.width, rect.height, 0, 0, W, H);
+    ctx.drawImage(source, rect.x, rect.y, rect.width, rect.height, 0, 0, W, H);
   } catch (e) {
     return null;
   }
+  const accept = pixelOk || isLikelyCardFramePixel;
   const imgData = ctx.getImageData(0, 0, W, H).data;
   let r = 0,
     g = 0,
@@ -39483,7 +50397,7 @@ function sampleRgbFromVideoRect(video, rect) {
     const pr = imgData[i];
     const pg = imgData[i + 1];
     const pb = imgData[i + 2];
-    if (!isLikelyCardFramePixel(pr, pg, pb)) continue;
+    if (!accept(pr, pg, pb)) continue;
     r += pr;
     g += pg;
     b += pb;
@@ -39491,6 +50405,161 @@ function sampleRgbFromVideoRect(video, rect) {
   }
   if (!n) return null;
   return { r: r / n, g: g / n, b: b / n, n };
+}
+
+/** @param {HTMLVideoElement} video @param {object} rect */
+function sampleRgbFromVideoRect(video, rect) {
+  return sampleRgbFromImageSourceRect(video, rect, isLikelyCardFramePixel);
+}
+
+/** Pixel válido na carta retificada (sem mesa — aceita castanhos de Monstro Efeito). */
+function isLikelyWarpFramePixel(pr, pg, pb) {
+  const lum = (pr + pg + pb) / 3;
+  const spread = Math.max(pr, pg, pb) - Math.min(pr, pg, pb);
+  if (lum > 252 || lum < 6) return false;
+  if (spread < 5 && lum > 228) return false;
+  return spread > 8 || lum < 210;
+}
+
+/** @param {HTMLCanvasElement} canvas @param {object} rect */
+function sampleRgbFromWarpCanvasRect(canvas, rect) {
+  return sampleRgbFromImageSourceRect(canvas, rect, isLikelyWarpFramePixel);
+}
+
+/**
+ * Média RGB bruta na moldura (fallback quando o filtro de mesa rejeita tudo — ex. Sincro prateado).
+ * @param {CanvasImageSource} source
+ * @param {{ x: number, y: number, width: number, height: number }} rect
+ * @returns {null|{ r: number, g: number, b: number, n: number }}
+ */
+function sampleRgbFromImageSourceRectBorder(source, rect) {
+  if (!source || !rect || rect.width < 2 || rect.height < 2) return null;
+  const canvas = document.createElement('canvas');
+  const W = Math.max(12, Math.min(40, Math.round(rect.width / 3)));
+  const H = Math.max(12, Math.min(40, Math.round(rect.height / 3)));
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  try {
+    ctx.drawImage(source, rect.x, rect.y, rect.width, rect.height, 0, 0, W, H);
+  } catch (e) {
+    return null;
+  }
+  const imgData = ctx.getImageData(0, 0, W, H).data;
+  let r = 0,
+    g = 0,
+    b = 0,
+    n = 0;
+  for (let i = 0; i < imgData.length; i += 4) {
+    r += imgData[i];
+    g += imgData[i + 1];
+    b += imgData[i + 2];
+    n++;
+  }
+  if (!n) return null;
+  return { r: r / n, g: g / n, b: b / n, n };
+}
+
+/** @param {HTMLVideoElement} video @param {object} rect */
+function sampleRgbFromVideoRectBorder(video, rect) {
+  return sampleRgbFromImageSourceRectBorder(video, rect);
+}
+
+/**
+ * Moldura na carta retificada (ocrWarp) — cores mais fiéis que vídeo cru com glare.
+ * @param {HTMLCanvasElement} canvas
+ * @param {{ x: number, y: number, width: number, height: number }} typeRect
+ */
+function sampleCardFrameRgbFromWarpCanvas(canvas, typeRect) {
+  if (!canvas || !typeRect || typeRect.width < 8 || typeRect.height < 8) return null;
+  const cW = canvas.width || 0;
+  const cH = canvas.height || 0;
+  const rects = getCardTypeBorderSampleRects(typeRect, cW, cH);
+  const parts = [
+    { key: 'left', rect: rects.left, weight: 1.4 },
+    { key: 'right', rect: rects.right, weight: 1.4 },
+    { key: 'top', rect: rects.top, weight: 1.05 },
+    { key: 'namePlate', rect: rects.namePlate, weight: 1.15 },
+  ];
+  let r = 0,
+    g = 0,
+    bSum = 0,
+    samples = 0;
+  const regions = {};
+  for (const p of parts) {
+    const avg =
+      sampleRgbFromWarpCanvasRect(canvas, p.rect) ||
+      sampleRgbFromImageSourceRectBorder(canvas, p.rect);
+    if (!avg) continue;
+    r += avg.r * avg.n * p.weight;
+    g += avg.g * avg.n * p.weight;
+    bSum += avg.b * avg.n * p.weight;
+    samples += avg.n * p.weight;
+    regions[p.key] = {
+      avgR: safeRound(avg.r, 1),
+      avgG: safeRound(avg.g, 1),
+      avgB: safeRound(avg.b, 1),
+      pixels: avg.n,
+    };
+  }
+  if (!samples) return null;
+  const avgR = r / samples;
+  const avgG = g / samples;
+  const avgB = bSum / samples;
+  const lum = (avgR + avgG + avgB) / 3;
+  const spread = Math.max(avgR, avgG, avgB) - Math.min(avgR, avgG, avgB);
+  let bandAvgR = avgR;
+  let bandAvgG = avgG;
+  let bandAvgB = avgB;
+  const bandParts = [regions.left, regions.right].filter(Boolean);
+  if (bandParts.length === 2) {
+    let br = 0;
+    let bg = 0;
+    let bb = 0;
+    let bw = 0;
+    for (let bi = 0; bi < bandParts.length; bi++) {
+      const bp = bandParts[bi];
+      const w = bp.pixels || 1;
+      br += bp.avgR * w;
+      bg += bp.avgG * w;
+      bb += bp.avgB * w;
+      bw += w;
+    }
+    if (bw > 0) {
+      bandAvgR = br / bw;
+      bandAvgG = bg / bw;
+      bandAvgB = bb / bw;
+    }
+  }
+  const bandLum = (bandAvgR + bandAvgG + bandAvgB) / 3;
+  const bandSpread = Math.max(bandAvgR, bandAvgG, bandAvgB) - Math.min(bandAvgR, bandAvgG, bandAvgB);
+  return {
+    avgR,
+    avgG,
+    avgB,
+    lum: safeRound(lum, 1),
+    spread: safeRound(spread, 1),
+    samples: Math.round(samples),
+    bandAvgR: safeRound(bandAvgR, 1),
+    bandAvgG: safeRound(bandAvgG, 1),
+    bandAvgB: safeRound(bandAvgB, 1),
+    bandLum: safeRound(bandLum, 1),
+    bandSpread: safeRound(bandSpread, 1),
+    regions,
+    sampleRects: rects,
+    warpSampled: true,
+  };
+}
+
+/**
+ * @param {HTMLVideoElement} video
+ * @param {{ x: number, y: number, width: number, height: number }|null} typeCropRect
+ * @param {object|null} [track]
+ * @returns {null|object}
+ */
+function resolveOcrWarpForTypeProbe(video, typeCropRect, track) {
+  const trackPack = resolveScannerTrackPackForWarp(track || null, video, typeCropRect);
+  return buildScannerWarpOcrContext(video, trackPack);
 }
 
 /**
@@ -39513,7 +50582,8 @@ function sampleCardFrameRgbFromCrop(video, cropRect, vW, vH) {
     samples = 0;
   const regions = {};
   for (const p of parts) {
-    const avg = sampleRgbFromVideoRect(video, p.rect);
+    const avg =
+      sampleRgbFromVideoRect(video, p.rect) || sampleRgbFromVideoRectBorder(video, p.rect);
     if (!avg) continue;
     r += avg.r * avg.n * p.weight;
     g += avg.g * avg.n * p.weight;
@@ -39553,39 +50623,12 @@ function sampleCardFrameRgbFromCrop(video, cropRect, vW, vH) {
  */
 function sampleCardFrameRgbFromTypeCrop(video, typeRect, vW, vH) {
   if (!typeRect || typeRect.width < 8 || typeRect.height < 8) return null;
-  const b = 0.1;
-  const sw = Math.max(6, typeRect.width * b * 1.15);
-  const th = Math.max(5, typeRect.height * b);
-  const clamp = (r) => {
-    let x = Math.max(0, r.x);
-    let y = Math.max(0, r.y);
-    let width = Math.max(1, r.width);
-    let height = Math.max(1, r.height);
-    if (x + width > vW) width = vW - x;
-    if (y + height > vH) height = vH - y;
-    return { x, y, width, height };
-  };
-  const rects = {
-    left: clamp({ x: typeRect.x, y: typeRect.y, width: sw, height: typeRect.height }),
-    right: clamp({
-      x: typeRect.x + typeRect.width - sw,
-      y: typeRect.y,
-      width: sw,
-      height: typeRect.height,
-    }),
-    top: clamp({ x: typeRect.x, y: typeRect.y, width: typeRect.width, height: th }),
-    bottom: clamp({
-      x: typeRect.x,
-      y: typeRect.y + typeRect.height - th,
-      width: typeRect.width,
-      height: th,
-    }),
-  };
+  const rects = getCardTypeBorderSampleRects(typeRect, vW, vH);
   const parts = [
-    { key: 'left', rect: rects.left, weight: 1.35 },
-    { key: 'right', rect: rects.right, weight: 1.35 },
-    { key: 'top', rect: rects.top, weight: 0.9 },
-    { key: 'bottom', rect: rects.bottom, weight: 0.45 },
+    { key: 'left', rect: rects.left, weight: 1.4 },
+    { key: 'right', rect: rects.right, weight: 1.4 },
+    { key: 'top', rect: rects.top, weight: 1.05 },
+    { key: 'namePlate', rect: rects.namePlate, weight: 1.15 },
   ];
   let r = 0,
     g = 0,
@@ -39593,7 +50636,8 @@ function sampleCardFrameRgbFromTypeCrop(video, typeRect, vW, vH) {
     samples = 0;
   const regions = {};
   for (const p of parts) {
-    const avg = sampleRgbFromVideoRect(video, p.rect);
+    const avg =
+      sampleRgbFromVideoRect(video, p.rect) || sampleRgbFromVideoRectBorder(video, p.rect);
     if (!avg) continue;
     r += avg.r * avg.n * p.weight;
     g += avg.g * avg.n * p.weight;
@@ -39612,6 +50656,31 @@ function sampleCardFrameRgbFromTypeCrop(video, typeRect, vW, vH) {
   const avgB = bSum / samples;
   const lum = (avgR + avgG + avgB) / 3;
   const spread = Math.max(avgR, avgG, avgB) - Math.min(avgR, avgG, avgB);
+  let bandAvgR = avgR;
+  let bandAvgG = avgG;
+  let bandAvgB = avgB;
+  const bandParts = [regions.left, regions.right].filter(Boolean);
+  if (bandParts.length === 2) {
+    let br = 0;
+    let bg = 0;
+    let bb = 0;
+    let bw = 0;
+    for (let bi = 0; bi < bandParts.length; bi++) {
+      const bp = bandParts[bi];
+      const w = bp.pixels || 1;
+      br += bp.avgR * w;
+      bg += bp.avgG * w;
+      bb += bp.avgB * w;
+      bw += w;
+    }
+    if (bw > 0) {
+      bandAvgR = br / bw;
+      bandAvgG = bg / bw;
+      bandAvgB = bb / bw;
+    }
+  }
+  const bandLum = (bandAvgR + bandAvgG + bandAvgB) / 3;
+  const bandSpread = Math.max(bandAvgR, bandAvgG, bandAvgB) - Math.min(bandAvgR, bandAvgG, bandAvgB);
   return {
     avgR,
     avgG,
@@ -39619,9 +50688,321 @@ function sampleCardFrameRgbFromTypeCrop(video, typeRect, vW, vH) {
     lum: safeRound(lum, 1),
     spread: safeRound(spread, 1),
     samples: Math.round(samples),
+    bandAvgR: safeRound(bandAvgR, 1),
+    bandAvgG: safeRound(bandAvgG, 1),
+    bandAvgB: safeRound(bandAvgB, 1),
+    bandLum: safeRound(bandLum, 1),
+    bandSpread: safeRound(bandSpread, 1),
     regions,
     sampleRects: rects,
   };
+}
+
+/**
+ * RGB das faixas laterais (entre arte e borda) — fonte principal para tipo de carta.
+ * @param {{ regions?: object }|null|undefined} frameColor
+ * @returns {{ avgR: number, avgG: number, avgB: number }|null}
+ */
+function frameBandRgbFromFrameColor(frameColor) {
+  if (!frameColor) return null;
+  if (frameColor.bandAvgR != null) {
+    return { avgR: frameColor.bandAvgR, avgG: frameColor.bandAvgG, avgB: frameColor.bandAvgB };
+  }
+  const reg = frameColor.regions;
+  if (!reg || !reg.left || !reg.right) return null;
+  const wL = reg.left.pixels || 1;
+  const wR = reg.right.pixels || 1;
+  const w = wL + wR;
+  return {
+    avgR: (reg.left.avgR * wL + reg.right.avgR * wR) / w,
+    avgG: (reg.left.avgG * wL + reg.right.avgG * wR) / w,
+    avgB: (reg.left.avgB * wL + reg.right.avgB * wR) / w,
+  };
+}
+
+/**
+ * @param {{ regions?: object }|null|undefined} reg
+ * @returns {boolean}
+ */
+/**
+ * @param {number} avgR
+ * @param {number} avgG
+ * @param {number} avgB
+ * @returns {boolean}
+ */
+function sideRgbLooksSynchro(avgR, avgG, avgB) {
+  return (
+    frameRgbMatchesSynchroSilverInline(avgR, avgG, avgB) ||
+    isSynchroSilverFrameRgbCore(avgR, avgG, avgB) ||
+    sideRgbLooksSynchroWhiteSecret(avgR, avgG, avgB)
+  );
+}
+
+/**
+ * Moldura branca/prateada (Sincro Secreta — Psychic End Punisher foil).
+ * @param {number} avgR
+ * @param {number} avgG
+ * @param {number} avgB
+ * @returns {boolean}
+ */
+function sideRgbLooksSynchroWhiteSecret(avgR, avgG, avgB) {
+  const lum = (avgR + avgG + avgB) / 3;
+  const spread = Math.max(avgR, avgG, avgB) - Math.min(avgR, avgG, avgB);
+  if (lum < 155 || spread > 48) return false;
+  if (avgR < 138 || avgG < 138 || avgB < 138) return false;
+  if (isEffectOrangeBrownFrameRgbCore(avgR, avgG, avgB)) return false;
+  return Math.abs(avgR - avgG) < 36 && Math.abs(avgG - avgB) < 36;
+}
+
+/**
+ * @param {number} avgR
+ * @param {number} avgG
+ * @param {number} avgB
+ * @returns {boolean}
+ */
+function sideRgbLooksSpellGreen(avgR, avgG, avgB) {
+  if (isSpellGreenFrameRgbRaw(avgR, avgG, avgB)) return true;
+  const lum = (avgR + avgG + avgB) / 3;
+  if (!(avgG > avgR + 10 && avgG > avgB + 8 && avgG > 62 && lum > 55 && lum < 200)) {
+    return false;
+  }
+  if (isFusionPurpleFrameRgbCoreRaw(avgR, avgG, avgB)) return false;
+  if (avgB > avgR + 26 && avgB > avgG + 10 && avgB > 88 && lum < 140) return false;
+  return true;
+}
+
+/**
+ * Magia com glare/luz baixa — verde lavado (ex.: Livro da Lua noite).
+ * @param {number} avgR
+ * @param {number} avgG
+ * @param {number} avgB
+ * @returns {boolean}
+ */
+function sideRgbLooksSpellWashedLowLight(avgR, avgG, avgB) {
+  const lum = (avgR + avgG + avgB) / 3;
+  const spread = Math.max(avgR, avgG, avgB) - Math.min(avgR, avgG, avgB);
+  if (lum < 148 || spread > 32) return false;
+  if (isEffectOrangeBrownFrameRgbCore(avgR, avgG, avgB)) return false;
+  if (isFusionPurpleFrameRgbCoreRaw(avgR, avgG, avgB)) return false;
+  if (isLinkFrameRgbCore(avgR, avgG, avgB)) return false;
+  if (frameRgbMatchesSynchroSilverInline(avgR, avgG, avgB)) return false;
+  return avgG >= avgR - 6 && avgG >= avgB - 10 && avgG > 100;
+}
+
+/**
+ * Faixa superior verde-azulada de Magia sob glare (Livro da Lua — padrão Link top).
+ * @param {number} avgR
+ * @param {number} avgG
+ * @param {number} avgB
+ * @returns {boolean}
+ */
+function isSpellTealFrameTopRgb(avgR, avgG, avgB) {
+  const lum = (avgR + avgG + avgB) / 3;
+  if (lum < 70 || lum > 200) return false;
+  if (isLinkFrameRgbCore(avgR, avgG, avgB)) return false;
+  if (isFusionPurpleFrameRgbCoreRaw(avgR, avgG, avgB)) return false;
+  return (
+    avgG > avgR + 35 &&
+    avgB > avgR + 45 &&
+    avgG > 95 &&
+    avgB > 100 &&
+    avgR < 130
+  );
+}
+
+/**
+ * Moldura XYZ escurecida sob luz baixa (Exciton — top/cantos cinza, não laranja Efeito).
+ * @param {number} avgR
+ * @param {number} avgG
+ * @param {number} avgB
+ * @returns {boolean}
+ */
+function isXyzWashedFrameRgb(avgR, avgG, avgB) {
+  const lum = (avgR + avgG + avgB) / 3;
+  const spread = Math.max(avgR, avgG, avgB) - Math.min(avgR, avgG, avgB);
+  if (lum < 72 || lum > 132) return false;
+  if (isEffectOrangeBrownFrameRgbCore(avgR, avgG, avgB)) return false;
+  if (isFusionPurpleFrameRgbCoreRaw(avgR, avgG, avgB)) return false;
+  if (isLinkFrameRgbCore(avgR, avgG, avgB)) return false;
+  if (sideRgbLooksSynchro(avgR, avgG, avgB)) return false;
+  return spread < 45 && avgR < 172 && avgG < 138 && avgB < 125;
+}
+
+/**
+ * Placa da faixa do nome em XYZ Ultra sob glare (Exciton rank 4).
+ * @param {number} avgR
+ * @param {number} avgG
+ * @param {number} avgB
+ * @returns {boolean}
+ */
+function isXyzWashedNamePlateRgb(avgR, avgG, avgB) {
+  const lum = (avgR + avgG + avgB) / 3;
+  const spread = Math.max(avgR, avgG, avgB) - Math.min(avgR, avgG, avgB);
+  if (lum < 95 || lum > 168) return false;
+  if (isEffectOrangeBrownFrameRgbCore(avgR, avgG, avgB) && spread > 45) return false;
+  return avgR > 108 && avgG > 88 && avgB > 72 && avgR > avgB + 12 && spread < 72;
+}
+
+/**
+ * @param {{ left?: object, right?: object }|null|undefined} reg
+ * @returns {boolean}
+ */
+function hasSpellWashedLowLightSides(reg) {
+  if (!reg || !reg.left || !reg.right) return false;
+  if (hasSynchroFrameSides(reg)) return false;
+  const lSpell =
+    sideRgbLooksSpellWashedLowLight(reg.left.avgR, reg.left.avgG, reg.left.avgB) ||
+    sideRgbLooksSpellGreen(reg.left.avgR, reg.left.avgG, reg.left.avgB);
+  const rSpell =
+    sideRgbLooksSpellWashedLowLight(reg.right.avgR, reg.right.avgG, reg.right.avgB) ||
+    sideRgbLooksSpellGreen(reg.right.avgR, reg.right.avgG, reg.right.avgB);
+  if (lSpell && rSpell) return true;
+  const lBrown =
+    isEffectOrangeBrownFrameRgbCore(reg.left.avgR, reg.left.avgG, reg.left.avgB) ||
+    isBrownNeutralFrameRgbCore(reg.left.avgR, reg.left.avgG, reg.left.avgB);
+  const rBrown =
+    isEffectOrangeBrownFrameRgbCore(reg.right.avgR, reg.right.avgG, reg.right.avgB) ||
+    isBrownNeutralFrameRgbCore(reg.right.avgR, reg.right.avgG, reg.right.avgB);
+  return (lSpell && rBrown) || (rSpell && lBrown);
+}
+
+function hasFusionFrameSides(reg) {
+  if (!reg || !reg.left || !reg.right) return false;
+  if (hasSynchroFrameSides(reg)) return false;
+  const lR = reg.left.avgR;
+  const lG = reg.left.avgG;
+  const lB = reg.left.avgB;
+  const rR = reg.right.avgR;
+  const rG = reg.right.avgG;
+  const rB = reg.right.avgB;
+  if (sideRgbLooksSynchro(lR, lG, lB) || sideRgbLooksSynchro(rR, rG, rB)) return false;
+  return (
+    isFusionPurpleFrameRgbCoreRaw(lR, lG, lB) &&
+    isFusionPurpleFrameRgbCoreRaw(rR, rG, rB) &&
+    !frameRgbMatchesSynchroSilverInline(lR, lG, lB) &&
+    !frameRgbMatchesSynchroSilverInline(rR, rG, rB)
+  );
+}
+
+/**
+ * @param {{ regions?: object }|null|undefined} reg
+ * @returns {boolean}
+ */
+function hasSynchroFrameSides(reg) {
+  if (!reg || !reg.left || !reg.right) return false;
+  const lR = reg.left.avgR;
+  const lG = reg.left.avgG;
+  const lB = reg.left.avgB;
+  const rR = reg.right.avgR;
+  const rG = reg.right.avgG;
+  const rB = reg.right.avgB;
+  const lSyn = sideRgbLooksSynchro(lR, lG, lB);
+  const rSyn = sideRgbLooksSynchro(rR, rG, rB);
+  if (lSyn && rSyn) return true;
+  const lWhite = sideRgbLooksSynchroWhiteSecret(lR, lG, lB);
+  const rWhite = sideRgbLooksSynchroWhiteSecret(rR, rG, rB);
+  return lWhite && rWhite;
+}
+
+/**
+ * @param {{ regions?: object }|null|undefined} reg
+ * @returns {boolean}
+ */
+function hasEffectFrameSides(reg) {
+  if (!reg || !reg.left || !reg.right) return false;
+  const sideEffect = (side) =>
+    isEffectOrangeBrownFrameRgb(side.avgR, side.avgG, side.avgB) ||
+    isBrownNeutralFrameRgb(side.avgR, side.avgG, side.avgB);
+  return sideEffect(reg.left) && sideEffect(reg.right);
+}
+
+/**
+ * Tipo a partir das faixas laterais da moldura (prioridade sobre média com placa do nome).
+ * @param {{ regions?: object, bandAvgR?: number }|null|undefined} frameColor
+ * @returns {string|null}
+ */
+function frameRegionsGlareWashed(reg) {
+  if (!reg || !reg.left || !reg.right) return false;
+  const lum = (side) => (side.avgR + side.avgG + side.avgB) / 3;
+  const spread = (side) =>
+    Math.max(side.avgR, side.avgG, side.avgB) - Math.min(side.avgR, side.avgG, side.avgB);
+  return lum(reg.left) > 132 && lum(reg.right) > 132 && spread(reg.left) < 62 && spread(reg.right) < 62;
+}
+
+function classifyCardTypeFromFrameRegions(frameColor) {
+  const reg = frameColor && frameColor.regions;
+  if (!reg || !reg.left || !reg.right) return null;
+  if (reg.namePlate) {
+    const np = reg.namePlate;
+    if (isLinkNamePlateRgb(np.avgR, np.avgG, np.avgB)) return 'Monstro Link';
+    if (
+      isXyzDarkPlateRgb(np.avgR, np.avgG, np.avgB) ||
+      isXyzNamePlateRgb(np.avgR, np.avgG, np.avgB)
+    ) {
+      return 'Monstro Xyz';
+    }
+  }
+  if (
+    reg.top &&
+    isLinkFrameRgbCore(reg.top.avgR, reg.top.avgG, reg.top.avgB) &&
+    !sideRgbLooksSpellGreen(reg.top.avgR, reg.top.avgG, reg.top.avgB)
+  ) {
+    return 'Monstro Link';
+  }
+  if (reg.top && isSpellTealFrameTopRgb(reg.top.avgR, reg.top.avgG, reg.top.avgB)) {
+    return 'Magia';
+  }
+  if (
+    reg.top &&
+    isFusionPurpleFrameRgbCoreRaw(reg.top.avgR, reg.top.avgG, reg.top.avgB) &&
+    !isLinkFrameRgbCore(reg.top.avgR, reg.top.avgG, reg.top.avgB) &&
+    !sideRgbLooksSpellGreen(reg.top.avgR, reg.top.avgG, reg.top.avgB)
+  ) {
+    return 'Monstro Fusão';
+  }
+  if (
+    reg.top &&
+    sideRgbLooksSynchro(reg.top.avgR, reg.top.avgG, reg.top.avgB) &&
+    !isLinkFrameRgbCore(reg.top.avgR, reg.top.avgG, reg.top.avgB) &&
+    !isFusionPurpleFrameRgbCoreRaw(reg.top.avgR, reg.top.avgG, reg.top.avgB)
+  ) {
+    return 'Monstro Sincro';
+  }
+  if (reg.top && isXyzWashedFrameRgb(reg.top.avgR, reg.top.avgG, reg.top.avgB)) {
+    return 'Monstro Xyz';
+  }
+  if (hasLinkFrameSides(reg)) return 'Monstro Link';
+  const lLink = isLinkFrameRgbCore(reg.left.avgR, reg.left.avgG, reg.left.avgB);
+  const rLink = isLinkFrameRgbCore(reg.right.avgR, reg.right.avgG, reg.right.avgB);
+  if (lLink && rLink) return 'Monstro Link';
+  if (hasFusionFrameSides(reg)) return 'Monstro Fusão';
+  const leftXyz =
+    (isXyzDarkPlateRgb(reg.left.avgR, reg.left.avgG, reg.left.avgB) &&
+      isXyzDarkPlateRgb(reg.right.avgR, reg.right.avgG, reg.right.avgB)) ||
+    (isXyzWashedFrameRgb(reg.left.avgR, reg.left.avgG, reg.left.avgB) &&
+      isXyzWashedFrameRgb(reg.right.avgR, reg.right.avgG, reg.right.avgB));
+  if (leftXyz) return 'Monstro Xyz';
+  if (hasFlipFrameLoose(reg)) return 'Monstro Virar';
+  if (hasFlipFrameSides(reg)) return 'Monstro Virar';
+  if (hasSpellFrameSides(reg)) return 'Magia';
+  if (hasSpellWashedLowLightSides(reg)) return 'Magia';
+  const spellGlareSide = (side) =>
+    side.avgG > side.avgR - 8 &&
+    side.avgB > side.avgR + 4 &&
+    (side.avgG + side.avgB) / 2 > side.avgR + 10;
+  if (spellGlareSide(reg.left) && spellGlareSide(reg.right)) return 'Magia';
+  if (hasSynchroFrameSides(reg)) return 'Monstro Sincro';
+  if (lLink || rLink) return 'Monstro Link';
+  const band = frameBandRgbFromFrameColor(frameColor);
+  if (frameRegionsGlareWashed(reg) && band) {
+    const fromBand = classifyCardTypeFromFrameRgb(band.avgR, band.avgG, band.avgB);
+    if (fromBand && fromBand !== 'Monstro Efeito') return fromBand;
+  }
+  if (!frameRegionsGlareWashed(reg) && hasEffectFrameSides(reg) && !hasFlipFrameLoose(reg)) {
+    return 'Monstro Efeito';
+  }
+  if (band) return classifyCardTypeFromFrameRgb(band.avgR, band.avgG, band.avgB);
+  return null;
 }
 
 /**
@@ -39661,13 +51042,15 @@ function isEffectOrangeBrownFrameRgbCore(avgR, avgG, avgB) {
   const lum = (avgR + avgG + avgB) / 3;
   const spread = Math.max(avgR, avgG, avgB) - Math.min(avgR, avgG, avgB);
   if (lum < 88 || lum > 168) return false;
-  if (isFusionPurpleFrameRgb(avgR, avgG, avgB) || isLinkFrameRgbCore(avgR, avgG, avgB)) return false;
+  if (isFusionPurpleFrameRgbCoreRaw(avgR, avgG, avgB) || frameRgbMatchesLinkBlueInline(avgR, avgG, avgB)) {
+    return false;
+  }
   return (
     avgR > avgG + 10 &&
     avgR > avgB + 22 &&
     avgG > avgB + 4 &&
     avgR > 118 &&
-    spread < 72 &&
+    spread < 82 &&
     spread > 18
   );
 }
@@ -39685,14 +51068,167 @@ function isEffectOrangeBrownFrameRgb(avgR, avgG, avgB) {
 }
 
 /**
- * Roxo de Monstro Fusão (Dracotail, etc.) — distinto do rosa de Armadilha.
+ * Moldura verde-escura / oliva de Monstro Virar (Vazio — distinto de Magia teal e Efeito laranja).
  * @param {number} avgR
  * @param {number} avgG
  * @param {number} avgB
  * @returns {boolean}
  */
-function isFusionPurpleFrameRgb(avgR, avgG, avgB) {
-  if (isTrapRoseFrameRgb(avgR, avgG, avgB)) return false;
+function isFlipDarkGreenFrameRgbCore(avgR, avgG, avgB) {
+  const lum = (avgR + avgG + avgB) / 3;
+  const spread = Math.max(avgR, avgG, avgB) - Math.min(avgR, avgG, avgB);
+  if (lum < 48 || lum > 142) return false;
+  if (isEffectOrangeBrownFrameRgbCore(avgR, avgG, avgB)) return false;
+  if (isFusionPurpleFrameRgbCoreRaw(avgR, avgG, avgB)) return false;
+  if (isLinkFrameRgbCore(avgR, avgG, avgB)) return false;
+  if (sideRgbLooksSynchro(avgR, avgG, avgB)) return false;
+  if (avgB > avgG + 16 && avgB > avgR + 22 && lum > 88) return false;
+  if (isSpellGreenFrameRgbRaw(avgR, avgG, avgB) && avgG > avgB + 14 && lum > 92) return false;
+  return (
+    avgG > avgR + 3 &&
+    avgG > avgB - 2 &&
+    avgG > 52 &&
+    avgR > 38 &&
+    spread > 10 &&
+    spread < 78 &&
+    !(avgR > avgG + 16 && avgR > avgB + 20)
+  );
+}
+
+/**
+ * @param {number} avgR
+ * @param {number} avgG
+ * @param {number} avgB
+ * @returns {boolean}
+ */
+function isFlipDarkGreenFrameRgb(avgR, avgG, avgB) {
+  if (isSpellGreenFrameRgb(avgR, avgG, avgB) && avgG > avgB + 12) return false;
+  return isFlipDarkGreenFrameRgbCore(avgR, avgG, avgB);
+}
+
+/**
+ * Bordas laterais verde-escuro de Monstro Virar (ambos os lados).
+ * @param {{ left?: object, right?: object }|null|undefined} reg
+ * @returns {boolean}
+ */
+function hasFlipFrameSides(reg) {
+  if (!reg || !reg.left || !reg.right) return false;
+  if (hasSpellFrameSides(reg)) return false;
+  if (hasFusionFrameSides(reg)) return false;
+  if (hasLinkFrameSides(reg)) return false;
+  if (hasSynchroFrameSides(reg)) return false;
+  const flipSide = (side) => isFlipDarkGreenFrameRgbCore(side.avgR, side.avgG, side.avgB);
+  return flipSide(reg.left) && flipSide(reg.right);
+}
+
+/**
+ * Virar com detecção relaxada (glare / um lado lavado — Vazio benchmark).
+ * @param {{ left?: object, right?: object, top?: object }|null|undefined} reg
+ * @returns {boolean}
+ */
+function hasFlipFrameLoose(reg) {
+  if (!reg) return false;
+  if (hasFlipFrameSides(reg)) return true;
+  const flipSide = (side) =>
+    side && isFlipDarkGreenFrameRgbCore(side.avgR, side.avgG, side.avgB);
+  const leftFlip = flipSide(reg.left);
+  const rightFlip = flipSide(reg.right);
+  const topFlip =
+    reg.top &&
+    (isFlipDarkGreenFrameRgbCore(reg.top.avgR, reg.top.avgG, reg.top.avgB) ||
+      (reg.top.avgG > reg.top.avgR + 4 && reg.top.avgG > 52 && !isEffectOrangeBrownFrameRgbCore(reg.top.avgR, reg.top.avgG, reg.top.avgB)));
+  if (leftFlip && rightFlip) return true;
+  if ((leftFlip || rightFlip) && topFlip) return true;
+  if (leftFlip && reg.top && reg.top.avgG > reg.top.avgR) return true;
+  return false;
+}
+
+/**
+ * Ícone circular «Virar» na faixa verde (canto esquerdo da mira tipo).
+ * @param {CanvasImageSource} source
+ * @param {{ x: number, y: number, width: number, height: number }} typeRect
+ * @returns {{ darkRatio: number, greenBgRatio: number, score: number }|null}
+ */
+function sampleFlipIconMetrics(source, typeRect) {
+  if (!source || !typeRect || typeRect.width < 12 || typeRect.height < 12) return null;
+  const w = typeRect.width;
+  const h = typeRect.height;
+  const rect = {
+    x: Math.round(typeRect.x + w * 0.012),
+    y: Math.round(typeRect.y + h * 0.102),
+    width: Math.max(5, Math.round(w * 0.072)),
+    height: Math.max(4, Math.round(h * 0.038)),
+  };
+  const avg = sampleRgbFromImageSourceRectBorder(source, rect, (pr, pg, pb) => {
+    const lum = (pr + pg + pb) / 3;
+    return lum > 28 && lum < 228;
+  });
+  if (!avg || avg.n < 6) return null;
+  let dark = 0;
+  let greenBg = 0;
+  try {
+    const canvas = document.createElement('canvas');
+    const sw = Math.max(1, Math.min(32, rect.width));
+    const sh = Math.max(1, Math.min(24, rect.height));
+    canvas.width = sw;
+    canvas.height = sh;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+    ctx.drawImage(source, rect.x, rect.y, rect.width, rect.height, 0, 0, sw, sh);
+    const data = ctx.getImageData(0, 0, sw, sh).data;
+    const total = sw * sh;
+    for (let i = 0; i < data.length; i += 4) {
+      const pr = data[i];
+      const pg = data[i + 1];
+      const pb = data[i + 2];
+      const lum = (pr + pg + pb) / 3;
+      if (pg > pr + 5 && pg > pb - 4 && lum > 52 && lum < 148) greenBg++;
+      if (lum < 98 && Math.max(pr, pg, pb) - Math.min(pr, pg, pb) > 18) dark++;
+    }
+    const darkRatio = dark / total;
+    const greenBgRatio = greenBg / total;
+    const score = darkRatio * greenBgRatio;
+    return { darkRatio, greenBgRatio, score };
+  } catch (_) {
+    return null;
+  }
+}
+
+/**
+ * @param {{ darkRatio?: number, greenBgRatio?: number, score?: number }|null|undefined} metrics
+ * @returns {boolean}
+ */
+function hasFlipIconHint(metrics) {
+  if (!metrics) return false;
+  return (
+    metrics.score > 0.018 ||
+    (metrics.darkRatio > 0.08 && metrics.greenBgRatio > 0.22) ||
+    (metrics.darkRatio > 0.05 && metrics.greenBgRatio > 0.38)
+  );
+}
+
+/**
+ * Roxo Fusão — só limiares RGB (sem chamar Sincro/Link/outros classificadores).
+ * @param {number} avgR
+ * @param {number} avgG
+ * @param {number} avgB
+ * @returns {boolean}
+ */
+function isFusionPurpleFrameRgbCoreRaw(avgR, avgG, avgB) {
+  const lum0 = (avgR + avgG + avgB) / 3;
+  const spread0 = Math.max(avgR, avgG, avgB) - Math.min(avgR, avgG, avgB);
+  if (
+    lum0 > 102 &&
+    spread0 < 66 &&
+    avgR > 92 &&
+    avgG > 92 &&
+    avgB > 92 &&
+    Math.abs(avgR - avgG) < 50 &&
+    Math.abs(avgG - avgB) < 44 &&
+    avgB - avgR < 64
+  ) {
+    return false;
+  }
   // Luz natural: roxo vivo vira lavanda (B alto, R≈G) — não confundir com Ritual azul.
   if (
     avgB > 148 &&
@@ -39740,6 +51276,37 @@ function isFusionPurpleFrameRgb(avgR, avgG, avgB) {
 }
 
 /**
+ * Núcleo roxo de Monstro Fusão — exclui prateado Sincro (usa Raw para evitar ciclo de pilha).
+ * @param {number} avgR
+ * @param {number} avgG
+ * @param {number} avgB
+ * @returns {boolean}
+ */
+function isFusionPurpleFrameRgbCore(avgR, avgG, avgB) {
+  if (!isFusionPurpleFrameRgbCoreRaw(avgR, avgG, avgB)) return false;
+  return !frameRgbMatchesSynchroSilverInline(avgR, avgG, avgB);
+}
+
+/**
+ * Roxo de Monstro Fusão (Dracotail, etc.) — distinto do rosa de Armadilha.
+ * @param {number} avgR
+ * @param {number} avgG
+ * @param {number} avgB
+ * @returns {boolean}
+ */
+function isFusionPurpleFrameRgb(avgR, avgG, avgB) {
+  if (isTrapRoseFrameRgb(avgR, avgG, avgB)) return false;
+  if (!isFusionPurpleFrameRgbCore(avgR, avgG, avgB)) return false;
+  if (frameRgbMatchesSynchroSilverInline(avgR, avgG, avgB)) return false;
+  if (frameRgbMatchesLinkBlueInline(avgR, avgG, avgB)) {
+    const rb = Math.abs(avgR - avgB);
+    if (Math.abs(avgR - avgG) < 44 && avgB > avgR + 6 && rb < 52) return true;
+    return false;
+  }
+  return true;
+}
+
+/**
  * Rosa/magenta de Armadilha (ex.: Dragon's Mind) — R alto, R≈B, G mais baixo.
  * @param {number} avgR
  * @param {number} avgG
@@ -39772,7 +51339,8 @@ function isXyzDarkPlateRgb(avgR, avgG, avgB) {
  * @returns {boolean}
  */
 function isXyzFrameRgb(avgR, avgG, avgB) {
-  if (isFusionPurpleFrameRgb(avgR, avgG, avgB) || isTrapRoseFrameRgb(avgR, avgG, avgB)) return false;
+  if (isTrapRoseFrameRgb(avgR, avgG, avgB)) return false;
+  if (isFusionPurpleFrameRgbCore(avgR, avgG, avgB)) return false;
   if (isXyzDarkPlateRgb(avgR, avgG, avgB)) return true;
   const lum = (avgR + avgG + avgB) / 3;
   const spread = Math.max(avgR, avgG, avgB) - Math.min(avgR, avgG, avgB);
@@ -39798,7 +51366,8 @@ function isXyzFrameRgb(avgR, avgG, avgB) {
 function isXyzNamePlateRgb(avgR, avgG, avgB) {
   if (isFusionPurpleFrameRgb(avgR, avgG, avgB)) return false;
   const lum = (avgR + avgG + avgB) / 3;
-  return lum < 94 && avgR < 98 && avgG < 98 && avgB < 108;
+  const spread = Math.max(avgR, avgG, avgB) - Math.min(avgR, avgG, avgB);
+  return lum < 102 && avgR < 102 && avgG < 102 && avgB < 112 && spread < 32;
 }
 
 /**
@@ -39830,17 +51399,16 @@ function isDarkMonsterNamePlateRgb(avgR, avgG, avgB) {
 }
 
 /**
- * Verde/teal da moldura de Magia (bordas laterais).
+ * Verde Magia — só limiares RGB (sem Link/Sincro wrappers; evita ciclo de pilha).
  * @param {number} avgR
  * @param {number} avgG
  * @param {number} avgB
  * @returns {boolean}
  */
-function isSpellGreenFrameRgb(avgR, avgG, avgB) {
+function isSpellGreenFrameRgbRaw(avgR, avgG, avgB) {
   const lum = (avgR + avgG + avgB) / 3;
   if (lum < 40 || lum > 215) return false;
-  if (isFusionPurpleFrameRgb(avgR, avgG, avgB) || isTrapRoseFrameRgb(avgR, avgG, avgB)) return false;
-  if (isLinkFrameRgbCore(avgR, avgG, avgB)) return false;
+  if (isFusionPurpleFrameRgbCoreRaw(avgR, avgG, avgB) || isTrapRoseFrameRgb(avgR, avgG, avgB)) return false;
   if (avgB > avgG + 6 && avgB > avgR + 18 && avgB > 70) return false;
   return (
     (avgG > avgR + 14 && avgG > avgB + 14 && avgG > 72 && avgR < 150) ||
@@ -39849,17 +51417,50 @@ function isSpellGreenFrameRgb(avgR, avgG, avgB) {
 }
 
 /**
+ * Verde/teal da moldura de Magia (bordas laterais).
+ * @param {number} avgR
+ * @param {number} avgG
+ * @param {number} avgB
+ * @returns {boolean}
+ */
+function isSpellGreenFrameRgb(avgR, avgG, avgB) {
+  if (!isSpellGreenFrameRgbRaw(avgR, avgG, avgB)) return false;
+  if (frameRgbMatchesLinkBlueInline(avgR, avgG, avgB)) return false;
+  return true;
+}
+
+/**
  * Bordas laterais azuis de Link (prioridade sobre verde de Magia com glare).
  * @param {{ left?: object, right?: object }|null|undefined} reg
  * @returns {boolean}
  */
 function hasLinkFrameSides(reg) {
-  return !!(
-    reg &&
-    reg.left &&
-    reg.right &&
-    isLinkFrameRgb(reg.left.avgR, reg.left.avgG, reg.left.avgB) &&
-    isLinkFrameRgb(reg.right.avgR, reg.right.avgG, reg.right.avgB)
+  if (!reg || !reg.left || !reg.right) return false;
+  if (hasSpellFrameSides(reg)) return false;
+  if (
+    sideRgbLooksSpellGreen(reg.left.avgR, reg.left.avgG, reg.left.avgB) ||
+    sideRgbLooksSpellGreen(reg.right.avgR, reg.right.avgG, reg.right.avgB)
+  ) {
+    return false;
+  }
+  if (hasSynchroFrameSides(reg)) return false;
+  if (
+    isFusionPurpleFrameRgbCoreRaw(reg.left.avgR, reg.left.avgG, reg.left.avgB) ||
+    isFusionPurpleFrameRgbCoreRaw(reg.right.avgR, reg.right.avgG, reg.right.avgB)
+  ) {
+    return false;
+  }
+  const lR = reg.left.avgR;
+  const lG = reg.left.avgG;
+  const lB = reg.left.avgB;
+  const rR = reg.right.avgR;
+  const rG = reg.right.avgG;
+  const rB = reg.right.avgB;
+  return (
+    isLinkFrameRgbCore(lR, lG, lB) &&
+    isLinkFrameRgbCore(rR, rG, rB) &&
+    !sideRgbLooksSpellGreen(lR, lG, lB) &&
+    !sideRgbLooksSpellGreen(rR, rG, rB)
   );
 }
 
@@ -39870,16 +51471,20 @@ function hasLinkFrameSides(reg) {
  */
 function hasSpellFrameSides(reg) {
   if (!reg || !reg.left || !reg.right) return false;
-  if (
-    isSynchroSilverFrameRgb(reg.left.avgR, reg.left.avgG, reg.left.avgB) &&
-    isSynchroSilverFrameRgb(reg.right.avgR, reg.right.avgG, reg.right.avgB)
-  ) {
-    return false;
-  }
-  return (
-    isSpellGreenFrameRgb(reg.left.avgR, reg.left.avgG, reg.left.avgB) &&
-    isSpellGreenFrameRgb(reg.right.avgR, reg.right.avgG, reg.right.avgB)
-  );
+  if (hasSynchroFrameSides(reg)) return false;
+  const lR = reg.left.avgR;
+  const lG = reg.left.avgG;
+  const lB = reg.left.avgB;
+  const rR = reg.right.avgR;
+  const rG = reg.right.avgG;
+  const rB = reg.right.avgB;
+  const lSpell = sideRgbLooksSpellGreen(lR, lG, lB);
+  const rSpell = sideRgbLooksSpellGreen(rR, rG, rB);
+  if (lSpell && rSpell) return true;
+  const lLink = isLinkFrameRgbCore(lR, lG, lB) && !lSpell;
+  const rLink = isLinkFrameRgbCore(rR, rG, rB) && !rSpell;
+  if (lLink && rLink) return false;
+  return (lSpell && !rLink) || (rSpell && !lLink);
 }
 
 /**
@@ -39911,6 +51516,13 @@ function classifyExtraDeckRarityFromContext(m, frameColor, cardType) {
   const fg = frameColor && frameColor.avgG != null ? frameColor.avgG : null;
   const fb = frameColor && frameColor.avgB != null ? frameColor.avgB : null;
   const reg = frameColor && frameColor.regions;
+  const namePlateXyz =
+    reg &&
+    reg.namePlate &&
+    (isXyzDarkPlateRgb(reg.namePlate.avgR, reg.namePlate.avgG, reg.namePlate.avgB) ||
+      isXyzNamePlateRgb(reg.namePlate.avgR, reg.namePlate.avgG, reg.namePlate.avgB));
+  const namePlateLink =
+    reg && reg.namePlate && isLinkNamePlateRgb(reg.namePlate.avgR, reg.namePlate.avgG, reg.namePlate.avgB);
   const sideXyz =
     reg &&
     reg.left &&
@@ -39927,20 +51539,33 @@ function classifyExtraDeckRarityFromContext(m, frameColor, cardType) {
     isLinkFrameRgb(reg.right.avgR, reg.right.avgG, reg.right.avgB);
   const isXyz =
     cardType === 'Monstro Xyz' ||
+    namePlateXyz ||
     sideXyz ||
     (fr != null && isXyzFrameRgb(fr, fg, fb));
   const isLink =
     cardType === 'Monstro Link' ||
+    namePlateLink ||
     sideLink ||
     (fr != null && isLinkFrameRgb(fr, fg, fb));
   if (!isXyz && !isLink) return null;
+  if (isUltraGoldNameStripMetrics(m)) return 'Ultra Rara';
+  if (
+    m.goldRatio < 0.1 &&
+    m.warmFoilRatio < 0.1 &&
+    m.foilRatio > 0.06 &&
+    isExtraDeckDarkPlateRgb(m.plateR, m.plateG, m.plateB)
+  ) {
+    return 'Ultra Rara';
+  }
   if (
     m.silverRatio > 0.2 &&
     m.hueVar > 0.1 &&
     m.foilRatio > 0.05 &&
     m.foilRatio < 0.4 &&
     m.goldRatio < 0.07 &&
-    m.warmFoilRatio < 0.1
+    m.warmFoilRatio < 0.1 &&
+    !(isXyz && m.goldRatio < 0.08 && m.warmFoilRatio < 0.08) &&
+    !(isLink && (m.goldRatio > 0.004 || m.warmFoilRatio > 0.008 || m.foilRatio > 0.04))
   ) {
     return 'Secreta';
   }
@@ -40027,6 +51652,69 @@ function isSecretSilverOnLightPlateMetrics(m) {
 }
 
 /**
+ * Prateado Sincro — só critérios numéricos (nunca chama Link/Efeito wrappers).
+ * @param {number} avgR
+ * @param {number} avgG
+ * @param {number} avgB
+ * @returns {boolean}
+ */
+function frameRgbMatchesSynchroSilverInline(avgR, avgG, avgB) {
+  if (isFusionPurpleFrameRgbCoreRaw(avgR, avgG, avgB)) return false;
+  const lum = (avgR + avgG + avgB) / 3;
+  const spread = Math.max(avgR, avgG, avgB) - Math.min(avgR, avgG, avgB);
+  if (isBrownNeutralFrameRgbCore(avgR, avgG, avgB)) return false;
+  if (
+    avgR > avgG + 10 &&
+    avgR > avgB + 22 &&
+    avgG > avgB + 4 &&
+    avgR > 118 &&
+    lum > 88 &&
+    lum < 168 &&
+    spread < 72 &&
+    spread > 18
+  ) {
+    return false;
+  }
+  if (avgG > avgR + 5 && avgG > avgB - 4 && lum > 130) return false;
+  if (avgR > avgB + 28 && avgR > avgG + 12 && lum < 155) return false;
+  return (
+    lum > 108 &&
+    spread < 62 &&
+    avgR > 98 &&
+    avgG > 98 &&
+    avgB > 98 &&
+    Math.abs(avgR - avgG) < 44 &&
+    Math.abs(avgG - avgB) < 40 &&
+    avgB - avgR < 58
+  );
+}
+
+/**
+ * Azul Link — só critérios numéricos (nunca chama Sincro/Efeito wrappers).
+ * @param {number} avgR
+ * @param {number} avgG
+ * @param {number} avgB
+ * @returns {boolean}
+ */
+function frameRgbMatchesLinkBlueInline(avgR, avgG, avgB) {
+  if (isFusionPurpleFrameRgbCoreRaw(avgR, avgG, avgB)) return false;
+  if (isSpellGreenFrameRgbRaw(avgR, avgG, avgB)) return false;
+  if (avgG > avgR + 14 && avgG > avgB + 14 && avgG > 72) return false;
+  const lum = (avgR + avgG + avgB) / 3;
+  const spread = Math.max(avgR, avgG, avgB) - Math.min(avgR, avgG, avgB);
+  if (lum < 28) return false;
+  if (lum > 165) {
+    if (spread < 52 && avgR > 100 && avgG > 100) return false;
+    return avgB > avgR + 18 && avgB > avgG + 10 && avgB > 95 && avgR < 105;
+  }
+  if (avgB <= avgR + 12 || avgB <= avgG + 8) return false;
+  if (avgG > avgR + 26 && avgG > avgB + 6) return false;
+  if (lum > 95 && avgB > 135 && avgG > 88 && avgR < 95 && avgB > avgR + 45) return true;
+  if (lum > 78 && avgB > 118 && avgB > avgR + 32 && avgB > avgG + 16 && avgR < 90) return true;
+  return avgB > 95 && lum < 128 && avgB > avgR + 28 && avgB > avgG + 12;
+}
+
+/**
  * Núcleo da deteção Link (sem chamar {@link isSynchroSilverFrameRgb} — evita ciclo com ela).
  * @param {number} avgR
  * @param {number} avgG
@@ -40034,12 +51722,20 @@ function isSecretSilverOnLightPlateMetrics(m) {
  * @returns {boolean}
  */
 function isLinkFrameRgbCore(avgR, avgG, avgB) {
+  if (isFusionPurpleFrameRgbCoreRaw(avgR, avgG, avgB)) return false;
+  if (frameRgbMatchesSynchroSilverInline(avgR, avgG, avgB)) return false;
   const lum = (avgR + avgG + avgB) / 3;
-  if (lum < 28 || lum > 165) return false;
-  if (avgB <= avgR + 6 || avgB <= avgG + 5) return false;
-  if (lum > 95 && avgB > 135 && avgG > 115 && avgR < 95 && avgB > avgR + 45) return true;
-  if (lum > 100 && avgB > 145 && avgG > 88 && avgB > avgR + 38) return true;
-  return avgB > 58 && lum < 152;
+  const spread = Math.max(avgR, avgG, avgB) - Math.min(avgR, avgG, avgB);
+  if (lum < 28) return false;
+  if (lum > 165) {
+    if (spread < 52 && avgR > 100 && avgG > 100) return false;
+    return avgB > avgR + 18 && avgB > avgG + 10 && avgB > 95 && avgR < 105;
+  }
+  if (avgB <= avgR + 12 || avgB <= avgG + 8) return false;
+  if (avgG > avgR + 26 && avgG > avgB + 6) return false;
+  if (lum > 95 && avgB > 135 && avgG > 88 && avgR < 95 && avgB > avgR + 45) return true;
+  if (lum > 78 && avgB > 118 && avgB > avgR + 32 && avgB > avgG + 16 && avgR < 90) return true;
+  return avgB > 95 && lum < 128 && avgB > avgR + 28 && avgB > avgG + 12;
 }
 
 /**
@@ -40050,14 +51746,24 @@ function isLinkFrameRgbCore(avgR, avgG, avgB) {
  * @returns {boolean}
  */
 function isLinkFrameRgb(avgR, avgG, avgB) {
+  if (isTrapRoseFrameRgb(avgR, avgG, avgB)) return false;
+  if (isFusionPurpleFrameRgbCore(avgR, avgG, avgB)) return false;
+  if (isXyzDarkPlateRgb(avgR, avgG, avgB)) return false;
+  const lum = (avgR + avgG + avgB) / 3;
+  const spread = Math.max(avgR, avgG, avgB) - Math.min(avgR, avgG, avgB);
   if (
-    isFusionPurpleFrameRgb(avgR, avgG, avgB) ||
-    isXyzDarkPlateRgb(avgR, avgG, avgB) ||
-    isXyzFrameRgb(avgR, avgG, avgB)
+    lum >= 28 &&
+    lum < 118 &&
+    avgR < 100 &&
+    avgG < 108 &&
+    avgB < 130 &&
+    avgB > avgR + 20 &&
+    avgB > avgG + 8 &&
+    spread < 68
   ) {
     return false;
   }
-  if (isSynchroSilverFrameRgbCore(avgR, avgG, avgB)) return false;
+  if (frameRgbMatchesSynchroSilverInline(avgR, avgG, avgB)) return false;
   return isLinkFrameRgbCore(avgR, avgG, avgB);
 }
 
@@ -40069,8 +51775,8 @@ function isLinkFrameRgb(avgR, avgG, avgB) {
  * @returns {boolean}
  */
 function isRitualBlueFrameRgbCore(avgR, avgG, avgB) {
-  if (isFusionPurpleFrameRgb(avgR, avgG, avgB) || isXyzDarkPlateRgb(avgR, avgG, avgB)) return false;
-  if (isLinkFrameRgbCore(avgR, avgG, avgB)) return false;
+  if (isFusionPurpleFrameRgbCoreRaw(avgR, avgG, avgB) || isXyzDarkPlateRgb(avgR, avgG, avgB)) return false;
+  if (frameRgbMatchesLinkBlueInline(avgR, avgG, avgB)) return false;
   const lum = (avgR + avgG + avgB) / 3;
   if (avgG > 125 && avgB > 155 && avgR < 95) return false;
   return (
@@ -40081,7 +51787,7 @@ function isRitualBlueFrameRgbCore(avgR, avgG, avgB) {
     avgG < avgB - 28 &&
     lum > 95 &&
     lum < 210 &&
-    !isSynchroSilverFrameRgbCore(avgR, avgG, avgB)
+    !frameRgbMatchesSynchroSilverInline(avgR, avgG, avgB)
   );
 }
 
@@ -40105,24 +51811,9 @@ function isRitualBlueFrameRgb(avgR, avgG, avgB) {
  * @returns {boolean}
  */
 function isSynchroSilverFrameRgbCore(avgR, avgG, avgB) {
-  if (isFusionPurpleFrameRgb(avgR, avgG, avgB)) return false;
-  const lum = (avgR + avgG + avgB) / 3;
-  const spread = Math.max(avgR, avgG, avgB) - Math.min(avgR, avgG, avgB);
-  if (isEffectOrangeBrownFrameRgbCore(avgR, avgG, avgB) || isBrownNeutralFrameRgbCore(avgR, avgG, avgB)) {
-    return false;
-  }
-  if (avgG > avgR + 5 && avgG > avgB - 4 && lum > 130) return false;
-  if (avgR > avgB + 28 && avgR > avgG + 12 && lum < 155) return false;
-  return (
-    lum > 108 &&
-    spread < 62 &&
-    avgR > 98 &&
-    avgG > 98 &&
-    avgB > 98 &&
-    Math.abs(avgR - avgG) < 44 &&
-    Math.abs(avgG - avgB) < 40 &&
-    avgB - avgR < 58
-  );
+  if (isFusionPurpleFrameRgbCoreRaw(avgR, avgG, avgB)) return false;
+  if (frameRgbMatchesLinkBlueInline(avgR, avgG, avgB)) return false;
+  return frameRgbMatchesSynchroSilverInline(avgR, avgG, avgB);
 }
 
 /**
@@ -40133,8 +51824,23 @@ function isSynchroSilverFrameRgbCore(avgR, avgG, avgB) {
  * @returns {boolean}
  */
 function isSynchroSilverFrameRgb(avgR, avgG, avgB) {
-  if (isFusionPurpleFrameRgb(avgR, avgG, avgB)) return false;
-  if (isLinkFrameRgbCore(avgR, avgG, avgB) || isXyzFrameRgb(avgR, avgG, avgB)) return false;
+  if (isFusionPurpleFrameRgbCore(avgR, avgG, avgB)) return false;
+  if (frameRgbMatchesLinkBlueInline(avgR, avgG, avgB)) return false;
+  if (isXyzDarkPlateRgb(avgR, avgG, avgB)) return false;
+  const lum = (avgR + avgG + avgB) / 3;
+  const spread = Math.max(avgR, avgG, avgB) - Math.min(avgR, avgG, avgB);
+  if (
+    lum >= 28 &&
+    lum < 118 &&
+    avgR < 100 &&
+    avgG < 108 &&
+    avgB < 130 &&
+    avgB > avgR + 20 &&
+    avgB > avgG + 8 &&
+    spread < 68
+  ) {
+    return false;
+  }
   return isSynchroSilverFrameRgbCore(avgR, avgG, avgB);
 }
 
@@ -40146,19 +51852,30 @@ function isSynchroSilverFrameRgb(avgR, avgG, avgB) {
  * @returns {string|null}
  */
 function classifyCardTypeFromNameStripRgb(avgR, avgG, avgB) {
-  if (isXyzDarkPlateRgb(avgR, avgG, avgB) || isXyzFrameRgb(avgR, avgG, avgB)) return 'Monstro Xyz';
-  if (isFusionPurpleFrameRgb(avgR, avgG, avgB)) return 'Monstro Fusão';
-  if (isLinkNamePlateRgb(avgR, avgG, avgB) || isLinkFrameRgb(avgR, avgG, avgB)) return 'Monstro Link';
+  if (
+    isXyzDarkPlateRgb(avgR, avgG, avgB) ||
+    isXyzFrameRgb(avgR, avgG, avgB) ||
+    isXyzWashedNamePlateRgb(avgR, avgG, avgB)
+  ) {
+    return 'Monstro Xyz';
+  }
+  if (isSynchroSilverFrameRgb(avgR, avgG, avgB) || frameRgbMatchesSynchroSilverInline(avgR, avgG, avgB)) {
+    return 'Monstro Sincro';
+  }
+  if (isFusionPurpleFrameRgb(avgR, avgG, avgB) && !frameRgbMatchesSynchroSilverInline(avgR, avgG, avgB)) {
+    return 'Monstro Fusão';
+  }
+  if (isFlipDarkGreenFrameRgb(avgR, avgG, avgB)) return 'Monstro Virar';
+  if (isLinkNamePlateRgb(avgR, avgG, avgB)) return 'Monstro Link';
   if (isRitualBlueFrameRgb(avgR, avgG, avgB)) return 'Monstro Ritual';
-  if (isSpellGreenFrameRgb(avgR, avgG, avgB) && avgG > avgR + 8 && avgG > avgB + 6) return 'Magia';
-  if (isSynchroSilverFrameRgb(avgR, avgG, avgB)) return 'Monstro Sincro';
-  const lum = (avgR + avgG + avgB) / 3;
-  const spread = Math.max(avgR, avgG, avgB) - Math.min(avgR, avgG, avgB);
-  if (lum > 128 && spread < 44 && avgR > 108 && avgG > 108 && avgB > 108) return 'Monstro Sincro';
-  if (isSpellGreenFrameRgb(avgR, avgG, avgB) && avgG > avgR + 16 && avgG > avgB + 12) return 'Magia';
+  if (sideRgbLooksSpellGreen(avgR, avgG, avgB)) return 'Magia';
   if (isEffectOrangeBrownFrameRgb(avgR, avgG, avgB) || isBrownNeutralFrameRgb(avgR, avgG, avgB)) {
     return 'Monstro Efeito';
   }
+  const lum = (avgR + avgG + avgB) / 3;
+  const spread = Math.max(avgR, avgG, avgB) - Math.min(avgR, avgG, avgB);
+  if (lum > 128 && spread < 44 && avgR > 108 && avgG > 108 && avgB > 108) return 'Monstro Sincro';
+  if (isLinkNamePlateRgb(avgR, avgG, avgB) || isLinkFrameRgbCore(avgR, avgG, avgB)) return 'Monstro Link';
   const isTeal =
     (avgG > avgR + 20 || avgB > avgR + 20) &&
     avgR < 130 &&
@@ -40167,7 +51884,7 @@ function classifyCardTypeFromNameStripRgb(avgR, avgG, avgB) {
     !isXyzDarkPlateRgb(avgR, avgG, avgB);
   if ((avgG > avgR + 30 && avgG > avgB + 30 && avgG > 100) || isTeal) {
     if (!(lum > 125 && spread < 48 && avgR > 100 && avgG > 100 && avgB > 100)) {
-      return 'Magia';
+      if (!isSynchroSilverFrameRgbCore(avgR, avgG, avgB)) return 'Magia';
     }
   }
   if (isTrapRoseFrameRgb(avgR, avgG, avgB)) return 'Armadilha';
@@ -40194,6 +51911,103 @@ function isNameStripPlateGlareNotHolo(m) {
 }
 
 /**
+ * Corrige falso Magia/Fusão quando moldura ou faixa indicam Link/Sincro (sol forte / glare).
+ * @param {object|null|undefined} typeProbe
+ * @param {string} [stabilizedType]
+ * @returns {string}
+ */
+function resolveScannerCardTypeFromProbes(typeProbe, stabilizedType) {
+  const merged =
+    stabilizedType ||
+    (typeProbe && (typeProbe.classifiedTypeMerged || typeProbe.classifiedType)) ||
+    'Monstro Efeito';
+  const frameOnly = typeProbe && typeProbe.classifiedTypeFromFrameOnly;
+  const strip = typeProbe && typeProbe.classifiedTypeFromNameStripOnly;
+  const fc = typeProbe && typeProbe.frameColor;
+  const reg = fc && fc.regions;
+
+  if (
+    frameOnly &&
+    frameOnly !== 'Monstro Efeito' &&
+    frameOnly !== 'Monstro Normal' &&
+    (merged === 'Monstro Efeito' || merged === 'Monstro Normal')
+  ) {
+    return frameOnly;
+  }
+
+  if (reg && reg.left && reg.right) {
+    const lLink = isLinkFrameRgbCore(reg.left.avgR, reg.left.avgG, reg.left.avgB);
+    const rLink = isLinkFrameRgbCore(reg.right.avgR, reg.right.avgG, reg.right.avgB);
+    if (lLink && rLink) return 'Monstro Link';
+    if ((lLink || rLink) && merged === 'Monstro Sincro') return 'Monstro Link';
+  }
+
+  if (merged === 'Monstro Efeito' && (strip === 'Magia' || frameOnly === 'Magia')) {
+    if (reg && hasSpellFrameSides(reg)) return 'Magia';
+    const bandSpell = frameBandRgbFromFrameColor(fc);
+    if (bandSpell && sideRgbLooksSpellGreen(bandSpell.avgR, bandSpell.avgG, bandSpell.avgB)) {
+      return 'Magia';
+    }
+    if (strip === 'Magia') return 'Magia';
+  }
+
+  if (merged === 'Magia') {
+    if (reg && hasSpellFrameSides(reg)) return 'Magia';
+    if (strip === 'Magia' || frameOnly === 'Magia') return 'Magia';
+    if (fc && isSpellGreenFrameRgb(fc.avgR, fc.avgG, fc.avgB)) return 'Magia';
+    const bandSpell = frameBandRgbFromFrameColor(fc);
+    if (
+      bandSpell &&
+      isSpellGreenFrameRgb(bandSpell.avgR, bandSpell.avgG, bandSpell.avgB)
+    ) {
+      return 'Magia';
+    }
+  }
+
+  if (merged === 'Monstro Sincro' || strip === 'Monstro Sincro' || frameOnly === 'Monstro Sincro') {
+    if (reg && hasSynchroFrameSides(reg)) return 'Monstro Sincro';
+    const bandSyn = frameBandRgbFromFrameColor(fc);
+    if (bandSyn && sideRgbLooksSynchro(bandSyn.avgR, bandSyn.avgG, bandSyn.avgB)) {
+      return 'Monstro Sincro';
+    }
+    if (fc && isSynchroSilverFrameRgb(fc.avgR, fc.avgG, fc.avgB)) return 'Monstro Sincro';
+  }
+
+  if (merged === 'Monstro Fusão' || frameOnly === 'Monstro Fusão' || strip === 'Monstro Fusão') {
+    if (reg && hasSynchroFrameSides(reg)) return 'Monstro Sincro';
+    const bandFus = frameBandRgbFromFrameColor(fc);
+    if (bandFus && sideRgbLooksSynchro(bandFus.avgR, bandFus.avgG, bandFus.avgB)) {
+      return 'Monstro Sincro';
+    }
+  }
+
+  if (
+    (merged === 'Monstro Efeito' || merged === 'Monstro Normal') &&
+    (strip === 'Monstro Virar' ||
+      frameOnly === 'Monstro Virar' ||
+      (reg && hasFlipFrameSides(reg)) ||
+      (reg && hasFlipFrameLoose(reg)))
+  ) {
+    return 'Monstro Virar';
+  }
+
+  if (merged === 'Armadilha') {
+    if (strip === 'Armadilha' || frameOnly === 'Armadilha') return 'Armadilha';
+  }
+
+  if (
+    merged === 'Monstro Fusão' &&
+    (frameOnly === 'Monstro Link' || strip === 'Monstro Link') &&
+    reg &&
+    hasLinkFrameSides(reg)
+  ) {
+    return 'Monstro Link';
+  }
+
+  return merged;
+}
+
+/**
  * Evita oscilar tipo entre frames (ex.: Sincro → Armadilha na faixa do nome).
  * @param {string} detected
  * @returns {string}
@@ -40214,6 +52028,7 @@ function stabilizeDetectedCardType(detected) {
     'Monstro Xyz',
     'Monstro Sincro',
     'Monstro Link',
+    'Monstro Virar',
   ]);
   if (prev === 'Monstro Ritual' && detected === 'Monstro Sincro') {
     lastStableDetectedCardType = detected;
@@ -40237,6 +52052,9 @@ function stabilizeDetectedCardType(detected) {
     lastStableDetectedCardType = detected;
     lastStableDetectedCardTypeAt = now;
     return detected;
+  }
+  if (prev === 'Monstro Sincro' && detected === 'Magia' && now - lastStableDetectedCardTypeAt < 1400) {
+    return prev;
   }
   if (prev === 'Monstro Sincro' && detected === 'Magia') {
     lastStableDetectedCardType = detected;
@@ -40265,7 +52083,7 @@ function stabilizeDetectedCardType(detected) {
   if (prev === 'Monstro Link' && detected === 'Monstro Ritual') {
     return prev;
   }
-  if (prev === 'Monstro Link' && detected === 'Magia' && now - lastStableDetectedCardTypeAt < 2200) {
+  if (prev === 'Monstro Link' && detected === 'Magia' && now - lastStableDetectedCardTypeAt < 700) {
     return prev;
   }
   if (prev === 'Magia' && detected === 'Monstro Link') {
@@ -40332,6 +52150,62 @@ function stabilizeDetectedCardType(detected) {
 }
 
 /**
+ * Corrige tipo quando a faixa do nome/placa contradiz a moldura (ex.: Magia vs Link por glare).
+ * @param {object|null|undefined} typeProbe
+ * @param {string} cardType
+ * @returns {string}
+ */
+function correctCardTypeFromChromaStrip(typeProbe, cardType) {
+  const strip =
+    (typeProbe && (typeProbe.nameStripFallbackType || typeProbe.classifiedTypeFromNameStripOnly)) ||
+    null;
+  const plate = typeProbe && typeProbe.namePlateType;
+  const stripHint = strip || plate;
+  const fc = typeProbe && typeProbe.frameColor;
+  const reg = fc && fc.regions;
+  const band = frameBandRgbFromFrameColor(fc);
+  if (typeProbe && typeProbe.flipIconHint) return 'Monstro Virar';
+  if (reg && hasFlipFrameLoose(reg)) return 'Monstro Virar';
+  if (reg && hasSynchroFrameSides(reg)) return 'Monstro Sincro';
+  if (reg && hasSpellFrameSides(reg)) return 'Magia';
+  if (reg && hasFusionFrameSides(reg)) return 'Monstro Fusão';
+  if (stripHint === 'Magia' && cardType === 'Monstro Link') {
+    if (reg && hasSpellFrameSides(reg)) return 'Magia';
+    if (band && sideRgbLooksSpellGreen(band.avgR, band.avgG, band.avgB)) return 'Magia';
+    if (strip === 'Magia') return 'Magia';
+  }
+  if (stripHint === 'Monstro Sincro' && cardType === 'Monstro Fusão') {
+    if (reg && hasSynchroFrameSides(reg)) return 'Monstro Sincro';
+    if (band && frameRgbMatchesSynchroSilverInline(band.avgR, band.avgG, band.avgB)) {
+      return 'Monstro Sincro';
+    }
+    if (strip === 'Monstro Sincro') return 'Monstro Sincro';
+  }
+  if (
+    (cardType === 'Monstro Normal' || cardType === 'Monstro Link') &&
+    (stripHint === 'Monstro Efeito' || strip === 'Monstro Efeito')
+  ) {
+    return 'Monstro Efeito';
+  }
+  if (cardType === 'Monstro Normal' || cardType === 'Monstro Link') {
+    if (reg && hasEffectFrameSides(reg)) return 'Monstro Efeito';
+    if (band && isEffectOrangeBrownFrameRgb(band.avgR, band.avgG, band.avgB)) return 'Monstro Efeito';
+    if (
+      band &&
+      isBrownNeutralFrameRgb(band.avgR, band.avgG, band.avgB) &&
+      !frameRgbMatchesLinkBlueInline(band.avgR, band.avgG, band.avgB)
+    ) {
+      return 'Monstro Efeito';
+    }
+  }
+  if (cardType === 'Monstro Fusão' && (stripHint === 'Monstro Sincro' || strip === 'Monstro Sincro')) {
+    if (reg && hasSynchroFrameSides(reg)) return 'Monstro Sincro';
+    if (band && sideRgbLooksSynchro(band.avgR, band.avgG, band.avgB)) return 'Monstro Sincro';
+  }
+  return cardType;
+}
+
+/**
  * Quando a moldura fica neutra (mesa/madeira), confia na faixa do nome para Magia/Armadilha/Fusão/etc.
  * @param {string} frameType
  * @param {string|null} stripType
@@ -40340,57 +52214,70 @@ function stabilizeDetectedCardType(detected) {
  */
 function mergeCardTypeDetection(frameType, stripType, frameColor, opts) {
   const useTypeMira = !!(opts && opts.typeMiraDedicated);
-  const r = frameColor && frameColor.avgR != null ? frameColor.avgR : 0;
-  const g = frameColor && frameColor.avgG != null ? frameColor.avgG : 0;
-  const b = frameColor && frameColor.avgB != null ? frameColor.avgB : 0;
+  const bandMerge = frameBandRgbFromFrameColor(frameColor);
+  const r =
+    bandMerge && bandMerge.avgR != null
+      ? bandMerge.avgR
+      : frameColor && frameColor.avgR != null
+        ? frameColor.avgR
+        : 0;
+  const g =
+    bandMerge && bandMerge.avgG != null
+      ? bandMerge.avgG
+      : frameColor && frameColor.avgG != null
+        ? frameColor.avgG
+        : 0;
+  const b =
+    bandMerge && bandMerge.avgB != null
+      ? bandMerge.avgB
+      : frameColor && frameColor.avgB != null
+        ? frameColor.avgB
+        : 0;
   if (frameColor && frameColor.samples >= 4) {
     const regEarly = frameColor.regions;
     if (regEarly) {
-      if (hasLinkFrameSides(regEarly)) return 'Monstro Link';
-      const leftLinkEarly =
-        regEarly.left && isLinkFrameRgb(regEarly.left.avgR, regEarly.left.avgG, regEarly.left.avgB);
-      const rightLinkEarly =
-        regEarly.right && isLinkFrameRgb(regEarly.right.avgR, regEarly.right.avgG, regEarly.right.avgB);
-      if ((leftLinkEarly || rightLinkEarly) && isLinkFrameRgb(r, g, b)) return 'Monstro Link';
-      if (hasSpellFrameSides(regEarly) && !isSynchroSilverFrameRgb(r, g, b)) return 'Magia';
-      const leftSynEarly =
-        regEarly.left &&
-        isSynchroSilverFrameRgb(regEarly.left.avgR, regEarly.left.avgG, regEarly.left.avgB);
-      const rightSynEarly =
-        regEarly.right &&
-        isSynchroSilverFrameRgb(regEarly.right.avgR, regEarly.right.avgG, regEarly.right.avgB);
-      if ((leftSynEarly && rightSynEarly) || isSynchroSilverFrameRgb(r, g, b)) return 'Monstro Sincro';
+      const bandEarly = frameBandRgbFromFrameColor(frameColor);
+      const br = bandEarly ? bandEarly.avgR : r;
+      const bg = bandEarly ? bandEarly.avgG : g;
+      const bb = bandEarly ? bandEarly.avgB : b;
+      const fromSides = classifyCardTypeFromFrameRegions(frameColor);
+      if (fromSides) return fromSides;
+      if (hasSynchroFrameSides(regEarly)) return 'Monstro Sincro';
+      if (hasFusionFrameSides(regEarly)) return 'Monstro Fusão';
       const leftXyzEarly =
         regEarly.left && isXyzDarkPlateRgb(regEarly.left.avgR, regEarly.left.avgG, regEarly.left.avgB);
       const rightXyzEarly =
         regEarly.right && isXyzDarkPlateRgb(regEarly.right.avgR, regEarly.right.avgG, regEarly.right.avgB);
       if (leftXyzEarly && rightXyzEarly) return 'Monstro Xyz';
+      if (hasFlipFrameSides(regEarly)) return 'Monstro Virar';
+      if (hasFlipFrameLoose(regEarly)) return 'Monstro Virar';
+      if (hasSpellFrameSides(regEarly) && !isSynchroSilverFrameRgb(br, bg, bb)) return 'Magia';
+      if (hasLinkFrameSides(regEarly)) return 'Monstro Link';
+      if (hasEffectFrameSides(regEarly) && !hasFlipFrameLoose(regEarly)) return 'Monstro Efeito';
     }
   }
   if (stripType === 'Monstro Xyz') return 'Monstro Xyz';
+  if (stripType === 'Monstro Virar') return 'Monstro Virar';
   if (stripType === 'Monstro Fusão') return 'Monstro Fusão';
   if (stripType === 'Monstro Sincro') return 'Monstro Sincro';
   if (stripType === 'Monstro Link') return 'Monstro Link';
   if (stripType === 'Monstro Ritual') return 'Monstro Ritual';
   if (stripType === 'Magia') {
+    const regMag = frameColor && frameColor.regions;
+    if (regMag && hasSpellFrameSides(regMag)) return 'Magia';
+    if (isSpellGreenFrameRgb(r, g, b)) return 'Magia';
+    if (regMag && hasLinkFrameSides(regMag)) return 'Monstro Link';
+    if (isLinkFrameRgb(r, g, b)) return 'Monstro Link';
     if (
       frameColor &&
       frameColor.samples >= 4 &&
       (isSynchroSilverFrameRgb(r, g, b) ||
         frameType === 'Monstro Sincro' ||
-        (frameColor.regions &&
-          frameColor.regions.left &&
-          frameColor.regions.right &&
-          isSynchroSilverFrameRgb(
-            frameColor.regions.left.avgR,
-            frameColor.regions.left.avgG,
-            frameColor.regions.left.avgB
-          ) &&
-          isSynchroSilverFrameRgb(
-            frameColor.regions.right.avgR,
-            frameColor.regions.right.avgG,
-            frameColor.regions.right.avgB
-          )))
+        (regMag &&
+          regMag.left &&
+          regMag.right &&
+          isSynchroSilverFrameRgb(regMag.left.avgR, regMag.left.avgG, regMag.left.avgB) &&
+          isSynchroSilverFrameRgb(regMag.right.avgR, regMag.right.avgG, regMag.right.avgB)))
     ) {
       return 'Monstro Sincro';
     }
@@ -40398,41 +52285,23 @@ function mergeCardTypeDetection(frameType, stripType, frameColor, opts) {
   }
   if (stripType === 'Armadilha') return 'Armadilha';
   if (frameColor && frameColor.samples >= 4) {
-    if (isFusionPurpleFrameRgb(r, g, b)) return 'Monstro Fusão';
     const reg = frameColor.regions;
     if (reg) {
-      const sidePurple =
-        (reg.left && isFusionPurpleFrameRgb(reg.left.avgR, reg.left.avgG, reg.left.avgB)) ||
-        (reg.right && isFusionPurpleFrameRgb(reg.right.avgR, reg.right.avgG, reg.right.avgB));
-      if (sidePurple) return 'Monstro Fusão';
-      const leftXyz =
-        reg.left &&
-        isXyzDarkPlateRgb(reg.left.avgR, reg.left.avgG, reg.left.avgB);
-      const rightXyz =
-        reg.right &&
-        isXyzDarkPlateRgb(reg.right.avgR, reg.right.avgG, reg.right.avgB);
-      if (leftXyz && rightXyz) return 'Monstro Xyz';
-      if ((leftXyz || rightXyz) && isXyzDarkPlateRgb(r, g, b)) return 'Monstro Xyz';
-      if (hasLinkFrameSides(reg)) return 'Monstro Link';
-      if (hasSpellFrameSides(reg)) return 'Magia';
-      const leftSpell =
-        reg.left && isSpellGreenFrameRgb(reg.left.avgR, reg.left.avgG, reg.left.avgB);
-      const rightSpell =
-        reg.right && isSpellGreenFrameRgb(reg.right.avgR, reg.right.avgG, reg.right.avgB);
-      const leftLinkSide =
-        reg.left && isLinkFrameRgb(reg.left.avgR, reg.left.avgG, reg.left.avgB);
-      const rightLinkSide =
-        reg.right && isLinkFrameRgb(reg.right.avgR, reg.right.avgG, reg.right.avgB);
-      if (leftLinkSide && rightLinkSide) return 'Monstro Link';
-      if (leftSpell && rightSpell && !leftLinkSide && !rightLinkSide) return 'Magia';
+      const fromSidesLate = classifyCardTypeFromFrameRegions(frameColor);
+      if (fromSidesLate) return fromSidesLate;
     }
+    if (isSynchroSilverFrameRgb(r, g, b)) return 'Monstro Sincro';
     if (isFusionPurpleFrameRgb(r, g, b)) return 'Monstro Fusão';
     if (isXyzFrameRgb(r, g, b)) return 'Monstro Xyz';
-    if (isLinkFrameRgb(r, g, b)) return 'Monstro Link';
+    if (reg && hasSpellFrameSides(reg)) return 'Magia';
     if (isSpellGreenFrameRgb(r, g, b)) return 'Magia';
+    if (reg && hasLinkFrameSides(reg)) return 'Monstro Link';
+    if (isLinkFrameRgb(r, g, b)) return 'Monstro Link';
     if (isRitualBlueFrameRgb(r, g, b)) return 'Monstro Ritual';
     if (isTrapRoseFrameRgb(r, g, b)) return 'Armadilha';
-    if (isSynchroSilverFrameRgb(r, g, b)) return 'Monstro Sincro';
+    if (isEffectOrangeBrownFrameRgb(r, g, b) || isBrownNeutralFrameRgb(r, g, b)) {
+      return 'Monstro Efeito';
+    }
   }
   if (frameType === 'Monstro Link' || frameType === 'Monstro Sincro' || frameType === 'Monstro Ritual') {
     return frameType;
@@ -40480,6 +52349,25 @@ function mergeCardTypeDetection(frameType, stripType, frameColor, opts) {
     ) {
       return stripType;
     }
+    const chromaTypesMira = new Set([
+      'Magia',
+      'Armadilha',
+      'Monstro Fusão',
+      'Monstro Ritual',
+      'Monstro Xyz',
+      'Monstro Sincro',
+      'Monstro Link',
+      'Monstro Virar',
+    ]);
+    const frameWeakMira =
+      frameType === 'Monstro Efeito' ||
+      frameType === 'Monstro Normal' ||
+      (frameColor && isBrownNeutralFrameRgb(r, g, b));
+    if (frameWeakMira && stripType && chromaTypesMira.has(stripType)) {
+      return stripType;
+    }
+    if (stripType === 'Monstro Link' && frameType === 'Monstro Normal') return 'Monstro Link';
+    if (stripType === 'Monstro Xyz' && frameType === 'Monstro Normal') return 'Monstro Xyz';
     return frameType;
   }
   const chromaTypes = new Set([
@@ -40490,6 +52378,7 @@ function mergeCardTypeDetection(frameType, stripType, frameColor, opts) {
     'Monstro Xyz',
     'Monstro Sincro',
     'Monstro Link',
+    'Monstro Virar',
   ]);
   const frameWeak =
     frameType === 'Monstro Efeito' ||
@@ -40499,8 +52388,23 @@ function mergeCardTypeDetection(frameType, stripType, frameColor, opts) {
   if (frameWeak && stripType && chromaTypes.has(stripType)) {
     return stripType;
   }
+  if (stripType === 'Monstro Normal' && frameType === 'Monstro Efeito') {
+    return 'Monstro Efeito';
+  }
   if (frameType === 'Monstro Efeito' && stripType === 'Monstro Normal') {
-    return stripType;
+    return 'Monstro Efeito';
+  }
+  if (stripType === 'Monstro Normal' && frameColor && frameColor.samples >= 4) {
+    const regNorm = frameColor.regions;
+    if (regNorm && hasEffectFrameSides(regNorm)) return 'Monstro Efeito';
+    if (isEffectOrangeBrownFrameRgb(r, g, b) || isBrownNeutralFrameRgb(r, g, b)) {
+      return 'Monstro Efeito';
+    }
+  }
+  if (frameType === 'Monstro Normal' && frameColor && frameColor.samples >= 4) {
+    const regFn = frameColor.regions;
+    if (regFn && hasEffectFrameSides(regFn)) return 'Monstro Efeito';
+    if (isEffectOrangeBrownFrameRgb(r, g, b)) return 'Monstro Efeito';
   }
   return frameType || stripType || 'Monstro Efeito';
 }
@@ -40517,14 +52421,14 @@ function classifyCardTypeFromFrameRgb(avgR, avgG, avgB) {
   const spread = Math.max(avgR, avgG, avgB) - Math.min(avgR, avgG, avgB);
   const minRgb = Math.min(avgR, avgG, avgB);
 
+  if (isSynchroSilverFrameRgb(avgR, avgG, avgB)) {
+    return 'Monstro Sincro';
+  }
   if (isFusionPurpleFrameRgb(avgR, avgG, avgB)) {
     return 'Monstro Fusão';
   }
   if (isXyzFrameRgb(avgR, avgG, avgB)) {
     return 'Monstro Xyz';
-  }
-  if (isLinkFrameRgb(avgR, avgG, avgB)) {
-    return 'Monstro Link';
   }
   if (isSpellGreenFrameRgb(avgR, avgG, avgB)) {
     return 'Magia';
@@ -40572,18 +52476,37 @@ function classifyCardTypeFromFrameRgb(avgR, avgG, avgB) {
     return 'Monstro Sincro';
   }
 
+  if (isFlipDarkGreenFrameRgbCore(avgR, avgG, avgB)) {
+    return 'Monstro Virar';
+  }
+
   if (isEffectOrangeBrownFrameRgb(avgR, avgG, avgB) || isBrownNeutralFrameRgb(avgR, avgG, avgB)) {
     return 'Monstro Efeito';
   }
+  if (
+    isEffectOrangeBrownFrameRgbCore(avgR, avgG, avgB) ||
+    (isBrownNeutralFrameRgbCore(avgR, avgG, avgB) && avgR > 112 && avgR > avgB + 12)
+  ) {
+    return 'Monstro Efeito';
+  }
+
+  if (isLinkFrameRgb(avgR, avgG, avgB)) {
+    return 'Monstro Link';
+  }
 
   if (
-    avgR > avgG + 22 &&
-    avgR > avgB + 25 &&
-    avgR > 162 &&
-    avgG > 112 &&
-    avgG < avgR - 15 &&
-    lum < 172 &&
-    !(lum > 138 && spread < 54 && minRgb > 90)
+    avgR > avgG + 28 &&
+    avgR > avgB + 32 &&
+    avgR > 175 &&
+    avgG > 118 &&
+    avgG < avgR - 22 &&
+    lum < 162 &&
+    spread > 42 &&
+    spread < 72 &&
+    !(lum > 138 && spread < 54 && minRgb > 90) &&
+    !isEffectOrangeBrownFrameRgbCore(avgR, avgG, avgB) &&
+    !isBrownNeutralFrameRgbCore(avgR, avgG, avgB) &&
+    !frameRgbMatchesSynchroSilverInline(avgR, avgG, avgB)
   ) {
     return 'Monstro Normal';
   }
@@ -40628,23 +52551,48 @@ function maxRgb(a, b, c) {
  * @param {{ x: number, y: number, width: number, height: number }} cropRect
  * @returns {{ probeRect: object, frameColor: object|null, classifiedType: string, nameStripFallbackType: string|null }}
  */
-function probeCardTypeDiagnostics(video, nameCropRect, typeCropRect) {
+function probeCardTypeDiagnostics(video, nameCropRect, typeCropRect, ocrWarp) {
   const vW = video.videoWidth || 0;
   const vH = video.videoHeight || 0;
-  const frameColor = typeCropRect
-    ? sampleCardFrameRgbFromTypeCrop(video, typeCropRect, vW, vH)
-    : nameCropRect
-      ? sampleCardFrameRgbFromCrop(video, nameCropRect, vW, vH)
-      : null;
+  const warp =
+    ocrWarp && ocrWarp.media && ocrWarp.typeCrop
+      ? ocrWarp
+      : resolveOcrWarpForTypeProbe(video, typeCropRect, null);
+  let frameColor = null;
+  if (warp && warp.media && warp.typeCrop) {
+    frameColor = sampleCardFrameRgbFromWarpCanvas(warp.media, warp.typeCrop);
+  }
+  if (!frameColor) {
+    frameColor = typeCropRect
+      ? sampleCardFrameRgbFromTypeCrop(video, typeCropRect, vW, vH)
+      : nameCropRect
+        ? sampleCardFrameRgbFromCrop(video, nameCropRect, vW, vH)
+        : null;
+  }
   let frameType = 'Monstro Efeito';
+  let flipIconHint = false;
+  let flipIconMetrics = null;
   if (frameColor && frameColor.samples >= 4) {
-    frameType = classifyCardTypeFromFrameRgb(frameColor.avgR, frameColor.avgG, frameColor.avgB);
+    const fromBand = classifyCardTypeFromFrameRegions(frameColor);
+    if (fromBand) {
+      frameType = fromBand;
+    } else {
+      const band = frameBandRgbFromFrameColor(frameColor);
+      if (band) {
+        frameType = classifyCardTypeFromFrameRgb(band.avgR, band.avgG, band.avgB);
+      } else {
+        frameType = classifyCardTypeFromFrameRgb(frameColor.avgR, frameColor.avgG, frameColor.avgB);
+      }
+    }
   }
   let nameStripFallbackType = null;
   let namePlateType = null;
   if (nameCropRect) {
     try {
-      const plateMetrics = sampleNameStripRarityMetrics(video, nameCropRect);
+      const nameSource =
+        warp && warp.media && warp.nameCrop ? warp.media : video;
+      const nameRect = warp && warp.nameCrop ? warp.nameCrop : nameCropRect;
+      const plateMetrics = sampleNameStripRarityMetrics(nameSource, nameRect);
       namePlateType = classifyCardTypeFromNameStripRgb(
         plateMetrics.plateR,
         plateMetrics.plateG,
@@ -40655,11 +52603,11 @@ function probeCardTypeDiagnostics(video, nameCropRect, typeCropRect) {
       canvas.width = 100;
       canvas.height = 50;
       ctx.drawImage(
-        video,
-        nameCropRect.x,
-        nameCropRect.y,
-        nameCropRect.width,
-        nameCropRect.height,
+        nameSource,
+        nameRect.x,
+        nameRect.y,
+        nameRect.width,
+        nameRect.height,
         0,
         0,
         100,
@@ -40682,15 +52630,27 @@ function probeCardTypeDiagnostics(video, nameCropRect, typeCropRect) {
       if (namePlateType) nameStripFallbackType = namePlateType;
     } catch (_) {}
   }
+  const flipSource =
+    warp && warp.media && warp.typeCrop ? warp.media : typeCropRect ? video : null;
+  const flipRect = warp && warp.typeCrop ? warp.typeCrop : typeCropRect;
+  if (flipSource && flipRect) {
+    flipIconMetrics = sampleFlipIconMetrics(flipSource, flipRect);
+    flipIconHint = hasFlipIconHint(flipIconMetrics);
+    if (flipIconHint && (frameType === 'Monstro Efeito' || frameType === 'Monstro Normal')) {
+      frameType = 'Monstro Virar';
+    }
+  }
   const classifiedType = mergeCardTypeDetection(frameType, nameStripFallbackType, frameColor, {
     typeMiraDedicated: !!typeCropRect,
   });
   const sampleRects =
     frameColor && frameColor.sampleRects
       ? frameColor.sampleRects
-      : nameCropRect
-        ? getCardFrameSampleRects(nameCropRect, vW, vH)
-        : { left: null, right: null, top: null };
+      : typeCropRect
+        ? getCardTypeBorderSampleRects(typeCropRect, vW, vH)
+        : nameCropRect
+          ? getCardFrameSampleRects(nameCropRect, vW, vH)
+          : { left: null, right: null, top: null };
   const sr = sampleRects.left
     ? sampleRects
     : { left: sampleRects.left, right: sampleRects.right, top: sampleRects.top };
@@ -40719,6 +52679,14 @@ function probeCardTypeDiagnostics(video, nameCropRect, typeCropRect) {
     classifiedTypeFromNameStripOnly: nameStripFallbackType,
     nameStripFallbackType,
     namePlateType,
+    flipIconHint,
+    flipIconMetrics: flipIconMetrics
+      ? {
+          darkRatio: safeRound(flipIconMetrics.darkRatio, 3),
+          greenBgRatio: safeRound(flipIconMetrics.greenBgRatio, 3),
+          score: safeRound(flipIconMetrics.score, 4),
+        }
+      : null,
   };
 }
 
@@ -40741,7 +52709,7 @@ function roundRect(r) {
 function detectCardTypeFromImage(video, typeCropRect, nameCropRect) {
   return new Promise((resolve) => {
     const probe = probeCardTypeDiagnostics(video, nameCropRect, typeCropRect);
-    resolve(probe.classifiedType || 'Monstro Efeito');
+    resolve(probe.classifiedTypeFromFrameOnly || probe.classifiedType || 'Monstro Efeito');
   });
 }
 
@@ -40956,7 +52924,18 @@ function isSecretNameStripMetrics(m) {
   ) {
     return false;
   }
-  if (m.goldRatio > 0.88 && m.hueVar > 0.09 && m.foilRatio > 0.5) return true;
+  if (
+    m.goldRatio > 0.88 &&
+    m.hueVar > 0.09 &&
+    m.foilRatio > 0.5 &&
+    !(
+      isFusionPurpleFrameRgb(m.plateR, m.plateG, m.plateB) &&
+      m.silverRatio < 0.09 &&
+      m.goldRatio > 0.85
+    )
+  ) {
+    return true;
+  }
   if (m.silverRatio > 0.42) return true;
   if (m.silverRatio > 0.1 && m.silverRatio > m.goldRatio * 0.65 && m.foilRatio > 0.48) return true;
   if (m.silverRatio > 0.18 && m.hueVar > 0.085 && m.foilRatio > 0.55) return true;
@@ -41032,6 +53011,15 @@ function isUltraGoldNameStripMetrics(m) {
   ) {
     return true;
   }
+  if (
+    isFusionPurpleFrameRgb(m.plateR, m.plateG, m.plateB) &&
+    m.goldRatio > 0.82 &&
+    m.silverRatio < 0.12 &&
+    m.foilRatio >= 0.26 &&
+    m.hueVar < 0.12
+  ) {
+    return true;
+  }
   return (
     ((m.goldRatio > 0.14 && m.warmFoilRatio > 0.11) ||
       (m.warmFoilRatio > 0.18 && m.goldRatio > 0.08)) &&
@@ -41086,6 +53074,26 @@ function isArtMatteCommonMetrics(art) {
 }
 
 /**
+ * Holo diagonal Magia Secreta (Livro da Lua — artHue ~0.18–0.19 vs Comum).
+ * @param {ReturnType<typeof sampleRegionImageMetrics>} art
+ * @returns {boolean}
+ */
+function isSpellArtSecretHoloMetrics(art) {
+  if (!art || art.samples < 8) return false;
+  if (isArtMatteCommonMetrics(art)) return false;
+  if (art.hueVar >= 0.175 && art.hueVar <= 0.21 && art.foilRatio >= 0.26 && art.colLumStd >= 7) {
+    return true;
+  }
+  return (
+    art.hueVar >= 0.165 &&
+    art.hueVar <= 0.23 &&
+    art.foilRatio >= 0.34 &&
+    art.colLumStd >= 8 &&
+    art.colLumStd <= 22
+  );
+}
+
+/**
  * Arte muito holo / arco-íris (típico de Secreta).
  * @param {ReturnType<typeof sampleRegionImageMetrics>} art
  * @returns {boolean}
@@ -41104,6 +53112,8 @@ function classifyFusionPlateFoilRarity(m, artMetrics) {
   if (!m || m.samples < 8) return null;
   if (!isFusionPurpleFrameRgb(m.plateR, m.plateG, m.plateB)) return null;
   if (m.foilRatio < 0.36) {
+    if (m.goldRatio > 0.76 && m.silverRatio < 0.14 && m.hueVar < 0.14) return 'Ultra Rara';
+    if (m.goldRatio > 0.82 && m.silverRatio < 0.12 && m.hueVar < 0.12) return 'Ultra Rara';
     return m.darkLetterRatio > 0.07 ? 'Comum' : null;
   }
   if (isUltraGoldNameStripMetrics(m)) return 'Ultra Rara';
@@ -41173,6 +53183,9 @@ function resolveSecretUltraRarityDispute(nameRarity, artRarity, nameMetrics, art
   if (!artConflict && !stripConflict) return null;
   let secretScore = 0;
   let ultraScore = 0;
+  if (isExtraDeckDarkPlateRgb(m.plateR, m.plateG, m.plateB) && m.goldRatio < 0.1 && m.warmFoilRatio < 0.1) {
+    ultraScore += 5;
+  }
   if (m.silverRatio > 0.11) secretScore += 2;
   if (m.silverRatio > m.goldRatio * 0.9) secretScore += 2;
   if (m.hueVar > 0.11) secretScore += 2;
@@ -41212,7 +53225,7 @@ function resolveSecretUltraRarityDispute(nameRarity, artRarity, nameMetrics, art
  * @param {ReturnType<typeof sampleNameStripRarityMetrics>} m
  * @returns {string}
  */
-function classifyRarityFromStripMetrics(m) {
+function classifyRarityFromStripMetrics(m, frameColor) {
   if (!m || m.samples < 8) return 'Comum';
   const { foilRatio, goldRatio, silverRatio, warmFoilRatio, hueVar, colLumStd, brightLum, darkLetterRatio } =
     m;
@@ -41220,18 +53233,57 @@ function classifyRarityFromStripMetrics(m) {
   const pg = m.plateG;
   const pb = m.plateB;
   const purplePlate = isFusionPurpleFrameRgb(pr, pg, pb);
-  const xyzPlate = isXyzDarkPlateRgb(pr, pg, pb);
+  const xyzWashedPlate = isXyzWashedNamePlateRgb(pr, pg, pb);
+  const xyzPlate = isXyzDarkPlateRgb(pr, pg, pb) || xyzWashedPlate;
   const linkPlate = isLinkNamePlateRgb(pr, pg, pb);
   const darkPlate = xyzPlate || linkPlate || isXyzNamePlateRgb(pr, pg, pb);
   const lightPlate = isLightNamePlateRgb(pr, pg, pb);
 
-  if (darkPlate && isDarkPlatePremiumGoldNameStrip(m)) return 'Ultra Rara';
+  if (isSpellSecretFoilNameStripMetrics(m, frameColor)) return 'Secreta';
+
+  if (darkPlate && isDarkPlatePremiumGoldNameStrip(m, frameColor)) return 'Ultra Rara';
   if (isExtraDeckDarkPlateRgb(pr, pg, pb) && foilRatio > 0.04 && (goldRatio > 0.012 || warmFoilRatio > 0.025)) {
-    if (silverRatio > 0.2 && hueVar > 0.1 && foilRatio < 0.42) return 'Secreta';
+    if (
+      linkPlate &&
+      (isUltraGoldNameStripMetrics(m) ||
+        isDarkPlatePremiumGoldNameStrip(m, frameColor, 'Monstro Link') ||
+        (goldRatio > 0.004 && warmFoilRatio > 0.008))
+    ) {
+      return 'Ultra Rara';
+    }
+    if (
+      silverRatio > 0.2 &&
+      hueVar > 0.1 &&
+      foilRatio < 0.42 &&
+      goldRatio > 0.07 &&
+      warmFoilRatio > 0.06 &&
+      !(linkPlate && silverRatio < 0.28 && warmFoilRatio > 0.012)
+    ) {
+      return 'Secreta';
+    }
     return 'Ultra Rara';
   }
+  if (isSpellSecretGlareNameStripMetrics(m, frameColor)) return 'Secreta';
   if (lightPlate && isSecretSilverOnLightPlateMetrics(m)) return 'Secreta';
-  if (xyzPlate && silverRatio > 0.22 && foilRatio > 0.03 && foilRatio < 0.45) return 'Secreta';
+  if (
+    xyzPlate &&
+    goldRatio > 0.32 &&
+    goldRatio >= silverRatio * 0.75 &&
+    foilRatio > 0.04 &&
+    warmFoilRatio > 0.02
+  ) {
+    return 'Ultra Rara';
+  }
+  if (
+    xyzPlate &&
+    silverRatio > 0.22 &&
+    foilRatio > 0.03 &&
+    foilRatio < 0.45 &&
+    goldRatio < 0.32 &&
+    warmFoilRatio < silverRatio * 0.85
+  ) {
+    return 'Secreta';
+  }
   if (silverRatio > 0.45 && foilRatio > 0.32) return 'Secreta';
   if (hueVar > 0.13 && foilRatio > 0.48) return 'Secreta';
   if (isNameStripSunGlareMetrics(m)) return 'Comum';
@@ -41444,16 +53496,18 @@ function sampleRegionImageMetrics(video, rect, outW = 64, outH = 48) {
     shineRatio: 0,
   };
   if (!video || !rect || rect.width < 2 || rect.height < 2) return empty;
+  const ow = Math.max(4, Math.round(outW));
+  const oh = Math.max(4, Math.round(outH));
   const c = document.createElement('canvas');
-  c.width = outW;
-  c.height = outH;
+  c.width = ow;
+  c.height = oh;
   const ctx = c.getContext('2d');
   if (!ctx) return empty;
   try {
-    ctx.drawImage(video, rect.x, rect.y, rect.width, rect.height, 0, 0, outW, outH);
-    const data = ctx.getImageData(0, 0, outW, outH).data;
-    const colSum = new Array(outW).fill(0);
-    const colCnt = new Array(outW).fill(0);
+    ctx.drawImage(video, rect.x, rect.y, rect.width, rect.height, 0, 0, ow, oh);
+    const data = ctx.getImageData(0, 0, ow, oh).data;
+    const colSum = new Array(ow).fill(0);
+    const colCnt = new Array(ow).fill(0);
     let lumSum = 0;
     let lumSq = 0;
     let foilN = 0;
@@ -41533,6 +53587,7 @@ function classifyRarityFromArtMetrics(art, border) {
   const b = border && border.samples >= 8 ? border : art;
 
   if (isArtMatteCommonMetrics(a)) return 'Comum';
+  if (isSpellArtSecretHoloMetrics(a)) return 'Secreta';
   if (isArtHeavySecretHoloMetrics(a) && a.shineRatio > 0.12) return 'Secreta';
 
   if (
@@ -41586,11 +53641,120 @@ function classifyRarityFromArtMetrics(art, border) {
  * @param {ReturnType<typeof sampleRegionImageMetrics>} artMetrics
  * @returns {string}
  */
+function nameStripRarityConfident(m) {
+  if (!m || m.samples < 8) return false;
+  return (
+    isUltraGoldNameStripMetrics(m) ||
+    isSecretNameStripMetrics(m) ||
+    isSecretSilverOnLightPlateMetrics(m) ||
+    (m.foilRatio > 0.14 &&
+      (m.goldRatio > 0.045 || m.warmFoilRatio > 0.07 || m.silverRatio > 0.1))
+  );
+}
+
+function isSpellSecretGlareNameStripMetrics(m, frameColor) {
+  if (!m || m.samples < 8) return false;
+  const reg = frameColor && frameColor.regions;
+  const spellCtx =
+    isSpellGreenFrameRgb(m.plateR, m.plateG, m.plateB) ||
+    (reg &&
+      (hasSpellFrameSides(reg) ||
+        hasSpellWashedLowLightSides(reg) ||
+        (reg.top && isSpellTealFrameTopRgb(reg.top.avgR, reg.top.avgG, reg.top.avgB)))) ||
+    (m.plateG > m.plateR + 2 && m.plateB > m.plateR - 10);
+  if (!spellCtx) return false;
+  if (isUltraGoldNameStripMetrics(m)) return false;
+  if (
+    m.foilRatio > 0.03 &&
+    m.hueVar > 0.13 &&
+    (m.silverRatio > 0.08 || m.goldRatio > 0.18) &&
+    m.warmFoilRatio + m.goldRatio > m.silverRatio * 0.3
+  ) {
+    return true;
+  }
+  return isNameStripSunGlareMetrics(m) && m.hueVar > 0.18 && m.foilRatio > 0.03;
+}
+
+/**
+ * Foil prateado Secreta em placa Magia (Livro da Lua — faixa nome, luz baixa).
+ * @param {ReturnType<typeof sampleNameStripRarityMetrics>} m
+ * @param {{ regions?: object }|null|undefined} frameColor
+ * @returns {boolean}
+ */
+function isSpellSecretFoilNameStripMetrics(m, frameColor) {
+  if (!m || m.samples < 8) return false;
+  const reg = frameColor && frameColor.regions;
+  const spellCtx =
+    isSpellGreenFrameRgb(m.plateR, m.plateG, m.plateB) ||
+    (reg &&
+      (hasSpellFrameSides(reg) ||
+        hasSpellWashedLowLightSides(reg) ||
+        (reg.top && isSpellTealFrameTopRgb(reg.top.avgR, reg.top.avgG, reg.top.avgB)))) ||
+    (m.plateG > m.plateR - 8 && m.plateG > m.plateB - 14);
+  if (!spellCtx) return false;
+  if (isUltraGoldNameStripMetrics(m)) return false;
+  if (isNameStripSunGlareMetrics(m) && m.goldRatio > 0.35) return false;
+  return (
+    m.foilRatio > 0.26 &&
+    m.goldRatio < 0.08 &&
+    m.warmFoilRatio < 0.14 &&
+    m.hueVar < 0.14 &&
+    m.silverRatio < 0.14
+  );
+}
+
 function mergeRarityClassification(nameRarity, artRarity, nameMetrics, artMetrics, frameColor, cardType) {
   const art = artRarity || null;
+  const regMerge = frameColor && frameColor.regions;
+  const xyzFrameCtx =
+    cardType === 'Monstro Xyz' ||
+    (regMerge &&
+      regMerge.top &&
+      isXyzWashedFrameRgb(regMerge.top.avgR, regMerge.top.avgG, regMerge.top.avgB)) ||
+    (regMerge &&
+      regMerge.left &&
+      regMerge.right &&
+      isXyzWashedFrameRgb(regMerge.left.avgR, regMerge.left.avgG, regMerge.left.avgB) &&
+      isXyzWashedFrameRgb(regMerge.right.avgR, regMerge.right.avgG, regMerge.right.avgB));
+  if (
+    xyzFrameCtx &&
+    nameRarity === 'Ultra Rara' &&
+    art === 'Secreta' &&
+    nameMetrics &&
+    (isUltraGoldNameStripMetrics(nameMetrics) || nameStripRarityConfident(nameMetrics))
+  ) {
+    return 'Ultra Rara';
+  }
   const ctxRarity =
     nameMetrics && classifyExtraDeckRarityFromContext(nameMetrics, frameColor || null, cardType || null);
   if (ctxRarity) return ctxRarity;
+  if (nameMetrics && isSpellSecretFoilNameStripMetrics(nameMetrics, frameColor)) {
+    return 'Secreta';
+  }
+  if (nameMetrics && isSpellSecretGlareNameStripMetrics(nameMetrics, frameColor)) {
+    return 'Secreta';
+  }
+  if (
+    nameRarity === 'Ultra Rara' &&
+    art === 'Secreta' &&
+    nameMetrics &&
+    isExtraDeckDarkPlateRgb(nameMetrics.plateR, nameMetrics.plateG, nameMetrics.plateB) &&
+    nameMetrics.goldRatio < 0.1 &&
+    nameMetrics.warmFoilRatio < 0.1 &&
+    !isSecretNameStripMetrics(nameMetrics)
+  ) {
+    return 'Ultra Rara';
+  }
+  if (
+    nameRarity &&
+    (nameRarity === 'Ultra Rara' || nameRarity === 'Secreta') &&
+    nameStripRarityConfident(nameMetrics) &&
+    art &&
+    art !== nameRarity &&
+    !(artMetrics && isArtMatteCommonMetrics(artMetrics) && nameMetrics && nameMetrics.foilRatio < 0.22)
+  ) {
+    return nameRarity;
+  }
   if (nameMetrics && isUltraGoldNameStripMetrics(nameMetrics)) {
     return 'Ultra Rara';
   }
@@ -41689,6 +53853,9 @@ function mergeRarityClassification(nameRarity, artRarity, nameMetrics, artMetric
       nameMetrics &&
       nameMetrics.foilRatio > 0.35
     ) {
+      if (isUltraGoldNameStripMetrics(nameMetrics) || nameStripRarityConfident(nameMetrics)) {
+        return 'Ultra Rara';
+      }
       if (nameMetrics.hueVar < 0.085 && nameMetrics.silverRatio < 0.09) return 'Ultra Rara';
       if (nameMetrics.hueVar > 0.1 || nameMetrics.silverRatio > 0.06) return 'Secreta';
       return 'Secreta';
@@ -41745,34 +53912,59 @@ function mergeRarityClassification(nameRarity, artRarity, nameMetrics, artMetric
  * @param {{ x: number, y: number, width: number, height: number }|null} typeCropRect
  * @returns {object}
  */
-function probeCardRarityDiagnostics(video, nameCropRect, typeCropRect, cardTypeHint) {
-  const nameMetrics = sampleNameStripRarityMetrics(video, nameCropRect);
-  const vW = video.videoWidth || 0;
-  const vH = video.videoHeight || 0;
-  const frameColor = typeCropRect
-    ? sampleCardFrameRgbFromTypeCrop(video, typeCropRect, vW, vH)
-    : null;
+function probeCardRarityDiagnostics(video, nameCropRect, typeCropRect, cardTypeHint, ocrWarp) {
+  // Foil forte: faixa do nome + arte. Passcode (8 dígitos, canto inf. esq.) é matte em Ultra/Secret — não usar ROI do passcode como sinal de foil.
+  const warp =
+    ocrWarp && ocrWarp.media
+      ? ocrWarp
+      : resolveOcrWarpForTypeProbe(video, typeCropRect, null);
+  const nameSource = warp && warp.media && warp.nameCrop ? warp.media : video;
+  const nameRect = warp && warp.nameCrop ? warp.nameCrop : nameCropRect;
+  const nameMetrics = sampleNameStripRarityMetrics(nameSource, nameRect);
+  const vW = video.videoWidth || video.width || 0;
+  const vH = video.videoHeight || video.height || 0;
+  let frameColor = null;
+  if (warp && warp.media && warp.typeCrop) {
+    frameColor = sampleCardFrameRgbFromWarpCanvas(warp.media, warp.typeCrop);
+  }
+  if (!frameColor && typeCropRect) {
+    frameColor = sampleCardFrameRgbFromTypeCrop(video, typeCropRect, vW, vH);
+  }
   const frameTypeGuess =
     cardTypeHint ||
     (frameColor
       ? classifyCardTypeFromFrameRgb(frameColor.avgR, frameColor.avgG, frameColor.avgB)
       : null);
-  let nameFromStrip = classifyRarityFromStripMetrics(nameMetrics);
+  let nameFromStrip = classifyRarityFromStripMetrics(nameMetrics, frameColor);
   const ctxStrip = classifyExtraDeckRarityFromContext(
     nameMetrics,
     frameColor,
     frameTypeGuess
   );
   if (ctxStrip) nameFromStrip = ctxStrip;
-  const artRect = typeCropRect ? getCardArtSampleRect(typeCropRect, nameCropRect) : null;
-  const artMetrics = artRect ? sampleRegionImageMetrics(video, artRect, 72, 52) : sampleRegionImageMetrics(video, nameCropRect, 48, 20);
+  const artSource = warp && warp.media && warp.artCrop ? warp.media : video;
+  const artRect =
+    warp && warp.artCrop
+      ? warp.artCrop
+      : typeCropRect
+        ? getCardArtSampleRect(typeCropRect, nameCropRect)
+        : null;
+  const artMetrics = artRect
+    ? sampleRegionImageMetrics(artSource, artRect, 72, 52)
+    : sampleRegionImageMetrics(
+        warp && warp.media && warp.nameCrop ? warp.media : video,
+        warp && warp.nameCrop ? warp.nameCrop : nameCropRect,
+        48,
+        20
+      );
   let borderMetrics = artMetrics;
+  const borderSource = warp && warp.media ? warp.media : video;
   if (typeCropRect && frameColor && frameColor.sampleRects) {
     const sr = frameColor.sampleRects;
     const borderParts = [];
     for (const key of ['left', 'right', 'top']) {
       const r = sr[key];
-      if (r && r.width > 2) borderParts.push(sampleRegionImageMetrics(video, r, 24, 40));
+      if (r && r.width > 2) borderParts.push(sampleRegionImageMetrics(borderSource, r, 24, 40));
     }
     if (borderParts.length) {
       borderMetrics = {
@@ -41876,29 +54068,20 @@ function resolveVisionTypeAndRarityFromProbes(typeProbe, rarityProbe, detectedTy
   const stripType = typeProbe?.nameStripFallbackType || typeProbe?.classifiedTypeFromNameStripOnly;
   const frameForCtx = typeProbe?.frameColor || frameColor;
   const regFrame = frameForCtx && frameForCtx.regions;
-  const forcedLink = !!(
-    regFrame &&
-    (hasLinkFrameSides(regFrame) ||
-      (regFrame.left &&
-        regFrame.right &&
-        isLinkFrameRgb(regFrame.left.avgR, regFrame.left.avgG, regFrame.left.avgB) &&
-        isLinkFrameRgb(regFrame.right.avgR, regFrame.right.avgG, regFrame.right.avgB)))
-  );
+  const bandRgb = frameBandRgbFromFrameColor(frameForCtx);
+  const bandR = bandRgb ? bandRgb.avgR : frameForCtx && frameForCtx.avgR;
+  const bandG = bandRgb ? bandRgb.avgG : frameForCtx && frameForCtx.avgG;
+  const bandB = bandRgb ? bandRgb.avgB : frameForCtx && frameForCtx.avgB;
+  const forcedLink = !!(regFrame && hasLinkFrameSides(regFrame));
   const frameIsEffectOrange =
-    frameForCtx &&
-    frameForCtx.avgR != null &&
-    !isSynchroSilverFrameRgb(frameForCtx.avgR, frameForCtx.avgG, frameForCtx.avgB) &&
-    (isEffectOrangeBrownFrameRgb(frameForCtx.avgR, frameForCtx.avgG, frameForCtx.avgB) ||
-      isBrownNeutralFrameRgb(frameForCtx.avgR, frameForCtx.avgG, frameForCtx.avgB));
+    bandR != null &&
+    !isSynchroSilverFrameRgb(bandR, bandG, bandB) &&
+    (isEffectOrangeBrownFrameRgb(bandR, bandG, bandB) ||
+      isBrownNeutralFrameRgb(bandR, bandG, bandB) ||
+      (regFrame && hasEffectFrameSides(regFrame)));
   const forcedSynchro = !!(
-    frameForCtx &&
-    frameForCtx.avgR != null &&
-    (isSynchroSilverFrameRgb(frameForCtx.avgR, frameForCtx.avgG, frameForCtx.avgB) ||
-      (regFrame &&
-        regFrame.left &&
-        regFrame.right &&
-        isSynchroSilverFrameRgb(regFrame.left.avgR, regFrame.left.avgG, regFrame.left.avgB) &&
-        isSynchroSilverFrameRgb(regFrame.right.avgR, regFrame.right.avgG, regFrame.right.avgB)))
+    (regFrame && hasSynchroFrameSides(regFrame)) ||
+    (bandR != null && isSynchroSilverFrameRgb(bandR, bandG, bandB))
   );
   const typeGuess = mergedT || stripType || cardType;
   const extraDeckCtx = nm && classifyExtraDeckRarityFromContext(nm, frameForCtx, typeGuess);
@@ -41973,6 +54156,17 @@ function resolveVisionTypeAndRarityFromProbes(typeProbe, rarityProbe, detectedTy
     rarity = fusionFoil;
     lastStableDetectedCardRarity = rarity;
     lastStableDetectedCardRarityAt = Date.now();
+  } else if (
+    stripR &&
+    premium.has(stripR) &&
+    nameStripRarityConfident(nm) &&
+    artHint &&
+    artHint !== stripR &&
+    stripR === 'Ultra Rara'
+  ) {
+    rarity = stripR;
+    lastStableDetectedCardRarity = rarity;
+    lastStableDetectedCardRarityAt = Date.now();
   } else if (stripR && classR && stripR === classR) {
     rarity = classR;
     lastStableDetectedCardRarity = rarity;
@@ -41990,32 +54184,29 @@ function resolveVisionTypeAndRarityFromProbes(typeProbe, rarityProbe, detectedTy
   }
 
   const framePurpleFusion =
-    frameForCtx &&
-    frameForCtx.avgR != null &&
-    isFusionPurpleFrameRgb(frameForCtx.avgR, frameForCtx.avgG, frameForCtx.avgB);
-  const sidePurpleFusion =
-    regFrame &&
-    ((regFrame.left &&
-      isFusionPurpleFrameRgb(regFrame.left.avgR, regFrame.left.avgG, regFrame.left.avgB)) ||
-      (regFrame.right &&
-        isFusionPurpleFrameRgb(regFrame.right.avgR, regFrame.right.avgG, regFrame.right.avgB)));
+    (regFrame && hasFusionFrameSides(regFrame)) ||
+    (bandR != null &&
+      isFusionPurpleFrameRgb(bandR, bandG, bandB) &&
+      !frameRgbMatchesSynchroSilverInline(bandR, bandG, bandB) &&
+      !sideRgbLooksSynchro(bandR, bandG, bandB));
 
-  const linkSignals =
-    forcedLink ||
-    stripType === 'Monstro Link' ||
-    mergedT === 'Monstro Link' ||
-    plateT === 'Monstro Link';
+  const linkSignals = forcedLink;
+  const spellSides = !!(regFrame && hasSpellFrameSides(regFrame));
 
-  if (linkSignals) {
-    cardType = 'Monstro Link';
+  if (forcedSynchro) {
+    cardType = 'Monstro Sincro';
     lastStableDetectedCardType = cardType;
     lastStableDetectedCardTypeAt = Date.now();
-  } else if (framePurpleFusion || sidePurpleFusion) {
+  } else if (spellSides && (stripType === 'Magia' || mergedT === 'Magia' || plateT === 'Magia')) {
+    cardType = 'Magia';
+    lastStableDetectedCardType = cardType;
+    lastStableDetectedCardTypeAt = Date.now();
+  } else if (framePurpleFusion) {
     cardType = 'Monstro Fusão';
     lastStableDetectedCardType = cardType;
     lastStableDetectedCardTypeAt = Date.now();
-  } else if (forcedSynchro) {
-    cardType = 'Monstro Sincro';
+  } else if (linkSignals) {
+    cardType = 'Monstro Link';
     lastStableDetectedCardType = cardType;
     lastStableDetectedCardTypeAt = Date.now();
   } else if (
@@ -42039,7 +54230,9 @@ function resolveVisionTypeAndRarityFromProbes(typeProbe, rarityProbe, detectedTy
       frameIsEffectOrange &&
       !forcedSynchro
     ) {
-      cardType = 'Monstro Efeito';
+      const level11 = lastDetectedCardLevel === 11;
+      const stripSyn = stripType === 'Monstro Sincro' || plateT === 'Monstro Sincro';
+      cardType = level11 || stripSyn ? 'Monstro Sincro' : 'Monstro Efeito';
     } else if (stripType === 'Monstro Sincro' || mergedT === 'Monstro Sincro') {
       cardType = 'Monstro Sincro';
     } else if (stripType === 'Monstro Ritual' || mergedT === 'Monstro Ritual') {
@@ -42049,8 +54242,12 @@ function resolveVisionTypeAndRarityFromProbes(typeProbe, rarityProbe, detectedTy
       mergedT === 'Magia' ||
       (plateT === 'Magia' && regFrame && hasSpellFrameSides(regFrame))
     ) {
-      if (forcedSynchro) {
+      if (spellSides || (regFrame && hasSpellFrameSides(regFrame))) {
+        cardType = 'Magia';
+      } else if (forcedSynchro) {
         cardType = 'Monstro Sincro';
+      } else if (forcedLink) {
+        cardType = 'Monstro Link';
       } else {
         cardType = 'Magia';
       }
@@ -42082,6 +54279,8 @@ function resolveVisionTypeAndRarityFromProbes(typeProbe, rarityProbe, detectedTy
     lastStableDetectedCardRarity = rarity;
     lastStableDetectedCardRarityAt = Date.now();
   }
+
+  cardType = resolveScannerCardTypeFromProbes(typeProbe, cardType);
 
   return { cardType, rarity };
 }
@@ -42188,31 +54387,43 @@ function reconcileCardTypeWithRarity(cardType, rarity, plateColor, frameColor, p
   ) {
     return 'Magia';
   }
-  const fr = frameColor && frameColor.avgR != null ? frameColor.avgR : null;
-  const fg = frameColor && frameColor.avgG != null ? frameColor.avgG : null;
-  const fb = frameColor && frameColor.avgB != null ? frameColor.avgB : null;
+  const bandRgb = frameBandRgbFromFrameColor(frameColor);
+  const fr =
+    bandRgb && bandRgb.avgR != null
+      ? bandRgb.avgR
+      : frameColor && frameColor.avgR != null
+        ? frameColor.avgR
+        : null;
+  const fg =
+    bandRgb && bandRgb.avgG != null
+      ? bandRgb.avgG
+      : frameColor && frameColor.avgG != null
+        ? frameColor.avgG
+        : null;
+  const fb =
+    bandRgb && bandRgb.avgB != null
+      ? bandRgb.avgB
+      : frameColor && frameColor.avgB != null
+        ? frameColor.avgB
+        : null;
   const frameFusion = fr != null && isFusionPurpleFrameRgb(fr, fg, fb);
   const regSpell = frameColor && frameColor.regions;
   if (regSpell) {
-    if (hasLinkFrameSides(regSpell)) return 'Monstro Link';
+    if (hasSynchroFrameSides(regSpell)) return 'Monstro Sincro';
+    if (hasFusionFrameSides(regSpell)) return 'Monstro Fusão';
     if (hasSpellFrameSides(regSpell)) return 'Magia';
-    const leftLink =
-      regSpell.left && isLinkFrameRgb(regSpell.left.avgR, regSpell.left.avgG, regSpell.left.avgB);
-    const rightLink =
-      regSpell.right && isLinkFrameRgb(regSpell.right.avgR, regSpell.right.avgG, regSpell.right.avgB);
-    if ((leftLink || rightLink) && fr != null && isLinkFrameRgb(fr, fg, fb)) return 'Monstro Link';
-    const leftSpell =
-      regSpell.left && isSpellGreenFrameRgb(regSpell.left.avgR, regSpell.left.avgG, regSpell.left.avgB);
-    const rightSpell =
-      regSpell.right && isSpellGreenFrameRgb(regSpell.right.avgR, regSpell.right.avgG, regSpell.right.avgB);
-    if (leftSpell && rightSpell && !leftLink && !rightLink) return 'Magia';
+    if (hasLinkFrameSides(regSpell)) return 'Monstro Link';
+    if (hasEffectFrameSides(regSpell)) return 'Monstro Efeito';
+  }
+  if (fr != null && isSynchroSilverFrameRgb(fr, fg, fb)) return 'Monstro Sincro';
+  if (fr != null && isSpellGreenFrameRgb(fr, fg, fb)) return 'Magia';
+  if (fr != null && isFusionPurpleFrameRgb(fr, fg, fb) && !sideRgbLooksSynchro(fr, fg, fb)) {
+    return 'Monstro Fusão';
   }
   if (fr != null && isLinkFrameRgb(fr, fg, fb)) return 'Monstro Link';
   if (cardType === 'Monstro Link') return 'Monstro Link';
-  if (fr != null && isSpellGreenFrameRgb(fr, fg, fb)) return 'Magia';
   if (cardType === 'Magia') return 'Magia';
   if (fr != null && isXyzFrameRgb(fr, fg, fb)) return 'Monstro Xyz';
-  if (fr != null && isSynchroSilverFrameRgb(fr, fg, fb)) return 'Monstro Sincro';
   if (
     cardType === 'Monstro Link' ||
     cardType === 'Monstro Sincro' ||

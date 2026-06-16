@@ -4476,12 +4476,21 @@ html.theme-white .custom-select-wrap--api-lang .custom-select-trigger .lang-flag
   line-height: 1.45;
   font-size: 0.95em;
 }
-.results-view > .results-state-placeholder #results-loading-count {
+.results-view > .results-state-placeholder #results-loading-count,
+.results-view > .results-state-placeholder .ocr-scanner-startup-status {
   margin-top: 14px;
   font-size: 0.95em;
   color: var(--accent);
   opacity: 0.82;
   min-height: 1.35em;
+}
+.results-view > .results-state-placeholder .results-state-emoji {
+  font-size: 3em;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+.results-view > .results-state-placeholder .results-loading-spinner {
+  margin-bottom: 2px;
 }
 
 .suggestion-item {

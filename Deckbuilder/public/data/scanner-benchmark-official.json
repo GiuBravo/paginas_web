@@ -1,0 +1,91 @@
+{
+  "id": "official",
+  "stamp": "1781306694767",
+  "label": "Guard v1.1 (2026-06-12 6694767)",
+  "exportedAt": "2026-06-12T20:27:00.000Z",
+  "targetSamples": 75,
+  "samples": 75,
+  "warpActive": 75,
+  "artMatched": 71,
+  "nearMiss": 1,
+  "pipeline": 12,
+  "matchedWrong": 0,
+  "top0Correct": 66,
+  "top0DistLe9": 49,
+  "phaseD": 6,
+  "phaseE": 5,
+  "phaseF": 6,
+  "phaseG": 6,
+  "phaseH": 2,
+  "perCard": {
+    "14087893": {
+      "segSamples": 13,
+      "matched": 11,
+      "top0": 9,
+      "top0Le9": 9,
+      "minDist": 5,
+      "phaseD": 100,
+      "phaseE": 77,
+      "phaseF": 100,
+      "phaseG": 100
+    },
+    "34848821": {
+      "segSamples": 13,
+      "matched": 13,
+      "top0": 13,
+      "top0Le9": 5,
+      "minDist": 9,
+      "phaseD": 100,
+      "phaseE": 46,
+      "phaseF": 100,
+      "phaseG": 100
+    },
+    "46772449": {
+      "segSamples": 12,
+      "matched": 11,
+      "top0": 11,
+      "top0Le9": 6,
+      "minDist": 6,
+      "phaseD": 100,
+      "phaseE": 100,
+      "phaseF": 92,
+      "phaseG": 100
+    },
+    "60465049": {
+      "segSamples": 12,
+      "matched": 11,
+      "top0": 11,
+      "top0Le9": 3,
+      "minDist": 8,
+      "phaseD": 100,
+      "phaseE": 100,
+      "phaseF": 100,
+      "phaseG": 100
+    },
+    "66403530": {
+      "segSamples": 13,
+      "matched": 13,
+      "top0": 12,
+      "top0Le9": 12,
+      "minDist": 3,
+      "phaseD": 100,
+      "phaseE": 100,
+      "phaseF": 100,
+      "phaseG": 100
+    },
+    "92079625": {
+      "segSamples": 12,
+      "matched": 11,
+      "top0": 11,
+      "top0Le9": 11,
+      "minDist": 3,
+      "phaseD": 100,
+      "phaseE": 92,
+      "phaseF": 100,
+      "phaseG": 100
+    }
+  },
+  "benchmark": {
+    "note": "ZIP 1781306694767 — guard C: matched 71/75, top0≤9 49, near-miss 1, G 6/6, H 2/6 (Vazio+Exciton)."
+  }
+}

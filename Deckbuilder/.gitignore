@@ -28,3 +28,14 @@ desktop.ini
 public/ocr-models/**/*.onnx
 public/ocr-models/**/*.zip
 
+## Tesseract traineddata p/ benchmark offline Fase J (após clone: npm run vendor:tess-lang)
+.tess-lang/
+## cache descomprimido que o tesseract.js escreve no cwd
+/eng.traineddata
+
+## Benchmark — saídas geradas (overlays/crops/debug)
+docs/benchmark-photos/calibration-overlays/
+docs/benchmark-photos/_crops/
+docs/benchmark-photos/_passcode-debug/
+docs/benchmark-photos/_name-debug/
+

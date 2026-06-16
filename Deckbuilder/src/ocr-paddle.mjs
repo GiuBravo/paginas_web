@@ -114,7 +114,7 @@ export function syncPaddleOcrSessionStart() {
 /**
  * Reconhece texto num canvas (faixa do nome já pré-processada).
  * @param {HTMLCanvasElement} canvas
- * @returns {Promise<{ text: string, confidence: number }|null>}
+ * @returns {Promise<{ text: string, confidence: number, allText?: string }|null>}
  */
 export async function paddleRecognizeCanvas(canvas) {
   if (!paddleRecEngine) {
@@ -135,7 +135,58 @@ export async function paddleRecognizeCanvas(canvas) {
   const text = String(best.text || '').trim();
   const confidence = typeof best.mean === 'number' ? Math.min(100, Math.max(0, best.mean * 100)) : 0;
   if (!text) return null;
-  return { text, confidence };
+  const allText = lines
+    .map((l) => String(l.text || '').trim())
+    .filter(Boolean)
+    .join(' ');
+  return { text, confidence, allText };
+}
+
+/**
+ * Reconhece passcode (dígitos matte de baixa confiança). O `rec` normal descarta linhas com
+ * mean < 0.5 — os dígitos borrados na warp ficam tipicamente a 0.15–0.45 e nunca aparecem.
+ * Usa `rawRec` e aplica um limiar baixo (0.12) só para o passcode.
+ * @param {HTMLCanvasElement} canvas
+ * @param {{ minMean?: number }} [opts]
+ * @returns {Promise<{ text: string, confidence: number, allText: string }|null>}
+ */
+export async function paddleRecognizePasscodeCanvas(canvas, opts = {}) {
+  if (!paddleRecEngine) {
+    const ok = await initPaddleOcrRec();
+    if (!ok) return null;
+  }
+  const ocr = await loadOcrLib();
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  if (!ctx) return null;
+  const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const boxes = ocr.warpDet(img);
+  const minMean = typeof opts.minMean === 'number' ? opts.minMean : 0.12;
+  const rawLines = await paddleRecEngine.rawRec(boxes, { topK: 2, threshold: 1e-5 });
+  if (!rawLines || !rawLines.length) return null;
+  const parsed = [];
+  for (const line of rawLines) {
+    const chars = line.text || [];
+    if (!chars.length) continue;
+    const picked = chars.map((b) =>
+      b[0] && b[0].t === '' && b[1] && b[1].t === ' ' && b[1].mean > 1e-3 ? b[1] : b[0]
+    );
+    const text = picked
+      .map((b) => (b && b.t != null ? String(b.t) : ''))
+      .join('')
+      .trim();
+    const mean =
+      picked.reduce((s, b) => s + (b && typeof b.mean === 'number' ? b.mean : 0), 0) / picked.length;
+    if (text && mean >= minMean) parsed.push({ text, mean });
+  }
+  if (!parsed.length) return null;
+  parsed.sort((a, b) => b.mean - a.mean);
+  const best = parsed[0];
+  const allText = parsed
+    .map((p) => p.text)
+    .filter(Boolean)
+    .join(' ');
+  const confidence = Math.min(100, Math.max(0, best.mean * 100));
+  return { text: best.text, confidence, allText };
 }
 
 /**

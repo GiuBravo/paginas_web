@@ -1,0 +1,92 @@
+{
+  "id": "g-reference",
+  "stamp": "1781137694755",
+  "label": "Referência G (2026-06-10)",
+  "exportedAt": "2026-06-10T21:29:00.000Z",
+  "targetSamples": 75,
+  "samples": 75,
+  "warpActive": 75,
+  "artMatched": 63,
+  "nearMiss": 11,
+  "pipeline": 12,
+  "matchedWrong": 0,
+  "top0Correct": 55,
+  "top0DistLe9": 44,
+  "phaseD": 6,
+  "phaseE": 6,
+  "phaseF": 6,
+  "phaseG": 6,
+  "phaseH": 4,
+  "phaseB": 5,
+  "perCard": {
+    "14087893": {
+      "segSamples": 13,
+      "matched": 11,
+      "top0": 11,
+      "top0Le9": 11,
+      "minDist": 5,
+      "phaseD": 100,
+      "phaseE": 100,
+      "phaseF": 100,
+      "phaseG": 100
+    },
+    "34848821": {
+      "segSamples": 13,
+      "matched": 12,
+      "top0": 10,
+      "top0Le9": 8,
+      "minDist": 6,
+      "phaseD": 100,
+      "phaseE": 92,
+      "phaseF": 100,
+      "phaseG": 100
+    },
+    "46772449": {
+      "segSamples": 12,
+      "matched": 7,
+      "top0": 7,
+      "top0Le9": 5,
+      "minDist": 8,
+      "phaseD": 100,
+      "phaseE": 100,
+      "phaseF": 100,
+      "phaseG": 100
+    },
+    "60465049": {
+      "segSamples": 12,
+      "matched": 5,
+      "top0": 4,
+      "top0Le9": 0,
+      "minDist": 10,
+      "phaseD": 100,
+      "phaseE": 100,
+      "phaseF": 75,
+      "phaseG": 100
+    },
+    "66403530": {
+      "segSamples": 13,
+      "matched": 12,
+      "top0": 12,
+      "top0Le9": 11,
+      "minDist": 4,
+      "phaseD": 100,
+      "phaseE": 100,
+      "phaseF": 69,
+      "phaseG": 100
+    },
+    "92079625": {
+      "segSamples": 12,
+      "matched": 10,
+      "top0": 10,
+      "top0Le9": 10,
+      "minDist": 2,
+      "phaseD": 100,
+      "phaseE": 100,
+      "phaseF": 100,
+      "phaseG": 100
+    }
+  },
+  "benchmark": {
+    "note": "ZIP 1781137694755 — G 6/6 Brigrand L8 100% Vazio L9 100%; H 4/6; matched 63/75; Psychic 5/12."
+  }
+}
